@@ -13,13 +13,13 @@ macro(POLYTOPE_C_ADD_TEST name dependency_list)
   # Determine if you have the necessary components for the test
   set(BUILD_TEST true)
   foreach(_dependency ${dependency_list})
-    set(DEP_NAME "HAVE_${_dependency}")
+    set(DEP_NAME "POLYTOPE_ENABLE_${_dependency}")
     if(NOT ${DEP_NAME})
       set(BUILD_TEST false)
     endif()
     # If using Tetgen, remember to link to its library
-    if(${_dependency} EQUAL "TETGEN")
-      set(APPEND EXTRA_LINK_LIBRARIES ${TETGEN_LIB})
+    if(_dependency STREQUAL "TETGEN")
+      list(APPEND TEST_LINK_LIBRARIES tetgen)
     endif()
   endforeach()  
 
@@ -46,17 +46,17 @@ macro(POLYTOPE_C_ADD_DISTRIBUTED_TEST name dependency_list procs)
   # Check for MPI and determine if you have the necessary
   # components to build the test.
   set(BUILD_TEST true)
-  if(${HAVE_MPI} AND ${HAVE_MPIEXEC})
+  if(POLYTOPE_ENABLE_MPI AND POLYTOPE_MPIEXEC)
     # Every test links to the polytope library
     set(TEST_LINK_LIBRARIES polytopeC)
     foreach(_dependency ${dependency_list})
-      set(DEP_NAME "HAVE_${_dependency}")
+      set(DEP_NAME "POLYTOPE_ENABLE_${_dependency}")
       if(NOT ${DEP_NAME})
 	set(BUILD_TEST false)
       endif()
       # If using Tetgen, remember to link to its library
-      if(${_dependency} EQUAL "TETGEN")
-	set(APPEND EXTRA_LINK_LIBRARIES ${TETGEN_LIB})
+      if(_dependency STREQUAL "TETGEN")
+	list(APPEND TEST_LINK_LIBRARIES tetgen)
       endif()
     endforeach()
   else()
@@ -72,10 +72,9 @@ macro(POLYTOPE_C_ADD_DISTRIBUTED_TEST name dependency_list procs)
     #add_test(${TEST_NAME} ${TEST_NAME})
     foreach(proc ${procs})
       add_test(${TEST_NAME}_${proc}_proc 
-	${MPIEXEC} 
-	${MPIEXEC_NUMPROC_FLAG} 
+	${POLYTOPE_MPIEXEC} 
+	${POLYTOPE_MPIEXEC_NUMPROC_FLAG} 
 	${proc}
-	${MPIEXEC_PREFLAGS}
 	${CMAKE_CURRENT_BINARY_DIR}/${TEST_NAME}
 	${MPIEXEC_POSTFLAGS})
       set_tests_properties(${TEST_NAME}_${proc}_proc 

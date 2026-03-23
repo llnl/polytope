@@ -320,7 +320,7 @@ computeSortedFaceNodes(const vector<pair<int, int> >& edges) {
 //   Tessellation<2, RealType> dmesh;
 //   constructDelaunayMesh(delaunay, dmesh);
 //   map<string, double*> fields;
-// #ifdef HAVE_SILO
+// #ifdef POLYTOPE_ENABLE_SILO
 //   SiloWriter<2,RealType>::write(dmesh, fields, fields, fields, fields, name, cycle, 0.0);
 // #endif
 // }

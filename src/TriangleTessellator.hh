@@ -7,7 +7,7 @@
 #ifndef __Polytope_TriangleTessellator__
 #define __Polytope_TriangleTessellator__
 
-#ifdef HAVE_TRIANGLE
+#ifdef POLYTOPE_ENABLE_TRIANGLE
 
 #include <vector>
 #include <cmath>

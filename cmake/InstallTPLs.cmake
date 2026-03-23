@@ -1,0 +1,132 @@
+#-----------------------------------------------------------------------------------
+# Polytope TPLs
+#-----------------------------------------------------------------------------------
+
+# MPI
+#-----------------------------------------------------------------------------------
+if (POLYTOPE_ENABLE_MPI)
+  find_package(MPI REQUIRED)
+  list(APPEND POLYTOPE_TPL_DEPENDS MPI::MPI_C MPI::MPI_CXX)
+
+  if (MPIEXEC_EXECUTABLE)
+    set(POLYTOPE_MPIEXEC "${MPIEXEC_EXECUTABLE}" CACHE FILEPATH "MPI launcher for Polytope tests")
+  elseif (MPIEXEC)
+    set(POLYTOPE_MPIEXEC "${MPIEXEC}" CACHE FILEPATH "MPI launcher for Polytope tests")
+  endif()
+
+  if (MPIEXEC_NUMPROC_FLAG)
+    set(POLYTOPE_MPIEXEC_NUMPROC_FLAG "${MPIEXEC_NUMPROC_FLAG}" CACHE STRING "MPI launcher process-count flag")
+  else()
+    set(POLYTOPE_MPIEXEC_NUMPROC_FLAG "-np" CACHE STRING "MPI launcher process-count flag")
+  endif()
+endif()
+
+# Python
+#-----------------------------------------------------------------------------------
+if (POLYTOPE_ENABLE_PYTHON)
+  # Find the appropriate Python
+  find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
+  set(POLYTOPE_SITE_PACKAGES_PATH "lib/python${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}/site-packages" )
+  list(APPEND POLYTOPE_TPL_DEPENDS Python3::Python)
+
+  # Set the PYB11Generator path
+  if (NOT PYB11GENERATOR_ROOT_DIR)
+    set(PYB11GENERATOR_ROOT_DIR "${POLYTOPE_ROOT_DIR}/extern/PYB11Generator" CACHE PATH "")
+  endif()
+  # Set the pybind11 path
+  if (NOT PYBIND11_ROOT_DIR)
+    set(PYBIND11_ROOT_DIR "${PYB11GENERATOR_ROOT_DIR}/extern/pybind11" CACHE PATH "")
+    set(PYBIND11_NOPYTHON TRUE)
+  endif()
+  include(${PYB11GENERATOR_ROOT_DIR}/cmake/PYB11Generator.cmake)
+  list(APPEND POLYTOPE_TPL_DEPENDS pybind11_headers)
+  install(TARGETS pybind11_headers
+    EXPORT polytope-targets
+    DESTINATION lib/cmake)
+  set_target_properties(pybind11_headers PROPERTIES EXPORT_NAME polytope::pybind11_headers)
+endif()
+
+# BOOST
+#-----------------------------------------------------------------------------------
+if(POLYTOPE_ENABLE_BOOST)
+  if (DEFINED boost_DIR)
+    find_package(Boost 1.50 REQUIRED NO_DEFAULT_PATH PATHS ${boost_DIR})
+  else()
+    find_package(Boost 1.50 REQUIRED)
+  endif()
+
+  if (TARGET Boost::headers)
+    list(APPEND POLYTOPE_TPL_DEPENDS Boost::headers)
+  elseif (TARGET Boost::boost)
+    list(APPEND POLYTOPE_TPL_DEPENDS Boost::boost)
+  else()
+    add_library(polytope_boost_headers INTERFACE)
+    target_include_directories(polytope_boost_headers SYSTEM INTERFACE ${Boost_INCLUDE_DIRS})
+    list(APPEND POLYTOPE_TPL_DEPENDS polytope_boost_headers)
+  endif()
+endif()
+
+# Silo/HDF5
+#-----------------------------------------------------------------------------------
+if(POLYTOPE_ENABLE_SILO)
+  if(NOT ENABLE_STATIC_TPL)
+    find_package(hdf5 REQUIRED NO_DEFAULT_PATH PATHS ${hdf5_DIR})
+    message("Found HDF5 External Package.")
+    if(ENABLE_STATIC_TPL)
+      list(APPEND POLYTOPE_TPL_DEPENDS hdf5-static hdf5_hl-static)
+    else()
+      list(APPEND POLYTOPE_TPL_DEPENDS hdf5-shared hdf5_hl-shared)
+    endif()
+  else()
+    set(HDF5_LIBS ${hdf5_DIR}/lib/libhdf5.a ${hdf5_DIR}/lib/libhdf5_hl.a)
+    blt_import_library(NAME hdf5
+      LIBRARIES ${HDF5_LIBS}
+      INCLUDES ${hdf5_DIR}/includes
+      TREAT_INCLUDES_AS_SYSTEM ON
+      EXPORTABLE ON)
+    list(APPEND POLYTOPE_TPL_DEPENDS hdf5)
+  endif()
+  find_package(Silo REQUIRED NO_DEFAULT_PATH PATHS ${silo_DIR})
+  list(APPEND POLYTOPE_TPL_DEPENDS silo)
+  # if (DEFINED hdf5_DIR)
+  #   find_package(HDF5 REQUIRED NO_DEFAULT_PATH PATHS ${hdf5_DIR})
+  # else()
+  #   find_package(HDF5 REQUIRED)
+  # endif()
+
+  # if (DEFINED silo_DIR)
+  #   find_package(Silo REQUIRED NO_DEFAULT_PATH PATHS ${silo_DIR})
+  # else()
+  #   find_package(Silo REQUIRED)
+  # endif()
+
+  # find_package(ZLIB REQUIRED)
+
+  # add_library(polytope_silo INTERFACE)
+  # target_include_directories(polytope_silo SYSTEM INTERFACE
+  #   ${SILO_INCLUDE_DIRS}
+  #   ${HDF5_INCLUDE_DIRS}
+  #   ${ZLIB_INCLUDE_DIRS})
+  # target_link_libraries(polytope_silo INTERFACE
+  #   ${SILO_LIBRARIES}
+  #   ${HDF5_LIBRARIES}
+  #   ZLIB::ZLIB)
+  # list(APPEND POLYTOPE_TPL_DEPENDS polytope_silo)
+endif()
+
+if(POLYTOPE_ENABLE_TETGEN)
+  blt_import_library(NAME tetgen
+    LIBRARIES ${tetgen_DIR}/lib/libtet.a
+    INCLUDES ${tetgen_DIR}/include
+    TREAT_INCLUDES_AS_SYSTEM ON
+    EXPORTABLE ON)
+  list(APPEND POLYTOPE_TPL_DEPENDS tetgen)
+  get_target_property(_is_imported tetgen IMPORTED)
+  if(NOT ${_is_imported})
+    install(TARGETS tetgen
+      EXPORT polytope-targets
+      DESTINATION lib/cmake)
+  endif()
+endif()
+
+set_property(GLOBAL APPEND PROPERTY POLYTOPE_TPL_DEPENDS "${POLYTOPE_TPL_DEPENDS}")

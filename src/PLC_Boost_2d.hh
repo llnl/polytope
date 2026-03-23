@@ -1,7 +1,7 @@
 #ifndef POLYTOPE_PLC_BOOST_2D_HH
 #define POLYTOPE_PLC_BOOST_2D_HH
 
-#ifdef HAVE_BOOST
+#ifdef POLYTOPE_ENABLE_BOOST
 
 #include <vector>
 
@@ -323,6 +323,6 @@ std::vector<ReducedPLC<2, RealType> > boost_unionReduce(const std::vector<Reduce
 } //end namespace polytope
 
 
-#endif  // end #ifdef HAVE_BOOST
+#endif  // end #ifdef POLYTOPE_ENABLE_BOOST
 
 #endif

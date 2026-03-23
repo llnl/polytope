@@ -66,7 +66,7 @@ outputTessellation(const polytope::Tessellation<Dimension, RealType>& mesh,
                    const int rank,
                    const vector<RealType>& cellField,
                    const string cellFieldName) {
-#ifdef HAVE_SILO
+#ifdef POLYTOPE_ENABLE_SILO
   POLY_ASSERT(cellField.size() == mesh.cells.size());
   const string meshName = "DEBUG_DistributedTessellator_" + name;
   vector<RealType> r2(mesh.cells.size(), RealType(rank));

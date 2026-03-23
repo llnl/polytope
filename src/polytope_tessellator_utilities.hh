@@ -15,7 +15,7 @@
 #include "DimensionTraits.hh"
 #include "Point.hh"
 
-#ifdef HAVE_BOOST
+#ifdef POLYTOPE_ENABLE_BOOST
 BOOST_GEOMETRY_REGISTER_POINT_2D(polytope::Point2<double>, double, boost::geometry::cs::cartesian, x, y);
 BOOST_GEOMETRY_REGISTER_POINT_2D(polytope::Point2<int32_t>, int32_t, boost::geometry::cs::cartesian, x, y);
 BOOST_GEOMETRY_REGISTER_POINT_2D(polytope::Point2<int64_t>, int64_t, boost::geometry::cs::cartesian, x, y);

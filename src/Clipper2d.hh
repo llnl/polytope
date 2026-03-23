@@ -10,7 +10,7 @@
 //       new algorithms. 9/19/2013
 //************************************************************************
 
-#ifdef HAVE_BOOST
+#ifdef POLYTOPE_ENABLE_BOOST
 
 #include <vector>
 

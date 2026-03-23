@@ -1,4 +1,4 @@
-#ifdef HAVE_SILO
+
 #include "polytope.hh"
 #include <fstream>
 #include <set>
@@ -7,11 +7,9 @@
 #include <dirent.h>
 #include "silo.h"
 
-#ifdef HAVE_MPI
-// extern "C" {
+#ifdef POLYTOPE_ENABLE_MPI
 #include "mpi.h"
 #include "pmpio.h"
-// }
 #else
 #define MPI_Comm int
 #define MPI_COMM_WORLD 0
@@ -25,7 +23,7 @@ using namespace std;
 namespace 
 {
 
-#ifdef HAVE_MPI
+#ifdef POLYTOPE_ENABLE_MPI
 
 //-------------------------------------------------------------------
 void*
@@ -103,7 +101,7 @@ read(Tessellation<2, RealType>& mesh,
 
   // Open a file in Silo/HDF5 format for reading.
   char filename[1024];
-#ifdef HAVE_MPI
+#ifdef POLYTOPE_ENABLE_MPI
   int nproc = 1, rank = 0;
   MPI_Comm_size(comm, &nproc);
   MPI_Comm_rank(comm, &rank);
@@ -373,7 +371,7 @@ vector<int> findAvailableCycles(const string& prefix,
                                 const string& directory,
                                 MPI_Comm comm)
 {
-#ifdef HAVE_MPI
+#ifdef POLYTOPE_ENABLE_MPI
   int nproc = 1, rank = 0;
   MPI_Comm_size(comm, &nproc);
 #endif
@@ -382,7 +380,7 @@ vector<int> findAvailableCycles(const string& prefix,
   string dir = directory;
   if (dir.empty())
   {
-#ifdef HAVE_MPI
+#ifdef POLYTOPE_ENABLE_MPI
     char dirname[1024];
     snprintf(dirname, 1024, "%s-%d", prefix.c_str(), nproc);
     dir = dirname;

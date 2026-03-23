@@ -12,7 +12,7 @@
 #include "Tessellation.hh"
 #include "ReducedPLC.hh"
 
-#ifdef HAVE_MPI
+#ifdef POLYTOPE_ENABLE_MPI
 #include <mpi.h>
 #include "polytope_parallel_utilities.hh"
 #endif
@@ -620,7 +620,7 @@ computeBoundingBox(const RealType* pos,
        xmax[j] = std::max(xmax[j], pos[Dimension*i + j]);
      }
    }
-#ifdef HAVE_MPI
+#ifdef POLYTOPE_ENABLE_MPI
    if (globalReduce) {
      for (unsigned j = 0; j != Dimension; ++j) {
        xmin[j] = allReduce(xmin[j], MPI_MIN, MPI_COMM_WORLD);
@@ -670,7 +670,7 @@ expandBoundingBox(const RealType* pos,
       xmax[j] = std::max(xmax[j], high[j]);
     }
   }
-#ifdef HAVE_MPI
+#ifdef POLYTOPE_ENABLE_MPI
   if (globalReduce) {
     for (unsigned j = 0; j != Dimension; ++j) {
       xmin[j] = allReduce(xmin[j], MPI_MIN, MPI_COMM_WORLD);

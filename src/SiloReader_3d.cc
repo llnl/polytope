@@ -1,4 +1,4 @@
-#ifdef HAVE_SILO
+#ifdef POLYTOPE_ENABLE_SILO
 #include "polytope.hh"
 #include <fstream>
 #include <set>
@@ -7,7 +7,7 @@
 #include <dirent.h>
 #include "silo.h"
 
-#ifdef HAVE_MPI
+#ifdef POLYTOPE_ENABLE_MPI
 // extern "C" {
 #include "mpi.h"
 #include "pmpio.h"
@@ -25,7 +25,7 @@ using namespace std;
 namespace 
 {
 
-#ifdef HAVE_MPI
+#ifdef POLYTOPE_ENABLE_MPI
 
 //-------------------------------------------------------------------
 void*
@@ -103,7 +103,7 @@ read(Tessellation<3, RealType>& mesh,
 
   // Open a file in Silo/HDF5 format for reading.
   char filename[1024];
-#ifdef HAVE_MPI
+#ifdef POLYTOPE_ENABLE_MPI
   int nproc = 1, rank = 0;
   MPI_Comm_size(comm, &nproc);
   MPI_Comm_rank(comm, &rank);
@@ -367,4 +367,3 @@ template class SiloReader<3, double>;
 } // end namespace
 
 #endif
-

@@ -237,7 +237,7 @@ public:
     computeBoundsFromRadius(rinf_new, &mCenter.x, &low_new.x, &high_new.x);
 
     // All-reduce to ensure bounds are exact across processors.
-#ifdef HAVE_MPI
+#ifdef POLYTOPE_ENABLE_MPI
     for (unsigned j = 0; j != Dimension; ++j) {
       low_new [j] = allReduce(low_new [j], MPI_MIN, MPI_COMM_WORLD);
       high_new[j] = allReduce(high_new[j], MPI_MAX, MPI_COMM_WORLD);

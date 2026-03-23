@@ -66,7 +66,7 @@ writePLCtoOFF3d = PYB11TemplateFunction(writePLCtoOFF, pyname="writePLCtoOFF", t
                            py::dict cellFieldsDict,
                            int cycle,
                            %(RealType)s time) {
-#ifdef HAVE_SILO
+#ifdef POLYTOPE_ENABLE_SILO
                                std::map<std::string, %(RealType)s*> nodeFields, edgeFields, faceFields, cellFields;
                                auto nodeVals = pybind11_helpers::copyDictToMap<std::string, double>(nodeFieldsDict);
                                auto edgeVals = pybind11_helpers::copyDictToMap<std::string, double>(edgeFieldsDict);
@@ -106,7 +106,7 @@ writeTessellation3d = PYB11TemplateFunction(writeTessellation, template_paramete
                            py::dict cellFieldsDict,
                            int cycle,
                            %(RealType)s time) {
-#ifdef HAVE_SILO
+#ifdef POLYTOPE_ENABLE_SILO
                                std::map<std::string, %(RealType)s*> nodeFields, edgeFields, faceFields, cellFields;
                                auto nodeVals = pybind11_helpers::copyDictToMap<std::string, double>(nodeFieldsDict);
                                auto edgeVals = pybind11_helpers::copyDictToMap<std::string, double>(edgeFieldsDict);
