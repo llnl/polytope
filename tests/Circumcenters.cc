@@ -98,7 +98,7 @@ int main(int argc, char** argv)
   test(boost);
 #endif      
 
-  cout << "PASS" << endl;
+  
 
 #ifdef POLYTOPE_ENABLE_MPI
    MPI_Finalize();

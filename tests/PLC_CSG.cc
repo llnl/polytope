@@ -327,7 +327,7 @@ int main(int argc, char** argv) {
     POLY_CHECK(box_intersect_simplify.points.size() == 3*8);
   }
 
-  cout << "PASS" << endl;
+  
 
 #ifdef POLYTOPE_ENABLE_MPI
    MPI_Finalize();

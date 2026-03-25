@@ -166,6 +166,6 @@ int main(int argc, char** argv) {
     cerr << "No Intersection" << endl;
   }
 
-  cout << "PASS" << endl;
+  
   return 0;
 }

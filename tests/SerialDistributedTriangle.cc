@@ -205,7 +205,7 @@ int main(int argc, char** argv) {
     POLY_CHECK2(parCheck == "ok", parCheck);
   }
 
-  cout << "PASS" << endl;
+  
   MPI_Finalize();
   return 0;
 }

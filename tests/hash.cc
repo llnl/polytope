@@ -196,7 +196,7 @@ int main(int argc, char** argv) {
     hashSlingingSlasher<3, int64_t>(xmin, xmax, tol, coords);
   }
 
-  cout << "PASS" << endl;
+  
 
 #ifdef POLYTOPE_ENABLE_MPI
    MPI_Finalize();

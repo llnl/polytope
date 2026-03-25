@@ -172,7 +172,7 @@ int main(int argc, char** argv) {
 #endif
   }
 
-  cout << "PASS" << endl;
+  
   MPI_Finalize();
   return 0;
 }

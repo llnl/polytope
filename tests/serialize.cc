@@ -194,6 +194,6 @@ int main(int argc, char** argv) {
   }
 
   // That's all!
-  cout << "PASS" << endl;
+  
   return 0;
 }

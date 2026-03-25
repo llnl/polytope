@@ -187,7 +187,7 @@ int main(int argc, char** argv) {
     // escapePod("simple_random", simple_random_hull, simple_random_hull.points);
   }
 
-  cout << "PASS" << endl;
+  
 
 #ifdef POLYTOPE_ENABLE_MPI
    MPI_Finalize();

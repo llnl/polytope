@@ -76,6 +76,6 @@ int main(int argc, char** argv) {
   }
 
   
-  cout << "PASS" << endl;
+  
   return 0;
 }

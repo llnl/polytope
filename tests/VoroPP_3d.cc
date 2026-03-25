@@ -118,6 +118,6 @@ int main() {
     POLY_CHECK(mesh.faces.size() == 3*nx*nx*(nx + 1));
   }
 
-  cout << "PASS" << endl;
+  
   return 0;
 }

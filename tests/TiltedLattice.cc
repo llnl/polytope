@@ -56,15 +56,14 @@ void checkCartesianMesh(Tessellation<2,double>& mesh, unsigned nx, unsigned ny)
 // generateMesh
 // -----------------------------------------------------------------------
 void generateMesh(Tessellator<2,double>& tessellator,
-                  const bool checkLattice)
+                  const bool checkLattice,
+                  int Nmin, int Nmax, int increment)
 {
   // Constants
   const double degToRad = 2.0*M_PI/360;
 
   // Parameters
   const double degrees = 4.0;     // Angle of tilt
-  const unsigned Nmin = 2;        // Minimum value of N for NxN lattice
-  const unsigned Nmax = 100;      // Maximum value of N for NxN lattice
   const unsigned dumpEvery = 10;  // Set to 1 to dump EVERY mesh
 
   // Derived parameters
@@ -81,7 +80,7 @@ void generateMesh(Tessellator<2,double>& tessellator,
     plc.facets[i][1] = (i+1)%4;
   }
 
-  for (unsigned N = Nmin; N < Nmax+1; ++N){
+  for (unsigned N = Nmin; N < Nmax+1; N += increment){
     cout << "Testing N=" << N << endl;
 
     const double delta = 1.0/N;
@@ -122,12 +121,33 @@ int main(int argc, char** argv)
   MPI_Init(&argc, &argv);
 #endif
 
+  // Accepts 3 input parameters:
+  // 1. The minimum value of nx (defaults to 2).
+  // 2. The maximum value of nx (defaults to 102).
+  // 3. The positive (integer) increment by which nx is increased after each
+  //    mesh generation (defaults to 10).
+  int Nmin = 2;
+  int Nmax = 102;
+  int increment = 10;
+
+  if(argc >= 2) {
+    Nmin = std::stoi(argv[1]);
+    if(argc >= 3) {
+      Nmax = std::stoi(argv[2]);
+      if(argc >= 4) {
+        increment = std::stoi(argv[3]);
+      }
+    }
+  }
+  POLY_CHECK2(Nmin > 0, "Nmin must be greater than 0");
+  POLY_CHECK2(Nmax > Nmin, "Nmax must be greater than Nmin");
+  POLY_CHECK2(increment < (Nmax - Nmin), "Increment must be less than Nmax - Nmin");
 
 #ifdef POLYTOPE_ENABLE_TRIANGLE
   {
     cout << "\nTriangle Tessellator:\n" << endl;
     TriangleTessellator<double> tessellator;
-    generateMesh(tessellator, true);
+    generateMeshes(tessellator, true, Nmin, Nmax, increment);
   }
 #endif   
 
@@ -135,7 +155,7 @@ int main(int argc, char** argv)
   {
     cout << "\nBoost Tessellator:\n" << endl;
     BoostTessellator<double> tessellator;
-    generateMesh(tessellator, false);
+    generateMesh(tessellator, false, Nmin, Nmax, increment);
     
     // NOTE: We do not check to see if BoostTessellator
     // resolves the degenerate lattice mesh. Boost.Voronoi 
@@ -144,9 +164,7 @@ int main(int argc, char** argv)
     // could be resolved with generators snapped to an
     // integer grid.  -DPS 01/20/2015
   }
-#endif
-
-  cout << "PASS" << endl;
+#endif  
 
 #ifdef POLYTOPE_ENABLE_MPI
   MPI_Finalize();

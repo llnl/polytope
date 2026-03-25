@@ -292,7 +292,7 @@ int main(int argc, char** argv) {
     MPI_Waitall(sendRequests.size(), &sendRequests.front(), &sendStatus.front());
   }
 
-  cout << "PASS" << endl;
+  
   MPI_Finalize();
   return 0;
 }

@@ -108,11 +108,11 @@ void getVelocities(const vector<double>& points,
 // runTest
 // -----------------------------------------------------------------------
 void runTest(Tessellator<2,double>& tessellator,
-             const unsigned flowType) {
+             const unsigned flowType,
+             const unsigned nx) {
   POLY_ASSERT(flowType >= 1 and flowType <= 4);
   
   // Boundary size parameters
-  const unsigned nx = 50;
   const double xmin = 0.0, xmax = 1.0;
   const double ymin = 0.0, ymax = 1.0;
   const double dx = (xmax-xmin)/nx,  dy = (ymax-ymin)/nx;
@@ -238,12 +238,20 @@ int main(int argc, char** argv)
   MPI_Init(&argc, &argv);
 #endif
 
+  int nx = 20;
+
+  if(argc >= 2) {
+    nx = std::stoi(argv[1]);
+  }
+  POLY_CHECK2(nx > 0, "Number of points specified must be > 0.");
 
 #ifdef POLYTOPE_ENABLE_TRIANGLE
   {
     cout << "\nTriangle Tessellator:\n" << endl;
     TriangleTessellator<double> tessellator;
-    for (unsigned flowTest = 1; flowTest < 5; ++flowTest) runTest(tessellator,flowTest);
+    for (unsigned flowTest = 1; flowTest < 5; ++flowTest) {
+      runTest(tessellator, flowTest, nx);
+    }
   }
 #endif   
 
@@ -252,12 +260,11 @@ int main(int argc, char** argv)
   {
     cout << "\nBoost Tessellator:\n" << endl;
     BoostTessellator<double> tessellator;
-    for (unsigned flowTest = 1; flowTest < 5; ++flowTest) runTest(tessellator,flowTest);
+    for (unsigned flowTest = 1; flowTest < 5; ++flowTest) {
+      runTest(tessellator, flowTest, nx);
+    }
   }
-#endif
-   
-
-  cout << "PASS" << endl;
+#endif  
 
 #ifdef POLYTOPE_ENABLE_MPI
   MPI_Finalize();

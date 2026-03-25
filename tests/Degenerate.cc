@@ -139,7 +139,7 @@ int main(int argc, char** argv)
   // VoroPP_2d<double> voro;
   // test(voro);
 
-   cout << "PASS" << endl;
+   
 
 #ifdef POLYTOPE_ENABLE_MPI
   MPI_Finalize();

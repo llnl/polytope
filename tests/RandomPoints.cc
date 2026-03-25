@@ -29,7 +29,7 @@ using namespace polytope;
 // -----------------------------------------------------------------------
 void testBoundary(Boundary2D<double>& boundary,
                   Tessellator<2,double>& tessellator,
-                  int boundaryID) {
+                  int boundaryID, int numSweeps) {
   // output name
   ostringstream os;
   os << "RandomPoints_" << tessellator.name();
@@ -38,16 +38,16 @@ void testBoundary(Boundary2D<double>& boundary,
   Generators<2,double> generators(boundary);
   unsigned nPoints = 10;
   Tessellation<2,double> mesh;
-  for( unsigned n = 0; n < 3; ++n ){
+  for( unsigned n = 0; n < numSweeps; ++n ){
     POLY_ASSERT(mesh.empty());
     nPoints = nPoints * 10;
     int plotIndex = 3*boundaryID + n;
 
     cout << nPoints << " points..." << endl;
-    generators.randomPoints( nPoints );      
-    tessellate2D(generators.mPoints,boundary,tessellator,mesh);    
+    generators.randomPoints( nPoints );
+    tessellate2D(generators.mPoints,boundary,tessellator,mesh);
     outputMesh(mesh, testName, generators.mPoints, plotIndex);
-    mesh.clear();   
+    mesh.clear();
     plotIndex++;
   }
 }
@@ -55,12 +55,12 @@ void testBoundary(Boundary2D<double>& boundary,
 // -----------------------------------------------------------------------
 // testAllBoundaries
 // -----------------------------------------------------------------------
-void testAllBoundaries(Tessellator<2,double>& tessellator) {
+void testAllBoundaries(Tessellator<2,double>& tessellator, int numSweeps) {
   for (int bid = 0; bid < 10; ++bid){
     cout << "Testing boundary type " << bid << endl;
     Boundary2D<double> boundary;
     boundary.setDefaultBoundary(bid);
-    testBoundary(boundary, tessellator, bid);
+    testBoundary(boundary, tessellator, bid, numSweeps);
   }
 }
 
@@ -73,24 +73,26 @@ int main(int argc, char** argv)
    MPI_Init(&argc, &argv);
 #endif
 
+   int numSweeps = 2;
+   if (argc >= 2) {
+     numSweeps = std::stoi(argv[1]);
+   }
 
 #ifdef POLYTOPE_ENABLE_TRIANGLE
    {
      cout << "\nTriangle Tessellator:\n" << endl;
      TriangleTessellator<double> tessellator;
-     testAllBoundaries(tessellator);
+     testAllBoundaries(tessellator, numSweeps);
    }
 #endif
-   
+
 #ifdef POLYTOPE_ENABLE_BOOST
    {
      cout << "\nBoost Tessellator:\n" << endl;
      BoostTessellator<double> tessellator;
-     testAllBoundaries(tessellator);
+     testAllBoundaries(tessellator, numSweeps);
    }
-#endif      
-
-   cout << "PASS" << endl;
+#endif
 
 #ifdef POLYTOPE_ENABLE_MPI
    MPI_Finalize();

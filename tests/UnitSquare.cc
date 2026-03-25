@@ -38,7 +38,7 @@ void checkCartesianMesh(Tessellation<2,double>& mesh, unsigned nx, unsigned ny)
    for (unsigned i = 0; i != nx*ny; ++i) POLY_CHECK(mesh.cells[i].size() == 4);
    
    std::vector<std::set<unsigned> > nodeCells = mesh.computeNodeCells();
-   for (unsigned i = 0; i != (nx+1)*(ny+1); ++i)
+   for (unsigned i = 0; i < (nx+1)*(ny+1); ++i)
    {
       POLY_CHECK( (nodeCells[i].size() == 4) ||
                   (nodeCells[i].size() == 2) ||
@@ -49,18 +49,15 @@ void checkCartesianMesh(Tessellation<2,double>& mesh, unsigned nx, unsigned ny)
 // -----------------------------------------------------------------------
 // generateMesh
 // -----------------------------------------------------------------------
-void generateMesh(Tessellator<2,double>& tessellator)
+void generateMesh(Tessellator<2,double>& tessellator,
+                  int Nmin, int Nmax, int increment)
 {
   // Set the boundary
   Boundary2D<double> boundary;
   boundary.setUnitSquare();
   Generators<2,double> generators( boundary );
   
-  const unsigned Nmin   = 2;
-  const unsigned Nmax   = 101;
-
-  
-  for (unsigned nx = Nmin; nx != Nmax; ++nx) {
+  for (unsigned nx = Nmin; nx <= Nmax; nx += increment) {
     cout << "Testing nx=" << nx << endl;
 
     // Create generators
@@ -102,12 +99,33 @@ int main(int argc, char** argv)
   MPI_Init(&argc, &argv);
 #endif
 
+  // Accepts 3 input parameters:
+  // 1. The minimum value of nx (defaults to 2).
+  // 2. The maximum value of nx (defaults to 102).
+  // 3. The positive (integer) increment by which nx is increased after each
+  //    mesh generation (defaults to 10).
+  int Nmin = 2;
+  int Nmax = 102;
+  int increment = 10;
+
+  if(argc >= 2) {
+    Nmin = std::stoi(argv[1]);
+    if(argc >= 3) {
+      Nmax = std::stoi(argv[2]);
+      if(argc >= 4) {
+        increment = std::stoi(argv[3]);
+      }
+    }
+  }
+  POLY_CHECK2(Nmin > 0, "Nmin must be greater than 0");
+  POLY_CHECK2(Nmax > Nmin, "Nmax must be greater than Nmin");
+  POLY_CHECK2(increment < (Nmax - Nmin), "Increment must be less than Nmax - Nmin");
 
 #ifdef POLYTOPE_ENABLE_TRIANGLE
   {
     cout << "\nTriangle Tessellator:\n" << endl;
     TriangleTessellator<double> tessellator;
-    generateMesh(tessellator);
+    generateMesh(tessellator, Nmin, Nmax, increment);
   }
 #endif   
 
@@ -115,7 +133,7 @@ int main(int argc, char** argv)
   {
     cout << "\nBoost Tessellator:\n" << endl;
     BoostTessellator<double> tessellator;
-    generateMesh(tessellator);
+    generateMesh(tessellator, Nmin, Nmax, increment);
   }
 #endif
 
@@ -123,8 +141,6 @@ int main(int argc, char** argv)
    // VoroPP_2d<double> voro;
    // generateMesh(voro);
    // cout << "Voro 2D: PASS" << endl;
-
-  cout << "PASS" << endl;
 
 #ifdef POLYTOPE_ENABLE_MPI
   MPI_Finalize();

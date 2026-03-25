@@ -116,7 +116,7 @@ int main(int argc, char** argv) {
   //   cerr << endl;
   // }
 
-  cout << "PASS" << endl;
+  
 
 #ifdef POLYTOPE_ENABLE_MPI
    MPI_Finalize();
