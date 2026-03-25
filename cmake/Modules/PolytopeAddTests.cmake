@@ -26,7 +26,7 @@ macro(polytope_add_test target)
   blt_add_executable(NAME ${target}
     SOURCES ${target}.cc
     DEPENDS_ON polytopeC ${POLYTOPE_TPL_DEPENDS}
-    OUTPUT_DIR ${CMAKE_BINARY_DIR}/tests
+    OUTPUT_DIR ${CMAKE_BINARY_DIR}/bin
   )
 
   target_compile_options(${target} PRIVATE ${POLYTOPE_CXX_COMPILE_FLAGS})
