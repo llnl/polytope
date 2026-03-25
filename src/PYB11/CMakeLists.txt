@@ -19,7 +19,7 @@ configure_file(Tessellators.py.in ${PROJECT_BINARY_DIR}/src/PYB11/Tessellators.p
 PYB11Generator_add_module(polytope
   MODULE   polytope
   SOURCE   polytope_PYB11.py
-  INCLUDES ${CMAKE_INSTALL_PREFIX}/include/polytope
+  INCLUDES ${CMAKE_INSTALL_PREFIX}/include/polytope ${CMAKE_CURRENT_SOURCE_DIR}
   LINKS    polytopeC
   USE_BLT  ON
   INSTALL  ${POLYTOPE_SITE_PACKAGES_PATH}

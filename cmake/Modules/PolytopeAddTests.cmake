@@ -4,95 +4,40 @@
 
 #--------------------------------------------------------------
 # polytope_add_test
-# Add a serial test to Polytope
+# Add a test to Polytope
 #--------------------------------------------------------------
-macro(polytope_add_test name dependency_list)
-  # Every test links to the polytope library
-  set(TEST_LINK_LIBRARIES polytopeC)
+macro(polytope_add_test target)
+  set(options )
+  set(singleValueArgs NUMTASKS)
+  set(multiValueArgs )
 
-  # Determine dependencies for tests.
-  set(BUILD_TEST ON)
-  foreach(_dependency ${dependency_list})
-    if (_dependency STREQUAL "BOOST")
-      set(BUILD_TEST ${POLYTOPE_ENABLE_BOOST})
-    endif()
+  cmake_parse_arguments(arg
+    "${options}" "${singleValueArgs}" "${multiValueArgs}" ${ARGN})
 
-    if (_dependency STREQUAL "BOOST_VORONOI")
-      set(BUILD_TEST ${POLYTOPE_ENABLE_BOOST})
-    endif()
-
-    if(_dependency STREQUAL "TETGEN")
-      set(BUILD_TEST ${POLYTOPE_ENABLE_TETGEN})
-      list(APPEND TEST_LINK_LIBRARIES tetgen)
-    endif()
-
-    if(_dependency STREQUAL "TRIANGLE")
-      set(BUILD_TEST ${POLYTOPE_ENABLE_TRIANGLE})
-      list(APPEND TEST_LINK_LIBRARIES triangle)
-    endif()
-  endforeach()
-
-  # Build the test executable
-  if (BUILD_TEST)
-    set(TEST_NAME "test_${name}")
-    add_executable(${TEST_NAME} "${TEST_NAME}.cc")
-    target_link_libraries(${TEST_NAME} ${TEST_LINK_LIBRARIES})
-
-    # Special CTest run instructions
-    add_test(${TEST_NAME} ${TEST_NAME})
-    set_tests_properties(${TEST_NAME}
-      PROPERTIES PASS_REGULAR_EXPRESSION PASS
-      WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
-  endif()
-endmacro()
-
-#--------------------------------------------------------------
-# polytope_add_distributed_test
-# Add a parallel with custom run instructions
-#--------------------------------------------------------------
-macro(polytope_add_distributed_test name dependency_list procs)
-
-  # Check for MPI and determine if you have the necessary
-  # components to build the test.
-  set(BUILD_TEST true)
-  if(POLYTOPE_ENABLE_MPI AND POLYTOPE_MPIEXEC)
-    # Every test links to the polytope library
-    set(TEST_LINK_LIBRARIES polytopeC)
-    foreach(_dependency ${dependency_list})
-      set(DEP_NAME "POLYTOPE_ENABLE_${_dependency}")
-      if(NOT ${DEP_NAME})
-	set(BUILD_TEST false)
-      endif()
-      # If using Tetgen, remember to link to its library
-      if(_dependency STREQUAL "TETGEN")
-	list(APPEND TEST_LINK_LIBRARIES tetgen)
-      endif()
-      # If using Triangle, remember to link to its library
-      if(_dependency STREQUAL "TRIANGLE")
-	list(APPEND TEST_LINK_LIBRARIES triangle)
-      endif()
-    endforeach()
+  if(NOT DEFINED arg_NUMTASKS OR "${arg_NUMTASKS}" STREQUAL "")
+    set(arg_NUMTASKS 1)
+    message("--- Creating test ${target}")
   else()
-    set(BUILD_TEST false)
+    message("--- Creating test ${target}: N=${arg_NUMTASKS}")
   endif()
 
-  # Build the test executable
-  if(BUILD_TEST)
-    set(TEST_NAME "test_${name}")
-    add_executable(${TEST_NAME} "${TEST_NAME}.cc")
-    target_link_libraries(${TEST_NAME} ${TEST_LINK_LIBRARIES})
-    # Special CTest run instructions
-    #add_test(${TEST_NAME} ${TEST_NAME})
-    foreach(proc ${procs})
-      add_test(${TEST_NAME}_${proc}_proc 
-	${POLYTOPE_MPIEXEC} 
-	${POLYTOPE_MPIEXEC_NUMPROC_FLAG} 
-	${proc}
-	${CMAKE_CURRENT_BINARY_DIR}/${TEST_NAME}
-	${MPIEXEC_POSTFLAGS})
-      set_tests_properties(${TEST_NAME}_${proc}_proc 
-	PROPERTIES PASS_REGULAR_EXPRESSION PASS
-	WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
-    endforeach()
-  endif()
+  get_property(POLYTOPE_TPL_DEPENDS GLOBAL PROPERTY POLYTOPE_TPL_DEPENDS)
+  get_property(POLYTOPE_CXX_COMPILE_FLAGS GLOBAL PROPERTY POLYTOPE_CXX_COMPILE_FLAGS)
+  blt_add_executable(NAME ${target}
+    SOURCES ${target}.cc
+    DEPENDS_ON polytopeC ${POLYTOPE_TPL_DEPENDS}
+    OUTPUT_DIR ${CMAKE_BINARY_DIR}/tests
+  )
+
+  target_compile_options(${target} PRIVATE ${POLYTOPE_CXX_COMPILE_FLAGS})
+  target_include_directories(${target} SYSTEM PRIVATE
+    ${POLYTOPE_ROOT_DIR}/tests
+    ${POLYTOPE_ROOT_DIR}/src
+    ${PROJECT_BINARY_DIR}/src
+  )
+
+  blt_add_test(NAME ${target}_test
+    COMMAND ${CMAKE_BINARY_DIR}/bin/${target}
+    NUM_MPI_TASKS ${arg_NUMTASKS}
+  )
 endmacro()

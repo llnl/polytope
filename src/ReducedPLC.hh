@@ -36,12 +36,12 @@ public:
     points()
   {
     std::set<int> indices;
-    int i;
-    for (i = 0; i != plc.facets.size(); ++i) {
+    size_t i;
+    for (i = 0u; i != plc.facets.size(); ++i) {
       std::copy(plc.facets[i].begin(), plc.facets[i].end(), std::inserter(indices, indices.end()));
     }
     std::map<int, int> old2new;
-    int j = 0;
+    size_t j = 0u;
     for (typename std::set<int>::const_iterator itr = indices.begin();
          itr != indices.end();
          ++itr ) {
@@ -61,11 +61,12 @@ public:
   {
     s << dynamic_cast<const PLC<Dimension, RealType>&>(plc) << std::endl
       << "PLC points : " << std::endl;
-    const unsigned n = plc.points.size()/Dimension;
-    for (unsigned i = 0; i != n; ++i)
-    {
+    const auto n = plc.points.size()/Dimension;
+    for (auto i = 0u; i != n; ++i) {
       s << "(";
-      for (unsigned j = 0; j != Dimension; ++j) s << plc.points[Dimension*i+j] << ",";
+      for (auto j = 0u; j != Dimension; ++j) {
+        s << plc.points[Dimension*i+j] << ",";
+      }
       s << ")," << std::endl;
     }
     return s;

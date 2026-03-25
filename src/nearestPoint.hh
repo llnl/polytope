@@ -41,8 +41,8 @@ struct ClosestPointOnFacetsFunctor<2, RealType> {
       POLY_ASSERT(facets[ifacet].size() == 2);
       i = facets[ifacet][0];
       j = facets[ifacet][1];
-      POLY_ASSERT(i >= 0 and i < numVertices);
-      POLY_ASSERT(j >= 0 and j < numVertices);
+      POLY_ASSERT(i < numVertices);
+      POLY_ASSERT(j < numVertices);
       geometry::closestPointOnSegment2D(point, &vertices[2*i], &vertices[2*j], candidate);
       dist = geometry::distance<2, RealType>(point, candidate);
       if (dist < minDist) {

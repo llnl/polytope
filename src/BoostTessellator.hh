@@ -7,8 +7,6 @@
 #ifndef __Polytope_BoostTessellator__
 #define __Polytope_BoostTessellator__
 
-#ifdef POLYTOPE_ENABLE_BOOST
-
 #include <vector>
 #include <cmath>
 #include <limits>
@@ -70,5 +68,4 @@ BoostTessellator<RealType>::mDegeneracy = 8.0/std::numeric_limits<typename Boost
 
 } //end polytope namespace
 
-#endif
 #endif

@@ -4,7 +4,11 @@ from PYB11Generator import *
 
 PYB11includes = ['"polytope.hh"',
                  '"polytope_write_OOGL.hh"',
-                 '"polytope_pybind11_helpers.hh"']
+                 '"polytope_pybind11_helpers.hh"',
+                 '"SiloReader.hh"',
+                 '"SiloWriter.hh"',
+                 '"Tessellator.hh"',
+                 '"Tessellation.hh"']
 
 PYB11namespaces = ["polytope"]
 

@@ -10,3 +10,12 @@
 #cmakedefine POLYTOPE_ENABLE_TRIANGLE
 #cmakedefine POLYTOPE_ENABLE_TETGEN
 #cmakedefine POLYTOPE_ENABLE_BOOST
+
+#include "Tessellator.hh"
+#include "Tessellation.hh"
+
+#ifdef POLYTOPE_ENABLE_BOOST
+#include "BoostTessellator.hh"
+#endif
+#include "SiloWriter.hh"
+#include "SiloReader.hh"

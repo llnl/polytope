@@ -7,20 +7,18 @@
 #include <map>
 #include <utility>
 
-#include <boost/geometry.hpp>
-#include <boost/geometry/geometries/geometries.hpp>
-#include <boost/geometry/geometries/register/point.hpp>
-#include <boost/geometry/algorithms/unique.hpp>
-
 #include "DimensionTraits.hh"
 #include "Point.hh"
 
 #ifdef POLYTOPE_ENABLE_BOOST
+#include <boost/geometry.hpp>
+#include <boost/geometry/geometries/geometries.hpp>
+#include <boost/geometry/geometries/register/point.hpp>
+#include <boost/geometry/algorithms/unique.hpp>
 BOOST_GEOMETRY_REGISTER_POINT_2D(polytope::Point2<double>, double, boost::geometry::cs::cartesian, x, y);
 BOOST_GEOMETRY_REGISTER_POINT_2D(polytope::Point2<int32_t>, int32_t, boost::geometry::cs::cartesian, x, y);
 BOOST_GEOMETRY_REGISTER_POINT_2D(polytope::Point2<int64_t>, int64_t, boost::geometry::cs::cartesian, x, y);
 #endif
-
 
 namespace polytope {
 
@@ -124,7 +122,7 @@ constructUnboundedMeshTopology(std::vector<std::vector<unsigned> >& cellNodes,
 }
 //------------------------------------------------------------------------------
 
-
+#ifdef POLYTOPE_ENABLE_BOOST
 //------------------------------------------------------------------------------
 // constructBoostBoundary
 //
@@ -220,7 +218,7 @@ void convertTessellationToRings(const polytope::Tessellation<2,RealType>& mesh,
   }
   POLY_ASSERT(cellRings.size() == mesh.cells.size());
 }
-
+#endif // POLYTOPE_ENABLE_BOOST
 
 //------------------------------------------------------------------------------
 // intersectBoundingBox

@@ -4,14 +4,12 @@
 #include <vector>
 #include <iostream>
 
-namespace polytope
-{
+namespace polytope {
 
 //! \class PLC - A Piecewise Linear Complex in 3D, or a Planar Straight Line 
 //! Graph (PSLG) in 2D.
 template<int Dimension, typename RealType>
-class PLC
-{
+class PLC {
   public:
 
   //! This two-dimensional array defines the topology of the facets of the 
@@ -83,32 +81,29 @@ class PLC
   {
     s << "PLC (" << Dimension << "D):" << std::endl;
     s << plc.facets.size() << " facets:" << std::endl;
-    for (int f = 0; f < plc.facets.size(); ++f)
-    {
+    for (auto f = 0; f < plc.facets.size(); ++f) {
       s << " " << f << ": (";
-      for (int p = 0; p < plc.facets[f].size(); ++p)
-      {
-        if (p < plc.facets[f].size()-1)
+      for (auto p = 0; p < plc.facets[f].size(); ++p) {
+        if (p < plc.facets[f].size()-1) {
           s << plc.facets[f][p] << ", ";
-        else
+        } else {
           s << plc.facets[f][p];
+        }
       }
       s << ")" << std::endl;
     }
     s << std::endl;
     s << plc.holes.size() << " holes:" << std::endl;
-    for (int h = 0; h < plc.holes.size(); ++h)
-    {
+    for (auto h = 0; h < plc.holes.size(); ++h) {
       s << "Hole #" << h << std::endl;
-      for (int f = 0; f < plc.holes[h].size(); ++f)
-      {
+      for (auto f = 0; f < plc.holes[h].size(); ++f) {
         s << "    " << f << ": (";
-        for (int p = 0; p < plc.holes[h][f].size(); ++p)
-        {
-          if (p < plc.holes[h][f].size()-1)
+        for (auto p = 0; p < plc.holes[h][f].size(); ++p) {
+          if (p < plc.holes[h][f].size()-1) {
             s << plc.holes[h][f][p] << ", ";
-          else
+          } else {
             s << plc.holes[h][f][p];
+          }
         }
         s << ")" << std::endl;
       }

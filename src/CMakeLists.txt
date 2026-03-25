@@ -1,11 +1,11 @@
 
 # Build a configuration header file from our options.
+include_directories(.)
+include_directories(${PROJECT_BINARY_DIR}/src)
 configure_file(
   "${PROJECT_SOURCE_DIR}/src/polytope.hh.in"
   "${PROJECT_BINARY_DIR}/src/polytope.hh"
 )
-install(FILES ${PROJECT_BINARY_DIR}/src/polytope.hh
-  DESTINATION include)
 
 set(polytope_sources
   KeyTraits.cc
@@ -20,7 +20,7 @@ set(polytope_sources
   polytope_internal_abort.cc)
 
 file(GLOB polytope_headers CONFIGURE_DEPENDS "*.hh")
-#list(APPEND polytope_headers "${PROJECT_BINARY_DIR}/src/polytope.hh")
+list(APPEND polytope_headers "${PROJECT_BINARY_DIR}/src/polytope.hh")
 
 # Include Silo stuff if we've found it.
 if (POLYTOPE_ENABLE_SILO)
@@ -52,6 +52,7 @@ if (POLYTOPE_ENABLE_MPI)
 endif()
 
 get_property(POLYTOPE_TPL_DEPENDS GLOBAL PROPERTY POLYTOPE_TPL_DEPENDS)
+get_property(POLYTOPE_CXX_COMPILE_FLAGS GLOBAL PROPERTY POLYTOPE_CXX_COMPILE_FLAGS)
 blt_add_library(NAME polytopeC
   HEADERS    ${polytope_headers}
   SOURCES    ${polytope_sources}

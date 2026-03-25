@@ -1,12 +1,8 @@
 #ifndef POLYTOPE_SILO_READER_HH
 #define POLYTOPE_SILO_READER_HH
 
-#ifdef POLYTOPE_ENABLE_SILO
-
 #ifdef POLYTOPE_ENABLE_MPI
-// extern "C" {
 #include <mpi.h>
-// }
 #define MMPI_Comm MPI_Comm
 #define MMPI_COMM_WORLD MPI_COMM_WORLD
 #else
@@ -277,7 +273,5 @@ class SiloReader<3, RealType>
 };
 
 } // end namespace
-
-#endif
 
 #endif

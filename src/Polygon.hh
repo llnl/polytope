@@ -1,14 +1,14 @@
 #ifndef POLYTOPE_POLYGON_HH
 #define POLYTOPE_POLYGON_HH
 
+#include <float.h>
+
 #include "polytope.hh"
 
-namespace polytope
-{
+namespace polytope {
 
 template <typename RealType>
-class Polygon
-{
+class Polygon {
   public:
 
   //! Construct a polygon by traversing the given vertices in order.

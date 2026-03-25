@@ -52,7 +52,7 @@ if(POLYTOPE_ENABLE_BOOST)
   if (DEFINED boost_DIR)
     find_package(Boost 1.50 REQUIRED NO_DEFAULT_PATH PATHS ${boost_DIR})
   else()
-    find_package(Boost 1.50 REQUIRED)
+    message(FATAL_ERROR "Must provide boost_DIR if enabling Boost")
   endif()
 
   if (TARGET Boost::headers)
@@ -81,37 +81,30 @@ if(POLYTOPE_ENABLE_SILO)
     set(HDF5_LIBS ${hdf5_DIR}/lib/libhdf5.a ${hdf5_DIR}/lib/libhdf5_hl.a)
     blt_import_library(NAME hdf5
       LIBRARIES ${HDF5_LIBS}
-      INCLUDES ${hdf5_DIR}/includes
+      INCLUDES ${hdf5_DIR}/include
       TREAT_INCLUDES_AS_SYSTEM ON
       EXPORTABLE ON)
     list(APPEND POLYTOPE_TPL_DEPENDS hdf5)
   endif()
-  find_package(Silo REQUIRED NO_DEFAULT_PATH PATHS ${silo_DIR})
-  list(APPEND POLYTOPE_TPL_DEPENDS silo)
-  # if (DEFINED hdf5_DIR)
-  #   find_package(HDF5 REQUIRED NO_DEFAULT_PATH PATHS ${hdf5_DIR})
-  # else()
-  #   find_package(HDF5 REQUIRED)
-  # endif()
-
-  # if (DEFINED silo_DIR)
-  #   find_package(Silo REQUIRED NO_DEFAULT_PATH PATHS ${silo_DIR})
-  # else()
-  #   find_package(Silo REQUIRED)
-  # endif()
-
-  # find_package(ZLIB REQUIRED)
-
-  # add_library(polytope_silo INTERFACE)
-  # target_include_directories(polytope_silo SYSTEM INTERFACE
-  #   ${SILO_INCLUDE_DIRS}
-  #   ${HDF5_INCLUDE_DIRS}
-  #   ${ZLIB_INCLUDE_DIRS})
-  # target_link_libraries(polytope_silo INTERFACE
-  #   ${SILO_LIBRARIES}
-  #   ${HDF5_LIBRARIES}
-  #   ZLIB::ZLIB)
-  # list(APPEND POLYTOPE_TPL_DEPENDS polytope_silo)
+  # find_package(Silo is currently broken but should be working by the next release
+  set(SILO_LIB_NAME libsiloh5.a)
+  if (POLYTOPE_ENABLE_APPLE)
+    set(SILO_LIB_NAME libsiloh5.dylib)
+  endif()
+  file(GLOB SILO_LIB "${silo_DIR}/*/${SILO_LIB_NAME}")
+  blt_import_library(NAME silo
+    LIBRARIES ${SILO_LIB}
+    TREAT_INCLUDES_AS_SYSTEM ON
+    INCLUDES ${silo_DIR}/include
+    EXPORTABLE ON)
+    list(APPEND POLYTOPE_TPL_DEPENDS silo)
+    get_target_property(_is_imported silo IMPORTED)
+    if(NOT ${_is_imported})
+      install(TARGETS silo
+        EXPORT polytope-targets
+        DESTINATION lib/cmake)
+      set_target_properties(silo PROPERTIES EXPORT_NAME polytope::silo)
+    endif()
 endif()
 
 if(POLYTOPE_ENABLE_TETGEN)
@@ -126,6 +119,7 @@ if(POLYTOPE_ENABLE_TETGEN)
     install(TARGETS tetgen
       EXPORT polytope-targets
       DESTINATION lib/cmake)
+    set_target_properties(tetgen PROPERTIES EXPORT_NAME polytope::tetgen)
   endif()
 endif()
 

@@ -7,8 +7,8 @@ set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 include(cmake/PolytopeVersion.cmake)
 project(Polytope LANGUAGES C CXX VERSION ${POLYTOPE_VERSION})
 
-# We require at least C++14
-set(CMAKE_CXX_STANDARD 14)
+# We require at least C++17
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -17,18 +17,38 @@ set(POLYTOPE_VERSION_MINOR ${PROJECT_VERSION_MINOR})
 
 set(POLYTOPE_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR} CACHE PATH "Path to top source directory")
 
+#-------------------------------------------------------------------------------
+# Set full rpath information by default
+#-------------------------------------------------------------------------------
+# use, i.e. don't skip the full RPATH for the build tree
+set(CMAKE_SKIP_BUILD_RPATH FALSE)
+
+# when building, don't use the install RPATH already
+# (but later on when installing)
+set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+
+list(APPEND CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+
+# add the automatically determined parts of the RPATH
+# which point to directories outside the build tree to the install RPATH
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
 # List containing target dependencies
 set(POLYTOPE_TPL_DEPENDS )
 
 #option(POLYTOPE_ENABLE_HIP "Build with HIP enabled" OFF) # Currently unsupported
-option(POLYTOPE_ENABLE_MPI "Build with MPI enabled" OFF)
+set(ENABLE_MPI OFF CACHE BOOL "")
+set(POLYTOPE_ENABLE_MPI ${ENABLE_MPI})
 option(POLYTOPE_ENABLE_BOOST "Enable Boost Voronoi tessellator" ON)
 option(POLYTOPE_ENABLE_SILO "Enable Silo read/write features" OFF)
 option(POLYTOPE_ENABLE_PYTHON "Enable Python interface" OFF)
 option(POLYTOPE_ENABLE_TRIANGLE "Enable Triangle Voronoi tesselator" OFF)
 option(POLYTOPE_ENABLE_TETGEN "Enable TetGen Voronoi tesselator" OFF)
 option(POLYTOPE_ENABLE_TESTING "Enable testing" ON)
-option(POLYTOPE_ENABLE_C "Enable C interface" OFF)
+if(NOT POLYTOPE_ENABLE_BOOST AND POLYTOPE_ENABLE_TESTING)
+  message(FATAL_ERROR "Testing relies on Boost. Must enable Boost to enable testing.")
+endif()
+option(POLYTOPE_ENABLE_APPLE "Enable Apple installation support" OFF)
 option(ENABLE_STATIC_TPLS "Used for libraries that require older HDF5 versions" OFF)
 option(BUILD_SHARED_LIBS "Build Polytope as shared library" OFF)
 
@@ -39,7 +59,7 @@ if (POLYTOPE_ENABLE_PYTHON AND DEFINED python_DIR)
   set(Python_EXECUTABLE ${python_DIR}/bin/python3)
   set(Python3_EXECUTABLE ${python_DIR}/bin/python3)
 endif()
-set(BLT_CXX_STD "c++14" CACHE STRING "")
+set(BLT_CXX_STD "c++17" CACHE STRING "")
 
 if(NOT EXISTS "${POLYTOPE_ROOT_DIR}/cmake/blt/SetupBLT.cmake")
   message(FATAL_ERROR "No BLT instance found. Update submodules.")
@@ -54,10 +74,6 @@ add_subdirectory(src)
 if (POLYTOPE_ENABLE_TESTING)
   enable_testing()
   add_subdirectory(tests)
-endif()
-
-if (POLYTOPE_ENABLE_C)
-  add_subdirectory(polytope_c)
 endif()
 
 # Export package to allow it to be installed with find_package

@@ -7,14 +7,12 @@
 #include "PLC.hh"
 #include "polytope_internal.hh"
 
-namespace polytope
-{
+namespace polytope {
 
 //! \class Mesh - A basic descriptor class for a topologically-consistent 
 //! arbitrary poly(gonal/hedral) mesh.
 template<int Dimension, typename RealType>
-class Tessellation
-{
+class Tessellation {
   public:
 
   // Default constructor.
@@ -104,20 +102,16 @@ class Tessellation
   std::vector<std::vector<unsigned> > sharedNodes, sharedFaces;
 
   //! Find the set of cells that touch each mesh node.
-  std::vector<std::set<unsigned> > computeNodeCells()
-  {
+  std::vector<std::set<unsigned> > computeNodeCells() {
     std::vector<std::set<unsigned> > result(nodes.size()/Dimension);
-    for (unsigned i = 0; i != cells.size(); ++i)
-    {
+    for (auto i = 0; i <= (unsigned)cells.size(); ++i) {
       for (std::vector<int>::const_iterator faceItr = cells[i].begin();
            faceItr != cells[i].end();
-           ++faceItr)
-      {
+           ++faceItr) {
         const unsigned iface = *faceItr < 0 ? ~(*faceItr) : *faceItr;
         for (std::vector<unsigned>::const_iterator nodeItr = faces[iface].begin();
              nodeItr != faces[iface].end();
-             ++nodeItr)
-        {
+             ++nodeItr) {
           POLY_ASSERT(*nodeItr < result.size());
           result[*nodeItr].insert(i);
         }
@@ -152,13 +146,11 @@ class Tessellation
   {
     s << "Tessellation (" << Dimension << "D):" << std::endl;
     s << mesh.nodes.size()/Dimension << " nodes:" << std::endl;
-    for (int n = 0; n < mesh.nodes.size()/Dimension; ++n)
-    {
+    for (auto n = 0; n < mesh.nodes.size()/Dimension; ++n) {
       s << " " << n << ": "; 
-      if (Dimension == 2)
+      if (Dimension == 2) {
         s << "(" << mesh.nodes[2*n] << ", " << mesh.nodes[2*n+1] << ")" << std::endl;
-      else
-      {
+      } else {
         POLY_ASSERT(Dimension == 3);
         s << "(" << mesh.nodes[3*n] << ", " << mesh.nodes[3*n+1] << ", " << mesh.nodes[3*n+2] << ")" << std::endl;
       }
@@ -166,36 +158,35 @@ class Tessellation
     s << std::endl;
 
     s << mesh.faces.size() << " faces:" << std::endl;
-    for (int f = 0; f < mesh.faces.size(); ++f)
+    for (auto f = 0; f < mesh.faces.size(); ++f)
     {
       s << " " << f << ": (";
-      for (int p = 0; p < mesh.faces[f].size(); ++p)
-      {
-        if (p < mesh.faces[f].size()-1)
+      for (auto p = 0; p < mesh.faces[f].size(); ++p) {
+        if (p < mesh.faces[f].size()-1) {
           s << mesh.faces[f][p] << ", ";
-        else
+        } else {
           s << mesh.faces[f][p];
+        }
       }
       s << ")" << std::endl;
     }
     s << std::endl;
 
     s << mesh.cells.size() << " cells:" << std::endl;
-    for (int c = 0; c < mesh.cells.size(); ++c)
-    {
+    for (auto c = 0; c < mesh.cells.size(); ++c) {
       s << " " << c << ": (";
-      for (int f = 0; f < mesh.cells[c].size(); ++f)
-      {
-        if (f < mesh.cells[c].size()-1)
+      for (auto f = 0; f < mesh.cells[c].size(); ++f) {
+        if (f < mesh.cells[c].size()-1) {
           s << mesh.cells[c][f] << ", ";
-        else
+        } else {
           s << mesh.cells[c][f];
+        }
       }
       s << ")" << std::endl;
     }
 
     s << mesh.boundaryNodes.size() << " boundary nodes:" << std::endl;
-    for (int i = 0; i != mesh.boundaryNodes.size(); ++i) s << " " << mesh.boundaryNodes[i];
+    for (auto i = 0; i != mesh.boundaryNodes.size(); ++i) s << " " << mesh.boundaryNodes[i];
     s << std::endl;
 
     return s;

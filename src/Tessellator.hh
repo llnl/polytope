@@ -11,17 +11,13 @@
 #include "polytope_internal.hh"
 #include "polytope_geometric_utilities.hh"
 
-namespace polytope
-{
-
-
+namespace polytope {
 
 //! \class Tessellator - An abstract base class for objects that generate 
 //! Voronoi and Voronoi-like tessellations for sets of points and/or 
 //! geometries.
 template<int Dimension, typename RealType>
-class Tessellator
-{
+class Tessellator {
 public:
 
   // The type of QuantizedTessellation we'll be using.

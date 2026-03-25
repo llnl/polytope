@@ -6,6 +6,7 @@
 
 #include "polytope.hh"
 #include "MeshEditor.hh"
+#include "polytope_geometric_utilities.hh"
 
 namespace polytope {
 
@@ -151,7 +152,7 @@ flagEdgesForCleaning(const RealType edgeTol,
         if (iedge == nedges) {
            indexToEdge[iedge] = edge;
            length = geometry::distance<Dimension, RealType>
-              (&mMesh.nodes[Dimension*inode0], &mMesh.nodes[Dimension*inode1]);
+             (&mMesh.nodes[Dimension*inode0], &mMesh.nodes[Dimension*inode1]);
            edgeLength.push_back(length);
         }
         cellEdgeIDs.push_back(iedge);
@@ -200,12 +201,12 @@ flagEdgesForCleaning(const RealType edgeTol,
       otherNodes.push_back(otherNode);
     }
     POLY_ASSERT(otherNodes.size() == 2);
-    
-    const bool collinear = 
-       geometry::collinear<Dimension, RealType>(&mMesh.nodes[2*(*nodeItr)],
-                                                &mMesh.nodes[2*otherNodes[0]],
-                                                &mMesh.nodes[2*otherNodes[1]],
-                                                1.0e-8);
+
+    const bool collinear =
+      geometry::collinear<Dimension, RealType>(&mMesh.nodes[2*(*nodeItr)],
+                                               &mMesh.nodes[2*otherNodes[0]],
+                                               &mMesh.nodes[2*otherNodes[1]],
+                                               1.0e-8);
     if (not collinear) cornerNodes.insert(*nodeItr);// isCornerNode[*nodeItr] = 1;
   }
   

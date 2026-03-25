@@ -11,6 +11,7 @@
 
 #include "Tessellation.hh"
 #include "ReducedPLC.hh"
+#include "KeyTraits.hh"
 
 #ifdef POLYTOPE_ENABLE_MPI
 #include <mpi.h>

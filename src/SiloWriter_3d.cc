@@ -1,31 +1,26 @@
+
 #include "polytope.hh"
-#ifdef POLYTOPE_ENABLE_SILO
+#include "SiloWriter.hh"
+
 #include <fstream>
 #include <set>
 #include <cstring>
 #include <sys/stat.h>
 #include <dirent.h>
+#include <cmath>
 #include "silo.h"
 
 #ifdef POLYTOPE_ENABLE_MPI
-// extern "C" {
-#include "mpi.h"
 #include "pmpio.h"
-// }
-#else
-#define MPI_Comm int
-#define MPI_COMM_WORLD 0
 #endif
 
 #include "SiloUtils.hh"
 
-namespace polytope
-{
+namespace polytope {
 
 using namespace std;
 
-namespace 
-{
+namespace {
 
 //-------------------------------------------------------------------
 // Traverse the given points of a polygonal facet along their convex
@@ -159,7 +154,7 @@ write(const Tessellation<3, RealType>& mesh,
       const string& directory,
       int cycle,
       RealType time,
-      MPI_Comm comm,
+      MMPI_Comm comm,
       int numFiles,
       int mpiTag)
 {
@@ -173,8 +168,8 @@ write(const Tessellation<3, RealType>& mesh,
   char filename[1024];
 #ifdef POLYTOPE_ENABLE_MPI
   int nproc = 1, rank = 0;
-  MPI_Comm_size(comm, &nproc);
-  MPI_Comm_rank(comm, &rank);
+  MMPI_Comm_size(comm, &nproc);
+  MMPI_Comm_rank(comm, &rank);
   if (numFiles == -1)
     numFiles = nproc;
   POLY_ASSERT(numFiles <= nproc);
@@ -572,4 +567,3 @@ template class SiloWriter<3, double>;
 
 } // end namespace
 
-#endif

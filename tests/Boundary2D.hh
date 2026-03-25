@@ -1,38 +1,24 @@
 #ifndef POLYTOPE_BOUNDARY2D_HH
 #define POLYTOPE_BOUNDARY2D_HH
 
-#ifdef HAVE_BOOST
-
-#include <iostream>
-#include <vector>
-#include <set>
-#include <cassert>
-#include <cstdlib>
-
-#include "polytope.hh"
 #include "within.hh"
-#include "polytope_test_utilities.hh"
+#include "polytope_boost_utilities.hh"
 
-// We use the Boost.Geometry library to handle polygon intersections and such.
-#include <boost/geometry.hpp>
-#include <boost/geometry/geometries/geometries.hpp>
+//------------------------------------------------------------------------------
+// Define our own local random number generator wrapping the standard srand &
+// rand methods.
+//------------------------------------------------------------------------------
+inline
+double random01() {
+  return double(rand())/RAND_MAX;
+}
 
 using namespace std;
-using namespace polytope;
-
+namespace polytope {
 //------------------------------------------------------------------------
 template<typename RealType>
-class Boundary2D
-{
+class Boundary2D {
 public:
-  // ------------- Some handy typedefs for Boost.Geometry --------------- //
-  typedef boost::geometry::model::point<RealType, 2, boost::geometry::cs::cartesian>
-    BGpoint;
-  typedef boost::geometry::model::polygon<BGpoint,false> 
-    BGpolygon;
-  typedef boost::geometry::model::ring<BGpoint,false>
-    BGring;
-
   // -------------- Public member variables and routines ---------------- //
   
   // Number of dimensions
@@ -44,9 +30,8 @@ public:
   vector<RealType> mPLCpoints;
   // Ranges of bounding box
   RealType mCenter[3], mLow[3], mHigh[3], mArea;
-  
-  BGpolygon mBGboundary;
-  
+
+  BGPolygon<RealType, 2> mBGboundary;
   
   // Define enum to keep track fo the type of boundary called for
   enum BoundaryType{
@@ -516,7 +501,7 @@ public:
 				 8.7, 0.4, 7.2, 0.8};
 
     mPLC.facets.resize( nSides, vector<int>(2) );
-    for (unsigned i = 0; i != nSides; ++i){
+    for (unsigned i = 0; i != nSides; ++i) {
       unsigned j = nSides - i - 1;
       mPLCpoints.push_back(points[2*j  ]);
       mPLCpoints.push_back(points[2*j+1]);
@@ -574,7 +559,7 @@ public:
   // set of points in mPLCpoints starting at index 'offset'
   //------------------------------------------------------------------------
   bool inside( const RealType x, const RealType y, 
-	       const unsigned nSides ,unsigned& offset ) {
+	       const unsigned nSides, unsigned& offset ) {
     unsigned j = nSides - 1;
     bool isInside = false;
     for (unsigned i = 0; i < nSides; ++i ) {
@@ -630,16 +615,15 @@ public:
       radius = max( radius, sqrt( distance ) );
     }
   }
-  
+
   //------------------------------------------------------------------------
   // BoostMyBoundary
   // Store the boundary info as a Boost.Geometry polygon
   //------------------------------------------------------------------------
   void boostMyBoundary() {
     boost::geometry::clear(mBGboundary);
-    mBGboundary = makePolygon<RealType>(mPLC, mPLCpoints);
+    mBGboundary = makeBGPolygon<RealType>(mPLC, mPLCpoints);
   }
-  
   
   //------------------------------------------------------------------------
   // getPointInside
@@ -654,12 +638,5 @@ public:
     }
   }
 };
-
-#endif
-
-#else
-
-// Forward declaration
-template<typename RealType> class Boundary2d;
-
+}
 #endif

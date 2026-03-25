@@ -1,6 +1,8 @@
 //------------------------------------------------------------------------
 // BoostTessellator
 //------------------------------------------------------------------------
+#include "BoostTessellator.hh"
+
 #include <iostream>
 #include <algorithm>
 #include <set>

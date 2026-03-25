@@ -1,5 +1,6 @@
+#include "SiloWriter.hh"
 #include "polytope.hh"
-#ifdef POLYTOPE_ENABLE_SILO
+
 #include <fstream>
 #include <set>
 #include <cstring>
@@ -8,24 +9,17 @@
 #include "silo.h"
 
 #ifdef POLYTOPE_ENABLE_MPI
-// extern "C" {
-#include "mpi.h"
 #include "pmpio.h"
-// }
-#else
-#define MPI_Comm int
-#define MPI_COMM_WORLD 0
 #endif
 
 #include "SiloUtils.hh"
+#include "Tessellation.hh"
 
-namespace polytope
-{
+namespace polytope {
 
 using namespace std;
 
-namespace 
-{
+namespace {
 
 //-------------------------------------------------------------------
 // Traverse the nodes of cell i within the given tessellation in 
@@ -42,8 +36,7 @@ template <typename RealType>
 void 
 traverseNodes(const Tessellation<2, RealType>& mesh,
               int i,
-              vector<int>& nodes)
-{
+              vector<int>& nodes) {
   const vector<int>& cellFaces = mesh.cells[i];
   for (int j = 0; j != cellFaces.size(); ++j) 
   {
@@ -71,8 +64,7 @@ traverseNodes(const Tessellation<2, RealType>& mesh,
 void*
 PMPIO_createFile(const char* filename,
                  const char* dirname,
-                 void* userData)
-{
+                 void* userData) {
   int driver = DB_HDF5;
   DBfile* file = DBCreate(filename, 0, DB_LOCAL, 0, driver);
   DBMkDir(file, dirname);
@@ -86,8 +78,7 @@ void*
 PMPIO_openFile(const char* filename, 
                const char* dirname,
                PMPIO_iomode_t iomode, 
-               void* userData)
-{
+               void* userData) {
   int driver = DB_HDF5;
   DBfile* file;
   if (iomode == PMPIO_WRITE)
@@ -120,23 +111,22 @@ PMPIO_closeFile(void* file,
 //-------------------------------------------------------------------
 template <typename RealType>
 void 
-SiloWriter<2, RealType>::
-write(const Tessellation<2, RealType>& mesh, 
-     const map<string, RealType*>& nodeFields,
-     const map<string, vector<int>*>& nodeTags,
-     const map<string, RealType*>& edgeFields,
-     const map<string, vector<int>*>& edgeTags,
-     const map<string, RealType*>& faceFields,
-     const map<string, vector<int>*>& faceTags,
-     const map<string, RealType*>& cellFields,
-     const map<string, vector<int>*>& cellTags,
-     const string& filePrefix,
-     const string& directory,
-     int cycle,
-     RealType time,
-     MPI_Comm comm,
-     int numFiles,
-     int mpiTag)
+SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh, 
+                               const map<string, RealType*>& nodeFields,
+                               const map<string, vector<int>*>& nodeTags,
+                               const map<string, RealType*>& edgeFields,
+                               const map<string, vector<int>*>& edgeTags,
+                               const map<string, RealType*>& faceFields,
+                               const map<string, vector<int>*>& faceTags,
+                               const map<string, RealType*>& cellFields,
+                               const map<string, vector<int>*>& cellTags,
+                               const string& filePrefix,
+                               const string& directory,
+                               int cycle,
+                               RealType time,
+                               MMPI_Comm comm,
+                               int numFiles,
+                               int mpiTag)
 {
   // Strip .silo off of the prefix if it's there.
   string prefix = filePrefix;
@@ -145,13 +135,11 @@ write(const Tessellation<2, RealType>& mesh,
     prefix.erase(index);
 
   // Open a file in Silo/HDF5 format for writing.
-  char filename[1024];
 #ifdef POLYTOPE_ENABLE_MPI
   int nproc = 1, rank = 0;
-  MPI_Comm_size(comm, &nproc);
-  MPI_Comm_rank(comm, &rank);
-  if (numFiles == -1)
-    numFiles = nproc;
+  MMPI_Comm_size(comm, &nproc);
+  MMPI_Comm_rank(comm, &rank);
+  if (numFiles == -1) numFiles = nproc;
   POLY_ASSERT(numFiles <= nproc);
 
   // We put the entire data set into a directory named after the 
@@ -159,25 +147,18 @@ write(const Tessellation<2, RealType>& mesh,
 
   // Create the master directory if we need to.
   string masterDirName = directory;
-  if (masterDirName.empty())
-  {
-    char dirname[1024];
-    snprintf(dirname, 1024, "%s-%d", filePrefix.c_str(), nproc);
-    masterDirName = dirname;
+  if (masterDirName.empty()) {
+    masterDirName = filePrefix + "-" + std::to_string(nproc);
   }
-  if (rank == 0)
-  {
+  if (rank == 0) {
     DIR* masterDir = opendir(directory.c_str());
-    if (masterDir == 0)
-      mkdir((char*)masterDirName.c_str(), S_IRWXU | S_IRWXG);
-    else
+    if (masterDir == 0) {
+      mkdir(masterDirName.c_str(), S_IRWXU | S_IRWXG);
+    } else {
       closedir(masterDir);
-    MPI_Barrier(comm);
+    }
   }
-  else
-  {
-    MPI_Barrier(comm);
-  }
+  MPI_Barrier(comm);
 
   // Initialize poor man's I/O and figure out group ranks.
   PMPIO_baton_t* baton = PMPIO_Init(numFiles, PMPIO_WRITE, comm, mpiTag, 
@@ -189,43 +170,41 @@ write(const Tessellation<2, RealType>& mesh,
   int rankInGroup = PMPIO_RankInGroup(baton, rank);
 
   // Create a subdirectory for each group.
-  char groupdirname[1024];
-  snprintf(groupdirname, 1024, "%s/%d", masterDirName.c_str(), groupRank);
-  if (rankInGroup == 0)
-  {
-    DIR* groupDir = opendir(groupdirname);
-    if (groupDir == 0)
-      mkdir((char*)groupdirname, S_IRWXU | S_IRWXG);
-    else
+  std::string groupdirname = masterDirName + "/" + std::to_string(groupRank);
+  if (rankInGroup == 0) {
+    DIR* groupDir = opendir(groupdirname.c_str());
+    if (groupDir == 0) {
+      mkdir(groupdirname.c_str(), S_IRWXU | S_IRWXG);
+    } else {
       closedir(groupDir);
-    MPI_Barrier(comm);
+    }
   }
-  else
-  {
-    MPI_Barrier(comm);
-  }
+  MPI_Barrier(comm);
 
   // Determine a file name.
-  if (cycle >= 0)
-    snprintf(filename, 1024, "%s/%s-%d.silo", groupdirname, prefix.c_str(), cycle);
-  else
-    snprintf(filename, 1024, "%s/%s.silo", groupdirname, prefix.c_str());
+  std::string filename;
+  // Determine the file name.
+  if (cycle >= 0) {
+    filename = groupdirname + "/" + prefix + "-" + std::to_string(cycle) + ".silo";
+  } else {
+    filename = groupdirname + "/" + prefix + ".silo";
+  }
 
-  char dirname[1024];
-  snprintf(dirname, 1024, "domain_%d", rankInGroup);
-  DBfile* file = (DBfile*)PMPIO_WaitForBaton(baton, filename, dirname);
+  std::string dirname = "domain_" + std::to_string(rankInGroup);
+  DBfile* file = (DBfile*)PMPIO_WaitForBaton(baton, filename.c_str(), dirname.c_str());
 #else
   string dirname = directory;
-  if (dirname.empty())
-    dirname = ".";
-
-  if (cycle >= 0)
-    snprintf(filename, 1024, "%s/%s-%d.silo", dirname.c_str(), prefix.c_str(), cycle);
-  else
-    snprintf(filename, 1024, "%s/%s.silo", dirname.c_str(), prefix.c_str());
+  if (dirname.empty()) dirname = ".";
+  std::string filename;
+  // Determine the file name.
+  if (cycle >= 0) {
+    filename = dirname + "/" + prefix + "-" + std::to_string(cycle) + ".silo";
+  } else {
+    filename = dirname + "/" + prefix + ".silo";
+  }
 
   int driver = DB_HDF5;
-  DBfile* file = DBCreate(filename, 0, DB_LOCAL, 0, driver);
+  DBfile* file = DBCreate(filename.c_str(), 0, DB_LOCAL, 0, driver);
   DBSetDir(file, "/");
 #endif
 
@@ -455,16 +434,16 @@ write(const Tessellation<2, RealType>& mesh,
   PMPIO_Finish(baton);
 
   // Finally, write the uber-master file.
-  if (rank == 0)
-  {
-    char masterFileName[1024];
-    if (cycle >= 0)
-      snprintf(masterFileName, 1024, "%s/%s-%d.silo", masterDirName.c_str(), prefix.c_str(), cycle);
-    else
-      snprintf(masterFileName, 1024, "%s/%s.silo", masterDirName.c_str(), prefix.c_str());
+  if (rank == 0) {
+    std::string masterFileName;
+    if (cycle >= 0) {
+      masterFileName = masterDirName + "/" + prefix + "-" + std::to_string(cycle) + ".silo";
+    } else {
+      masterFileName = masterDirName + "/" + prefix + ".silo";
+    }
+
     int driver = DB_HDF5;
-    // cerr << "Opening MASTER file " << masterFileName << endl;
-    DBfile* file = DBCreate(masterFileName, DB_CLOBBER, DB_LOCAL, "Master file", driver);
+    DBfile* file = DBCreate(masterFileName.c_str(), DB_CLOBBER, DB_LOCAL, "Master file", driver);
 
     vector<char*> meshNames(numFiles*numChunks);
     vector<int> meshTypes(numFiles*numChunks, DB_UCDMESH);
@@ -473,17 +452,19 @@ write(const Tessellation<2, RealType>& mesh,
         faceFields.size() +
         cellFields.size());
     vector<int> varTypes(numFiles*numChunks, DB_UCDVAR);
-    for (int i = 0; i < numFiles; ++i)
-    {
-      for (int c = 0; c < numChunks; ++c)
-      {
+    for (int i = 0; i < numFiles; ++i) {
+      for (int c = 0; c < numChunks; ++c) {
         // Mesh.
+        std::string meshName;
         char meshName[1024];
-        if (cycle >= 0)
+        if (cycle >= 0) {
+          meshName = std::to_string(i) + "/" + prefix + "-" + std::to_string(cycle)
+            + ".silo:/domain_" + std::to_string(c) + "/mesh";
           snprintf(meshName, 1024, "%d/%s-%d.silo:/domain_%d/mesh", i, prefix.c_str(), cycle, c);
-        else
-          snprintf(meshName, 1024, "%d/%s.silo:/domain_%d/mesh", i, prefix.c_str(), c);
-        meshNames[i*numChunks+c] = strDup(meshName);
+        } else {
+          meshName = std::to_string(i) + "/" + prefix + ".silo:/domain_" + std::to_string(c) + "/mesh";
+        }
+        meshNames[i*numChunks+c] = strDup(meshName.c_str());
 
         // Field data.
         int fieldIndex = 0;
@@ -530,5 +511,3 @@ write(const Tessellation<2, RealType>& mesh,
 template class SiloWriter<2, double>;
 
 } // end namespace
-
-#endif

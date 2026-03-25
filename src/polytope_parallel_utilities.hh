@@ -8,7 +8,7 @@
 #include <vector>
 #include <limits>
 
-#include "mpi.h"
+#include <mpi.h>
 
 #include "KeyTraits.hh"
 

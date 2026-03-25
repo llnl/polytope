@@ -21,7 +21,12 @@ struct Point2 {
   CoordType x, y;
   unsigned index;
   Point2(): x(0), y(0), index(0) {}
-  Point2(const CoordType& xi, const CoordType& yi, const unsigned i = 0): x(xi), y(yi), index(i) {}
+
+  Point2(const CoordType& xi,
+         const CoordType& yi,
+         const unsigned i = 0) :
+    x(xi), y(yi), index(i) {}
+
   Point2& operator=(const Point2& rhs) { x = rhs.x; y = rhs.y; index = rhs.index; return *this; }
   bool operator==(const Point2& rhs) const { return (x == rhs.x and y == rhs.y); }
   bool operator!=(const Point2& rhs) const { return !(*this == rhs); }

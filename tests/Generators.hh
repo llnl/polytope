@@ -1,43 +1,23 @@
+// This file must be brought in through polytope_test_utilities.hh, do not include it separately
+
 #ifndef POLYTOPE_GENERATORS_HH
 #define POLYTOPE_GENERATORS_HH
 
-#ifdef HAVE_BOOST
-
-#include <iostream>
-#include <vector>
-#include <set>
-#include <cassert>
-#include <cstdlib>
-
-#include "polytope.hh"
 #include "Boundary2D.hh"
 
-// We use the Boost.Geometry library to determine if generators lie inside boundary
-#include <boost/geometry.hpp>
-#include <boost/geometry/geometries/geometries.hpp>
-
 using namespace std;
-using namespace polytope;
 
-
+namespace polytope {
 //------------------------------------------------------------------------
 template<int Dimension, typename RealType>
-class Generators
-{
+class Generators {
 public:
-   // ------------- Some handy typedefs for Boost.Geometry --------------- //
-   typedef boost::geometry::model::point<RealType, Dimension, boost::geometry::cs::cartesian>
-      BGpoint;
-   typedef boost::geometry::model::polygon<BGpoint,false> 
-      BGpolygon;
-   
    // -------------- Public member variables and routines ---------------- //
 
    // Number of generators
    unsigned nPoints;
    vector<RealType> mPoints;
-   Boundary2D<RealType>& mBoundary;
-   
+   Boundary2D<RealType>& mBoundary;   
    
    //------------------------------------------------------------------------
    // Constructor, destructor
@@ -59,7 +39,7 @@ public:
       nPoints = nGenerators;
 
       mBoundary.getBoundingBox();
-      
+
       for (unsigned iter = 0; iter < nGenerators; ++iter ){
          std::vector<RealType> pos(Dimension,0);
          bool inside = false;
@@ -68,7 +48,7 @@ public:
                pos[n] = (mBoundary.mHigh[n]-mBoundary.mLow[n]) * 
                   RealType(::random())/RAND_MAX + mBoundary.mLow[n];
             }
-            inside = boost::geometry::within( makePoint(pos),
+            inside = boost::geometry::within( makeBGPoint(pos),
                                               mBoundary.mBGboundary );
          }
          mPoints.insert( mPoints.end(), pos.begin(), pos.end() );
@@ -119,7 +99,7 @@ public:
             RealType theta = 2*M_PI*j/nArcs;
             pos[0] = mBoundary.mCenter[0] + rad*cos(theta);
             pos[1] = mBoundary.mCenter[1] + rad*sin(theta);
-            if( boost::geometry::within( makePoint(pos), mBoundary.mBGboundary) ){
+            if( boost::geometry::within( makeBGPoint(pos), mBoundary.mBGboundary) ){
                mPoints.push_back( pos[0] );
                mPoints.push_back( pos[1] );
             }
@@ -136,7 +116,7 @@ public:
    {
       std::vector<RealType> point;
       for (unsigned n=0; n<Dimension; ++n ) point.push_back( pos[n] );
-      bool inside = boost::geometry::within( makePoint(point), mBoundary.mBGboundary );
+      bool inside = boost::geometry::within( makeBGPoint(point), mBoundary.mBGboundary );
       POLY_ASSERT( inside );
       mPoints.insert( mPoints.end(), point.begin(), point.end() );
    }
@@ -155,7 +135,7 @@ public:
          for (unsigned ix = 0; ix != nx; ++ix){
             x = mBoundary.mLow[0] + (ix + 0.5)*dx;
             pos[0] = x;   pos[1] = y;
-            if( boost::geometry::within( makePoint(pos), mBoundary.mBGboundary) ){
+            if( boost::geometry::within( makeBGPoint(pos), mBoundary.mBGboundary) ){
                mPoints.push_back( x );
                mPoints.push_back( y );
             }
@@ -198,18 +178,17 @@ public:
       }
    }
 
-   //------------------------------------------------------------------------
-   // Create a Boost.Geometry point from a std::vector of data depending on
-   // the dimension of the problem. There really should be an easier way
-   //------------------------------------------------------------------------
-   BGpoint makePoint(std::vector<RealType> pointIn)
-   {
-      return makePoint2D(pointIn);
-      //return ( Dimension == 2 ? makePoint2D(pointIn) : makePoint3D(pointIn) );
-   }
-
+  //------------------------------------------------------------------------
+  // Create a Boost.Geometry point from a std::vector of data depending on
+  // the dimension of the problem. There really should be an easier way
+  //------------------------------------------------------------------------
+  BGPoint<RealType, Dimension> makeBGPoint(std::vector<RealType> pointIn) {
+    if constexpr (Dimension == 2) {
+        return BGPoint<RealType, 2>(pointIn[0], pointIn[1]);
+      } else if constexpr (Dimension == 3) {
+        return BGPoint<RealType, 3>(pointIn[0], pointIn[1], pointIn[2]);
+      }
+  }
 };
-
-
-#endif
+}
 #endif

@@ -1,4 +1,5 @@
-#ifdef POLYTOPE_ENABLE_SILO
+
+#include "SiloReader.hh"
 #include "polytope.hh"
 #include <fstream>
 #include <set>
@@ -8,25 +9,19 @@
 #include "silo.h"
 
 #ifdef POLYTOPE_ENABLE_MPI
-// extern "C" {
 #include "mpi.h"
 #include "pmpio.h"
-// }
 #else
 #define MPI_Comm int
 #define MPI_COMM_WORLD 0
 #endif
 
-namespace polytope
-{
+namespace polytope {
 
 using namespace std;
 
-namespace 
-{
-
 #ifdef POLYTOPE_ENABLE_MPI
-
+namespace {
 //-------------------------------------------------------------------
 void*
 PMPIO_createFile(const char* filename,
@@ -73,9 +68,8 @@ PMPIO_closeFile(void* file,
   DBClose((DBfile*)file);
 }
 //-------------------------------------------------------------------
-
+} // end namespace
 #endif
-}
 
 //-------------------------------------------------------------------
 template <typename RealType>
@@ -102,7 +96,6 @@ read(Tessellation<3, RealType>& mesh,
     prefix.erase(index);
 
   // Open a file in Silo/HDF5 format for reading.
-  char filename[1024];
 #ifdef POLYTOPE_ENABLE_MPI
   int nproc = 1, rank = 0;
   MPI_Comm_size(comm, &nproc);
@@ -116,18 +109,12 @@ read(Tessellation<3, RealType>& mesh,
 
   // Check for the existence of the master directory.
   string masterDirName = directory;
-  if (masterDirName.empty())
-  {
-    char dirname[1024];
-    snprintf(dirname, 1024, "%s-%d", filePrefix.c_str(), nproc);
-    masterDirName = dirname;
+  if (masterDirName.empty()) {
+    masterDirName = filePrefix + "-" + std::to_string(nproc);
   }
   DIR* masterDir = opendir(directory.c_str());
-  if (masterDir == 0)
-  {
-    char err[1024];
-    snprintf(err, 1024, "Could not find the directory %s", masterDirName.c_str());
-    error(err);
+  if (masterDir == 0) {
+    error("Could not find the directory " + masterDirName);
   }
 
   // Initialize poor man's I/O and figure out group ranks.
@@ -140,38 +127,35 @@ read(Tessellation<3, RealType>& mesh,
   int rankInGroup = PMPIO_RankInGroup(baton, rank);
 
   // Figure out the subdirectory for this group.
-  char groupdirname[1024];
-  snprintf(groupdirname, 1024, "%s/%d", masterDirName.c_str(), groupRank);
-  DIR* groupDir = opendir(groupdirname);
-  if (groupDir == 0)
-  {
-    char err[1024];
-    snprintf(err, 1024, "Could not find the directory %s", groupdirname);
-    error(err);
+  std::string groupdirname = masterDirName + "/" + std::to_string(groupRank);
+  DIR* groupDir = opendir(groupdirname.c_str());
+  if (groupDir == 0) {
+    error("Could not find the directory " + groupdirname);
+  }
+  std::string filename;
+  // Determine the file name.
+  if (cycle >= 0) {
+    filename = groupdirname + "/" + prefix + "-" + std::to_string(cycle) + ".silo";
+  } else {
+    filename = groupdirname + "/" + prefix + ".silo";
   }
 
-  // Determine the file name.
-  if (cycle >= 0)
-    snprintf(filename, 1024, "%s/%s-%d.silo", groupdirname, prefix.c_str(), cycle);
-  else
-    snprintf(filename, 1024, "%s/%s.silo", groupdirname, prefix.c_str());
-
-  char dirname[1024];
-  snprintf(dirname, 1024, "domain_%d", rankInGroup);
-  DBfile* file = (DBfile*)PMPIO_WaitForBaton(baton, filename, dirname);
-  DBSetDir(file, dirname);
+  std::string dirname = "domain_" + std::to_string(rankInGroup);
+  DBfile* file = (DBfile*)PMPIO_WaitForBaton(baton, filename.c_str(), dirname.c_str());
+  DBSetDir(file, dirname.c_str());
 #else
   string dirname = directory;
-  if (dirname.empty())
-    dirname = ".";
-
-  if (cycle >= 0)
-    snprintf(filename, 1024, "%s/%s-%d.silo", dirname.c_str(), prefix.c_str(), cycle);
-  else
-    snprintf(filename, 1024, "%s/%s.silo", dirname.c_str(), prefix.c_str());
+  if (dirname.empty()) dirname = ".";
+  std::string filename;
+  // Determine the file name.
+  if (cycle >= 0) {
+    filename = dirname + "/" + prefix + "-" + std::to_string(cycle) + ".silo";
+  } else {
+    filename = dirname + "/" + prefix + ".silo";
+  }
 
   int driver = DB_HDF5;
-  DBfile* file = DBOpen(filename, driver, DB_READ);
+  DBfile* file = DBOpen(filename.c_str(), driver, DB_READ);
   DBSetDir(file, "/");
 #endif
 
@@ -207,9 +191,7 @@ read(Tessellation<3, RealType>& mesh,
   if (conn == 0)
   {
     DBClose(file);
-    char err[1024];
-    snprintf(err, 1024, "Could not find cell-face connectivity in file %s.", filename);
-    error(err);
+    error("Could not find cell-face connectivity in file " + filename);
   }
   // First element is the number of faces in each zone.
   // Second element is the list of face indices in each zone.
@@ -219,9 +201,7 @@ read(Tessellation<3, RealType>& mesh,
       (conn->elemlengths[2] != 2*dbmesh->faces->nfaces))
   {
     DBClose(file);
-    char err[1024];
-    snprintf(err, 1024, "Found invalid cell-face connectivity in file %s.", filename);
-    error(err);
+    error("Found invalid cell-face connectivity in file " + filename);
   }
   int* connData = (int*)conn->values;
   int foffset = dbmesh->zones->nzones;
@@ -253,9 +233,7 @@ read(Tessellation<3, RealType>& mesh,
     if ((hull->nelems != 3) or (hull->elemlengths[0] != 1))
     {
       DBClose(file);
-      char err[1024];
-      snprintf(err, 1024, "Found invalid convex hull data in file %s.", filename);
-      error(err);
+      error("Found invalid convex hull data in file " + filename);
     }
     int* hullData = (int*)conn->values;
     int nfacets = hullData[0];
@@ -282,9 +260,9 @@ read(Tessellation<3, RealType>& mesh,
   {
     for (int i = 0; i < tags->nelems; ++i)
     {
-      std::vector<int>& tags = nodeTags[tags->elemnames[i]];
-      tags.resize(tags->elemlengths[i]);
-      copy((int*)tags->values, (int*)(tags->values + tags->elemlengths[i]), tag.begin());
+      std::vector<int>& tag = nodeTags[tags->elemnames[i]];
+      tag.resize(tags->elemlengths[i]);
+      copy((int*)tags->values, (int*)((char*)tags->values + tags->elemlengths[i]), tag.begin());
     }
     DBFreeCompoundarray(tags);
   }
@@ -293,9 +271,9 @@ read(Tessellation<3, RealType>& mesh,
   {
     for (int i = 0; i < tags->nelems; ++i)
     {
-      std::vector<int>& tags = edgeTags[tags->elemnames[i]];
-      tags.resize(tags->elemlengths[i]);
-      copy((int*)tags->values, (int*)(tags->values + tags->elemlengths[i]), tag.begin());
+      std::vector<int>& tag = edgeTags[tags->elemnames[i]];
+      tag.resize(tags->elemlengths[i]);
+      copy((int*)tags->values, (int*)((char*)tags->values + tags->elemlengths[i]), tag.begin());
     }
     DBFreeCompoundarray(tags);
   }
@@ -304,9 +282,9 @@ read(Tessellation<3, RealType>& mesh,
   {
     for (int i = 0; i < tags->nelems; ++i)
     {
-      std::vector<int>& tags = faceTags[tags->elemnames[i]];
-      tags.resize(tags->elemlengths[i]);
-      copy((int*)tags->values, (int*)(tags->values + tags->elemlengths[i]), tag.begin());
+      std::vector<int>& tag = faceTags[tags->elemnames[i]];
+      tag.resize(tags->elemlengths[i]);
+      copy((int*)tags->values, (int*)((char*)tags->values + tags->elemlengths[i]), tag.begin());
     }
     DBFreeCompoundarray(tags);
   }
@@ -315,38 +293,31 @@ read(Tessellation<3, RealType>& mesh,
   {
     for (int i = 0; i < tags->nelems; ++i)
     {
-      std::vector<int>& tags = cellTags[tags->elemnames[i]];
-      tags.resize(tags->elemlengths[i]);
-      copy((int*)tags->values, (int*)(tags->values + tags->elemlengths[i]), tag.begin());
+      std::vector<int>& tag = cellTags[tags->elemnames[i]];
+      tag.resize(tags->elemlengths[i]);
+      copy((int*)tags->values, (int*)((char*)tags->values + tags->elemlengths[i]), tag.begin());
     }
     DBFreeCompoundarray(tags);
   }
 
   // Make a list of the desired fields.
   vector<string> fieldNames;
-  if (fields.empty())
-  {
+  if (fields.empty()) {
     DBtoc* contents = DBGetToc(file);
     for (int f = 0; f < contents->nucdvar; ++f)
       fieldNames.push_back(string(contents->ucdvar_names[f]));
-  }
-  else
-  {
+  } else {
     for (typename map<string, vector<RealType> >::const_iterator iter = fields.begin();
          iter != fields.end(); ++iter)
     fieldNames.push_back(iter->first);
   }
 
   // Retrieve the fields.
-  for (int f = 0; f < fieldNames.size(); ++f)
-  {
+  for (int f = 0; f < fieldNames.size(); ++f) {
     DBucdvar* dbvar = DBGetUcdvar(file, fieldNames[f].c_str());
-    if (dbvar == 0)
-    {
+    if (dbvar == 0) {
       DBClose(file);
-      char err[1024];
-      snprintf(err, 1024, "Could not find field %s in file %s.", fieldNames[f].c_str(), filename);
-      error(err);
+      error("Could not find field " + fieldNames[f] + " in file " + filename);
     }
     fields[fieldNames[f]].resize(dbvar->nels);
     copy((RealType*)(dbvar->vals[0]), (RealType*)(dbvar->vals[0]) + dbvar->nels,
@@ -365,5 +336,3 @@ read(Tessellation<3, RealType>& mesh,
 template class SiloReader<3, double>;
 
 } // end namespace
-
-#endif

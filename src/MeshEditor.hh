@@ -6,6 +6,7 @@
 #include <algorithm>
 
 #include "polytope.hh"
+#include "Tessellation.hh"
 
 namespace polytope {
 
