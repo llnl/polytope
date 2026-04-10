@@ -19,8 +19,6 @@
 #include "mpi.h"
 #endif
 
-#define POLY_CHECK_BOOL(x) if (!(x)) { return false; }
-
 using namespace std;
 using namespace polytope;
 
@@ -32,7 +30,7 @@ double minLength(Tessellation<2,double>& mesh)
    double faceLength = FLT_MAX;
    for (unsigned iface = 0; iface != mesh.faces.size(); ++iface)
    {
-      POLY_ASSERT( mesh.faces[iface].size() == 2 );
+      POLY_CHECK( mesh.faces[iface].size() == 2 );
       const unsigned inode0 = mesh.faces[iface][0];
       const unsigned inode1 = mesh.faces[iface][1];
       double x0 = mesh.nodes[2*inode0], y0 = mesh.nodes[2*inode0+1];
@@ -49,16 +47,16 @@ double minLength(Tessellation<2,double>& mesh)
 bool checkIfCartesian(Tessellation<2,double>& mesh, 
                       const unsigned nx, 
                       const unsigned ny) {
-   POLY_CHECK_BOOL(mesh.nodes.size()/2 == (nx + 1)*(ny + 1) );
-   POLY_CHECK_BOOL(mesh.cells.size()   == nx*ny );
-   POLY_CHECK_BOOL(mesh.faces.size()   == nx*(ny + 1) + ny*(nx + 1) );
-   for (unsigned i = 0; i != nx*ny; ++i) POLY_CHECK_BOOL(mesh.cells[i].size() == 4);
+   POLY_CHECK(mesh.nodes.size()/2 == (nx + 1)*(ny + 1) );
+   POLY_CHECK(mesh.cells.size()   == nx*ny );
+   POLY_CHECK(mesh.faces.size()   == nx*(ny + 1) + ny*(nx + 1) );
+   for (unsigned i = 0; i != nx*ny; ++i) POLY_CHECK(mesh.cells[i].size() == 4);
    
    std::vector<std::set<unsigned> > nodeCells = mesh.computeNodeCells();
    for (unsigned i = 0; i != (nx+1)*(ny+1); ++i) {
-      POLY_CHECK_BOOL( (nodeCells[i].size() == 4) ||
-                       (nodeCells[i].size() == 2) ||
-                       (nodeCells[i].size() == 1) );
+     POLY_CHECK( (nodeCells[i].size() == 4) ||
+                 (nodeCells[i].size() == 2) ||
+                 (nodeCells[i].size() == 1) );
    }
    return true;
 }
@@ -72,14 +70,14 @@ bool checkBoundary(const Tessellation<2,double>& mesh,
    // Collect boundary nodes
    set<unsigned> boundaryNodes;
    for (unsigned iface = 0; iface != mesh.faces.size(); ++iface) {
-     POLY_ASSERT(mesh.faceCells[iface].size() == 1 or
+     POLY_CHECK(mesh.faceCells[iface].size() == 1 or
                  mesh.faceCells[iface].size() == 2 );
      if (mesh.faceCells[iface].size() == 1) {
        boundaryNodes.insert(mesh.faces[iface].begin(),
                             mesh.faces[iface].end());
      }
    }
-   POLY_ASSERT(boundaryNodes.size() <= mesh.nodes.size()/2);
+   POLY_CHECK(boundaryNodes.size() <= mesh.nodes.size()/2);
 
    // Check that node is exactly on the boundary
    double x, y;
@@ -87,7 +85,7 @@ bool checkBoundary(const Tessellation<2,double>& mesh,
        nodeItr != boundaryNodes.end(); ++nodeItr) {
      x = mesh.nodes[2*(*nodeItr)  ];
      y = mesh.nodes[2*(*nodeItr)+1];
-     POLY_ASSERT2((x==low[0] or x==high[0] or y==low[1] or y==high[1]), 
+     POLY_CHECK2((x==low[0] or x==high[0] or y==low[1] or y==high[1]), 
 		  "Node " << *nodeItr << " at (" 
                   << x      << "," << y       << ") is outside bounding box (" 
                   << low[0] << "," << high[0] << ")x("
@@ -112,7 +110,7 @@ vector<unsigned> computeJitterMask(const unsigned nx) {
       i2 = i*nx;
       i3 = (i+1)*nx;
       i4 = nx*(nx-1)+i;
-      POLY_ASSERT(i1 < numGenerators and i2 < numGenerators and
+      POLY_CHECK(i1 < numGenerators and i2 < numGenerators and
                   i3 < numGenerators and i4 < numGenerators);
       jitterMask[i1] = 1;
       jitterMask[i2] = 1;
@@ -130,7 +128,7 @@ void jitterPoints(vector<double>& points,
                   vector<unsigned>& jitterMask,
                   const double epsilon) {
   const unsigned numGenerators = points.size()/2;
-  POLY_ASSERT(numGenerators == jitterMask.size());
+  POLY_CHECK(numGenerators == jitterMask.size());
   for (unsigned i = 0; i != numGenerators; ++i) {
     if (jitterMask[i] == 1) {
       points[2*i  ] += epsilon*(random01()-0.5);
@@ -151,7 +149,7 @@ void test(Tessellator<2,double>& tessellator) {
   const double low [2] = {xmin, ymin};
   const double high[2] = {xmax, ymax};
   const double dx = (xmax-xmin)/nx,  dy = (ymax-ymin)/nx;
-  POLY_ASSERT(nx > 2);
+  POLY_CHECK(nx > 2);
 
   // Jitter factor
   const double epsilon = 2.0e-10;
@@ -185,7 +183,7 @@ void test(Tessellator<2,double>& tessellator) {
     bool isCartesian = checkIfCartesian(mesh,nx,nx);
     if(!isCartesian) 
        cout << "Degeneracy threshold reached! Minimum face length = " << minLength(mesh) << endl;
-    POLY_ASSERT(checkBoundary(mesh, low, high));
+    POLY_CHECK(checkBoundary(mesh, low, high));
   }
 }
 

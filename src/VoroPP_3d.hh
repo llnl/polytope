@@ -27,12 +27,13 @@ public:
   //! of these choices -- they only affect computational expense.
   //! \param nx The number of boxes to carve the volume into in the x direction.
   //! \param ny The number of boxes to carve the volume into in the y direction.
+  //! \param nz The number of boxes to carve the volume into in the z direction.
   //! \param degeneracy The tolerance for merging nodes in a cell.
   VoroPP_3d(const unsigned nx = 20,
             const unsigned ny = 20,
             const unsigned nz = 20,
             const RealType degeneracy = 1.0e-12);
-  ~VoroPP_3d();
+  virtual ~VoroPP_3d();
 
   //! Generate a Voronoi tessellation for the given set of generator points
   //! with a bounding box specified by \a low and \a high. Here, low[i]
@@ -52,10 +53,10 @@ public:
 
 
   // This Tessellator does not handle PLCs... yet.
-  bool handlesPLCs() const { return false; }
+  virtual bool handlesPLCs() const { return false; }
 
   // The Tessellator's name
-  std::string name() const { return "VoroTessellator3d"; }
+  virtual std::string name() const { return "VoroTessellator3d"; }
 
   // Access our attributes.
   unsigned nx() const { return mNx; }

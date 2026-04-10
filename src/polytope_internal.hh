@@ -27,13 +27,13 @@ void internal_abort();
     std::cout << "Assertion " << #x << " failed\nat " << __FILE__ << ":" << __LINE__ << std::endl << msg << std::endl; \
     polytope::internal_abort(); \
   }
-#define POLY_BEGIN_CONTRACT_SCOPE 
-#define POLY_END_CONTRACT_SCOPE 
+#define POLY_BEGIN_CONTRACT_SCOPE { 
+#define POLY_END_CONTRACT_SCOPE }
 #else
 #define POLY_ASSERT(x)
 #define POLY_ASSERT2(x, msg)
-#define POLY_BEGIN_CONTRACT_SCOPE if (false) { while(false)
-#define POLY_END_CONTRACT_SCOPE } while(false)
+#define POLY_BEGIN_CONTRACT_SCOPE if (false) {
+#define POLY_END_CONTRACT_SCOPE }
 #endif
 
 #define POLY_CONTRACT_VAR(x) if (0 && &x == &x){}

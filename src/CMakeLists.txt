@@ -7,6 +7,56 @@ configure_file(
   "${PROJECT_BINARY_DIR}/src/polytope.hh"
 )
 
+set(polytope_headers
+  bisectSearch.hh
+  checkDistributedTessellation.hh
+  clipQuantizedTessellation.hh
+  convexHull_2d.hh
+  convexHull_3d.hh
+  convexIntersect.hh
+  convexWithin.hh
+  deleteCells.hh
+  DimensionTraits.hh
+  DistributedTessellator.hh
+  ErrorHandler.hh
+  findBoundaryElements.hh
+  intersect.hh
+  IntPointMap.hh
+  KeyTraits.hh
+  makeBoxPLC.hh
+  MeshEditor.hh
+  mortonOrderIndices.hh
+  nearestPoint.hh
+  OrphanageBase.hh
+  PLC_CSG_2d.hh
+  PLC_CSG_3d.hh
+  PLC.hh
+  Point.hh
+  Polygon.hh
+  polytope_geometric_utilities.hh
+  polytope_internal.hh
+  polytope_plc_canned_geometries.hh
+  polytope_serialize.hh
+  polytope_tessellator_utilities.hh
+  polytope_write_OOGL.hh
+  QuantizedCoordinates.hh
+  QuantizedTessellation2d.hh
+  QuantizedTessellation3d.hh
+  QuantTessellation.hh
+  ReducedPLC.hh
+  removeElements.hh
+  Segment.hh
+  SerialDistributedTessellator.hh
+  simplifyPLCfacets.hh
+  snapToBoundary.hh
+  Tessellation.hh
+  Tessellator.hh
+  TessellatorInline.hh
+  TetgenTessellator.hh
+  timingUtilities.hh
+  within.hh
+)
+
 set(polytope_sources
   KeyTraits.cc
   predicates.cc
@@ -17,13 +67,17 @@ set(polytope_sources
   clipQuantizedTessellation3d.cc
   snapToBoundary.cc
   ErrorHandler.cc
-  polytope_internal_abort.cc)
+  polytope_internal_abort.cc
+)
 
-file(GLOB polytope_headers CONFIGURE_DEPENDS "*.hh")
 list(APPEND polytope_headers "${PROJECT_BINARY_DIR}/src/polytope.hh")
 
 # Include Silo stuff if we've found it.
 if (POLYTOPE_ENABLE_SILO)
+  list(APPEND polytope_headers
+    SiloReader.hh
+    SiloUtils.hh
+    SiloWriter.hh)
   list(APPEND polytope_sources
     SiloWriter_2d.cc
     SiloWriter_3d.cc
@@ -33,19 +87,41 @@ if (POLYTOPE_ENABLE_SILO)
 endif()
 
 # Check if we can include each of the serial tessellators:
+# Boost tessellator
 if (POLYTOPE_ENABLE_BOOST)
+  list(APPEND polytope_headers
+    Clipper2d.hh
+    PLC_Boost_2d.hh
+    RegisterBoostPolygonTypes.hh
+    BoostOrphanage.hh
+    BoostTessellator.hh
+    BoostTessellatorTraits.hh)
   list(APPEND polytope_sources
     BoostTessellator.cc
     MeshEditor.cc)
 endif()
 
-# TetgenTessellator
+# Tetgen tessellator
 if (POLYTOPE_ENABLE_TETGEN)
   list(APPEND polytope_sources TetgenTessellator.cc)
 endif ()
 
+# Triangle tessellator
+if (POLYTOPE_ENABLE_TRIANGLE)
+  list(APPEND polytope_headers TriangleTessellator.hh)
+  list(APPEND polytope_sources TriangleTessellator.cc)
+endif()
+
+# VORO++ tessellator
+if (POLYTOPE_ENABLE_VORO)
+  # list(APPEND polytope_headers VoroPP_2d.hh VoroPP_3d.hh)
+  # list(APPEND polytope_sources VoroPP_2d.cc VoroPP_3d.cc)
+endif()
+
 # Check if we can incude the distributed tessellators:
 if (POLYTOPE_ENABLE_MPI)
+  list(APPEND polytope_headers
+    polytope_parallel_utilities.hh)
   list(APPEND polytope_sources
     DistributedTessellator.cc
     SerialDistributedTessellator.cc)

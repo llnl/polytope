@@ -42,12 +42,13 @@ set(POLYTOPE_ENABLE_MPI ${ENABLE_MPI})
 option(POLYTOPE_ENABLE_BOOST "Enable Boost Voronoi tessellator" ON)
 option(POLYTOPE_ENABLE_SILO "Enable Silo read/write features" OFF)
 option(POLYTOPE_ENABLE_PYTHON "Enable Python interface" OFF)
-option(POLYTOPE_ENABLE_TRIANGLE "Enable Triangle Voronoi tesselator" OFF)
-option(POLYTOPE_ENABLE_TETGEN "Enable TetGen Voronoi tesselator" OFF)
+option(POLYTOPE_ENABLE_TRIANGLE "Enable Triangle Voronoi tessellator" OFF)
+option(POLYTOPE_ENABLE_TETGEN "Enable TetGen Voronoi tessellator" OFF)
 option(POLYTOPE_ENABLE_TESTING "Enable testing" ON)
 if(NOT POLYTOPE_ENABLE_BOOST AND POLYTOPE_ENABLE_TESTING)
   message(FATAL_ERROR "Testing relies on Boost. Must enable Boost to enable testing.")
 endif()
+option(POLYTOPE_ENABLE_VORO "Enable Voro Voronoi tessellator" OFF)
 option(POLYTOPE_ENABLE_APPLE "Enable Apple installation support" OFF)
 option(ENABLE_STATIC_TPLS "Used for libraries that require older HDF5 versions" OFF)
 option(BUILD_SHARED_LIBS "Build Polytope as shared library" OFF)
@@ -66,6 +67,20 @@ if(NOT EXISTS "${POLYTOPE_ROOT_DIR}/cmake/blt/SetupBLT.cmake")
 endif()
 
 include(cmake/blt/SetupBLT.cmake)
+
+#-------------------------------------------------------------------------------#
+# Set a default build type if none was specified
+#-------------------------------------------------------------------------------#
+set(default_build_type "Release")
+
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  message(STATUS "Setting build type to '${default_build_type}' as none was specified.")
+  set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING "Choose the type of build (debug, release, etc)." FORCE)
+
+  # Set the possible values of build type for cmake-gui
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
+    "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+endif()
 
 include(cmake/InstallTPLs.cmake)
 

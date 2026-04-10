@@ -10,8 +10,6 @@
 //       new algorithms. 9/19/2013
 //************************************************************************
 
-#ifdef POLYTOPE_ENABLE_BOOST
-
 #include <vector>
 
 #include "Point.hh"
@@ -187,5 +185,4 @@ public:
 
 } //end namespace polytope
 
-#endif
 #endif

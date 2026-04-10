@@ -31,10 +31,9 @@ void printArea(Boundary2D<double>& boundary,
 	       Tessellation<2,double>& mesh) {
    const double area = computeTessellationArea(mesh);
    const double relErr = (boundary.mArea-area)/boundary.mArea;
-   const double tol = 1.0e-5;
    cout << "Tessellation Area = " << area << endl;
    cout << "Relative error    = " << std::abs(boundary.mArea-area)/boundary.mArea << endl;
-   POLY_ASSERT(relErr < tol);
+   POLY_CHECK(relErr < 1.0E-5);
 }
 
 // -----------------------------------------------------------------------
@@ -105,8 +104,7 @@ void test(Tessellator<2,double>& tessellator) {
     tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
     outputMesh(mesh, testName, generators.mPoints, i);
     printArea(boundary,mesh);
-    bool result = checkNearestNode(mesh, dist);
-    POLY_ASSERT(result);
+    POLY_CHECK(checkNearestNode(mesh, dist));
     ++i;
   }
   
@@ -120,8 +118,7 @@ void test(Tessellator<2,double>& tessellator) {
     tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
     outputMesh(mesh, testName, generators.mPoints, i);
     printArea(boundary,mesh);
-    bool result = checkNearestNode(mesh, dist);
-    POLY_ASSERT(result);
+    POLY_CHECK(checkNearestNode(mesh,dist));
     ++i;
   }
   
@@ -135,8 +132,7 @@ void test(Tessellator<2,double>& tessellator) {
     tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
     outputMesh(mesh, testName, generators.mPoints, i);
     printArea(boundary,mesh);
-    bool result = checkNearestNode(mesh, dist);
-    POLY_ASSERT(result);
+    POLY_CHECK(checkNearestNode(mesh, dist));
     ++i;
   }
   
@@ -150,8 +146,7 @@ void test(Tessellator<2,double>& tessellator) {
     tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
     outputMesh(mesh, testName, generators.mPoints, i);
     printArea(boundary,mesh);
-    bool result = checkNearestNode(mesh, dist);
-    POLY_ASSERT(result);
+    POLY_CHECK(checkNearestNode(mesh, dist));
     ++i;
   }
   
@@ -165,8 +160,7 @@ void test(Tessellator<2,double>& tessellator) {
     tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
     outputMesh(mesh, testName, generators.mPoints, i);
     printArea(boundary,mesh);
-    bool result = checkNearestNode(mesh, dist);
-    POLY_ASSERT(result);
+    POLY_CHECK(checkNearestNode(mesh, dist));
     ++i;
   }
   
@@ -244,14 +238,13 @@ void test(Tessellator<2,double>& tessellator) {
     const double trueArea = 8.74;
     const double tessArea = computeTessellationArea(mesh);
     const double fracerr  = std::abs(trueArea - tessArea)/trueArea;
-    const double tol      = 1.0e-7;
-    POLY_ASSERT2(fracerr < tol, "Relative error in the tessellation "
+    POLY_CONTRACT_VAR(fracerr);
+    POLY_ASSERT2(fracerr < 1.0E-7, "Relative error in the tessellation "
                  << "area exceeds tolerance:" << endl
                  << "      Area = " << tessArea << endl
                  << "     Error = " << trueArea - tessArea << endl
                  << "Frac Error = " << fracerr);
-    bool result = checkNearestNode(mesh, dist);
-    POLY_ASSERT(result);
+    POLY_CHECK(checkNearestNode(mesh, dist));
     ++i;
   }
 
@@ -299,10 +292,7 @@ int main(int argc, char** argv)
     BoostTessellator<double> tessellator;
     test(tessellator);
   }
-#endif
-
-
-   
+#endif   
 
 #ifdef POLYTOPE_ENABLE_MPI
    MPI_Finalize();
