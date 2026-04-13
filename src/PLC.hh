@@ -1,6 +1,7 @@
 #ifndef POLYTOPE_PLC_HH
 #define POLYTOPE_PLC_HH
 
+#include <cstddef>
 #include <vector>
 #include <iostream>
 
@@ -45,13 +46,13 @@ class PLC {
     if (Dimension == 2)
     {
       // In 2D all facets must have at least 2 points.
-      for (int f = 0; f < facets.size(); ++f)
+      for (std::size_t f = 0; f < facets.size(); ++f)
       {
         if (facets[f].size() != 2) return false;
       }
-      for (int h = 0; h < holes.size(); ++h)
+      for (std::size_t h = 0; h < holes.size(); ++h)
       {
-        for (int f = 0; f < holes[h].size(); ++f)
+        for (std::size_t f = 0; f < holes[h].size(); ++f)
         {
           if (holes[h][f].size() != 2) return false;
         }
@@ -60,14 +61,14 @@ class PLC {
     else if (Dimension == 3)
     {
       // In 3D all facets must have at least 3 points.
-      for (int f = 0; f < facets.size(); ++f)
+      for (std::size_t f = 0; f < facets.size(); ++f)
       {
         if (facets[f].size() < 3)
           return false;
       }
-      for (int h = 0; h < holes.size(); ++h)
+      for (std::size_t h = 0; h < holes.size(); ++h)
       {
-        for (int f = 0; f < holes[h].size(); ++f)
+        for (std::size_t f = 0; f < holes[h].size(); ++f)
         {
           if (holes[h][f].size() < 3) return false;
         }
@@ -81,9 +82,9 @@ class PLC {
   {
     s << "PLC (" << Dimension << "D):" << std::endl;
     s << plc.facets.size() << " facets:" << std::endl;
-    for (auto f = 0; f < plc.facets.size(); ++f) {
+    for (std::size_t f = 0; f < plc.facets.size(); ++f) {
       s << " " << f << ": (";
-      for (auto p = 0; p < plc.facets[f].size(); ++p) {
+      for (std::size_t p = 0; p < plc.facets[f].size(); ++p) {
         if (p < plc.facets[f].size()-1) {
           s << plc.facets[f][p] << ", ";
         } else {
@@ -94,11 +95,11 @@ class PLC {
     }
     s << std::endl;
     s << plc.holes.size() << " holes:" << std::endl;
-    for (auto h = 0; h < plc.holes.size(); ++h) {
+    for (std::size_t h = 0; h < plc.holes.size(); ++h) {
       s << "Hole #" << h << std::endl;
-      for (auto f = 0; f < plc.holes[h].size(); ++f) {
+      for (std::size_t f = 0; f < plc.holes[h].size(); ++f) {
         s << "    " << f << ": (";
-        for (auto p = 0; p < plc.holes[h][f].size(); ++p) {
+        for (std::size_t p = 0; p < plc.holes[h][f].size(); ++p) {
           if (p < plc.holes[h][f].size()-1) {
             s << plc.holes[h][f][p] << ", ";
           } else {

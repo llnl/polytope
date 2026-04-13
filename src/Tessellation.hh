@@ -104,7 +104,7 @@ class Tessellation {
   //! Find the set of cells that touch each mesh node.
   std::vector<std::set<unsigned> > computeNodeCells() {
     std::vector<std::set<unsigned> > result(nodes.size()/Dimension);
-    for (auto i = 0; i <= (unsigned)cells.size(); ++i) {
+    for (auto i = 0u; i <= (unsigned)cells.size(); ++i) {
       for (std::vector<int>::const_iterator faceItr = cells[i].begin();
            faceItr != cells[i].end();
            ++faceItr) {
@@ -146,7 +146,7 @@ class Tessellation {
   {
     s << "Tessellation (" << Dimension << "D):" << std::endl;
     s << mesh.nodes.size()/Dimension << " nodes:" << std::endl;
-    for (auto n = 0; n < mesh.nodes.size()/Dimension; ++n) {
+    for (auto n = 0u; n < mesh.nodes.size()/Dimension; ++n) {
       s << " " << n << ": "; 
       if (Dimension == 2) {
         s << "(" << mesh.nodes[2*n] << ", " << mesh.nodes[2*n+1] << ")" << std::endl;
@@ -158,10 +158,10 @@ class Tessellation {
     s << std::endl;
 
     s << mesh.faces.size() << " faces:" << std::endl;
-    for (auto f = 0; f < mesh.faces.size(); ++f)
+    for (auto f = 0u; f < mesh.faces.size(); ++f)
     {
       s << " " << f << ": (";
-      for (auto p = 0; p < mesh.faces[f].size(); ++p) {
+      for (auto p = 0u; p < mesh.faces[f].size(); ++p) {
         if (p < mesh.faces[f].size()-1) {
           s << mesh.faces[f][p] << ", ";
         } else {
@@ -173,9 +173,9 @@ class Tessellation {
     s << std::endl;
 
     s << mesh.cells.size() << " cells:" << std::endl;
-    for (auto c = 0; c < mesh.cells.size(); ++c) {
+    for (auto c = 0u; c < mesh.cells.size(); ++c) {
       s << " " << c << ": (";
-      for (auto f = 0; f < mesh.cells[c].size(); ++f) {
+      for (auto f = 0u; f < mesh.cells[c].size(); ++f) {
         if (f < mesh.cells[c].size()-1) {
           s << mesh.cells[c][f] << ", ";
         } else {
@@ -186,7 +186,7 @@ class Tessellation {
     }
 
     s << mesh.boundaryNodes.size() << " boundary nodes:" << std::endl;
-    for (auto i = 0; i != mesh.boundaryNodes.size(); ++i) s << " " << mesh.boundaryNodes[i];
+    for (auto i = 0u; i != mesh.boundaryNodes.size(); ++i) s << " " << mesh.boundaryNodes[i];
     s << std::endl;
 
     return s;

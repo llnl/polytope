@@ -95,12 +95,12 @@ if(POLYTOPE_ENABLE_SILO)
     list(APPEND POLYTOPE_TPL_DEPENDS hdf5)
     list(APPEND IMPORTED_LIBS hdf5)
   endif()
-  # find_package(Silo is currently broken but should be working by the next release
+  # find_package(Silo... is currently broken but should be working by the next release
   set(SILO_LIB_NAME libsiloh5.a)
   if (POLYTOPE_ENABLE_APPLE)
     set(SILO_LIB_NAME libsiloh5.dylib)
   endif()
-  file(GLOB SILO_LIB "${silo_DIR}/*/${SILO_LIB_NAME}")
+  file(GLOB_RECURSE SILO_LIB "${silo_DIR}/*${SILO_LIB_NAME}")
   blt_import_library(NAME silo
     LIBRARIES ${SILO_LIB}
     TREAT_INCLUDES_AS_SYSTEM ON

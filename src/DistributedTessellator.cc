@@ -49,10 +49,10 @@ sortByKeys(vector<Value>& values, const vector<Key>& keys) {
   POLY_ASSERT(values.size() == keys.size());
   vector<pair<Key, Value> > stuff;
   stuff.reserve(values.size());
-  for (unsigned i = 0; i != values.size(); ++i) stuff.push_back(make_pair(keys[i], values[i]));
+  for (size_t i = 0; i != values.size(); ++i) stuff.push_back(make_pair(keys[i], values[i]));
   POLY_ASSERT(stuff.size() == values.size());
   std::sort(stuff.begin(), stuff.end(), internal::ComparePairByFirstElement<Key, Value>());
-  for (unsigned i = 0; i != values.size(); ++i) values[i] = stuff[i].second;
+  for (size_t i = 0; i != values.size(); ++i) values[i] = stuff[i].second;
 }
 
 //------------------------------------------------------------------------------
@@ -73,7 +73,7 @@ outputTessellation(const polytope::Tessellation<Dimension, RealType>& mesh,
   vector<RealType> px(mesh.cells.size());
   vector<RealType> py(mesh.cells.size());
   vector<RealType> cf(mesh.cells.size());
-  for (unsigned i = 0; i != mesh.cells.size(); ++i) {
+  for (size_t i = 0; i != mesh.cells.size(); ++i) {
     px[i] = points[2*i];
     py[i] = points[2*i+1];
     cf[i] = cellField[i];
@@ -342,7 +342,7 @@ computeDistributedTessellation(const vector<RealType>& points,
 
     // Build the reverse lookup from procID to index in the neighborDomain set.
     map<unsigned, unsigned> proc2offset;
-    for (unsigned i = 0; i != mesh.neighborDomains.size(); ++i) proc2offset[mesh.neighborDomains[i]] = i;
+    for (size_t i = 0; i != mesh.neighborDomains.size(); ++i) proc2offset[mesh.neighborDomains[i]] = i;
     POLY_ASSERT(proc2offset.size() == mesh.neighborDomains.size());
 
     // Look for the faces we share with other processors.
@@ -375,7 +375,7 @@ computeDistributedTessellation(const vector<RealType>& points,
     // Look for shared nodes.
     mesh.sharedNodes.resize(mesh.neighborDomains.size());
     const vector<set<unsigned> > nodeCells = mesh.computeNodeCells();
-    for (unsigned inode = 0; inode != nodeCells.size(); ++inode) {
+    for (size_t inode = 0; inode != nodeCells.size(); ++inode) {
       const set<unsigned>& cells = nodeCells[inode];
       for (typename set<unsigned>::const_iterator cellItr = cells.begin();
            cellItr != cells.end();
@@ -409,7 +409,7 @@ computeDistributedTessellation(const vector<RealType>& points,
 
 
     // Remove any duplicate shared nodes.  (Faces should already be unique).
-    for (unsigned i = 0; i != mesh.sharedNodes.size(); ++i) {
+    for (size_t i = 0; i != mesh.sharedNodes.size(); ++i) {
       sort(mesh.sharedNodes[i].begin(), mesh.sharedNodes[i].end());
       mesh.sharedNodes[i].erase(unique(mesh.sharedNodes[i].begin(), mesh.sharedNodes[i].end()), 
                                 mesh.sharedNodes[i].end());
@@ -505,7 +505,7 @@ computeDistributedTessellation(const vector<RealType>& points,
       
       
       sort(nodePoints.begin(), nodePoints.end());
-      for (unsigned i = 0; i != mesh.sharedNodes[idomain].size(); ++i) mesh.sharedNodes[idomain][i] = nodePoints[i].index;
+      for (size_t i = 0; i != mesh.sharedNodes[idomain].size(); ++i) mesh.sharedNodes[idomain][i] = nodePoints[i].index;
 
 
       // Faces.
@@ -517,7 +517,7 @@ computeDistributedTessellation(const vector<RealType>& points,
                                                                                           &rlow[0],
                                                                                           dx));
       sort(facePoints.begin(), facePoints.end());
-      for (unsigned i = 0; i != mesh.sharedFaces[idomain].size(); ++i) mesh.sharedFaces[idomain][i] = facePoints[i].index;
+      for (size_t i = 0; i != mesh.sharedFaces[idomain].size(); ++i) mesh.sharedFaces[idomain][i] = facePoints[i].index;
     }
   }
 
@@ -721,7 +721,7 @@ computeDistributedTessellation(const vector<RealType>& points,
         // // Blago!
 
         // Unpack the coordinates to the receive nodes.
-        for (unsigned j = 0; j != recvNodes.size(); ++j) {
+        for (size_t j = 0; j != recvNodes.size(); ++j) {
           const unsigned i = recvNodes[j];
           for (unsigned k = 0; k != Dimension; ++k) {
             mesh.nodes[Dimension*i + k] = recvCoords[Dimension*j + k];
@@ -871,13 +871,13 @@ computeDomainNeighbors(const vector<RealType>& points,
     if (DT::hullDimension(localHull) == Dimension)
     {
       mSerialTessellator->tessellate(points, localMesh);
-      for (unsigned i = 0; i < points.size()/Dimension; ++i) {
+      for (size_t i = 0; i < points.size()/Dimension; ++i) {
         ReducedPLC<Dimension, RealType> cell = geometry::cellToReducedPLC<Dimension, RealType>(localMesh, i);
         if (not convexWithin(cell, localHull))  exteriorCells.insert(i);
       }
       
       vector<RealPoint> exteriorPoints(localHull.points.size()/Dimension);
-      for (unsigned i = 0; i != localHull.points.size()/Dimension; ++i) {
+      for (size_t i = 0; i != localHull.points.size()/Dimension; ++i) {
         exteriorPoints[i] = DT::constructPoint(&(localHull.points[Dimension*i]));
       }
       
@@ -961,10 +961,10 @@ computeDomainNeighbors(const vector<RealType>& points,
     vector<RealType> tmpPLCpoints;
     tmpPLC.facets = mPLCptr->facets;
     std::map<int, int> pointMap;
-    for (int ifacet = 0; ifacet < mPLCptr->facets.size(); ++ifacet) {
-      for (int k = 0; k < mPLCptr->facets[ifacet].size(); ++k) {
+    for (size_t ifacet = 0; ifacet < mPLCptr->facets.size(); ++ifacet) {
+      for (size_t k = 0; k < mPLCptr->facets[ifacet].size(); ++k) {
         const int ipt = mPLCptr->facets[ifacet][k];
-        const int old_size = pointMap.size();
+        const size_t old_size = pointMap.size();
         const int nipt = internal::addKeyToMap(ipt, pointMap);
         tmpPLC.facets[ifacet][k] = nipt;
         if (old_size != pointMap.size()) {
@@ -981,7 +981,7 @@ computeDomainNeighbors(const vector<RealType>& points,
   if (visIntermediateMeshes)
   {
     vector<RealType> owner(visibleMesh.cells.size());
-    for (unsigned i = 0; i < visibleMesh.cells.size(); ++i) {
+    for (size_t i = 0; i < visibleMesh.cells.size(); ++i) {
       const unsigned procOwner = bisectSearch(domainCellOffset, i);
       owner[i] = RealType(procOwner);
     }

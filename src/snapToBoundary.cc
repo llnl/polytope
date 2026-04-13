@@ -135,6 +135,10 @@ void snapToBoundary(Tessellation<3, RealType>& mesh,
                     const vector<RealType>& points,
                     const PLC<3, RealType>& geometry,
                     const RealType degeneracy) {
+  (void) degeneracy;
+  (void) geometry;
+  (void) points;
+  (void) mesh;
   POLY_ASSERT2(false, "Implement me!");
 }
 

@@ -17,5 +17,8 @@
 #ifdef POLYTOPE_ENABLE_BOOST
 #include "BoostTessellator.hh"
 #endif
+#ifdef POLYTOPE_ENABLE_TETGEN
+#include "TetgenTessellator.hh"
+#endif
 #include "SiloWriter.hh"
 #include "SiloReader.hh"

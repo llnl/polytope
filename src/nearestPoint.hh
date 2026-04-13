@@ -36,6 +36,7 @@ struct ClosestPointOnFacetsFunctor<2, RealType> {
     unsigned i, j;
     RealType dist, minDist = std::numeric_limits<RealType>::max();
     RealType candidate[2];
+    (void) numVertices;
     const unsigned numFacets = facets.size();
     for (unsigned ifacet = 0; ifacet != numFacets; ++ifacet) {
       POLY_ASSERT(facets[ifacet].size() == 2);

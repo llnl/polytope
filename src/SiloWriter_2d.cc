@@ -38,7 +38,7 @@ traverseNodes(const Tessellation<2, RealType>& mesh,
               int i,
               vector<int>& nodes) {
   const vector<int>& cellFaces = mesh.cells[i];
-  for (int j = 0; j != cellFaces.size(); ++j) 
+  for (size_t j = 0; j != cellFaces.size(); ++j) 
   {
     int k = cellFaces[j];
     nodes.push_back(k >= 0 ? mesh.faces[ k][0] :
@@ -48,7 +48,7 @@ traverseNodes(const Tessellation<2, RealType>& mesh,
 
 #ifndef NDEBUG
   // Make sure we don't have any garbage in our list of nodes.
-  for (int n = 0; n < nodes.size(); ++n)
+  for (size_t n = 0; n < nodes.size(); ++n)
   {
     POLY_ASSERT(nodes[n] >= 0);
     POLY_ASSERT(nodes[n] < mesh.nodes.size()/2);
@@ -288,10 +288,10 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
     conn[c] = mesh.cells[c].size();
   for (int c = 0; c < numCells; ++c)
   {
-    for (int f = 0; f < mesh.cells[c].size(); ++f)
+    for (size_t f = 0; f < mesh.cells[c].size(); ++f)
       conn.push_back(mesh.cells[c][f]);
   }
-  for (int f = 0; f < mesh.faceCells.size(); ++f)
+  for (size_t f = 0; f < mesh.faceCells.size(); ++f)
   {
     conn.push_back(mesh.faceCells[f][0]);
     conn.push_back(mesh.faceCells[f][0]);
@@ -311,10 +311,10 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
   // Write out convex hull data.
   vector<int> hull(1+mesh.convexHull.facets.size());
   hull[0] = mesh.convexHull.facets.size();
-  for (int f = 0; f < mesh.convexHull.facets.size(); ++f)
+  for (size_t f = 0; f < mesh.convexHull.facets.size(); ++f)
     hull[1+f] = mesh.convexHull.facets[f].size();
-  for (int f = 0; f < mesh.convexHull.facets.size(); ++f)
-    for (int n = 0; n < mesh.convexHull.facets[f].size(); ++n)
+  for (size_t f = 0; f < mesh.convexHull.facets.size(); ++f)
+    for (size_t n = 0; n < mesh.convexHull.facets[f].size(); ++n)
       hull.push_back(mesh.convexHull.facets[f][n]);
   elemnames[0] = strDup("nfacets");
   elemlengths[0] = 1;
@@ -424,7 +424,7 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
     DBFreeOptlist(optlist);
     for (int i = 0; i < numChunks; ++i)
       free(meshNames[i]);
-    for (int f = 0; f < varNames.size(); ++f)
+    for (size_t f = 0; f < varNames.size(); ++f)
       for (int i = 0; i < numChunks; ++i)
         free(varNames[f][i]);
   }
@@ -496,7 +496,7 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
     DBFreeOptlist(optlist);
     for (int i = 0; i < numFiles*numChunks; ++i)
       free(meshNames[i]);
-    for (int f = 0; f < varNames.size(); ++f)
+    for (size_t f = 0; f < varNames.size(); ++f)
       for (int i = 0; i < numFiles*numChunks; ++i)
         free(varNames[f][i]);
   }

@@ -628,6 +628,8 @@ computeBoundingBox(const RealType* pos,
        xmax[j] = allReduce(xmax[j], MPI_MAX, MPI_COMM_WORLD);
      }
    }
+#else
+   (void)globalReduce;
 #endif
 }
 

@@ -90,7 +90,7 @@ NOTE: we implicitly assume that any domains of rank less than ours we
     xnodes = PYB11property(getterraw="""[](const Tessellation<%(Dimension)s, %(RealType)s>& self) -> std::vector<%(RealType)s> { 
                                           const auto n = self.nodes.size()/%(Dimension)s;
                                           std::vector<double> result(n);
-                                          for (auto i = 0; i < n; ++i) result[i] = self.nodes[%(Dimension)s*i];
+                                          for (auto i = 0u; i < n; ++i) result[i] = self.nodes[%(Dimension)s*i];
                                           return result;
                                         }""",
                            doc = "Extract the X coordinates of the nodes")
@@ -98,7 +98,7 @@ NOTE: we implicitly assume that any domains of rank less than ours we
     ynodes = PYB11property(getterraw="""[](const Tessellation<%(Dimension)s, %(RealType)s>& self) -> std::vector<%(RealType)s> { 
                                           const auto n = self.nodes.size()/%(Dimension)s;
                                           std::vector<double> result(n);
-                                          for (auto i = 0; i < n; ++i) result[i] = self.nodes[%(Dimension)s*i + 1];
+                                          for (auto i = 0u; i < n; ++i) result[i] = self.nodes[%(Dimension)s*i + 1];
                                           return result;
                                         }""",
                            doc = "Extract the Y coordinates of the nodes")
@@ -107,7 +107,7 @@ NOTE: we implicitly assume that any domains of rank less than ours we
                                           if (%(Dimension)s != 3) throw py::type_error("Cannot extract z component from 2D Tessellation");
                                           const auto n = self.nodes.size()/%(Dimension)s;
                                           std::vector<double> result(n);
-                                          for (auto i = 0; i < n; ++i) result[i] = self.nodes[%(Dimension)s*i + 2];
+                                          for (auto i = 0u; i < n; ++i) result[i] = self.nodes[%(Dimension)s*i + 2];
                                           return result;
                                         }""",
                            doc = "Extract the Z coordinates of the nodes")
@@ -124,13 +124,13 @@ NOTE: we implicitly assume that any domains of rank less than ours we
                                              std::vector<std::vector<int>> result(nzones);
                                              if (%(Dimension)s == 2) {
                                                // In 2D we read the points out ordered counterclockwise.
-                                               for (auto izone = 0; izone < nzones; ++izone) {
+                                               for (auto izone = 0u; izone < nzones; ++izone) {
                                                  std::transform(self.cells[izone].begin(), self.cells[izone].end(), std::back_inserter(result[izone]),
                                                                 [&](const int iface) { return iface < 0 ? self.faces[~iface][1] : self.faces[iface][0]; });
                                                }
                                              } else {
                                                // In 3D we just return the unique set of nodes for each zone.
-                                               for (auto izone = 0; izone < nzones; ++izone) {
+                                               for (auto izone = 0u; izone < nzones; ++izone) {
                                                  for (auto iface: self.cells[izone]) {
                                                    iface = iface < 0 ? ~iface : iface;
                                                    std::copy(self.faces[iface].begin(), self.faces[iface].end(), std::back_inserter(result[izone]));

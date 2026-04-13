@@ -14,6 +14,10 @@ void clipQuantizedTessellation(QuantizedTessellation3d<IntType, RealType>& qmesh
                                const std::vector<RealType>& PLCpoints,
                                const PLC<3, RealType>& geometry,
                                const Tessellator<3, RealType>& tessellator) {
+  (void) qmesh;
+  (void) PLCpoints;
+  (void) geometry;
+  (void) tessellator;
   POLY_ASSERT2(false, "Implement me!");
 }
 

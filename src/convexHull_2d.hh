@@ -156,14 +156,18 @@ convexHull_2d(const std::vector<RealType>& points,
     // Build the lower hull.
     for (i = 0, k = 0; i < nunique; i++) {
       while (k >= 2 and
-             zcross_sign(sortedPoints[result[k - 2]].first, sortedPoints[result[k - 1]].first, sortedPoints[i].first) <= 0) k--;
+             zcross_sign(sortedPoints[result[k - 2]].first,
+                         sortedPoints[result[k - 1]].first,
+                         sortedPoints[i].first) <= 0) k--;
       result[k++] = i;
     }
     
     // Build the upper hull.
-    for (i = nunique - 2, t = k + 1; i >= 0; i--) {
+    for (i = nunique - 1, t = k + 1; i-- > 0; ) {
       while (k >= t and
-             zcross_sign(sortedPoints[result[k - 2]].first, sortedPoints[result[k - 1]].first, sortedPoints[i].first) <= 0) k--;
+             zcross_sign(sortedPoints[result[k - 2]].first,
+                         sortedPoints[result[k - 1]].first,
+                         sortedPoints[i].first) <= 0) k--;
       result[k++] = i;
     }
     // if (!(k >= 4)) {

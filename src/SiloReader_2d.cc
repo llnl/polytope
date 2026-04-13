@@ -169,10 +169,10 @@ SiloReader<2, RealType>::read(Tessellation<2, RealType>& mesh,
   // Reconstruct the faces.
   mesh.faces.resize(dbmesh->faces->nfaces);
   int noffset = 0;
-  for (int f = 0; f < mesh.faces.size(); ++f)
+  for (size_t f = 0; f < mesh.faces.size(); ++f)
   {
     mesh.faces[f].resize(dbmesh->faces->shapesize[f]);
-    for (int n = 0; n < mesh.faces[f].size(); ++n, ++noffset) {
+    for (size_t n = 0; n < mesh.faces[f].size(); ++n, ++noffset) {
       mesh.faces[f][n] = dbmesh->faces->nodelist[noffset];
     }
   }
@@ -237,7 +237,7 @@ SiloReader<2, RealType>::read(Tessellation<2, RealType>& mesh,
     }
     for (int f = 0; f < nfacets; ++f, ++foffset)
     {
-      for (int n = 0; n < mesh.convexHull.facets[f].size(); ++n)
+      for (size_t n = 0; n < mesh.convexHull.facets[f].size(); ++n)
         mesh.convexHull.facets[f][n] = hullData[foffset];
     }
     DBFreeCompoundarray(hull);
@@ -302,7 +302,7 @@ SiloReader<2, RealType>::read(Tessellation<2, RealType>& mesh,
   }
 
   // Retrieve the fields.
-  for (int f = 0; f < fieldNames.size(); ++f) {
+  for (size_t f = 0; f < fieldNames.size(); ++f) {
     DBucdvar* dbvar = DBGetUcdvar(file, fieldNames[f].c_str());
     if (dbvar == 0) {
       DBClose(file);

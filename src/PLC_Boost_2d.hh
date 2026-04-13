@@ -3,6 +3,7 @@
 
 #ifdef POLYTOPE_ENABLE_BOOST
 
+#include <cstddef>
 #include <vector>
 
 #include "ReducedPLC.hh"
@@ -174,7 +175,7 @@ std::vector<ReducedPLC<2, RealType> > boost_union(const ReducedPLC<2, RealType>&
   boost::geometry::union_(ReducedPLCtoPolygon(a), ReducedPLCtoPolygon(b), bgresult);
   POLY_ASSERT(not bgresult.empty());
   std::vector<ReducedPLC<2, RealType> > result(bgresult.size());
-  for (unsigned i = 0; i != bgresult.size(); ++i) {
+  for (std::size_t i = 0; i != bgresult.size(); ++i) {
     POLY_ASSERT(bgresult[i].outer().front() == bgresult[i].outer().back());
     POLY_ASSERT(not boost::geometry::intersects(bgresult[i]));
     result[i] = ReducedPLCfromPolygon(bgresult[i]);
@@ -193,7 +194,7 @@ std::vector<ReducedPLC<2, RealType> > boost_intersect(const ReducedPLC<2, RealTy
   boost::geometry::intersection(ReducedPLCtoPolygon(a), ReducedPLCtoPolygon(b), bgresult);
   POLY_ASSERT(not bgresult.empty());
   std::vector<ReducedPLC<2, RealType> > result(bgresult.size());
-  for (unsigned i = 0; i != bgresult.size(); ++i) {
+  for (std::size_t i = 0; i != bgresult.size(); ++i) {
     POLY_ASSERT(bgresult[i].outer().front() == bgresult[i].outer().back());
     POLY_ASSERT(not boost::geometry::intersects(bgresult[i]));
     result[i] = ReducedPLCfromPolygon(bgresult[i]);
@@ -212,7 +213,7 @@ std::vector<ReducedPLC<2, RealType> > boost_subtract(const ReducedPLC<2, RealTyp
   boost::geometry::difference(ReducedPLCtoPolygon(a), ReducedPLCtoPolygon(b), bgresult);
   POLY_ASSERT(not bgresult.empty());
   std::vector<ReducedPLC<2, RealType> > result(bgresult.size());
-  for (unsigned i = 0; i != bgresult.size(); ++i) {
+  for (std::size_t i = 0; i != bgresult.size(); ++i) {
     POLY_ASSERT(bgresult[i].outer().front() == bgresult[i].outer().back());
     POLY_ASSERT(not boost::geometry::intersects(bgresult[i]));
     result[i] = ReducedPLCfromPolygon(bgresult[i]);
@@ -245,8 +246,8 @@ ReducedPLC<2, RealType> boost_clip(const ReducedPLC<2, RealType>& a,
   // The one geometry that contains point p is the returned intersection
   else {
     bool inside, onBoundary;
-    unsigned k = intersections.size();
-    for (unsigned j = 0; j != intersections.size(); ++j) {
+    std::size_t k = intersections.size();
+    for (std::size_t j = 0; j != intersections.size(); ++j) {
       inside = boost::geometry::covered_by(p, intersections[j]);
       if (inside) k = j;
       else {
@@ -299,7 +300,7 @@ std::vector<ReducedPLC<2, RealType> > boost_unionReduce(const std::vector<Reduce
   typedef boost::geometry::model::polygon<Point2<RealType>, false> PolygonType;
   typedef boost::geometry::model::multi_polygon<PolygonType>       MultiPolygonType;
   MultiPolygonType bgresult;
-  for (int i = 0; i < a.size(); ++i) {
+  for (std::size_t i = 0; i < a.size(); ++i) {
     MultiPolygonType tmp;
     boost::geometry::union_(bgresult, ReducedPLCtoPolygon(a[i]), tmp);
     boost::geometry::correct(tmp);
@@ -308,7 +309,7 @@ std::vector<ReducedPLC<2, RealType> > boost_unionReduce(const std::vector<Reduce
   POLY_ASSERT(not bgresult.empty());
   POLY_ASSERT(bgresult.size() <= a.size());
   std::vector<ReducedPLC<2, RealType> > result(bgresult.size());
-  for (int i = 0; i < bgresult.size(); ++i) {
+  for (std::size_t i = 0; i < bgresult.size(); ++i) {
     POLY_ASSERT(bgresult[i].outer().front() == bgresult[i].outer().back());
     POLY_ASSERT(not boost::geometry::intersects(bgresult[i]));
     result[i] = ReducedPLCfromPolygon(bgresult[i]);

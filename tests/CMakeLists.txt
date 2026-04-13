@@ -65,7 +65,7 @@ if(POLYTOPE_ENABLE_BOOST)
 endif()
 if(POLYTOPE_ENABLE_TETGEN)
   # 3D Tetgen Tessellator tests
-  polytope_add_test(TetgenTesselator)
+  polytope_add_test(testTetgenTessellator)
 endif()
 if(POLYTOPE_ENABLE_TRIANGLE)
   polytope_add_test(plot)

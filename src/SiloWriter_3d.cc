@@ -339,12 +339,12 @@ write(const Tessellation<3, RealType>& mesh,
     conn[c] = mesh.cells[c].size();
   for (int c = 0; c < numCells; ++c)
   {
-    for (int f = 0; f < mesh.cells[c].size(); ++f) {
+    for (size_t f = 0; f < mesh.cells[c].size(); ++f) {
       int j = mesh.cells[c][f];
       conn.push_back(j < 0 ? ~j : j);
     }
   }
-  for (int f = 0; f < mesh.faceCells.size(); ++f)
+  for (size_t f = 0; f < mesh.faceCells.size(); ++f)
   {
     conn.push_back(mesh.faceCells[f][0]);
     conn.push_back(mesh.faceCells[f][0]);
@@ -364,10 +364,10 @@ write(const Tessellation<3, RealType>& mesh,
   // Write out convex hull data.
   vector<int> hull(1+mesh.convexHull.facets.size());
   hull[0] = mesh.convexHull.facets.size();
-  for (int f = 0; f < mesh.convexHull.facets.size(); ++f)
+  for (size_t f = 0; f < mesh.convexHull.facets.size(); ++f)
     hull[1+f] = mesh.convexHull.facets[f].size();
-  for (int f = 0; f < mesh.convexHull.facets.size(); ++f)
-    for (int n = 0; n < mesh.convexHull.facets[f].size(); ++n)
+  for (size_t f = 0; f < mesh.convexHull.facets.size(); ++f)
+    for (size_t n = 0; n < mesh.convexHull.facets[f].size(); ++n)
       hull.push_back(mesh.convexHull.facets[f][n]);
   elemnames[0] = strDup("nfacets");
   elemlengths[0] = 1;
@@ -482,7 +482,7 @@ write(const Tessellation<3, RealType>& mesh,
     DBFreeOptlist(optlist);
     for (int i = 0; i < numChunks; ++i)
       free(meshNames[i]);
-    for (int f = 0; f < varNames.size(); ++f)
+    for (size_t f = 0; f < varNames.size(); ++f)
       for (int i = 0; i < numChunks; ++i)
         free(varNames[f][i]);
   }
@@ -551,7 +551,7 @@ write(const Tessellation<3, RealType>& mesh,
     DBFreeOptlist(optlist);
     for (int i = 0; i < numFiles*numChunks; ++i)
       free(meshNames[i]);
-    for (int f = 0; f < varNames.size(); ++f)
+    for (size_t f = 0; f < varNames.size(); ++f)
       for (int i = 0; i < numFiles*numChunks; ++i)
         free(varNames[f][i]);
   }
@@ -566,4 +566,3 @@ write(const Tessellation<3, RealType>& mesh,
 template class SiloWriter<3, double>;
 
 } // end namespace
-
