@@ -43,7 +43,7 @@ int main(int argc, char** argv) {
    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
    MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
 
-   POLY_ASSERT2(numProcs == 4, "Run this test using 4 processors");
+   POLY_CHECK2(numProcs == 4, "Run this test using 4 processors");
 
    const double x1 = 0.0, y1 = 0.0;
    const double x2 = 1.0, y2 = 1.0;
@@ -107,11 +107,11 @@ int main(int argc, char** argv) {
    for (unsigned k = 0; k != mesh.sharedNodes.size(); ++k) {
       if (mesh.neighborDomains[k] < rank) {
          for (unsigned j = 0; j != mesh.sharedNodes[k].size(); ++j) {
-            POLY_ASSERT(mesh.sharedNodes[k][j] < ownNodes.size());
+            POLY_CHECK(mesh.sharedNodes[k][j] < ownNodes.size());
             ownNodes[mesh.sharedNodes[k][j]] = 0;
          }
          for (unsigned j = 0; j != mesh.sharedFaces[k].size(); ++j) {
-            POLY_ASSERT(mesh.sharedFaces[k][j] < ownFaces.size());
+            POLY_CHECK(mesh.sharedFaces[k][j] < ownFaces.size());
             ownFaces[mesh.sharedFaces[k][j]] = 0;
          }
       }

@@ -41,7 +41,7 @@ double testBoundary(Boundary2D<double>& boundary,
   cout << "Area of boundary = " << boundary.mArea << endl;
   double result = 0.0;
   for( unsigned n = 0; n < 3; ++n ){
-    POLY_ASSERT(mesh.empty());
+    POLY_CHECK(mesh.empty());
     nPoints = nPoints * 10;
     cout << nPoints << " points..." << endl;
     
@@ -130,7 +130,7 @@ int main(int argc, char** argv)
 // double cellArea(std::vector<double> x, std::vector<double> y )
 // {
 //    double  area=0.0;
-//    POLY_ASSERT( x.size() == y.size() );
+//    POLY_CHECK( x.size() == y.size() );
 //    int j=x.size()-1;
 //    for (int i = 0; i < x.size(); ++i) {
 //       area -= (x[j] + x[i]) * (y[j] - y[i]); 
@@ -149,7 +149,7 @@ int main(int argc, char** argv)
 //               mesh.cells[i].end();  ++faceItr)
 //       {
 //          const unsigned iface = *faceItr < 0 ? ~(*faceItr) : *faceItr;
-//          POLY_ASSERT( mesh.faces[iface].size() == 2 );
+//          POLY_CHECK( mesh.faces[iface].size() == 2 );
 //          const unsigned inode = *faceItr < 0 ? mesh.faces[iface][1] :
 //             mesh.faces[iface][0];
 //          x.push_back( mesh.nodes[2*inode  ] );

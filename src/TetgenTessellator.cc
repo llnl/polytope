@@ -11,6 +11,7 @@
 #include "polytope.hh" // Pulls in POLY_ASSERT and TetgenTessellator.hh.
 #include "Point.hh"
 #include "PLC_CSG_3d.hh"
+#include "convexHull_2d.hh"
 #include "simplifyPLCfacets.hh"
 #include "polytope_write_OOGL.hh"
 #include "polytope_plc_canned_geometries.hh"
@@ -46,33 +47,33 @@ escapePod(const std::string nameEnd,
     return " : attempted to write to file " + os.str();
 }
 
-// //------------------------------------------------------------------------------
-// // Borrow the Point3 type as a tuple to create 3 node facets hashes.
-// //------------------------------------------------------------------------------
-// Point3<unsigned>
-// hashFacet(const unsigned i, const unsigned j, const unsigned k) {
-//   typedef Point3<unsigned> Tuple3;
-//   POLY_ASSERT(i != j and i != k and j != k);
-//   if (i < j and i < k) {
-//     if (j < k) {
-//       return Tuple3(i, j, k);
-//     } else {
-//       return Tuple3(i, k, j);
-//     }
-//   } else if (j < i and j < k) {
-//     if (i < k) {
-//       return Tuple3(j, i, k);
-//     } else {
-//       return Tuple3(j, k, i);
-//     }
-//   } else {
-//     if (i < j) {
-//       return Tuple3(k, i, j);
-//     } else {
-//       return Tuple3(k, j, i);
-//     }
-//   }
-// }
+//------------------------------------------------------------------------------
+// Borrow the Point3 type as a tuple to create 3 node facets hashes.
+//------------------------------------------------------------------------------
+Point3<unsigned>
+hashFacet(const unsigned i, const unsigned j, const unsigned k) {
+  typedef Point3<unsigned> Tuple3;
+  POLY_ASSERT(i != j and i != k and j != k);
+  if (i < j and i < k) {
+    if (j < k) {
+      return Tuple3(i, j, k);
+    } else {
+      return Tuple3(i, k, j);
+    }
+  } else if (j < i and j < k) {
+    if (i < k) {
+      return Tuple3(j, i, k);
+    } else {
+      return Tuple3(j, k, i);
+    }
+  } else {
+    if (i < j) {
+      return Tuple3(k, i, j);
+    } else {
+      return Tuple3(k, j, i);
+    }
+  }
+}
 
 //------------------------------------------------------------------------------
 // Given an array of 4 integers and 2 unique values, find the other two.
@@ -452,6 +453,15 @@ TetgenTessellator::
 }
 
 //------------------------------------------------------------------------------
+// Quantized tessellation.
+//------------------------------------------------------------------------------
+void
+TetgenTessellator::
+tessellateQuantized(QuantizedTessellation& /*qmesh*/) const {
+  POLY_ASSERT2(false, "TetgenTessellator has not been migrated to the QuantizedTessellation API yet. Use the direct 3D tessellate overloads for now.");
+}
+
+//------------------------------------------------------------------------------
 // Unbounded tessellation.
 //------------------------------------------------------------------------------
 void
@@ -601,6 +611,154 @@ tessellate(const vector<double>& points,
   // Convert to the output tessellation and we're done.
   qmesh1.tessellation(mesh);
 }
+
+// Alternate version of ReducedPLC tessellation
+// void
+// TetgenTessellator::
+// tessellate(const vector<double>& points,
+//            const ReducedPLC<3, double>& geometry,
+//            Tessellation<3, double>& mesh) const {
+
+//   typedef geometry::Hasher<3, double> HasherType;
+//   typedef internal::QuantTessellation<3, double>::PointHash PointHash;
+//   typedef internal::QuantTessellation<3, double>::EdgeHash EdgeHash;
+//   typedef internal::QuantTessellation<3, double>::IntPoint IntPoint;
+//   typedef internal::QuantTessellation<3, double>::RealPoint RealPoint;
+//   typedef geometry::Hasher<3, double> HasherType;
+
+//   // const PointHash outerFlag = HasherType::outerFlag();
+
+//   escapePod("boundary", geometry, geometry.points);
+
+//   // Pre-conditions.
+//   POLY_ASSERT(not points.empty());
+//   POLY_ASSERT(points.size() % 3 == 0);
+//   const unsigned numGenerators = points.size()/3;
+//   // for (unsigned i = 0; i != numGenerators; ++i) {
+//   //   for (unsigned j = 0; j != 3; ++j) {
+//   //     POLY_ASSERT(low[j] <= points[3*i+j] and points[3*i+j] <= high[j]);
+//   //   }
+//   // }
+
+//   // Create the unbounded QuantTessellation.
+//   internal::QuantTessellation<3, double> qmesh0;
+//   this->computeUnboundedQuantizedTessellation(points, geometry.points, qmesh0);
+
+//   // Create a new QuantTessellation.  This one will only use the single level of
+//   // quantization since we know the PLC is within this inner region.
+//   internal::QuantTessellation<3, double> qmesh1;
+//   qmesh1.generators = qmesh0.generators;
+//   qmesh1.low_labframe = qmesh0.low_labframe;
+//   qmesh1.high_labframe = qmesh0.high_labframe;
+//   qmesh1.low_inner = qmesh0.low_inner;
+//   qmesh1.high_inner = qmesh0.high_inner;
+//   qmesh1.low_outer = qmesh0.low_inner;
+//   qmesh1.high_outer = qmesh0.high_inner;
+//   qmesh1.degeneracy = 1.0e-5;
+
+//   // Walk each of the cells in the unbounded tessellation.
+//   for (unsigned icell = 0; icell != numGenerators; ++icell) {
+//     // Build a PLC to represent just this cell.
+//     ReducedPLC<3, double> cell = plcOfCell(qmesh0, icell);
+
+//     // Intersect with the boundary.
+//     cell = CSG::csg_intersect(geometry, cell);
+//     cell = simplifyPLCfacets(cell, cell.points, &qmesh1.low_inner.x, &qmesh1.high_inner.x, 1.0e-5);   // We have to use a *much* coarser degeneracy here due to CSG accuracy...  :(
+//     POLY_ASSERT(cell.facets.size() >= 4);
+
+//     // Add this cell and its elements to the new tessellation.
+//     vector<int> nodeIDs, edgeIDs, faceIDs;
+//     qmesh1.cells.push_back(vector<int>());
+//     for (unsigned i = 0; i != cell.points.size(); ++i) {
+//       nodeIDs.push_back(qmesh1.addNewNode(HasherType::hashPosition(&cell.points[3*i],
+//                                                                    const_cast<double*>(&qmesh1.low_inner.x), const_cast<double*>(&qmesh1.high_inner.x),
+//                                                                    const_cast<double*>(&qmesh1.low_outer.x), const_cast<double*>(&qmesh1.high_outer.x),
+//                                                                    qmesh1.degeneracy)));
+//     }
+//     for (unsigned iface = 0; iface != cell.facets.size(); ++iface) {
+//       vector<int> facetNodes = orderFacetNodes3d(cell.facets[iface], cell.points, qmesh1.degeneracy);
+
+//       // Remove vertices that lie on straight runs of the polygon boundary.
+//       bool removedCollinear = true;
+//       while (removedCollinear and facetNodes.size() > 3) {
+//         removedCollinear = false;
+//         vector<int> cleaned;
+//         cleaned.reserve(facetNodes.size());
+//         for (unsigned i = 0; i != facetNodes.size(); ++i) {
+//           const unsigned iprev = facetNodes[(i + facetNodes.size() - 1) % facetNodes.size()];
+//           const unsigned icurr = facetNodes[i];
+//           const unsigned inext = facetNodes[(i + 1) % facetNodes.size()];
+//           const RealPoint pprev(cell.points[3*iprev], cell.points[3*iprev + 1], cell.points[3*iprev + 2]);
+//           const RealPoint pcurr(cell.points[3*icurr], cell.points[3*icurr + 1], cell.points[3*icurr + 2]);
+//           const RealPoint pnext(cell.points[3*inext], cell.points[3*inext + 1], cell.points[3*inext + 2]);
+//           const RealPoint eprev = pcurr - pprev;
+//           const RealPoint enext = pnext - pcurr;
+//           RealPoint turn;
+//           geometry::cross<3, double>(&eprev.x, &enext.x, &turn.x);
+//           if (geometry::dot<3, double>(&turn.x, &turn.x) > 1.0e-20) {
+//             cleaned.push_back(icurr);
+//           } else {
+//             removedCollinear = true;
+//           }
+//         }
+//         facetNodes.swap(cleaned);
+//       }
+//       POLY_ASSERT(facetNodes.size() >= 3);
+
+//       // Orient the local facet cycle so this cell sees a positive signed
+//       // volume. Shared faces reused by other cells can then derive the proper
+//       // opposite sign from the stored face orientation.
+//       {
+//         const RealPoint p0(cell.points[3*facetNodes[0]], cell.points[3*facetNodes[0] + 1], cell.points[3*facetNodes[0] + 2]);
+//         const RealPoint p1(cell.points[3*facetNodes[1]], cell.points[3*facetNodes[1] + 1], cell.points[3*facetNodes[1] + 2]);
+//         const RealPoint p2(cell.points[3*facetNodes[2]], cell.points[3*facetNodes[2] + 1], cell.points[3*facetNodes[2] + 2]);
+//         const RealType localVol = geometry::tetrahedralVolume6(&qmesh1.generators[3*icell], &p2.x, &p1.x, &p0.x);
+//         POLY_ASSERT(localVol != 0.0);
+//         if (localVol < 0.0) std::reverse(facetNodes.begin(), facetNodes.end());
+//       }
+
+//       vector<int> face;
+//       face.reserve(facetNodes.size());
+//       for (unsigned i = 0; i != facetNodes.size(); ++i) {
+//         const unsigned j = (i + 1) % facetNodes.size();
+//         const EdgeHash ehash = internal::hashEdge(nodeIDs[facetNodes[i]],
+//                                                   nodeIDs[facetNodes[j]]);
+//         int iedge = qmesh1.addNewEdge(ehash);
+//         if (ehash.first == nodeIDs[facetNodes[j]]) iedge = ~iedge;
+//         face.push_back(iedge);
+//       }
+//       POLY_ASSERT(face.size() == facetNodes.size());
+//       const unsigned meshFace = qmesh1.addNewFace(face);
+//       POLY_ASSERT(meshFace < qmesh1.faces.size());
+
+//       // Choose the face sign from the stored face orientation, not from whether
+//       // the face was newly inserted. Shared bounded faces are reused by multiple
+//       // cells, and the second cell needs the opposite sign if the stored face
+//       // normal points away from its generator.
+//       POLY_ASSERT(qmesh1.faces[meshFace].size() >= 3);
+//       std::vector<unsigned> faceNodes;
+//       faceNodes.reserve(qmesh1.faces[meshFace].size());
+//       for (unsigned j = 0; j != qmesh1.faces[meshFace].size(); ++j) {
+//         const int iedge = qmesh1.faces[meshFace][j];
+//         faceNodes.push_back(iedge >= 0 ? qmesh1.edges[iedge].first : qmesh1.edges[~iedge].second);
+//       }
+//       POLY_ASSERT(faceNodes.size() >= 3);
+//       const RealPoint p0 = qmesh1.nodePosition(faceNodes[0]);
+//       const RealPoint p1 = qmesh1.nodePosition(faceNodes[1]);
+//       const RealPoint p2 = qmesh1.nodePosition(faceNodes[2]);
+//       const RealType vol = geometry::tetrahedralVolume6(&qmesh1.generators[3*icell], &p2.x, &p1.x, &p0.x);
+//       POLY_ASSERT(vol != 0.0);
+//       qmesh1.cells.back().push_back(vol > 0.0 ? meshFace : ~meshFace);
+//     }
+//     POLY_ASSERT(qmesh1.cells.back().size() == cell.facets.size());
+//   }
+
+//   // The QuantTessellation should be complete now.
+//   qmesh1.assertValid();
+
+//   // Convert to the output tessellation and we're done.
+//   qmesh1.tessellation(mesh);
+// }
 
 //------------------------------------------------------------------------------
 // Internal method that returns an intermediated quantized representation

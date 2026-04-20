@@ -95,7 +95,7 @@ void computeNormal(const RealType& ax, const RealType& ay, const RealType& az,
                    double& nx, double& ny, double& nz) {
   const double dx_ab = bx - ax, dy_ab = by - ay, dz_ab = bz - az;
   const double dx_ac = cx - ax, dy_ac = cy - ay, dz_ac = cz - az;
-  nx = dy_ab*dz_ac - dz_ab*dz_ac;
+  nx = dy_ab*dz_ac - dz_ab*dy_ac;
   ny = dz_ab*dx_ac - dx_ab*dz_ac;
   nz = dx_ab*dy_ac - dy_ab*dx_ac;
 }
@@ -166,6 +166,50 @@ convexIntersect(const ReducedPLC<2, RealType>& a, const ReducedPLC<2, RealType>&
   // We can't exclude anybody, so must intersect!
   return true;
 }
+
+// Alternative intersect version
+// The tests pass with this version
+// template<typename RealType>
+// bool
+// convexIntersect(const ReducedPLC<2, RealType>& a, const ReducedPLC<2, RealType>& b) {
+//   const unsigned nva = a.points.size() / 2;
+//   const unsigned nvb = b.points.size() / 2;
+//   const unsigned nfa = a.facets.size();
+//   const unsigned nfb = b.facets.size();
+//   POLY_CONTRACT_VAR(nva);
+//   POLY_CONTRACT_VAR(nvb);
+//   unsigned i, j, k, m;
+
+//   // Any vertex containment is sufficient.
+//   for (i = 0; i < nva; ++i) {
+//     if (within<2, RealType>(&a.points[2*i], nvb, &b.points[0], b)) return true;
+//   }
+//   for (i = 0; i < nvb; ++i) {
+//     if (within<2, RealType>(&b.points[2*i], nva, &a.points[0], a)) return true;
+//   }
+
+//   // Otherwise, the polygons intersect only if an edge pair crosses.
+//   RealType intersectionPoint[2];
+//   for (i = 0; i < nfa; ++i) {
+//     j = a.facets[i][0];
+//     k = a.facets[i][1];
+//     POLY_ASSERT(j < nva);
+//     POLY_ASSERT(k < nva);
+//     for (m = 0; m < nfb; ++m) {
+//       const unsigned p = b.facets[m][0];
+//       const unsigned q = b.facets[m][1];
+//       POLY_ASSERT(p < nvb);
+//       POLY_ASSERT(q < nvb);
+//       if (geometry::segmentIntersection2D(&a.points[2*j], &a.points[2*k],
+//                                           &b.points[2*p], &b.points[2*q],
+//                                           intersectionPoint)) {
+//         return true;
+//       }
+//     }
+//   }
+
+//   return false;
+// }
 
 //------------------------------------------------------------------------------
 // Convex polyhedron intersection.

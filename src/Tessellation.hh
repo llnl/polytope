@@ -20,7 +20,9 @@ class Tessellation {
     nodes(),
     cells(),
     faces(),
+    infNodes(),
     boundaryNodes(),
+    infFaces(),
     boundaryFaces(),
     faceCells(),
     convexHull() {}
@@ -34,7 +36,9 @@ class Tessellation {
     nodes.clear();
     cells.clear();
     faces.clear();
+    infNodes.clear();
     boundaryNodes.clear();
+    infFaces.clear();
     boundaryFaces.clear();
     faceCells.clear();
     convexHull.clear();
@@ -48,7 +52,7 @@ class Tessellation {
   virtual bool empty() const
   {
     return nodes.empty() and cells.empty() and faces.empty() and 
-       boundaryNodes.empty() and boundaryFaces.empty() and faceCells.empty() and 
+       infNodes.empty() and boundaryNodes.empty() and infFaces.empty() and boundaryFaces.empty() and faceCells.empty() and
        convexHull.empty();
   }
 
@@ -73,7 +77,13 @@ class Tessellation {
   std::vector<std::vector<unsigned> > faces;
 
   //! Indices of all nodes that are on the boundary of the tessellation.
+  std::vector<unsigned> infNodes;
+
+  //! Indices of all nodes that are on the boundary of the tessellation.
   std::vector<unsigned> boundaryNodes;
+
+  //! Indices of all faces on the boundary of the tessellation.
+  std::vector<unsigned> infFaces;
 
   //! Indices of all faces on the boundary of the tessellation.
   std::vector<unsigned> boundaryFaces;
@@ -104,7 +114,7 @@ class Tessellation {
   //! Find the set of cells that touch each mesh node.
   std::vector<std::set<unsigned> > computeNodeCells() {
     std::vector<std::set<unsigned> > result(nodes.size()/Dimension);
-    for (auto i = 0u; i <= (unsigned)cells.size(); ++i) {
+    for (auto i = 0u; i < cells.size(); ++i) {
       for (std::vector<int>::const_iterator faceItr = cells[i].begin();
            faceItr != cells[i].end();
            ++faceItr) {

@@ -30,4 +30,11 @@ clipQuantizedTessellation<int, double>(QuantizedTessellation3d<int, double>& qme
                                        const std::vector<double>& PLCpoints,
                                        const PLC<3, double>& geometry,
                                        const Tessellator<3, double>& tessellator);
+
+template
+void
+clipQuantizedTessellation<int64_t, double>(QuantizedTessellation3d<int64_t, double>& qmesh,
+                                           const std::vector<double>& PLCpoints,
+                                           const PLC<3, double>& geometry,
+                                           const Tessellator<3, double>& tessellator);
 }

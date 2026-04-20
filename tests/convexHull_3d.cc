@@ -41,7 +41,7 @@ convexContains(const polytope::PLC<3, RealType>& surface,
   RealType xn, yn, zn, dx1, dy1, dz1, dx2, dy2, dz2, norm;
   while (containmentTest and ifacet < surface.facets.size()) {
     n = surface.facets[ifacet].size();
-    POLY_ASSERT(n >= 3);
+    POLY_CHECK(n >= 3);
     xn = 0.0; yn = 0.0; zn = 0.0;
 
     // Compute the facet normal.

@@ -21,8 +21,6 @@
 // }
 #endif
 
-#define POLY_CHECK(x) if (!(x)) { cout << "FAIL: " << #x << endl; exit(-1); }
-
 using namespace std;
 
 //------------------------------------------------------------------------------
@@ -268,7 +266,7 @@ int main(int argc, char** argv) {
           vector<char>::const_iterator itr = buffer.begin();
           deserialize(otherNodeHashes, itr, buffer.end());
           deserialize(otherFaceHashes, itr, buffer.end());
-          POLY_ASSERT(itr == buffer.end());
+          POLY_CHECK(itr == buffer.end());
 
           // Check that the other processes node and face positions line up with ours.
           const unsigned nn = mesh.sharedNodes[i].size(), nf = mesh.sharedFaces[i].size();

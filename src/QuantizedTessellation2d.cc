@@ -170,4 +170,5 @@ IntType
 QuantizedTessellation2d<IntType, RealType>::coordMax = std::numeric_limits<IntType>::max()/2;
 
 template struct QuantizedTessellation2d<int, double>;
+template struct QuantizedTessellation2d<uint64_t, double>;
 }

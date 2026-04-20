@@ -136,11 +136,11 @@ void runTest(Tessellator<2,double>& tessellator) {
     for (unsigned k = 0; k != mesh.sharedNodes.size(); ++k) {
       if (mesh.neighborDomains[k] < rank) {
         for (unsigned j = 0; j != mesh.sharedNodes[k].size(); ++j) {
-          POLY_ASSERT(mesh.sharedNodes[k][j] < ownNodes.size());
+          POLY_CHECK(mesh.sharedNodes[k][j] < ownNodes.size());
           ownNodes[mesh.sharedNodes[k][j]] = 0;
         }
         for (unsigned j = 0; j != mesh.sharedFaces[k].size(); ++j) {
-          POLY_ASSERT(mesh.sharedFaces[k][j] < ownFaces.size());
+          POLY_CHECK(mesh.sharedFaces[k][j] < ownFaces.size());
           ownFaces[mesh.sharedFaces[k][j]] = 0;
         }
       }
@@ -194,7 +194,7 @@ void runTest(Tessellator<2,double>& tessellator) {
     //    for( std::vector<int>::const_iterator faceItr = mesh.cells[i].begin();
     //         faceItr != mesh.cells[i].end(); ++faceItr){
     //       const unsigned iface = *faceItr < 0 ? ~(*faceItr) : *faceItr;
-    //       POLY_ASSERT( mesh.faces[iface].size() == 2 );
+    //       POLY_CHECK( mesh.faces[iface].size() == 2 );
     //       const unsigned inode = *faceItr < 0 ? mesh.faces[iface][1] : mesh.faces[iface][0];
     //       cout << " (" << mesh.nodes[2*inode] << "," << mesh.nodes[2*inode+1] << ") ";
     //    }

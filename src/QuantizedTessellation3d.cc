@@ -48,7 +48,7 @@ QuantizedTessellation3d(const std::vector<RealType>& points,
   xmax[0] = xmax_in[0];
   xmax[1] = xmax_in[1];
   xmax[2] = xmax_in[2];
-  length = std::max(xmax[0] - xmin[0], xmax[1] - xmin[1]);
+  length = std::max(xmax[0] - xmin[0], std::max(xmax[1] - xmin[1], xmax[2] - xmin[2]));
   this->construct(points);
 }
 
@@ -121,4 +121,5 @@ IntType
 QuantizedTessellation3d<IntType, RealType>::coordMax = std::numeric_limits<IntType>::max()/3;
 
 template struct QuantizedTessellation3d<int, double>;
+template struct QuantizedTessellation3d<int64_t, double>;
 }

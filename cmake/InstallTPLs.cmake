@@ -110,6 +110,25 @@ if(POLYTOPE_ENABLE_SILO)
   list(APPEND IMPORTED_LIBS silo)
 endif()
 
+# Triangle
+#-----------------------------------------------------------------------------------
+# Spack does not install Triangle in any useful way so we have to install it ourselves
+if(POLYTOPE_ENABLE_TRIANGLE)
+  set(triangle_DIR ${POLYTOPE_ROOT_DIR}/extern/Triangle)
+  set(triangle_sources ${triangle_DIR}/triangle.c)
+  set(triangle_headers ${triangle_DIR}/triangle.h)
+  blt_add_library(NAME triangle
+    HEADERS ${triangle_headers}
+    SOURCES ${triangle_sources}
+    SHARED TRUE)
+  install(TARGETS triangle EXPORT polytope-targets DESTINATION lib)
+  install(FILES ${triangle_headers} DESTINATION include/triangle)
+  list(APPEND POLYTOPE_TPL_DEPENDS triangle)
+  include_directories(${triangle_DIR})
+endif()
+
+# Tetgen
+#-----------------------------------------------------------------------------------
 if(POLYTOPE_ENABLE_TETGEN)
   blt_import_library(NAME tetgen
     LIBRARIES ${tetgen_DIR}/lib/libtet.a

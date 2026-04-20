@@ -7,8 +7,6 @@
 #ifndef __Polytope_TriangleTessellator__
 #define __Polytope_TriangleTessellator__
 
-#ifdef POLYTOPE_ENABLE_TRIANGLE
-
 #include <vector>
 #include <cmath>
 
@@ -65,5 +63,4 @@ TriangleTessellator<RealType>::mDegeneracy = 8.0/std::numeric_limits<typename Tr
 
 } //end polytope namespace
 
-#endif
 #endif

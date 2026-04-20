@@ -7,8 +7,8 @@
 #include <map>
 #include <utility>
 
-#include "DimensionTraits.hh"
 #include "Point.hh"
+#include "polytope_geometric_utilities.hh"
 
 #ifdef POLYTOPE_ENABLE_BOOST
 #include <boost/geometry.hpp>

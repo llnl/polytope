@@ -59,7 +59,6 @@ set(polytope_headers
 
 set(polytope_sources
   KeyTraits.cc
-  predicates.cc
   PLC_CSG.cc
   QuantizedTessellation2d.cc
   QuantizedTessellation3d.cc
@@ -104,6 +103,8 @@ endif()
 # Tetgen tessellator
 if (POLYTOPE_ENABLE_TETGEN)
   list(APPEND polytope_sources TetgenTessellator.cc)
+else()
+  list(APPEND polytope_sources predicates.cc)
 endif ()
 
 # Triangle tessellator
@@ -133,7 +134,7 @@ blt_add_library(NAME polytopeC
   HEADERS    ${polytope_headers}
   SOURCES    ${polytope_sources}
   DEPENDS_ON ${POLYTOPE_TPL_DEPENDS}
-  SHARED     ON
+  SHARED     ${BUILD_SHARED_LIBS}
 )
 
 target_compile_options(polytopeC PRIVATE ${POLYTOPE_CXX_COMPILE_FLAGS})

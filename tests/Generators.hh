@@ -53,7 +53,7 @@ public:
          }
          mPoints.insert( mPoints.end(), pos.begin(), pos.end() );
       }
-      POLY_ASSERT( mPoints.size()/Dimension == nGenerators );
+      POLY_CHECK( mPoints.size()/Dimension == nGenerators );
    }
 
    
@@ -63,7 +63,7 @@ public:
    void cartesianPoints(vector<unsigned> nCellsPerDimension)
    {
       mPoints.clear();
-      POLY_ASSERT( nCellsPerDimension.size() == Dimension );
+      POLY_CHECK( nCellsPerDimension.size() == Dimension );
 
       mBoundary.getBoundingBox();
 
@@ -82,10 +82,10 @@ public:
    void radialPoints(const unsigned nr)
    {
       mPoints.clear();
-      POLY_ASSERT( Dimension == 2 );
+      POLY_CHECK( Dimension == 2 );
       RealType maxDistance;
       mBoundary.getBoundingRadius( maxDistance );
-      POLY_ASSERT( maxDistance > 0 );
+      POLY_CHECK( maxDistance > 0 );
       
       RealType dRadius = maxDistance/nr;
       for( unsigned i = 0; i != nr; ++i ){
@@ -117,7 +117,7 @@ public:
       std::vector<RealType> point;
       for (unsigned n=0; n<Dimension; ++n ) point.push_back( pos[n] );
       bool inside = boost::geometry::within( makeBGPoint(point), mBoundary.mBGboundary );
-      POLY_ASSERT( inside );
+      POLY_CHECK( inside );
       mPoints.insert( mPoints.end(), point.begin(), point.end() );
    }
 

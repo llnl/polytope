@@ -62,7 +62,7 @@ template<int Dimension, typename RealType> struct Hasher;
 template<typename RealType> struct Hasher<2, RealType> {
 
   // typedef typename DimensionTraits<Dimension, RealType>::CoordHash CoordHash;
-  typedef KeyTraits::Key CoordHash;
+  using CoordHash = KeyTraits::Key;
 
   static unsigned  num1dbits()                { return 31U; }
   //static unsigned  num1dbits()                { return 30U; }
@@ -172,8 +172,7 @@ template<typename RealType> struct Hasher<2, RealType> {
 // 3D
 template<typename RealType> struct Hasher<3, RealType> {
 
-  // typedef DimensionTraits<3, RealType>::CoordHash CoordHash;
-  typedef KeyTraits::Key CoordHash;
+  using CoordHash = KeyTraits::Key;
 
   static unsigned  num1dbits()                { return 21U; }
   static CoordHash coordMax()                 { return (1ULL << num1dbits()) - 1ULL; }
@@ -1360,8 +1359,7 @@ uniquePoints(const std::vector<RealType>& points,
              std::vector<unsigned>& indexMap) {
   POLY_ASSERT(points.size() % Dimension == 0);
   typedef geometry::Hasher<Dimension, RealType> HasherType;
-  // typedef DimensionTraits<Dimension, RealType>::CoordHash CoordHash;
-  typedef KeyTraits::Key CoordHash;
+  typedef typename HasherType::CoordHash CoordHash;
 
   // // Compute the bounding box.
   // RealType xmin[Dimension], xmax[Dimension];
@@ -1375,7 +1373,7 @@ uniquePoints(const std::vector<RealType>& points,
   RealType pos[Dimension];
   for (unsigned i = 0; i != n; ++i) {
     const CoordHash hashi = HasherType::hashPosition(&points[Dimension*i], xmin, xmax, xmin, xmax, tol);
-    std::map<CoordHash, unsigned>::const_iterator itr = uniqueHashes.find(hashi);
+    typename std::map<CoordHash, unsigned>::const_iterator itr = uniqueHashes.find(hashi);
     if (itr == uniqueHashes.end()) {
       uniqueHashes[hashi] = j;
       HasherType::unhashPosition(pos, xmin, xmax, xmin, xmax, hashi, tol);

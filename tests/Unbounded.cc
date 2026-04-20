@@ -16,8 +16,6 @@
 #include "mpi.h"
 #endif
 
-#define POLY_CHECK_BOOL(x) if (!(x)) { return false; }
-
 using namespace std;
 using namespace polytope;
 
@@ -31,14 +29,14 @@ bool checkMesh(const Tessellation<2,double>& mesh,
                const unsigned nfaces,
                const unsigned nboundNodes,
                const unsigned nboundFaces) {
-  POLY_CHECK_BOOL(mesh.cells.size()    == ncells);
+  POLY_CHECK(mesh.cells.size()    == ncells);
   // Suspending checking the number of boundary elements for our unbounded
   // tests, since my new method of using guard generators to implicitly
   // create a boundary makes this problematic.
   // POLY_CHECK_BOOL(mesh.nodes.size()/2  == nnodes);
-  // POLY_CHECK_BOOL(mesh.faces.size()    == nfaces);
-  // POLY_CHECK_BOOL(mesh.boundaryNodes.size() == nboundNodes);
-  // POLY_CHECK_BOOL(mesh.boundaryFaces.size() == nboundFaces);
+  // POLY_CHECK(mesh.faces.size()    == nfaces);
+  // POLY_CHECK(mesh.boundaryNodes.size() == nboundNodes);
+  // POLY_CHECK(mesh.boundaryFaces.size() == nboundFaces);
   return true;
 }
 
@@ -236,7 +234,7 @@ void test(Tessellator<2,double>& tessellator,
       }
     }
   }
-  POLY_ASSERT(passedAll);
+  POLY_CHECK(passedAll);
 }
 
 

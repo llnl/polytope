@@ -33,7 +33,7 @@ rotatePoints(std::vector<RealType>& points,
              const RealType theta,
              const RealType phi,
              const RealType psi) {
-  POLY_ASSERT(points.size() % 3 == 0);
+  POLY_CHECK(points.size() % 3 == 0);
   const RealType R[3][3] = {{ cos(theta)*cos(psi), cos(phi)*sin(psi) + sin(phi)*sin(theta)*cos(psi), sin(phi)*sin(psi) - cos(phi)*sin(theta)*cos(psi)},
                             {-cos(theta)*sin(psi), cos(phi)*cos(psi) - sin(phi)*sin(theta)*sin(psi), sin(phi)*cos(psi) + cos(phi)*sin(theta)*sin(psi)},
                             { sin(theta),         -sin(phi)*cos(theta),                              cos(phi)*cos(theta)}};
@@ -201,7 +201,7 @@ int main(int argc, char** argv) {
     // Deliberately split one triangle facet into three, creating some inconsistent hanging nodes.
     std::vector<CSG::CSG_internal_3d::Vertex<double> > triangle(3);
     polys.pop_back(); polys.pop_back();  // Pop off the last two triangles.
-    POLY_ASSERT(box1.facets.back().size() == 4);
+    POLY_CHECK(box1.facets.back().size() == 4);
     const unsigned k1 = box1.facets.back()[0],
                    k2 = box1.facets.back()[1],
                    k3 = box1.facets.back()[2],

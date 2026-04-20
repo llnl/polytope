@@ -13,6 +13,7 @@
 #include "convexHull_3d.hh"
 #include "QuantizedTessellation2d.hh"
 #include "QuantizedTessellation3d.hh"
+#include "ReducedPLC.hh"
 
 namespace polytope {
 
@@ -22,16 +23,16 @@ template<int Dimension, typename RealType> struct DimensionTraits {};
 // 2D specialization
 template<typename RealType>
 struct DimensionTraits<2, RealType> {
-  typedef typename polytope::ReducedPLC<2, RealType> ConvexHull;
-  typedef polytope::KeyTraits::Key CoordHash;
-  typedef polytope::Point2<CoordHash> IntPoint;
-  typedef polytope::Point2<RealType> RealPoint;
-  typedef polytope::QuantizedTessellation2d<CoordHash, RealType> QuantizedTessellation;
+  typedef ReducedPLC<2, RealType> ConvexHull;
+  typedef KeyTraits::Key CoordHash;
+  typedef Point2<CoordHash> IntPoint;
+  typedef Point2<RealType> RealPoint;
+  typedef QuantizedTessellation2d<CoordHash, RealType> QuantizedTessellation;
 
   static ConvexHull convexHull(const std::vector<RealType>& points, 
                                const RealType* low,
                                const RealType& dx) { 
-    return ConvexHull(polytope::convexHull_2d(points, low, dx), points);
+    return ConvexHull(convexHull_2d(points, low, dx), points);
   }
   static IntPoint constructPoint(const RealType* ri,
                                  const RealType* rlow,
@@ -44,7 +45,7 @@ struct DimensionTraits<2, RealType> {
   static RealPoint constructPoint(const RealType* ri) {
      return RealPoint(ri[0], ri[1]);
   }
-  static IntPoint faceCentroid(const polytope::Tessellation<2, RealType>& mesh,
+  static IntPoint faceCentroid(const Tessellation<2, RealType>& mesh,
                                const unsigned iface,
                                const RealType* rlow,
                                const RealType& dx) {
@@ -88,16 +89,16 @@ struct DimensionTraits<2, RealType> {
 // 3D specialization
 template<typename RealType>
 struct DimensionTraits<3, RealType> {
-  typedef typename polytope::ReducedPLC<3, RealType> ConvexHull;
-  typedef polytope::KeyTraits::Key CoordHash;
-  typedef polytope::Point3<CoordHash> IntPoint;
-  typedef polytope::Point3<RealType> RealPoint;
-  typedef polytope::QuantizedTessellation3d<CoordHash, RealType> QuantizedTessellation;
+  typedef ReducedPLC<3, RealType> ConvexHull;
+  typedef KeyTraits::Key CoordHash;
+  typedef Point3<CoordHash> IntPoint;
+  typedef Point3<RealType> RealPoint;
+  typedef QuantizedTessellation3d<CoordHash, RealType> QuantizedTessellation;
 
   static ConvexHull convexHull(const std::vector<RealType>& points, 
                                const RealType* low,
                                const RealType& dx) { 
-    return ConvexHull(polytope::convexHull_3d(points, low, dx), points);
+    return ConvexHull(convexHull_3d(points, low, dx), points);
   }
   static IntPoint constructPoint(const RealType* ri,
                                  const RealType* rlow,
@@ -110,7 +111,7 @@ struct DimensionTraits<3, RealType> {
   static RealPoint constructPoint(const RealType* ri) {
     return RealPoint(ri[0], ri[1], ri[2]);
   }
-  static IntPoint faceCentroid(const polytope::Tessellation<3, RealType>& mesh,
+  static IntPoint faceCentroid(const Tessellation<3, RealType>& mesh,
                                const unsigned iface,
                                const RealType* rlow,
                                const RealType& dx) {

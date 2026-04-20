@@ -13,11 +13,6 @@
 #include "Generators.hh"
 
 namespace polytope {
-//------------------------------------------------------------------------------
-// A macro for checking true/false test conditions.
-//------------------------------------------------------------------------------
-#define POLY_CHECK(x) { if (!(x)) { std::cout << "FAIL: " << #x << std::endl; exit(-1); } }
-#define POLY_CHECK2(x, msg) { if (!(x)) { std::cout << "FAIL: " << #x << std::endl << msg << std::endl; exit(-1); } }
 
 //------------------------------------------------------------------------------
 // A simple mesh output function for the SiloWriter
@@ -29,7 +24,7 @@ void outputMesh(const Tessellation<2,RealType>& mesh,
 		const std::vector<RealType>& points,
 		const unsigned testCycle = 1,
 		const RealType time = 0.0) {
-  POLY_ASSERT(points.empty() or
+  POLY_CHECK(points.empty() or
               points.size() == 2*mesh.cells.size());
 #ifdef POLYTOPE_ENABLE_SILO
   std::vector<double> index(mesh.cells.size());
@@ -62,7 +57,7 @@ void outputMesh(const Tessellation<3,RealType>& mesh,
 		const std::vector<RealType>& points,
 		const unsigned testCycle = 1,
 		const RealType time = 0.0) {
-  POLY_ASSERT(points.empty() ||
+  POLY_CHECK(points.empty() ||
               points.size() == 3*mesh.cells.size());
 #ifdef POLYTOPE_ENABLE_SILO
   std::vector<double> index(mesh.cells.size());
@@ -121,7 +116,7 @@ void outputMesh(Tessellation<2,RealType>& mesh,
 		const unsigned testCycle = 1,
 		const RealType time = 0.0) {
 #ifdef POLYTOPE_ENABLE_SILO
-  POLY_ASSERT(cellField.size() == mesh.cells.size());
+  POLY_CHECK(cellField.size() == mesh.cells.size());
   std::vector<double> index(mesh.cells.size());
   std::vector<double> genx (mesh.cells.size());
   std::vector<double> geny (mesh.cells.size());
@@ -173,8 +168,8 @@ RealType computeTessellationArea( Tessellation<2,RealType>& mesh ) {
       for (std::vector<int>::const_iterator faceItr = mesh.cells[i].begin();
            faceItr != mesh.cells[i].end(); ++faceItr){
          const unsigned iface = *faceItr < 0 ? ~(*faceItr) : *faceItr;
-         POLY_ASSERT(iface < mesh.faceCells.size());
-         POLY_ASSERT(mesh.faces[iface].size() == 2);
+         POLY_CHECK(iface < mesh.faceCells.size());
+         POLY_CHECK(mesh.faces[iface].size() == 2);
          const unsigned inode = *faceItr < 0 ? mesh.faces[iface][1] : mesh.faces[iface][0];
          nodeCell.push_back( mesh.nodes[2*inode  ] );
          nodeCell.push_back( mesh.nodes[2*inode+1] );

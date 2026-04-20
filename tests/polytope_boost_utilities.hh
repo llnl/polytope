@@ -23,7 +23,7 @@ using BGPolygon = bg::model::polygon<BGPoint<RealType, Dimension>,false>;
 //------------------------------------------------------------------------------
 template <typename RealType>
 BGPoint<RealType,2> makeBGPoint2D(std::vector<RealType>& position) {
-   POLY_ASSERT( position.size() == 2 );
+   POLY_CHECK( position.size() == 2 );
    BGPoint<RealType,2> point(position[0], position[1]);
    return point;
 }
@@ -33,7 +33,7 @@ BGPoint<RealType,2> makeBGPoint2D(std::vector<RealType>& position) {
 //------------------------------------------------------------------------------
 template <typename RealType>
 BGPoint<RealType,3> makeBGPoint3D(std::vector<RealType>& position) {
-   POLY_ASSERT( position.size() == 3 );
+   POLY_CHECK( position.size() == 3 );
    BGPoint<RealType,3> point(position[0], position[1], position[2]);
    return point;
 }
@@ -62,7 +62,7 @@ makeBGPolygon( PLC<2,RealType>& PLC, std::vector<RealType>& PLCpoints ) {
    BGPolygon<RealType, 2> polygon;
    // Walk the facets and add the first node
    for (j = 0; j != PLC.facets.size(); ++j){
-      POLY_ASSERT( PLC.facets[j].size() == 2 );
+      POLY_CHECK( PLC.facets[j].size() == 2 );
       i = PLC.facets[j][0];
       boost::geometry::append( polygon, BGPoint<RealType,2>(PLCpoints[2*i],PLCpoints[2*i+1]) );
    }
@@ -76,7 +76,7 @@ makeBGPolygon( PLC<2,RealType>& PLC, std::vector<RealType>& PLCpoints ) {
       holes.resize(nHoles);
       for (unsigned ihole = 0; ihole != nHoles; ++ihole) {
          for (j = 0; j != PLC.holes[ihole].size(); ++j){
-            POLY_ASSERT( PLC.holes[ihole][j].size() == 2 );
+            POLY_CHECK( PLC.holes[ihole][j].size() == 2 );
             i = PLC.holes[ihole][j][0];
             boost::geometry::append( holes[ihole], BGPoint<RealType,2>( PLCpoints[2*i], PLCpoints[2*i+1] ) );
          }

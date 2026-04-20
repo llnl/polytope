@@ -114,7 +114,7 @@ void test(Tessellator<2,double>& tessellator) {
   
   // The velocity field
   vector<double> velocityField(points.size());
-  POLY_ASSERT(velMask.size() == points.size());
+  POLY_CHECK(velMask.size() == points.size());
   
   // The initial tessellation
   unsigned step = 0;

@@ -53,13 +53,11 @@ bool checkIfCartesian(Tessellation<2,double>& mesh, unsigned nx, unsigned ny)
   POLY_CHECK_BOOL(mesh.cells.size()   == nx*ny );
   POLY_CHECK_BOOL(mesh.faces.size()   == nx*(ny + 1) + ny*(nx + 1) );
   for (unsigned i = 0; i != nx*ny; ++i) POLY_CHECK_BOOL(mesh.cells[i].size() == 4);
-  
   std::vector<std::set<unsigned> > nodeCells = mesh.computeNodeCells();
-  for (unsigned i = 0; i != (nx+1)*(ny+1); ++i)
-  {
-     POLY_CHECK_BOOL( (nodeCells[i].size() == 4) ||
-                      (nodeCells[i].size() == 2) ||
-                      (nodeCells[i].size() == 1) );
+  for (unsigned i = 0; i != (nx+1)*(ny+1); ++i) {
+    POLY_CHECK_BOOL( (nodeCells[i].size() == 4) ||
+                     (nodeCells[i].size() == 2) ||
+                     (nodeCells[i].size() == 1) );
   }
   return true;
 }

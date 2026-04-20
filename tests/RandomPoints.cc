@@ -39,7 +39,7 @@ void testBoundary(Boundary2D<double>& boundary,
   unsigned nPoints = 10;
   Tessellation<2,double> mesh;
   for( unsigned n = 0; n < numSweeps; ++n ){
-    POLY_ASSERT(mesh.empty());
+    POLY_CHECK(mesh.empty());
     nPoints = nPoints * 10;
     int plotIndex = 3*boundaryID + n;
 

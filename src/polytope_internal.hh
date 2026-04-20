@@ -2,12 +2,15 @@
 //
 // Put common includes for polytope here that you don't necessarily 
 // want exposed in the public interface.
+#ifndef POLYTOPE_INTERNAL_HH
+#define POLYTOPE_INTERNAL_HH
+
 #include <vector>
 #include <map>
 #include <set>
+#include <iostream>
 
 // An POLY_ASSERT macro, if one isn't already defined.
-#ifndef POLY_ASSERT
 
 namespace polytope {
 
@@ -39,19 +42,28 @@ void internal_abort();
 #define POLY_CONTRACT_VAR(x) if (0 && &x == &x){}
 
 // A requirement contract that is always on to check user input.
-#define POLY_VERIFY(x) \
-  if (!(x)) \
-  { \
+#define POLY_VERIFY(x)                                     \
+  if (!(x)) {                                              \
     std::cout << "Assertion " << #x << " failed\nat " << __FILE__ << ":" << __LINE__ << std::endl; \
-    polytope::internal_abort(); \
+    polytope::internal_abort();                                         \
   }
-#define POLY_VERIFY2(x, msg) \
-  if (!(x)) \
-  { \
+#define POLY_VERIFY2(x, msg)                                            \
+  if (!(x)) {                                                           \
     std::cout << "Assertion " << #x << " failed\nat " << __FILE__ << ":" << __LINE__ << std::endl << msg << std::endl; \
-    polytope::internal_abort(); \
+    polytope::internal_abort();                                         \
   }
 
+#define POLY_CHECK(x)                                                   \
+  if (!(x)) {                                                           \
+    std::cout << "Check " << #x << " failed at " << __FILE__ << ":" << __LINE__ << std::endl; \
+    exit(1);                                                            \
+  }
+
+#define POLY_CHECK2(x, msg)                                             \
+  if (!(x)) {                                                           \
+    std::cout << "Check " << #x << " failed at " << __FILE__ << ":" << __LINE__ << std::endl << msg << std::endl; \
+    exit(1);                                                            \
+  }
 
 namespace internal {
 

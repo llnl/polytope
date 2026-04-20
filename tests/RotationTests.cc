@@ -86,7 +86,7 @@ void computeDeformationFlow(const vector<double>& points,
 void getVelocities(const vector<double>& points,
                    const unsigned flowType,
                    vector<double>& velocities) {
-   POLY_ASSERT(points.size() == velocities.size());
+   POLY_CHECK(points.size() == velocities.size());
    switch(flowType){
    case 1:
       computeConstantVorticityFlow(points, velocities);
@@ -110,7 +110,7 @@ void getVelocities(const vector<double>& points,
 void runTest(Tessellator<2,double>& tessellator,
              const unsigned flowType,
              const unsigned nx) {
-  POLY_ASSERT(flowType >= 1 and flowType <= 4);
+  POLY_CHECK(flowType >= 1 and flowType <= 4);
   
   // Boundary size parameters
   const double xmin = 0.0, xmax = 1.0;
@@ -219,7 +219,7 @@ void runTest(Tessellator<2,double>& tessellator,
     getVelocities(halfTimePositions, flowType, velocityField);
     for (unsigned i = 0; i != points.size(); ++i) {
       points[i] += dt*velocityField[i];
-      POLY_ASSERT(xmin <= points[i] and points[i] <= xmax);
+      POLY_CHECK(xmin <= points[i] and points[i] <= xmax);
     }
     time += dt;
     ++step;

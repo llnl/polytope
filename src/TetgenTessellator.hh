@@ -25,6 +25,7 @@ class TetgenTessellator: public Tessellator<3, double> {
 public:
   //-------------------- Public interface --------------------
   typedef double RealType;
+  typedef Tessellator<3, RealType>::QuantizedTessellation QuantizedTessellation;
 
   // Constructor, destructor.
   TetgenTessellator();
@@ -53,6 +54,11 @@ public:
 
   // This Tessellator handles PLCs!
   bool handlesPLCs() const { return true; }
+
+  // This backend still uses the older direct tessellation path in 3D.
+  // We define the method so the class is concrete, but the quantized API
+  // migration remains separate work.
+  void tessellateQuantized(QuantizedTessellation& qmesh) const;
 
   // Return the name of this tessellator
   std::string name() const { return "TetgenTessellator"; }

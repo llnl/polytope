@@ -16,7 +16,7 @@ namespace polytope {
 
 template<int nDim>
 struct Segment {
-  typedef DimensionTraits<2, double>::IntPoint Point;
+  using Point = DimensionTraits<2, double>::IntPoint;
   typedef DimensionTraits<2, double>::CoordHash CoordHash;
   Point a, b;
   Segment(): a(), b() {}
@@ -56,12 +56,6 @@ struct Serializer<Segment<nDim> > {
   }
 };
 
-}
-
-#else
-
-namespace polytope {
-  template<int nDim> struct Segment;
 }
 
 #endif

@@ -94,7 +94,7 @@ void computeDeformationFlow(const vector<double>& points,
 void getVelocities(const vector<double>& points,
                    const unsigned flowType,
                    vector<double>& velocities) {
-   POLY_ASSERT(points.size() == velocities.size());
+   POLY_CHECK(points.size() == velocities.size());
    switch(flowType){
    case 1:
       computeConstantVorticityFlow(points, velocities);
@@ -117,7 +117,7 @@ void getVelocities(const vector<double>& points,
 // -----------------------------------------------------------------------
 void runTest(Tessellator<2,double>& tessellator,
              const unsigned flowType) {
-  POLY_ASSERT(flowType >= 1 and flowType <= 4);
+  POLY_CHECK(flowType >= 1 and flowType <= 4);
   
   // Boundary size parameters
   const unsigned nx = 50;
@@ -252,7 +252,7 @@ void runTest(Tessellator<2,double>& tessellator,
     getVelocities(halfTimePositions, flowType, velocityField);
     for (unsigned i = 0; i != points.size(); ++i) {
       points[i] += dt*velocityField[i];
-      POLY_ASSERT(xmin <= points[i] and points[i] <= xmax);
+      POLY_CHECK(xmin <= points[i] and points[i] <= xmax);
     }
     time += dt;
     ++step;
@@ -261,7 +261,7 @@ void runTest(Tessellator<2,double>& tessellator,
 
     // Check the correctness of the parallel data structures
     const string parCheck = checkDistributedTessellation(mesh);
-    POLY_ASSERT2(parCheck == "ok", parCheck);
+    POLY_CHECK2(parCheck == "ok", parCheck);
     MPI_Barrier(MPI_COMM_WORLD);
   }
 }

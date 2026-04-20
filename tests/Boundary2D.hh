@@ -154,7 +154,7 @@ public:
     mPLCpoints.push_back( x2 );   mPLCpoints.push_back( y1 );
     mPLCpoints.push_back( x2 );   mPLCpoints.push_back( y2 );
     mPLCpoints.push_back( x1 );   mPLCpoints.push_back( y2 );
-    POLY_ASSERT2(mPLCpoints.size() == 8, mPLCpoints.size());
+    POLY_CHECK2(mPLCpoints.size() == 8, mPLCpoints.size());
     
     mPLC.facets.resize(4);
     for (unsigned f = 0; f < 4; ++f) {
@@ -199,8 +199,8 @@ public:
   // Unit circle with a hole of prescribed radius
   //------------------------------------------------------------------------
   void setDonut( RealType innerRadius=0.25 ) {
-    POLY_ASSERT2( innerRadius > 0, "Must provide a positive inner radius" );
-    POLY_ASSERT2( innerRadius < 1, "Inner radius may not exceed outer (unit) radius" );
+    POLY_CHECK2( innerRadius > 0, "Must provide a positive inner radius" );
+    POLY_CHECK2( innerRadius < 1, "Inner radius may not exceed outer (unit) radius" );
     
     // The outer circle
     this->clear();
@@ -356,7 +356,7 @@ public:
   //         z>2 : cusp less pronounced, cardioid more circular, non-unit
   //------------------------------------------------------------------------
   void setCardioid( RealType z = 2 ) {
-    POLY_ASSERT2( z > 0, "Must provide a positive coefficient for the cardioid" );
+    POLY_CHECK2( z > 0, "Must provide a positive coefficient for the cardioid" );
     this->clear();
     
     // Boundary generators.
@@ -508,7 +508,7 @@ public:
       mPLC.facets[i][0] = i;
       mPLC.facets[i][1] = (i+1) % nSides;
     }
-    POLY_ASSERT(mPLCpoints.size()/2 == nSides);
+    POLY_CHECK(mPLCpoints.size()/2 == nSides);
 
 //     const unsigned nHolePoints = 3;
 //     const RealType holePoints[6] = {15.0, 14.0, 15.3, 14.4, 15.6, 14.0};
@@ -542,7 +542,7 @@ public:
     RealType x = pos[0];
     RealType y = pos[1];
     unsigned offset = 0;
-    POLY_ASSERT( mPLCpoints.size() > 0 );
+    POLY_CHECK( mPLCpoints.size() > 0 );
     const unsigned nSides = mPLC.facets.size();
     bool isInside = inside(x,y,nSides,offset);
     
@@ -604,7 +604,7 @@ public:
   // NOTE: method is general to 2D or 3D. Dimension is set to 2 here
   //------------------------------------------------------------------------
   void getBoundingRadius(RealType& radius) {
-    POLY_ASSERT( mCenter != 0 );
+    POLY_CHECK( mCenter != 0 );
     radius = 0;
     for (unsigned i = 0; i < mPLCpoints.size()/Dimension; ++i ){
       RealType distance = 0;

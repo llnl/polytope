@@ -126,11 +126,11 @@ int main(int argc, char** argv) {
    for (unsigned k = 0; k != mesh.sharedNodes.size(); ++k) {
       if (mesh.neighborDomains[k] < rank) {
          for (unsigned j = 0; j != mesh.sharedNodes[k].size(); ++j) {
-            POLY_ASSERT(mesh.sharedNodes[k][j] < ownNodes.size());
+            POLY_CHECK(mesh.sharedNodes[k][j] < ownNodes.size());
             ownNodes[mesh.sharedNodes[k][j]] = 0;
          }
          for (unsigned j = 0; j != mesh.sharedFaces[k].size(); ++j) {
-            POLY_ASSERT(mesh.sharedFaces[k][j] < ownFaces.size());
+            POLY_CHECK(mesh.sharedFaces[k][j] < ownFaces.size());
             ownFaces[mesh.sharedFaces[k][j]] = 0;
          }
       }

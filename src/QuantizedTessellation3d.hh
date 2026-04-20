@@ -57,10 +57,4 @@ private:
 
 }
 
-#else
-
-namespace polytope {
-  template<typename IntType, typename RealType> struct QuantizedTessellation3d;
-}
-
 #endif
