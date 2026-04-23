@@ -18,7 +18,7 @@ using namespace polytope;
 // The test itself.
 //------------------------------------------------------------------------------
 int main(int argc, char** argv) {
-   
+
   // Test 1
   {
     const double tol = 1.0e-10;
@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
       apoints.push_back(alow[0] + (ahigh[0]-alow[0])*random01());
       apoints.push_back(alow[1] + (ahigh[1]-alow[1])*random01());
     }
-  
+
     // Compute its convex hull
     ReducedPLC<2, double> ahull(convexHull_2d(apoints, alow, tol), apoints);
 
@@ -54,13 +54,13 @@ int main(int argc, char** argv) {
         ++i;
       }
     }
-    
+
     // Compute its convex hull
-    ReducedPLC<2, double> bhull(convexHull_2d(bpoints, blow, tol), bpoints);    
-    
+    ReducedPLC<2, double> bhull(convexHull_2d(bpoints, blow, tol), bpoints);
+
     cerr << "Test 1: Hull A is inside Hull B...";
     bool aIntersectsb = convexIntersect(ahull, bhull);
-    bool bIntersectsa = convexIntersect(ahull, bhull);
+    bool bIntersectsa = convexIntersect(bhull, ahull);
     POLY_CHECK(aIntersectsb == bIntersectsa);
     POLY_CHECK(aIntersectsb == true        );
     cerr << "Intersection" << endl;
@@ -84,10 +84,10 @@ int main(int argc, char** argv) {
     bhull.facets[1][0] = 0;  bhull.facets[1][1] = 2;
     bhull.facets[2][0] = 2;  bhull.facets[2][1] = 3;
     bhull.facets[3][0] = 3;  bhull.facets[3][1] = 1;
-    
+
     cerr << "Test 2: Hull A has points inside Hull B...";
     bool aIntersectsb = convexIntersect(ahull, bhull);
-    bool bIntersectsa = convexIntersect(ahull, bhull);
+    bool bIntersectsa = convexIntersect(bhull, ahull);
     POLY_CHECK(aIntersectsb == bIntersectsa);
     POLY_CHECK(aIntersectsb == true        );
     cerr << "Intersection" << endl;
@@ -111,7 +111,7 @@ int main(int argc, char** argv) {
 
     cerr << "Test 3: Hull B has a point inside Hull A...";
     bool aIntersectsb = convexIntersect(ahull, bhull);
-    bool bIntersectsa = convexIntersect(ahull, bhull);
+    bool bIntersectsa = convexIntersect(bhull, ahull);
     POLY_CHECK(aIntersectsb == bIntersectsa);
     POLY_CHECK(aIntersectsb == true        );
     cerr << "Intersection" << endl;
@@ -135,12 +135,12 @@ int main(int argc, char** argv) {
 
     cerr << "Test 4: Intersection, but neither hull has vertices inside the other...";
     bool aIntersectsb = convexIntersect(ahull, bhull);
-    bool bIntersectsa = convexIntersect(ahull, bhull);
+    bool bIntersectsa = convexIntersect(bhull, ahull);
     POLY_CHECK(aIntersectsb == bIntersectsa);
     POLY_CHECK(aIntersectsb == true        );
     cerr << "Intersection" << endl;
   }
-  
+
 
   // Test 5
   {
@@ -160,12 +160,11 @@ int main(int argc, char** argv) {
 
     cerr << "Test 5: Disjoint hulls...";
     bool aIntersectsb = convexIntersect(ahull, bhull);
-    bool bIntersectsa = convexIntersect(ahull, bhull);
+    bool bIntersectsa = convexIntersect(bhull, ahull);
     POLY_CHECK(aIntersectsb == bIntersectsa);
     POLY_CHECK(aIntersectsb == false       );
     cerr << "No Intersection" << endl;
   }
 
-  
   return 0;
 }

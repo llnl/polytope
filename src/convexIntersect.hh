@@ -21,7 +21,7 @@ int compare(const RealType& l1x, const RealType& l1y,
                         double(l2y - l1y)*double(px - l1x));
   return -(ztest < 0.0 ? -1 :
            ztest > 0.0 ?  1 :
-                          0);
+           0);
 }
 
 //------------------------------------------------------------------------------
@@ -127,6 +127,52 @@ convexIntersect(const ReducedPLC<2, RealType>& a, const ReducedPLC<2, RealType>&
   const unsigned nfb = b.facets.size();
   POLY_CONTRACT_VAR(nva);
   POLY_CONTRACT_VAR(nvb);
+  unsigned i, j, k, m;
+
+  // Any vertex containment is sufficient.
+  for (i = 0; i < nva; ++i) {
+    if (within<2, RealType>(&a.points[2*i], nvb, &b.points[0], b)) return true;
+  }
+  for (i = 0; i < nvb; ++i) {
+    if (within<2, RealType>(&b.points[2*i], nva, &a.points[0], a)) return true;
+  }
+
+  // Otherwise, the polygons intersect only if an edge pair crosses.
+  RealType intersectionPoint[2];
+  for (i = 0; i < nfa; ++i) {
+    j = a.facets[i][0];
+    k = a.facets[i][1];
+    POLY_ASSERT(j < nva);
+    POLY_ASSERT(k < nva);
+    for (m = 0; m < nfb; ++m) {
+      const unsigned p = b.facets[m][0];
+      const unsigned q = b.facets[m][1];
+      POLY_ASSERT(p < nvb);
+      POLY_ASSERT(q < nvb);
+      if (geometry::segmentIntersection2D(&a.points[2*j], &a.points[2*k],
+                                          &b.points[2*p], &b.points[2*q],
+                                          intersectionPoint)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+//------------------------------------------------------------------------------
+// Convex polygon intersection.
+// This only works if the vertices are in counter-clockwise order.
+//------------------------------------------------------------------------------
+template<typename RealType>
+bool
+convexIntersectOrdered(const ReducedPLC<2, RealType>& a, const ReducedPLC<2, RealType>& b) {
+  const unsigned nva = a.points.size() / 2;
+  const unsigned nvb = b.points.size() / 2;
+  const unsigned nfa = a.facets.size();
+  const unsigned nfb = b.facets.size();
+  POLY_CONTRACT_VAR(nva);
+  POLY_CONTRACT_VAR(nvb);
 
   bool outside = false;
   unsigned i, j, ifacet;
@@ -166,50 +212,6 @@ convexIntersect(const ReducedPLC<2, RealType>& a, const ReducedPLC<2, RealType>&
   // We can't exclude anybody, so must intersect!
   return true;
 }
-
-// Alternative intersect version
-// The tests pass with this version
-// template<typename RealType>
-// bool
-// convexIntersect(const ReducedPLC<2, RealType>& a, const ReducedPLC<2, RealType>& b) {
-//   const unsigned nva = a.points.size() / 2;
-//   const unsigned nvb = b.points.size() / 2;
-//   const unsigned nfa = a.facets.size();
-//   const unsigned nfb = b.facets.size();
-//   POLY_CONTRACT_VAR(nva);
-//   POLY_CONTRACT_VAR(nvb);
-//   unsigned i, j, k, m;
-
-//   // Any vertex containment is sufficient.
-//   for (i = 0; i < nva; ++i) {
-//     if (within<2, RealType>(&a.points[2*i], nvb, &b.points[0], b)) return true;
-//   }
-//   for (i = 0; i < nvb; ++i) {
-//     if (within<2, RealType>(&b.points[2*i], nva, &a.points[0], a)) return true;
-//   }
-
-//   // Otherwise, the polygons intersect only if an edge pair crosses.
-//   RealType intersectionPoint[2];
-//   for (i = 0; i < nfa; ++i) {
-//     j = a.facets[i][0];
-//     k = a.facets[i][1];
-//     POLY_ASSERT(j < nva);
-//     POLY_ASSERT(k < nva);
-//     for (m = 0; m < nfb; ++m) {
-//       const unsigned p = b.facets[m][0];
-//       const unsigned q = b.facets[m][1];
-//       POLY_ASSERT(p < nvb);
-//       POLY_ASSERT(q < nvb);
-//       if (geometry::segmentIntersection2D(&a.points[2*j], &a.points[2*k],
-//                                           &b.points[2*p], &b.points[2*q],
-//                                           intersectionPoint)) {
-//         return true;
-//       }
-//     }
-//   }
-
-//   return false;
-// }
 
 //------------------------------------------------------------------------------
 // Convex polyhedron intersection.

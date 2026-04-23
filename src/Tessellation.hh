@@ -51,7 +51,7 @@ class Tessellation {
   //! false otherwise.
   virtual bool empty() const
   {
-    return nodes.empty() and cells.empty() and faces.empty() and 
+    return nodes.empty() and cells.empty() and faces.empty() and
        infNodes.empty() and boundaryNodes.empty() and infFaces.empty() and boundaryFaces.empty() and faceCells.empty() and
        convexHull.empty();
   }

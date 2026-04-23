@@ -89,11 +89,11 @@ struct DimensionTraits<2, RealType> {
 // 3D specialization
 template<typename RealType>
 struct DimensionTraits<3, RealType> {
-  typedef ReducedPLC<3, RealType> ConvexHull;
-  typedef KeyTraits::Key CoordHash;
-  typedef Point3<CoordHash> IntPoint;
-  typedef Point3<RealType> RealPoint;
-  typedef QuantizedTessellation3d<CoordHash, RealType> QuantizedTessellation;
+  typedef typename polytope::ReducedPLC<3, RealType> ConvexHull;
+  typedef int64_t CoordHash;
+  typedef polytope::Point3<CoordHash> IntPoint;
+  typedef polytope::Point3<RealType> RealPoint;
+  typedef polytope::QuantizedTessellation3d<CoordHash, RealType> QuantizedTessellation;
 
   static ConvexHull convexHull(const std::vector<RealType>& points, 
                                const RealType* low,

@@ -61,8 +61,7 @@ template<int Dimension, typename RealType> struct Hasher;
 // 2D
 template<typename RealType> struct Hasher<2, RealType> {
 
-  // typedef typename DimensionTraits<Dimension, RealType>::CoordHash CoordHash;
-  using CoordHash = KeyTraits::Key;
+  using CoordHash = int64_t;
 
   static unsigned  num1dbits()                { return 31U; }
   //static unsigned  num1dbits()                { return 30U; }
@@ -172,7 +171,7 @@ template<typename RealType> struct Hasher<2, RealType> {
 // 3D
 template<typename RealType> struct Hasher<3, RealType> {
 
-  using CoordHash = KeyTraits::Key;
+  using CoordHash = int64_t;
 
   static unsigned  num1dbits()                { return 21U; }
   static CoordHash coordMax()                 { return (1ULL << num1dbits()) - 1ULL; }

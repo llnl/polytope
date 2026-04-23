@@ -48,7 +48,7 @@ escapePod(const std::string nameEnd,
 }
 
 //------------------------------------------------------------------------------
-// Borrow the Point3 type as a tuple to create 3 node facets hashes.
+// Borrow the Point3 type as a tuple to create 3 node facet hashes.
 //------------------------------------------------------------------------------
 Point3<unsigned>
 hashFacet(const unsigned i, const unsigned j, const unsigned k) {
@@ -73,6 +73,124 @@ hashFacet(const unsigned i, const unsigned j, const unsigned k) {
       return Tuple3(k, j, i);
     }
   }
+}
+
+//------------------------------------------------------------------------------
+// Robustly order a convex 3D facet by projecting to 2D, taking the hull, and
+// reinserting any collinear edge points along the hull edges.
+//------------------------------------------------------------------------------
+std::vector<int>
+orderFacetNodes3d(const std::vector<int>& facet,
+                  const std::vector<double>& points,
+                  const double tol) {
+  typedef Point2<double> Point2d;
+  typedef Point3<double> Point3d;
+
+  std::vector<int> uniqueFacet;
+  uniqueFacet.reserve(facet.size());
+  std::set<int> used;
+  for (std::vector<int>::const_iterator itr = facet.begin();
+       itr != facet.end();
+       ++itr) {
+    if (used.insert(*itr).second) uniqueFacet.push_back(*itr);
+  }
+  while (uniqueFacet.size() > 1 and uniqueFacet.front() == uniqueFacet.back()) {
+    uniqueFacet.pop_back();
+  }
+  POLY_ASSERT(uniqueFacet.size() >= 3);
+
+  const auto mag2 = [](const Point3d& p) { return geometry::dot<3, double>(&p.x, &p.x); };
+
+  Point3d centroid(0.0, 0.0, 0.0);
+  for (unsigned i = 0; i != uniqueFacet.size(); ++i) {
+    const unsigned ipoint = uniqueFacet[i];
+    centroid.x += points[3*ipoint];
+    centroid.y += points[3*ipoint + 1];
+    centroid.z += points[3*ipoint + 2];
+  }
+  centroid /= double(uniqueFacet.size());
+
+  Point3d normal(0.0, 0.0, 0.0);
+  for (unsigned i = 1; i + 1 < uniqueFacet.size() and mag2(normal) <= tol*tol; ++i) {
+    const unsigned i0 = uniqueFacet[0], i1 = uniqueFacet[i], i2 = uniqueFacet[i + 1];
+    const Point3d p0(points[3*i0], points[3*i0 + 1], points[3*i0 + 2]);
+    const Point3d p1(points[3*i1], points[3*i1 + 1], points[3*i1 + 2]);
+    const Point3d p2(points[3*i2], points[3*i2 + 1], points[3*i2 + 2]);
+    const Point3d e1 = p1 - p0;
+    const Point3d e2 = p2 - p0;
+    geometry::cross<3, double>(&e1.x, &e2.x, &normal.x);
+  }
+  POLY_ASSERT(mag2(normal) > tol*tol);
+  geometry::unitVector<3, double>(&normal.x);
+
+  Point3d axis0(0.0, 0.0, 0.0);
+  for (unsigned i = 0; i != uniqueFacet.size() and mag2(axis0) <= tol*tol; ++i) {
+    const unsigned ipoint = uniqueFacet[i];
+    axis0 = Point3d(points[3*ipoint], points[3*ipoint + 1], points[3*ipoint + 2]) - centroid;
+  }
+  POLY_ASSERT(mag2(axis0) > tol*tol);
+  geometry::unitVector<3, double>(&axis0.x);
+
+  Point3d axis1;
+  geometry::cross<3, double>(&normal.x, &axis0.x, &axis1.x);
+  POLY_ASSERT(mag2(axis1) > tol*tol);
+  geometry::unitVector<3, double>(&axis1.x);
+
+  std::vector<double> coords2d;
+  coords2d.reserve(2*uniqueFacet.size());
+  double low2d[2] = { std::numeric_limits<double>::max(),  std::numeric_limits<double>::max() };
+  for (unsigned i = 0; i != uniqueFacet.size(); ++i) {
+    const unsigned ipoint = uniqueFacet[i];
+    const Point3d p(points[3*ipoint], points[3*ipoint + 1], points[3*ipoint + 2]);
+    const Point3d dp = p - centroid;
+    const double u = geometry::dot<3, double>(&dp.x, &axis0.x);
+    const double v = geometry::dot<3, double>(&dp.x, &axis1.x);
+    coords2d.push_back(u);
+    coords2d.push_back(v);
+    low2d[0] = std::min(low2d[0], u);
+    low2d[1] = std::min(low2d[1], v);
+  }
+
+  const PLC<2, double> hull2d = convexHull_2d(coords2d, low2d, tol);
+  POLY_ASSERT(hull2d.facets.size() >= 3);
+
+  std::vector<int> orderedFacet;
+  std::vector<unsigned> assigned(uniqueFacet.size(), 0);
+  for (unsigned iedge = 0; iedge != hull2d.facets.size(); ++iedge) {
+    const unsigned ia = hull2d.facets[iedge][0];
+    const unsigned ib = hull2d.facets[iedge][1];
+    POLY_ASSERT(ia < uniqueFacet.size());
+    POLY_ASSERT(ib < uniqueFacet.size());
+    const Point2d a(coords2d[2*ia], coords2d[2*ia + 1]);
+    const Point2d b(coords2d[2*ib], coords2d[2*ib + 1]);
+    if (orderedFacet.empty()) {
+      orderedFacet.push_back(uniqueFacet[ia]);
+      assigned[ia] = 1;
+    }
+
+    std::vector<std::pair<double, int> > edgePoints;
+    const Point2d ab = b - a;
+    const double ab2 = std::max(tol*tol, double(geometry::dot<2, double>(&ab.x, &ab.x)));
+    for (unsigned j = 0; j != uniqueFacet.size(); ++j) {
+      if (j != ia and j != ib and !assigned[j] and
+          geometry::between<2, double>(&a.x, &b.x, &coords2d[2*j], tol)) {
+        const Point2d p(coords2d[2*j], coords2d[2*j + 1]);
+        const Point2d ap = p - a;
+        const double t = geometry::dot<2, double>(&ap.x, &ab.x)/ab2;
+        edgePoints.push_back(std::make_pair(t, uniqueFacet[j]));
+        assigned[j] = 1;
+      }
+    }
+    std::sort(edgePoints.begin(), edgePoints.end());
+    for (unsigned j = 0; j != edgePoints.size(); ++j) orderedFacet.push_back(edgePoints[j].second);
+    orderedFacet.push_back(uniqueFacet[ib]);
+    assigned[ib] = 1;
+  }
+
+  POLY_ASSERT(orderedFacet.size() >= 4);
+  POLY_ASSERT(orderedFacet.front() == orderedFacet.back());
+  orderedFacet.pop_back();
+  return orderedFacet;
 }
 
 //------------------------------------------------------------------------------
@@ -567,8 +685,6 @@ tessellate(const vector<double>& points,
 
   // Walk each of the cells in the unbounded tessellation.
   for (unsigned icell = 0; icell != numGenerators; ++icell) {
-    cerr << "---------------------------------------- cell " << icell << " ----------------------------------------" << endl;
-
     // Build a PLC to represent just this cell.
     ReducedPLC<3, double> cell = plcOfCell(qmesh0, icell);
 
@@ -587,20 +703,79 @@ tessellate(const vector<double>& points,
                                                                    qmesh1.degeneracy)));
     }
     for (unsigned iface = 0; iface != cell.facets.size(); ++iface) {
-      const unsigned nnodes = cell.facets[iface].size();
-      POLY_ASSERT(nnodes >= 3);
-      vector<int> face;
-      for (unsigned i = 0; i != nnodes; ++i) {
-        const unsigned j = (i + 1) % nnodes;
-        const EdgeHash ehash = internal::hashEdge(nodeIDs[cell.facets[iface][i]],
-                                                  nodeIDs[cell.facets[iface][j]]);
-        face.push_back(qmesh1.addNewEdge(ehash));
-        if (ehash.first == nodeIDs[cell.facets[iface][j]]) face.back() = ~face.back();
+      vector<int> facetNodes = orderFacetNodes3d(cell.facets[iface], cell.points, qmesh1.degeneracy);
+
+      // Remove vertices that lie on straight runs of the polygon boundary.
+      bool removedCollinear = true;
+      while (removedCollinear and facetNodes.size() > 3) {
+        removedCollinear = false;
+        vector<int> cleaned;
+        cleaned.reserve(facetNodes.size());
+        for (unsigned i = 0; i != facetNodes.size(); ++i) {
+          const unsigned iprev = facetNodes[(i + facetNodes.size() - 1) % facetNodes.size()];
+          const unsigned icurr = facetNodes[i];
+          const unsigned inext = facetNodes[(i + 1) % facetNodes.size()];
+          const RealPoint pprev(cell.points[3*iprev], cell.points[3*iprev + 1], cell.points[3*iprev + 2]);
+          const RealPoint pcurr(cell.points[3*icurr], cell.points[3*icurr + 1], cell.points[3*icurr + 2]);
+          const RealPoint pnext(cell.points[3*inext], cell.points[3*inext + 1], cell.points[3*inext + 2]);
+          const RealPoint eprev = pcurr - pprev;
+          const RealPoint enext = pnext - pcurr;
+          RealPoint turn;
+          geometry::cross<3, double>(&eprev.x, &enext.x, &turn.x);
+          if (geometry::dot<3, double>(&turn.x, &turn.x) > 1.0e-20) {
+            cleaned.push_back(icurr);
+          } else {
+            removedCollinear = true;
+          }
+        }
+        facetNodes.swap(cleaned);
       }
-      POLY_ASSERT(face.size() == nnodes);
-      const unsigned k = qmesh1.faces.size();
-      const unsigned i = qmesh1.addNewFace(face);
-      qmesh1.cells.back().push_back(i == k ? i : ~i);
+      POLY_ASSERT(facetNodes.size() >= 3);
+
+      // Orient the local facet cycle so this cell sees a positive signed
+      // volume. Shared faces reused by other cells can then derive the proper
+      // opposite sign from the stored face orientation.
+      {
+        const RealPoint p0(cell.points[3*facetNodes[0]], cell.points[3*facetNodes[0] + 1], cell.points[3*facetNodes[0] + 2]);
+        const RealPoint p1(cell.points[3*facetNodes[1]], cell.points[3*facetNodes[1] + 1], cell.points[3*facetNodes[1] + 2]);
+        const RealPoint p2(cell.points[3*facetNodes[2]], cell.points[3*facetNodes[2] + 1], cell.points[3*facetNodes[2] + 2]);
+        const RealType localVol = geometry::tetrahedralVolume6(&qmesh1.generators[3*icell], &p2.x, &p1.x, &p0.x);
+        POLY_ASSERT(localVol != 0.0);
+        if (localVol < 0.0) std::reverse(facetNodes.begin(), facetNodes.end());
+      }
+
+      vector<int> face;
+      face.reserve(facetNodes.size());
+      for (unsigned i = 0; i != facetNodes.size(); ++i) {
+        const unsigned j = (i + 1) % facetNodes.size();
+        const EdgeHash ehash = internal::hashEdge(nodeIDs[facetNodes[i]],
+                                                  nodeIDs[facetNodes[j]]);
+        int iedge = qmesh1.addNewEdge(ehash);
+        if (ehash.first == nodeIDs[facetNodes[j]]) iedge = ~iedge;
+        face.push_back(iedge);
+      }
+      POLY_ASSERT(face.size() == facetNodes.size());
+      const unsigned meshFace = qmesh1.addNewFace(face);
+      POLY_ASSERT(meshFace < qmesh1.faces.size());
+
+      // Choose the face sign from the stored face orientation, not from whether
+      // the face was newly inserted. Shared bounded faces are reused by multiple
+      // cells, and the second cell needs the opposite sign if the stored face
+      // normal points away from its generator.
+      POLY_ASSERT(qmesh1.faces[meshFace].size() >= 3);
+      std::vector<unsigned> faceNodes;
+      faceNodes.reserve(qmesh1.faces[meshFace].size());
+      for (unsigned j = 0; j != qmesh1.faces[meshFace].size(); ++j) {
+        const int iedge = qmesh1.faces[meshFace][j];
+        faceNodes.push_back(iedge >= 0 ? qmesh1.edges[iedge].first : qmesh1.edges[~iedge].second);
+      }
+      POLY_ASSERT(faceNodes.size() >= 3);
+      const RealPoint p0 = qmesh1.nodePosition(faceNodes[0]);
+      const RealPoint p1 = qmesh1.nodePosition(faceNodes[1]);
+      const RealPoint p2 = qmesh1.nodePosition(faceNodes[2]);
+      const RealType vol = geometry::tetrahedralVolume6(&qmesh1.generators[3*icell], &p2.x, &p1.x, &p0.x);
+      POLY_ASSERT(vol != 0.0);
+      qmesh1.cells.back().push_back(vol > 0.0 ? meshFace : ~meshFace);
     }
     POLY_ASSERT(qmesh1.cells.back().size() == cell.facets.size());
   }
