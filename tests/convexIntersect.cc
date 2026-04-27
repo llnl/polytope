@@ -166,5 +166,104 @@ int main(int argc, char** argv) {
     cerr << "No Intersection" << endl;
   }
 
+  // Test 6
+  {
+    // Two triangles touching at exactly one vertex (corner-to-corner)
+    double apts[6] = {0.0, 0.0, 1.0, 0.0, 0.5, 1.0};
+    double bpts[6] = {0.0, 0.0, -1.0, 0.0, -0.5, -1.0};
+    ReducedPLC<2,double> ahull, bhull;
+    for (unsigned i = 0; i != 6; ++i) {
+      ahull.points.push_back(apts[i]);
+      bhull.points.push_back(bpts[i]);
+    }
+    ahull.facets.resize(3, vector<int>(2));
+    bhull.facets.resize(3, vector<int>(2));
+    for (unsigned i = 0; i != 3; ++i) {
+      ahull.facets[i][0] = i;  ahull.facets[i][1] = (i+1)%3;
+      bhull.facets[i][0] = i;  bhull.facets[i][1] = (i+1)%3;
+    }
+
+    cerr << "Test 6: Touching at exactly one vertex (corner-to-corner)...";
+    bool aIntersectsb = convexIntersect(ahull, bhull);
+    bool bIntersectsa = convexIntersect(bhull, ahull);
+    POLY_CHECK(aIntersectsb == bIntersectsa);
+    POLY_CHECK(aIntersectsb == true        );  // Touching counts as intersection
+    cerr << "Intersection (touching)" << endl;
+  }
+
+  // Test 7
+  {
+    // One triangle's vertex touches another's edge
+    double apts[6] = {0.0, 0.0, 2.0, 0.0, 1.0, 1.0};
+    double bpts[6] = {1.0, 0.0, 0.5, -1.0, 1.5, -1.0};
+    ReducedPLC<2,double> ahull, bhull;
+    for (unsigned i = 0; i != 6; ++i) {
+      ahull.points.push_back(apts[i]);
+      bhull.points.push_back(bpts[i]);
+    }
+    ahull.facets.resize(3, vector<int>(2));
+    bhull.facets.resize(3, vector<int>(2));
+    for (unsigned i = 0; i != 3; ++i) {
+      ahull.facets[i][0] = i;  ahull.facets[i][1] = (i+1)%3;
+      bhull.facets[i][0] = i;  bhull.facets[i][1] = (i+1)%3;
+    }
+
+    cerr << "Test 7: Touching at vertex-to-edge...";
+    bool aIntersectsb = convexIntersect(ahull, bhull);
+    bool bIntersectsa = convexIntersect(bhull, ahull);
+    POLY_CHECK(aIntersectsb == bIntersectsa);
+    POLY_CHECK(aIntersectsb == true        );  // Touching counts as intersection
+    cerr << "Intersection (touching)" << endl;
+  }
+
+  // Test 8
+  {
+    // Two triangles sharing a common edge
+    double apts[6] = {0.0, 0.0, 2.0, 0.0, 1.0, 1.0};
+    double bpts[6] = {0.0, 0.0, 2.0, 0.0, 1.0, -1.0};
+    ReducedPLC<2,double> ahull, bhull;
+    for (unsigned i = 0; i != 6; ++i) {
+      ahull.points.push_back(apts[i]);
+      bhull.points.push_back(bpts[i]);
+    }
+    ahull.facets.resize(3, vector<int>(2));
+    bhull.facets.resize(3, vector<int>(2));
+    for (unsigned i = 0; i != 3; ++i) {
+      ahull.facets[i][0] = i;  ahull.facets[i][1] = (i+1)%3;
+      bhull.facets[i][0] = i;  bhull.facets[i][1] = (i+1)%3;
+    }
+
+    cerr << "Test 8: Sharing a common edge...";
+    bool aIntersectsb = convexIntersect(ahull, bhull);
+    bool bIntersectsa = convexIntersect(bhull, ahull);
+    POLY_CHECK(aIntersectsb == bIntersectsa);
+    POLY_CHECK(aIntersectsb == true        );  // Sharing edge counts as intersection
+    cerr << "Intersection (shared edge)" << endl;
+  }
+
+  // Test 9
+  {
+    // Identical polygons
+    double apts[8] = {0.0, 0.0, 2.0, 0.0, 2.0, 2.0, 0.0, 2.0};
+    ReducedPLC<2,double> ahull, bhull;
+    for (unsigned i = 0; i != 8; ++i) {
+      ahull.points.push_back(apts[i]);
+      bhull.points.push_back(apts[i]);
+    }
+    ahull.facets.resize(4, vector<int>(2));
+    bhull.facets.resize(4, vector<int>(2));
+    for (unsigned i = 0; i != 4; ++i) {
+      ahull.facets[i][0] = i;  ahull.facets[i][1] = (i+1)%4;
+      bhull.facets[i][0] = i;  bhull.facets[i][1] = (i+1)%4;
+    }
+
+    cerr << "Test 9: Identical polygons...";
+    bool aIntersectsb = convexIntersect(ahull, bhull);
+    bool bIntersectsa = convexIntersect(bhull, ahull);
+    POLY_CHECK(aIntersectsb == bIntersectsa);
+    POLY_CHECK(aIntersectsb == true        );
+    cerr << "Intersection (identical)" << endl;
+  }
+
   return 0;
 }

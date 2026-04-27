@@ -115,8 +115,9 @@ namespace polytope {
 
 //------------------------------------------------------------------------------
 // Convex polygon intersection.
-// We resrict this to ReducedPLC for expediency because the ReducedPLC has 
+// We restrict this to ReducedPLC for expediency because the ReducedPLC has
 // already computed the unique set of vertex coordinates.
+// Vertex-to-edge, edge-to-edge, and vertex-to-vertex touching counts as intersection.
 //------------------------------------------------------------------------------
 template<typename RealType>
 bool
