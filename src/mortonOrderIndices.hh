@@ -21,7 +21,7 @@ namespace {
 //------------------------------------------------------------------------------
 // Stand alone functions to do the interleaved bit hashing of positions.
 //------------------------------------------------------------------------------
-// 2-D
+// 2D
 inline
 polytope::KeyTraits::Key
 hashPosition(const polytope::Point2<polytope::KeyTraits::Key>& xoff) {

@@ -567,6 +567,205 @@ pointOnPolygon(const RealType* point,
 
 
 //------------------------------------------------------------------------------
+// Determine if a point lies inside a polyhedron using ray casting.
+// Casts a ray along the +x direction and counts face intersections.
+// facets is a vector of face vertex indices (each face can have varying number of vertices).
+// vertices contains all vertex coordinates in flattened form [x0,y0,z0,x1,y1,z1,...].
+//------------------------------------------------------------------------------
+template<typename RealType>
+bool
+pointInPolyhedron(const RealType* point,
+                  const std::vector<std::vector<int>>& facets,
+                  const RealType* vertices) {
+  const unsigned numFacets = facets.size();
+  unsigned crossings = 0;
+  const RealType tol = 1.0e-10;
+
+  // Cast a ray from the point in the +x direction
+  const RealType rayOrigin[3] = {point[0], point[1], point[2]};
+  const RealType rayDir[3] = {1.0, 0.0, 0.0};
+
+  // Check each face
+  for (unsigned f = 0; f < numFacets; ++f) {
+    const unsigned numFaceVerts = facets[f].size();
+    if (numFaceVerts < 3) continue; // Degenerate face
+
+    // Get three vertices to compute plane normal
+    const unsigned i0 = facets[f][0];
+    const unsigned i1 = facets[f][1];
+    const unsigned i2 = facets[f][2];
+
+    const RealType* v0 = &vertices[3*i0];
+    const RealType* v1 = &vertices[3*i1];
+    const RealType* v2 = &vertices[3*i2];
+
+    // Compute face normal
+    double nx, ny, nz;
+    computeNormal(v0[0], v0[1], v0[2],
+                  v1[0], v1[1], v1[2],
+                  v2[0], v2[1], v2[2],
+                  nx, ny, nz);
+
+    // Check if ray is parallel to face
+    const double rayDotNormal = rayDir[0]*nx + rayDir[1]*ny + rayDir[2]*nz;
+    if (std::abs(rayDotNormal) < tol) continue;
+
+    // Compute ray-plane intersection
+    const double d = -(nx*v0[0] + ny*v0[1] + nz*v0[2]);
+    const double t = -(nx*rayOrigin[0] + ny*rayOrigin[1] + nz*rayOrigin[2] + d) / rayDotNormal;
+
+    // Ray goes in wrong direction
+    if (t < tol) continue;
+
+    // Intersection point
+    const RealType hitPoint[3] = {
+      rayOrigin[0] + t*rayDir[0],
+      rayOrigin[1] + t*rayDir[1],
+      rayOrigin[2] + t*rayDir[2]
+    };
+
+    // Check if hit point is inside the face polygon using 2D projection
+    // Project onto the plane with largest normal component
+    int projAxis = 0;
+    if (std::abs(ny) > std::abs(nx)) projAxis = 1;
+    if (std::abs(nz) > std::abs(nx) && std::abs(nz) > std::abs(ny)) projAxis = 2;
+
+    // Map 3D coordinates to 2D for point-in-polygon test
+    auto get2DCoord = [&](const RealType* v3d, int idx2d) -> RealType {
+      if (projAxis == 0) return (idx2d == 0) ? v3d[1] : v3d[2]; // project to yz
+      if (projAxis == 1) return (idx2d == 0) ? v3d[0] : v3d[2]; // project to xz
+      return (idx2d == 0) ? v3d[0] : v3d[1]; // project to xy
+    };
+
+    const RealType hitPoint2D[2] = {get2DCoord(hitPoint, 0), get2DCoord(hitPoint, 1)};
+
+    // Point-in-polygon test using winding number
+    bool inside = false;
+    for (unsigned i = 0, j = numFaceVerts - 1; i < numFaceVerts; j = i++) {
+      const RealType* vi = &vertices[3*facets[f][i]];
+      const RealType* vj = &vertices[3*facets[f][j]];
+
+      const RealType vi2D[2] = {get2DCoord(vi, 0), get2DCoord(vi, 1)};
+      const RealType vj2D[2] = {get2DCoord(vj, 0), get2DCoord(vj, 1)};
+
+      if (((vi2D[1] > hitPoint2D[1]) != (vj2D[1] > hitPoint2D[1])) &&
+          (hitPoint2D[0] < (vj2D[0] - vi2D[0]) * (hitPoint2D[1] - vi2D[1]) /
+                           (vj2D[1] - vi2D[1]) + vi2D[0])) {
+        inside = !inside;
+      }
+    }
+
+    if (inside) crossings++;
+  }
+
+  // Odd number of crossings means inside
+  return (crossings % 2) == 1;
+}
+
+
+//------------------------------------------------------------------------------
+// Determine if the point lies on a polyhedron boundary (on any face).
+//------------------------------------------------------------------------------
+template<typename RealType>
+bool
+pointOnPolyhedron(const RealType* point,
+                  const std::vector<std::vector<int>>& facets,
+                  const RealType* vertices) {
+  const unsigned numFacets = facets.size();
+  const RealType tol = 1.0e-10;
+
+  // Check each face
+  for (unsigned f = 0; f < numFacets; ++f) {
+    const unsigned numFaceVerts = facets[f].size();
+    if (numFaceVerts < 3) continue;
+
+    // Get three vertices to compute plane
+    const unsigned i0 = facets[f][0];
+    const unsigned i1 = facets[f][1];
+    const unsigned i2 = facets[f][2];
+
+    const RealType* v0 = &vertices[3*i0];
+    const RealType* v1 = &vertices[3*i1];
+    const RealType* v2 = &vertices[3*i2];
+
+    // Compute face normal
+    double nx, ny, nz;
+    computeNormal(v0[0], v0[1], v0[2],
+                  v1[0], v1[1], v1[2],
+                  v2[0], v2[1], v2[2],
+                  nx, ny, nz);
+
+    // Normalize the normal
+    const double normLen = std::sqrt(nx*nx + ny*ny + nz*nz);
+    if (normLen < tol) continue; // Degenerate face
+    nx /= normLen;
+    ny /= normLen;
+    nz /= normLen;
+
+    // Check if point is on the plane
+    const double distToPlane = nx*(point[0] - v0[0]) +
+                               ny*(point[1] - v0[1]) +
+                               nz*(point[2] - v0[2]);
+
+    if (std::abs(distToPlane) > tol) continue; // Not on this face's plane
+
+    // Point is on the plane, check if it's inside the face polygon
+    // Project onto the plane with largest normal component
+    int projAxis = 0;
+    if (std::abs(ny) > std::abs(nx)) projAxis = 1;
+    if (std::abs(nz) > std::abs(nx) && std::abs(nz) > std::abs(ny)) projAxis = 2;
+
+    auto get2DCoord = [&](const RealType* v3d, int idx2d) -> RealType {
+      if (projAxis == 0) return (idx2d == 0) ? v3d[1] : v3d[2];
+      if (projAxis == 1) return (idx2d == 0) ? v3d[0] : v3d[2];
+      return (idx2d == 0) ? v3d[0] : v3d[1];
+    };
+
+    const RealType point2D[2] = {get2DCoord(point, 0), get2DCoord(point, 1)};
+
+    // Check if point is on any edge of the face
+    for (unsigned i = 0; i < numFaceVerts; ++i) {
+      const unsigned j = (i + 1) % numFaceVerts;
+      const RealType* vi = &vertices[3*facets[f][i]];
+      const RealType* vj = &vertices[3*facets[f][j]];
+
+      const RealType vi2D[2] = {get2DCoord(vi, 0), get2DCoord(vi, 1)};
+      const RealType vj2D[2] = {get2DCoord(vj, 0), get2DCoord(vj, 1)};
+
+      // Check if point is on this edge
+      if ((std::min(vi2D[0], vj2D[0]) - tol <= point2D[0]) &&
+          (std::max(vi2D[0], vj2D[0]) + tol >= point2D[0]) &&
+          (std::min(vi2D[1], vj2D[1]) - tol <= point2D[1]) &&
+          (std::max(vi2D[1], vj2D[1]) + tol >= point2D[1]) &&
+          collinear<2, RealType>(vi2D, vj2D, point2D, tol)) {
+        return true;
+      }
+    }
+
+    // Point is on plane but not on boundary, check if inside face
+    bool inside = false;
+    for (unsigned i = 0, j = numFaceVerts - 1; i < numFaceVerts; j = i++) {
+      const RealType* vi = &vertices[3*facets[f][i]];
+      const RealType* vj = &vertices[3*facets[f][j]];
+
+      const RealType vi2D[2] = {get2DCoord(vi, 0), get2DCoord(vi, 1)};
+      const RealType vj2D[2] = {get2DCoord(vj, 0), get2DCoord(vj, 1)};
+
+      if (((vi2D[1] > point2D[1]) != (vj2D[1] > point2D[1])) &&
+          (point2D[0] < (vj2D[0] - vi2D[0]) * (point2D[1] - vi2D[1]) /
+                        (vj2D[1] - vi2D[1]) + vi2D[0])) {
+        inside = !inside;
+      }
+    }
+
+    if (inside) return true;
+  }
+
+  return false;
+}
+
+
+//------------------------------------------------------------------------------
 // // OLD IMPLEMENTATION
 // template<typename RealType> 
 // bool
@@ -1575,7 +1774,7 @@ computeNormal(const RealType& ax, const RealType& ay, const RealType& az,
               double& nx, double& ny, double& nz) {
   const double dx_ab = bx - ax, dy_ab = by - ay, dz_ab = bz - az;
   const double dx_ac = cx - ax, dy_ac = cy - ay, dz_ac = cz - az;
-  nx = dy_ab*dz_ac - dz_ab*dz_ac;
+  nx = dy_ab*dz_ac - dz_ab*dy_ac;
   ny = dz_ab*dx_ac - dx_ab*dz_ac;
   nz = dx_ab*dy_ac - dy_ab*dx_ac;
 }

@@ -24,7 +24,8 @@ polytope_add_test(convexHull_3d)
 polytope_add_test(nearestPoint_2d)
 polytope_add_test(within_2d)
 polytope_add_test(intersect_2d)
-polytope_add_test(convexIntersect)
+polytope_add_test(convexIntersect_2d)
+polytope_add_test(convexIntersect_3d)
 #polytope_add_test( "PLC_CSG" )  #  <-- Suspending 'til we think it works
 polytope_add_test(hash)
 
@@ -35,7 +36,7 @@ polytope_add_test(hash)
 # Voro++ Tessellator tests
 #
 # NOTE: Temporarily suspending their build until more work can be
-#       done making their output toplogically consistent
+#       done making their output topologically consistent
 #
 #polytope_add_test( "VoroPP_2d"                                )
 #polytope_add_test( "VoroPP_3d"                                )

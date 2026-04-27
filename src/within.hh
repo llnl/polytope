@@ -25,7 +25,7 @@ namespace {
 // Functor definition first.
 template<int Dimension, typename RealType> struct WithinBoundaryFunctor;
 
-// 2-D specialization.
+// 2D specialization.
 template<typename RealType>
 struct WithinBoundaryFunctor<2, RealType> {
   static int impl(const RealType* point,
@@ -47,13 +47,32 @@ struct WithinBoundaryFunctor<2, RealType> {
   }
 };
 
+// 3D specialization.
+template<typename RealType>
+struct WithinBoundaryFunctor<3, RealType> {
+  static int impl(const RealType* point,
+		  const unsigned numVertices,
+		  const RealType* vertices,
+		  const std::vector<std::vector<int> >& facets) {
+    // Check if point is on the boundary of the polyhedron
+    bool onBoundary = geometry::pointOnPolyhedron(point, facets, vertices);
+
+    // Check if point is in the interior
+    bool inBoundary = geometry::pointInPolyhedron(point, facets, vertices);
+
+    if (onBoundary)                        return 2;
+    else if(inBoundary and not onBoundary) return 1;
+    else                                   return 0;
+  }
+};
+
 // Functional interface.
-template<int Dimension, typename RealType> 
+template<int Dimension, typename RealType>
 int withinBoundary(const RealType* point,
 		   const unsigned numVertices,
 		   const RealType* vertices,
 		   const std::vector<std::vector<int> >& facets) {
-  return WithinBoundaryFunctor<2, RealType>::impl(point, numVertices, vertices, facets);
+  return WithinBoundaryFunctor<Dimension, RealType>::impl(point, numVertices, vertices, facets);
 }
 
 }

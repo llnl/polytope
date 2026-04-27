@@ -25,7 +25,7 @@ namespace {
 // Functor definition first.
 template<int Dimension, typename RealType> struct ClosestPointOnFacetsFunctor;
 
-// 2-D specialization.
+// 2D specialization.
 template<typename RealType>
 struct ClosestPointOnFacetsFunctor<2, RealType> {
   static RealType impl(const RealType* point,

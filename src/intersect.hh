@@ -22,7 +22,7 @@ namespace {
 // Functor definition first.
 template<int Dimension, typename RealType> struct IntersectFacetsFunctor;
 
-// 2-D specialization.
+// 2D specialization.
 template<typename RealType>
 struct IntersectFacetsFunctor<2, RealType> {
   static unsigned impl(const RealType* point1,
