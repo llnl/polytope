@@ -6,6 +6,7 @@
 # polytope_add_test
 # Add a test to Polytope
 #--------------------------------------------------------------
+# TEST_WORK_DIR must be defined in calling CMake file
 macro(polytope_add_test target)
   set(options )
   set(singleValueArgs NUMTASKS)
@@ -24,7 +25,7 @@ macro(polytope_add_test target)
   get_property(POLYTOPE_TPL_DEPENDS GLOBAL PROPERTY POLYTOPE_TPL_DEPENDS)
   get_property(POLYTOPE_CXX_COMPILE_FLAGS GLOBAL PROPERTY POLYTOPE_CXX_COMPILE_FLAGS)
   blt_add_executable(NAME ${target}
-    SOURCES ${target}.cc
+    SOURCES test_${target}.cc
     DEPENDS_ON polytopeC ${POLYTOPE_TPL_DEPENDS}
     OUTPUT_DIR ${CMAKE_BINARY_DIR}/bin
   )
@@ -39,5 +40,9 @@ macro(polytope_add_test target)
   blt_add_test(NAME ${target}_test
     COMMAND ${CMAKE_BINARY_DIR}/bin/${target}
     NUM_MPI_TASKS ${arg_NUMTASKS}
+  )
+  set_tests_properties(${target}_test PROPERTIES
+    FIXTURES_REQUIRED "polytope_fixture"
+    WORKING_DIRECTORY "${TEST_WORK_DIR}"
   )
 endmacro()

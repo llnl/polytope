@@ -2,7 +2,7 @@
 # Adding a C++ test to Polytope
 #
 # The polytope test directory assumes all tests follow the naming convention
-#      "<name>.cc"
+#      "test_<name>.cc"
 #
 # To add a test, the user must register the test <name> and a list of the
 # dependencies needed to build it:
@@ -14,6 +14,27 @@
 
 # The polytope_add_test macro
 include(PolytopeAddTests)
+
+#-----------------------------------------------------------------------------
+# Polytope Setup/Cleanup
+#-----------------------------------------------------------------------------
+
+# Directory to run tests in to make cleanup easier
+set(TEST_WORK_DIR ${CMAKE_BINARY_DIR}/tests/test_silo_files)
+
+# Setup tests
+blt_add_test(NAME setup_tests
+  COMMAND ${CMAKE_COMMAND} -E make_directory "${TEST_WORK_DIR}"
+)
+
+set_tests_properties(setup_tests PROPERTIES FIXTURES_SETUP "polytope_fixtures")
+
+# Cleanup test files
+blt_add_test(NAME cleanup_tests
+ COMMAND ${CMAKE_COMMAND} -E rm -rf "${TEST_WORK_DIR}"
+)
+
+set_tests_properties(cleanup_tests PROPERTIES FIXTURES_CLEANUP "polytope_fixture")
 
 #-----------------------------------------------------------------------------
 # Polytope Utility Tests
@@ -68,7 +89,7 @@ if(POLYTOPE_ENABLE_BOOST)
 endif()
 if(POLYTOPE_ENABLE_TETGEN)
   # 3D Tetgen Tessellator tests
-  polytope_add_test(testTetgenTessellator)
+  polytope_add_test(TetgenTessellator)
 endif()
 if(POLYTOPE_ENABLE_TRIANGLE)
   # polytope_add_test(plot)
