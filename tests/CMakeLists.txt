@@ -24,6 +24,8 @@ polytope_add_test(convexHull_3d)
 polytope_add_test(nearestPoint_2d)
 polytope_add_test(within_2d)
 polytope_add_test(intersect_2d)
+polytope_add_test(within_3d)
+polytope_add_test(intersect_3d)
 polytope_add_test(convexIntersect_2d)
 polytope_add_test(convexIntersect_3d)
 #polytope_add_test( "PLC_CSG" )  #  <-- Suspending 'til we think it works

@@ -124,82 +124,68 @@ convexIntersectOrdered(const ReducedPLC<2, RealType>& a, const ReducedPLC<2, Rea
 }
 
 //------------------------------------------------------------------------------
-// Forward declaration for 3D ordered version.
-//------------------------------------------------------------------------------
-template<typename RealType>
-bool convexIntersectOrdered(const ReducedPLC<3, RealType>& a, const ReducedPLC<3, RealType>& b);
-
-//------------------------------------------------------------------------------
 // Convex polyhedron intersection (ordering-independent).
 //
-// NOTE: This implementation requires 3D geometric primitives that are not yet
-// implemented in polytope:
-//   - pointInPolyhedron() / pointOnPolyhedron() (for vertex containment tests)
-//   - segmentFaceIntersection3D() (for edge-face crossing tests)
-//
-// Until these are implemented, use convexIntersectOrdered() which requires
-// properly oriented facets but uses the separating axis theorem.
+// This implementation uses geometric primitives for vertex containment and
+// edge-face intersection tests, making it independent of facet orientation.
+// Vertex-to-face, edge-to-face, and vertex-to-vertex touching counts as intersection.
 //------------------------------------------------------------------------------
 template<typename RealType>
 bool
 convexIntersect(const ReducedPLC<3, RealType>& a, const ReducedPLC<3, RealType>& b) {
-  // For now, delegate to the ordered version which works if facets are properly oriented
-  return convexIntersectOrdered(a, b);
+  const unsigned nva = a.points.size() / 3;
+  const unsigned nvb = b.points.size() / 3;
+  const unsigned nfa = a.facets.size();
+  const unsigned nfb = b.facets.size();
+  POLY_CONTRACT_VAR(nva);
+  POLY_CONTRACT_VAR(nvb);
+  unsigned i, j, k, m;
 
-  // TODO: Implement the ordering-independent version following this pattern:
-  //
-  // const unsigned nva = a.points.size() / 3;
-  // const unsigned nvb = b.points.size() / 3;
-  // const unsigned nfa = a.facets.size();
-  // const unsigned nfb = b.facets.size();
-  // POLY_CONTRACT_VAR(nva);
-  // POLY_CONTRACT_VAR(nvb);
-  // unsigned i, j, k, m;
-  //
-  // // Any vertex containment is sufficient.
-  // for (i = 0; i < nva; ++i) {
-  //   if (within<3, RealType>(&a.points[3*i], nvb, &b.points[0], b)) return true;
-  // }
-  // for (i = 0; i < nvb; ++i) {
-  //   if (within<3, RealType>(&b.points[3*i], nva, &a.points[0], a)) return true;
-  // }
-  //
-  // // Otherwise, the polyhedra intersect only if an edge crosses a face.
-  // // For each edge of a, test against each face of b.
-  // for (i = 0; i < nfa; ++i) {
-  //   const unsigned nEdges = a.facets[i].size();
-  //   for (j = 0; j < nEdges; ++j) {
-  //     k = (j + 1) % nEdges;
-  //     const unsigned e0 = a.facets[i][j];
-  //     const unsigned e1 = a.facets[i][k];
-  //     POLY_ASSERT(e0 < nva and e1 < nva);
-  //     for (m = 0; m < nfb; ++m) {
-  //       if (geometry::segmentFaceIntersection3D(&a.points[3*e0], &a.points[3*e1],
-  //                                               b.facets[m], &b.points[0])) {
-  //         return true;
-  //       }
-  //     }
-  //   }
-  // }
-  //
-  // // For each edge of b, test against each face of a.
-  // for (i = 0; i < nfb; ++i) {
-  //   const unsigned nEdges = b.facets[i].size();
-  //   for (j = 0; j < nEdges; ++j) {
-  //     k = (j + 1) % nEdges;
-  //     const unsigned e0 = b.facets[i][j];
-  //     const unsigned e1 = b.facets[i][k];
-  //     POLY_ASSERT(e0 < nvb and e1 < nvb);
-  //     for (m = 0; m < nfa; ++m) {
-  //       if (geometry::segmentFaceIntersection3D(&b.points[3*e0], &b.points[3*e1],
-  //                                               a.facets[m], &a.points[0])) {
-  //         return true;
-  //       }
-  //     }
-  //   }
-  // }
-  //
-  // return false;
+  // Any vertex containment is sufficient.
+  for (i = 0; i < nva; ++i) {
+    if (within<3, RealType>(&a.points[3*i], nvb, &b.points[0], b)) return true;
+  }
+  for (i = 0; i < nvb; ++i) {
+    if (within<3, RealType>(&b.points[3*i], nva, &a.points[0], a)) return true;
+  }
+
+  // Otherwise, the polyhedra intersect only if an edge crosses a face.
+  // For each edge of a, test against each face of b.
+  RealType intersectionPoint[3];
+  for (i = 0; i < nfa; ++i) {
+    const unsigned nEdges = a.facets[i].size();
+    for (j = 0; j < nEdges; ++j) {
+      k = (j + 1) % nEdges;
+      const unsigned e0 = a.facets[i][j];
+      const unsigned e1 = a.facets[i][k];
+      POLY_ASSERT(e0 < nva and e1 < nva);
+      for (m = 0; m < nfb; ++m) {
+        if (geometry::segmentFaceIntersection3D(&a.points[3*e0], &a.points[3*e1],
+                                                b.facets[m], &b.points[0], intersectionPoint)) {
+          return true;
+        }
+      }
+    }
+  }
+
+  // For each edge of b, test against each face of a.
+  for (i = 0; i < nfb; ++i) {
+    const unsigned nEdges = b.facets[i].size();
+    for (j = 0; j < nEdges; ++j) {
+      k = (j + 1) % nEdges;
+      const unsigned e0 = b.facets[i][j];
+      const unsigned e1 = b.facets[i][k];
+      POLY_ASSERT(e0 < nvb and e1 < nvb);
+      for (m = 0; m < nfa; ++m) {
+        if (geometry::segmentFaceIntersection3D(&b.points[3*e0], &b.points[3*e1],
+                                                a.facets[m], &a.points[0], intersectionPoint)) {
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
 }
 
 //------------------------------------------------------------------------------
