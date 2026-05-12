@@ -51,6 +51,8 @@ polytope_add_test(convexIntersect_2d)
 polytope_add_test(convexIntersect_3d)
 #polytope_add_test( "PLC_CSG" )  #  <-- Suspending 'til we think it works
 polytope_add_test(hash)
+polytope_add_test(HashKey2D)
+polytope_add_test(HashKey3D)
 
 #-----------------------------------------------------------------------------
 # Serial Tessellator Tests

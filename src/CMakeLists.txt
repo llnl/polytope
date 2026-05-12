@@ -20,6 +20,7 @@ set(polytope_headers
   DistributedTessellator.hh
   ErrorHandler.hh
   findBoundaryElements.hh
+  HashKey.hh
   intersect.hh
   IntPointMap.hh
   KeyTraits.hh
