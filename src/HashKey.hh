@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------//
-// KeyTraits
+// HashKey
 //
 // Generalized class for handling hash keys.
 //----------------------------------------------------------------------------//
@@ -16,148 +16,157 @@
 
 namespace polytope {
 
-class HashKey2D {
-public:
-  HashKey2D() noexcept = default;
-  explicit HashKey2D(uint64_t key) noexcept : m_key(key) {}
+template<int Dimension, typename RealType> struct HashKey;
 
-  uint64_t value() const noexcept { return m_key; }
+template<typename RealType> struct HashKey<2, RealType> {
+  using CoordHash = uint64_t;
+  using CoordPoint = Point2<CoordHash>;
+  using RealPoint = Point2<RealType>;
 
-  bool operator==(const HashKey2D& other) const noexcept {
-    return m_key == other.m_key;
+  static constexpr unsigned  flagBit()   { return 63; }
+  static constexpr CoordHash FlagMask() {
+    return static_cast<CoordHash>(1) << flagBit();
   }
 
-  bool operator!=(const HashKey2D& other) const noexcept {
-    return !(*this == other);
+  // Check if hash corresponds to the inner or outer box
+  static bool getOuterFlag(const CoordHash& hash) {
+    return (hash & FlagMask()) != 0;
   }
 
-  static unsigned bitsPerDim() { return 32; }
+  // Set hash to correspond to outer box
+  static void enableOuterFlag(CoordHash& hash) {
+    hash |= FlagMask();
+  }
 
-  // Interleave using Morton indexing
-  template<typename CoordType> inline
-  void interleave(const Point2<CoordType>& point) {
-    m_key = 0;
-    auto x = static_cast<uint32_t>(point.x);
-    auto y = static_cast<uint32_t>(point.y);
-    for (auto i = 0; i < bitsPerDim(); ++i) {
-      m_key |= ((x >> i) & 1UL) << (2 * i);
-      m_key |= ((y >> i) & 1UL) << (2 * i + 1);
+  // Set hash to correspond to inner box
+  static void disableOuterFlag(CoordHash& hash) {
+    hash &= ~FlagMask();
+  }
+
+  static constexpr unsigned  num1DBits() { return 31; }
+  static constexpr CoordHash coordMax()  { return (1ULL << (num1DBits() - 1ULL)) - 1ULL; }
+
+  static CoordHash hash(const CoordPoint& point) {
+    CoordHash key = 0;
+    for (auto i = 0; i < num1DBits(); ++i) {
+      key |= ((point.x >> i) & 1UL) << (2*i);
+      key |= ((point.y >> i) & 1UL) << (2*i + 1);
     }
+    return key;
   }
 
-  // Deinterleave Morton's indexing
-  template<typename CoordType> inline
-  Point2<CoordType> deinterleave() {
-    uint32_t x = 0;
-    uint32_t y = 0;
-    for (unsigned i = 0; i < bitsPerDim(); ++i) {
-      x |= ((m_key >> (2*i))   & 1UL) << i;
-      y |= ((m_key >> (2*i+1)) & 1UL) << i;
+  static CoordPoint unhash(const CoordHash& key) {
+    CoordPoint point(0, 0);
+    for (auto i = 0; i < num1DBits(); ++i) {
+      point.x |= ((key >> (2*i))   & 1UL) << i;
+      point.y |= ((key >> (2*i+1)) & 1UL) << i;
     }
-    return Point2<CoordType>(static_cast<CoordType>(x),
-                             static_cast<CoordType>(y));
+    return point;
   }
 
-  uint64_t m_key = 0;
+  static CoordHash hashPosition(const RealPoint& pos,
+                                const RealPoint& length) {
+    RealPoint dx = length / static_cast<RealType>(coordMax());
+    return hash(CoordPoint(pos, dx));
+  }
+
+  static CoordHash hashPosition(const RealPoint& pos,
+                                const RealPoint& bhi,
+                                const RealPoint& blo) {
+    RealPoint length = bhi - blo;
+    RealPoint dx = length / static_cast<RealType>(coordMax());
+    return hash(CoordPoint(pos, blo, dx));
+  }
+
+  static RealPoint unhashPosition(const CoordHash& hashed_pos,
+                                  const RealPoint& length) {
+    RealPoint dx = length / static_cast<RealType>(coordMax());
+    return unhash(hashed_pos).realPoint(dx);
+  }
+
+  static CoordHash unhashPosition(const CoordHash& hashed_pos,
+                                  const RealPoint& bhi,
+                                  const RealPoint& blo) {
+    RealPoint length = bhi - blo;
+    RealPoint dx = length / static_cast<RealType>(coordMax());
+    return unhash(hashed_pos).realPoint(blo, dx);
+  }
+
 };
 
-class HashKey3D {
-public:
-  HashKey3D() noexcept = default;
-  HashKey3D(uint64_t lo, uint64_t hi) noexcept : m_lo(lo), m_hi(hi) {}
+template<typename RealType> struct HashKey<3, RealType> {
+  using CoordHash = unsigned __int128;
+  using CoordPoint = Point3<uint64_t>;
+  using RealPoint = Point3<RealType>;
 
-  uint64_t lo() const noexcept { return m_lo; }
-
-  uint64_t hi() const noexcept { return m_hi; }
-
-  bool operator==(const HashKey3D& other) const noexcept {
-    return m_lo == other.m_lo && m_hi == other.m_hi;
+  static constexpr unsigned  flagBit()   { return 127; }
+  static constexpr CoordHash FlagMask() {
+    return static_cast<CoordHash>(1) << flagBit();
   }
 
-  bool operator!=(const HashKey3D& other) const noexcept {
-    return !(*this == other);
+  static bool getOuterFlag(const CoordHash& hash) {
+    return (hash & FlagMask()) != 0;
   }
 
-  static unsigned bitsPerDim() { return 42; }
+  static void enableOuterFlag(CoordHash& hash) {
+    hash |= FlagMask();
+  }
 
-  // Interleave using Morton indexing
-  template<typename CoordType> inline
-  void interleave(const Point3<CoordType>& point) {
-    auto x = static_cast<uint64_t>(point.x);
-    auto y = static_cast<uint64_t>(point.y);
-    auto z = static_cast<uint64_t>(point.z);
-    m_lo = 0;
-    m_hi = 0;
-    for (auto i = 0; i < bitsPerDim(); ++i) {
-      setBit128(3*i,   (x >> i) & 1ULL);
-      setBit128(3*i+1, (y >> i) & 1ULL);
-      setBit128(3*i+2, (z >> i) & 1ULL);
+  static void disableOuterFlag(CoordHash& hash) {
+    hash &= ~FlagMask();
+  }
+
+  static constexpr unsigned  num1DBits() { return 42; }
+  static constexpr CoordHash coordMax()  { return (1ULL << (num1DBits() - 1ULL)) - 1ULL; }
+
+  static CoordHash hash(const CoordPoint& point) {
+    CoordHash key = 0;
+    for (auto i = 0; i < num1DBits(); ++i) {
+      key |= (static_cast<CoordHash>((point.x >> i) & 1ULL) << (3*i));
+      key |= (static_cast<CoordHash>((point.y >> i) & 1ULL) << (3*i + 1));
+      key |= (static_cast<CoordHash>((point.z >> i) & 1ULL) << (3*i + 2));
     }
+    return key;
   }
 
-  // Deinterleave Morton's indexing
-  template<typename CoordType> inline
-  Point3<CoordType> deinterleave() {
+  static CoordPoint unhash(const CoordHash& key) {
     uint64_t x = 0, y = 0, z = 0;
-    for (unsigned i = 0; i < bitsPerDim(); ++i) {
-      x |= getBit128(3*i)   << i;
-      y |= getBit128(3*i+1) << i;
-      z |= getBit128(3*i+2) << i;
+    for (auto i = 0; i < num1DBits(); ++i) {
+      x |= ((key >> (3*i))   & 1ULL) << i;
+      y |= ((key >> (3*i+1)) & 1ULL) << i;
+      z |= ((key >> (3*i+2)) & 1ULL) << i;
     }
-    return Point3<CoordType>(static_cast<uint64_t>(x),
-                             static_cast<uint64_t>(y),
-                             static_cast<uint64_t>(z));
+    return CoordPoint(x, y, z);
   }
 
-  // Bit operations
-  inline void setBit128(unsigned bitIndex, uint64_t bit) noexcept {
-    if (bitIndex < 64) {
-      m_lo |= (bit & 1ULL) << bitIndex;
-    } else {
-      m_hi |= (bit & 1ULL) << (bitIndex - 64);
-    }
+  static CoordHash hashPosition(const RealPoint& pos,
+                                const RealPoint& length) {
+    RealPoint dx = length / static_cast<RealType>(coordMax());
+    return hash(CoordPoint(pos, dx));
   }
 
-  inline uint64_t getBit128(unsigned bitIndex) const noexcept {
-    if (bitIndex < 64) {
-      return (m_lo >> bitIndex) & 1ULL;
-    }
-    return (m_hi >> (bitIndex - 64)) & 1ULL;
+  static CoordHash hashPosition(const RealPoint& pos,
+                                const RealPoint& bhi,
+                                const RealPoint& blo) {
+    RealPoint length = bhi - blo;
+    RealPoint dx = length / static_cast<RealType>(coordMax());
+    return hash(CoordPoint(pos, blo, dx));
   }
 
-  uint64_t m_lo = 0;
-  uint64_t m_hi = 0;
-};
-
-// Serialization
-template<>
-struct Serializer<HashKey2D> {
-  static void serializeImpl(const HashKey2D& value,
-                            std::vector<char>& buffer) {
-    serialize(value.m_key, buffer);
+  static RealPoint unhashPosition(const CoordHash& hashed_pos,
+                                  const RealPoint& length) {
+    RealPoint dx = length / static_cast<RealType>(coordMax());
+    return unhash(hashed_pos).realPoint(dx);
   }
 
-  static void deserializeImpl(HashKey2D& value,
-                              std::vector<char>::const_iterator& bufItr,
-                              const std::vector<char>::const_iterator& endItr) {
-    deserialize(value.m_key, bufItr, endItr);
-  }
-};
-
-template<>
-struct Serializer<HashKey3D> {
-  static void serializeImpl(const HashKey3D& value,
-                            std::vector<char>& buffer) {
-    serialize(value.m_lo, buffer);
-    serialize(value.m_hi, buffer);
+  static RealPoint unhashPosition(const CoordHash& hashed_pos,
+                                  const RealPoint& bhi,
+                                  const RealPoint& blo) {
+    RealPoint length = bhi - blo;
+    RealPoint dx = length / static_cast<RealType>(coordMax());
+    return unhash(hashed_pos).realPoint(blo, dx);
   }
 
-  static void deserializeImpl(HashKey3D& value,
-                              std::vector<char>::const_iterator& bufItr,
-                              const std::vector<char>::const_iterator& endItr) {
-    deserialize(value.m_lo, bufItr, endItr);
-    deserialize(value.m_hi, bufItr, endItr);
-  }
 };
 }
 #endif

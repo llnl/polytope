@@ -28,49 +28,44 @@ class PLC {
   std::vector<std::vector<std::vector<int> > > holes;
   
   //! Clears facets and holes to empty the PLC
-  void clear()
-  {
+  void clear() {
     facets.clear(); holes.clear();
   }
 
   //! Returns true if this PLC is empty, false otherwise.
-  bool empty() const
-  {
+  bool empty() const {
     return (facets.empty() and holes.empty());
   }
 
   //! Returns true if this PLC is valid (at first glance), false if it 
   //! is obviously invalid. This is not a rigorous check!
-  bool valid() const
-  {
-    if (Dimension == 2)
-    {
+  bool valid() const {
+    if (Dimension == 2) {
       // In 2D all facets must have at least 2 points.
-      for (std::size_t f = 0; f < facets.size(); ++f)
-      {
-        if (facets[f].size() != 2) return false;
-      }
-      for (std::size_t h = 0; h < holes.size(); ++h)
-      {
-        for (std::size_t f = 0; f < holes[h].size(); ++f)
-        {
-          if (holes[h][f].size() != 2) return false;
+      for (std::size_t f = 0; f < facets.size(); ++f) {
+        if (facets[f].size() != 2) {
+          return false;
         }
       }
-    }
-    else if (Dimension == 3)
-    {
-      // In 3D all facets must have at least 3 points.
-      for (std::size_t f = 0; f < facets.size(); ++f)
-      {
-        if (facets[f].size() < 3)
-          return false;
+      for (std::size_t h = 0; h < holes.size(); ++h) {
+        for (std::size_t f = 0; f < holes[h].size(); ++f) {
+          if (holes[h][f].size() != 2) {
+            return false;
+          }
+        }
       }
-      for (std::size_t h = 0; h < holes.size(); ++h)
-      {
-        for (std::size_t f = 0; f < holes[h].size(); ++f)
-        {
-          if (holes[h][f].size() < 3) return false;
+    } else if (Dimension == 3) {
+      // In 3D all facets must have at least 3 points.
+      for (std::size_t f = 0; f < facets.size(); ++f) {
+        if (facets[f].size() < 3) {
+          return false;
+        }
+      }
+      for (std::size_t h = 0; h < holes.size(); ++h) {
+        for (std::size_t f = 0; f < holes[h].size(); ++f) {
+          if (holes[h][f].size() < 3) {
+            return false;
+          }
         }
       }
     }
@@ -78,8 +73,7 @@ class PLC {
   }
 
   //! output operator.
-  friend std::ostream& operator<<(std::ostream& s, const PLC& plc)
-  {
+  friend std::ostream& operator<<(std::ostream& s, const PLC& plc) {
     s << "PLC (" << Dimension << "D):" << std::endl;
     s << plc.facets.size() << " facets:" << std::endl;
     for (std::size_t f = 0; f < plc.facets.size(); ++f) {

@@ -27,7 +27,12 @@ struct Point2 {
          const unsigned i = 0) :
     x(xi), y(yi), index(i) {}
 
-  Point2& operator=(const Point2& rhs) { x = rhs.x; y = rhs.y; index = rhs.index; return *this; }
+  Point2& operator=(const Point2& rhs) {
+    x = rhs.x;
+    y = rhs.y;
+    index = rhs.index;
+    return *this;
+  }
   bool operator==(const Point2& rhs) const { return (x == rhs.x and y == rhs.y); }
   bool operator!=(const Point2& rhs) const { return !(*this == rhs); }
   bool operator<(const Point2& rhs) const {
@@ -35,11 +40,35 @@ struct Point2 {
             x == rhs.x and y < rhs.y ? true :
             false);
   }
+  bool operator>(const Point2& rhs) const {
+    return (x > rhs.x                ? true :
+            x == rhs.x and y > rhs.y ? true :
+            false);
+  }
+
+  template<typename RealType>
+  Point2(const Point2<RealType>& real_point,
+         const Point2<RealType>& dx,
+         const unsigned i = 0):
+    x(static_cast<CoordType>(real_point.x/dx.x + 0.5)),
+    y(static_cast<CoordType>(real_point.y/dx.y + 0.5)),
+    index(i) {}
+
+  template<typename RealType>
+  Point2(const Point2<RealType>& real_point,
+         const Point2<RealType>& blo,
+         const Point2<RealType>& dx,
+         const unsigned i = 0):
+    x(static_cast<CoordType>((real_point.x - blo.x)/dx.x + 0.5)),
+    y(static_cast<CoordType>((real_point.y - blo.y)/dx.y + 0.5)),
+    index(i) {}
+
   template<typename RealType>
   Point2(const RealType& xi, const RealType& yi, const RealType& dx, const unsigned i = 0): 
     x(static_cast<CoordType>(xi/dx + 0.5)),
     y(static_cast<CoordType>(yi/dx + 0.5)),
     index(i) {}
+
   template<typename RealType>
   Point2(const RealType& xi, const RealType& yi, 
          const RealType& xlow, const RealType& ylow,
@@ -48,8 +77,27 @@ struct Point2 {
     x(static_cast<CoordType>((xi - xlow)/dx + 0.5)),
     y(static_cast<CoordType>((yi - ylow)/dx + 0.5)),
     index(i) {}
+
   template<typename RealType> RealType realx(const RealType& xmin, const RealType& dx) const { return static_cast<RealType>(x*dx) + xmin; }
   template<typename RealType> RealType realy(const RealType& ymin, const RealType& dy) const { return static_cast<RealType>(y*dy) + ymin; }
+
+  template<typename RealType> Point2<RealType>
+  realPoint(const Point2<RealType>& dx) const {
+    Point2<RealType> real_point;
+    real_point.x = static_cast<RealType>(dx.x*(x - 0.5));
+    real_point.y = static_cast<RealType>(dx.y*(y - 0.5));
+    return real_point;
+  }
+
+  template<typename RealType> Point2<RealType>
+  realPoint(const Point2<RealType>& blo,
+            const Point2<RealType>& dx) const {
+    Point2<RealType> real_point;
+    real_point.x = static_cast<RealType>(dx.x*(x - 0.5) + blo.x);
+    real_point.y = static_cast<RealType>(dx.y*(y - 0.5) + blo.y);
+    return real_point;
+  }
+
   Point2& operator+=(const Point2& rhs) { x += rhs.x; y += rhs.y; return *this; }
   Point2& operator-=(const Point2& rhs) { x -= rhs.x; y -= rhs.y; return *this; }
   Point2& operator*=(const CoordType& rhs) { x *= rhs; y *= rhs; return *this; }
@@ -100,7 +148,13 @@ struct Point3 {
   unsigned index;
   Point3(): x(0), y(0), z(0), index(0) {}
   Point3(const CoordType& xi, const CoordType& yi, const CoordType& zi, const unsigned i = 0): x(xi), y(yi), z(zi), index(i) {}
-  Point3& operator=(const Point3& rhs) { x = rhs.x; y = rhs.y; z = rhs.z; index = rhs.index; return *this; }
+  Point3& operator=(const Point3& rhs) {
+    x = rhs.x;
+    y = rhs.y;
+    z = rhs.z;
+    index = rhs.index;
+    return *this;
+  }
   bool operator==(const Point3& rhs) const { return (x == rhs.x and y == rhs.y and z == rhs.z); }
   bool operator!=(const Point3& rhs) const { return !(*this == rhs); }
   bool operator<(const Point3& rhs) const {
@@ -109,6 +163,32 @@ struct Point3 {
             x == rhs.x and y == rhs.y and z < rhs.z ? true :
             false);
   }
+  bool operator>(const Point3& rhs) const {
+    return (x > rhs.x                               ? true :
+            x == rhs.x and y > rhs.y                ? true :
+            x == rhs.x and y == rhs.y and z > rhs.z ? true :
+            false);
+  }
+
+  template<typename RealType>
+  Point3(const Point3<RealType>& real_point,
+         const Point3<RealType>& dx,
+         const unsigned i = 0):
+    x(static_cast<CoordType>(real_point.x/dx.x + 0.5)),
+    y(static_cast<CoordType>(real_point.y/dx.y + 0.5)),
+    z(static_cast<CoordType>(real_point.z/dx.z + 0.5)),
+    index(i) {}
+
+  template<typename RealType>
+  Point3(const Point3<RealType>& real_point,
+         const Point3<RealType>& blo,
+         const Point3<RealType>& dx,
+         const unsigned i = 0):
+    x(static_cast<CoordType>((real_point.x - blo.x)/dx.x + 0.5)),
+    y(static_cast<CoordType>((real_point.y - blo.y)/dx.y + 0.5)),
+    z(static_cast<CoordType>((real_point.z - blo.z)/dx.z + 0.5)),
+    index(i) {}
+
   template<typename RealType>
   Point3(const RealType& xi, const RealType& yi, const RealType& zi, const RealType& dx, const unsigned i = 0): 
     x(static_cast<CoordType>(xi/dx + 0.5)),
@@ -127,6 +207,26 @@ struct Point3 {
   template<typename RealType> RealType realx(const RealType& xmin, const RealType& dx) const { return static_cast<RealType>(x*dx) + xmin; }
   template<typename RealType> RealType realy(const RealType& ymin, const RealType& dy) const { return static_cast<RealType>(y*dy) + ymin; }
   template<typename RealType> RealType realz(const RealType& zmin, const RealType& dz) const { return static_cast<RealType>(z*dz) + zmin; }
+
+  template<typename RealType> Point3<RealType>
+  realPoint(const Point3<RealType>& dx) const {
+    Point3<RealType> real_point;
+    real_point.x = static_cast<RealType>(dx.x*(x - 0.5));
+    real_point.y = static_cast<RealType>(dx.y*(y - 0.5));
+    real_point.z = static_cast<RealType>(dx.z*(z - 0.5));
+    return real_point;
+  }
+
+  template<typename RealType> Point3<RealType>
+  realPoint(const Point3<RealType>& blo,
+            const Point3<RealType>& dx) const {
+    Point3<RealType> real_point;
+    real_point.x = static_cast<RealType>(dx.x*(x - 0.5) + blo.x);
+    real_point.y = static_cast<RealType>(dx.y*(y - 0.5) + blo.y);
+    real_point.z = static_cast<RealType>(dx.z*(z - 0.5) + blo.z);
+    return real_point;
+  }
+
   Point3& operator+=(const Point3& rhs) { x += rhs.x; y += rhs.y; z += rhs.z; return *this; }
   Point3& operator-=(const Point3& rhs) { x -= rhs.x; y -= rhs.y; z -= rhs.z; return *this; }
   Point3& operator*=(const CoordType& rhs) { x *= rhs; y *= rhs; z *= rhs; return *this; }

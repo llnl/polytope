@@ -156,6 +156,7 @@ computeNormal(const RealType& ax, const RealType& ay, const RealType& az,
 // A handy method for computing a hash of a position to a 64 bit quantized
 // integer value.
 //------------------------------------------------------------------------------
+// TODO: Replace this with HashKey
 template<int Dimension, typename RealType> struct Hasher;
 
 // 2D
