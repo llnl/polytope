@@ -79,7 +79,7 @@ struct ComparePairByFirstElement {
 //                                     index (0) in both positions 
 //------------------------------------------------------------------------------
 template<typename RealType>
-PLC<2, RealType>
+PLC<2>
 convexHull_2d(const std::vector<RealType>& points,
               const RealType* low,
               const RealType& dx) {
@@ -91,7 +91,7 @@ convexHull_2d(const std::vector<RealType>& points,
   POLY_ASSERT(!points.empty());
   POLY_ASSERT(points.size() % 2 == 0);
   const unsigned n = points.size() / 2;
-  PLC<2, RealType> plc;
+  PLC<2> plc;
   unsigned i, j, k, t;
   
   // If there's only one or two points, we're done: that's the whole hull

@@ -185,7 +185,7 @@ void test(Tessellator<2,double>& tessellator) {
       points.push_back(PLCpoints[k]);
     }
 
-    PLC<2,double> boundary;
+    PLC<2> boundary;
     boundary.facets.resize(7, std::vector<int>(2));
     for (int j = 0; j < 7; ++j){
       boundary.facets[j][0] = j;
@@ -202,7 +202,7 @@ void test(Tessellator<2,double>& tessellator) {
     cout << "\nTest 7: 3x3 Unit Test with 2 Orphans" << endl;
     vector<double> PLCpoints;
     vector<double> points;
-    PLC<2,double> boundary;
+    PLC<2> boundary;
     Tessellation<2,double> mesh;
     PLCpoints.push_back(0.0);  PLCpoints.push_back(0.0);
     PLCpoints.push_back(1.2);  PLCpoints.push_back(0.0);

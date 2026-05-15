@@ -283,7 +283,7 @@ void cullVisibleFacets(std::vector<std::pair<int, int> >& horizonEdges,
 // The 3D convex hull method.
 //------------------------------------------------------------------------------
 template<typename RealType>
-PLC<3, RealType>
+PLC<3>
 convexHull_3d(const std::vector<RealType>& points,
               const RealType* low,
               const RealType& dx) {
@@ -419,7 +419,7 @@ convexHull_3d(const std::vector<RealType>& points,
   }
 
   // Read out the data to the PLC and we're done.
-  PLC<3, RealType> plc;
+  PLC<3> plc;
   for (typename FacetSet::iterator facetItr = workingFacets.begin();
        facetItr != workingFacets.end();
        ++facetItr) {

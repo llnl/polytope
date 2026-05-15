@@ -85,7 +85,7 @@ bool
 within(const RealType* point,
        const unsigned numVertices,
        const RealType* vertices,
-       const PLC<Dimension, RealType>& plc) {
+       const PLC<Dimension>& plc) {
   const int numHoles = plc.holes.size();
   int i = 0, insideType;
 

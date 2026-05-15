@@ -71,7 +71,7 @@ void generateMesh(Tessellator<2,double>& tessellator,
 
   double boundaryPoints[8] = {0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0};
   vector<double> plcPoints(8);
-  PLC<2,double> plc;
+  PLC<2> plc;
   plc.facets.resize(4, vector<int>(2));
   for (unsigned i = 0; i < 4; ++i) {
     plcPoints[2*i  ] = tiltX(boundaryPoints[2*i], boundaryPoints[2*i+1], 0.5, 0.5, angle);

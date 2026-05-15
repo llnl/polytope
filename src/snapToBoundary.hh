@@ -16,14 +16,14 @@ namespace polytope {
 template<typename RealType>
 void snapToBoundary(Tessellation<2, RealType>& mesh,
                     const std::vector<RealType>& points,
-                    const PLC<2, RealType>& geometry,
+                    const PLC<2>& geometry,
                     const RealType degeneracy);
 
 // 3D
 template<typename RealType>
 void snapToBoundary(Tessellation<3, RealType>& mesh,
                     const std::vector<RealType>& points,
-                    const PLC<3, RealType>& geometry,
+                    const PLC<3>& geometry,
                     const RealType degeneracy);
 
 }

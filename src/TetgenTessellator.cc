@@ -39,7 +39,7 @@ namespace {
 //------------------------------------------------------------------------------
 std::string
 escapePod(const std::string nameEnd,
-          const polytope::PLC<3, double>& plc,
+          const polytope::PLC<3>& plc,
           const std::vector<double>& points) {
     std::stringstream os;
     os << "test_PLC_" << nameEnd;
@@ -151,7 +151,7 @@ orderFacetNodes3d(const std::vector<int>& facet,
     low2d[1] = std::min(low2d[1], v);
   }
 
-  const PLC<2, double> hull2d = convexHull_2d(coords2d, low2d, tol);
+  const PLC<2> hull2d = convexHull_2d(coords2d, low2d, tol);
   POLY_ASSERT(hull2d.facets.size() >= 3);
 
   std::vector<int> orderedFacet;
@@ -626,7 +626,7 @@ void
 TetgenTessellator::
 tessellate(const vector<double>& points,
            const vector<double>& PLCpoints,
-           const PLC<3, double>& geometry,
+           const PLC<3>& geometry,
            Tessellation<3, double>& mesh) const {
 
   // We export to the ReducedPLC method.

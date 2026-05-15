@@ -137,7 +137,7 @@ constructUnboundedMeshTopology(std::vector<std::vector<unsigned> >& cellNodes,
 template<typename RealType, typename PointType>
 void
 constructBoostBoundary(const std::vector<PointType>& PLCPoints,
-                       const PLC<2,RealType>& geometry,
+                       const PLC<2>& geometry,
                        boost::geometry::model::polygon<PointType,false>& boundary) {
   typedef boost::geometry::model::polygon<PointType,false> BGpolygon;
   int i, j, k;

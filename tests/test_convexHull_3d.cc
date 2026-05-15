@@ -32,7 +32,7 @@ namespace {
 //------------------------------------------------------------------------------
 template<typename RealType>
 unsigned
-convexContains(const polytope::PLC<3, RealType>& surface,
+convexContains(const polytope::PLC<3>& surface,
                const RealType* points,
                const RealType* p,
                const RealType tolerance) {
@@ -88,7 +88,7 @@ convexContains(const polytope::PLC<3, RealType>& surface,
 //------------------------------------------------------------------------------
 std::string
 escapePod(const std::string nameEnd,
-          const polytope::PLC<3, double>& plc,
+          const polytope::PLC<3>& plc,
           const std::vector<double>& points) {
     std::stringstream os;
     os << "test_PLC_convexHull_" << nameEnd;
@@ -126,7 +126,7 @@ int main(int argc, char** argv) {
     cout << "Generating convex hull... ";
     clock_t t0 = clock();
     const double tolerance = 1.0e-5;
-    polytope::PLC<3, double> box_hull = polytope::convexHull_3d(points, low, tolerance);
+    polytope::PLC<3> box_hull = polytope::convexHull_3d(points, low, tolerance);
     clock_t t1 = clock();
     cout << "required " << double(t1 - t0)/CLOCKS_PER_SEC << " seconds." << endl;
 
@@ -160,7 +160,7 @@ int main(int argc, char** argv) {
     cout << "Generating convex hull... ";
     t0 = clock();
     const double tolerance = 1.0e-5;
-    polytope::PLC<3, double> hull = polytope::convexHull_3d(points, low, tolerance);
+    polytope::PLC<3> hull = polytope::convexHull_3d(points, low, tolerance);
     t1 = clock();
     cout << "required " << double(t1 - t0)/CLOCKS_PER_SEC << " seconds." << endl;
 

@@ -25,7 +25,7 @@ public:
   unsigned Dimension;
   
   // Piecewise linear construct to define the boundary facets + holes
-  PLC<2, RealType> mPLC;
+  PLC<2> mPLC;
   // Vector of generators to define the boundary
   vector<RealType> mPLCpoints;
   // Ranges of bounding box

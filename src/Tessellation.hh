@@ -98,7 +98,7 @@ class Tessellation {
   //! of the point distribution. Not all Tessellators hand back the convex 
   //! hull, so this may be empty, in which case you must compute the convex 
   //! hull yourself.
-  PLC<Dimension, RealType> convexHull;
+  PLC<Dimension> convexHull;
 
   //! Parallel data structure: the set of neighbor domains this portion of
   //! the tessellation is in contact with.

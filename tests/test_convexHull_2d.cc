@@ -24,7 +24,7 @@ using namespace std;
 //------------------------------------------------------------------------------
 template<typename RealType>
 unsigned
-convexContains(const polytope::PLC<2, RealType>& surface,
+convexContains(const polytope::PLC<2>& surface,
                const RealType* points,
                const RealType* p,
                const RealType tolerance) {
@@ -92,7 +92,7 @@ int main(int argc, char** argv) {
   cout << "Generating convex hull... ";
   t0 = clock();
   const double tolerance = 1.0e-9;
-  polytope::PLC<2, double> hull = polytope::convexHull_2d(points, low, tolerance);
+  polytope::PLC<2> hull = polytope::convexHull_2d(points, low, tolerance);
   t1 = clock();
   cout << "required " << double(t1 - t0)/CLOCKS_PER_SEC << " seconds." << endl;
 

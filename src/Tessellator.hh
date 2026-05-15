@@ -65,7 +65,7 @@ public:
   //! \param mesh This will store the resulting tessellation.
   virtual void tessellate(const std::vector<RealType>& points,
                           const std::vector<RealType>& PLCpoints,
-                          const PLC<Dimension, RealType>& geometry,
+                          const PLC<Dimension>& geometry,
                           Tessellation<Dimension, RealType>& mesh) const;
 
   //! Generate a Voronoi-like tessellation for the given set of generator 
@@ -105,7 +105,7 @@ public:
   virtual std::vector<unsigned>
   tessellateDegenerate(const std::vector<RealType>& points,
                        const std::vector<RealType>& PLCpoints,
-                       const PLC<Dimension, RealType>& geometry,
+                       const PLC<Dimension>& geometry,
                        const RealType tol,
                        Tessellation<Dimension, RealType>& mesh) const;
 
@@ -152,7 +152,7 @@ public:
   // //! This helper method creates a piecewise linear complex (PLC) 
   // //! representing the bounding box containing the given points and 
   // //! adds the corners of the bounding box to \a points.
-  // PLC<Dimension, RealType> boundingBox(std::vector<RealType>& points) const;
+  // PLC<Dimension> boundingBox(std::vector<RealType>& points) const;
 
   //! Return a normalized set of coordinates, also returning the bounding low/high points.
   std::vector<RealType> computeNormalizedPoints(const std::vector<RealType>& points,

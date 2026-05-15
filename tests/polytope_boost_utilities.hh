@@ -57,7 +57,7 @@ makeBGPolygon( std::vector<RealType>& points ) {
 //------------------------------------------------------------------------------
 template <typename RealType>
 BGPolygon<RealType, 2>
-makeBGPolygon( PLC<2,RealType>& PLC, std::vector<RealType>& PLCpoints ) {
+makeBGPolygon( PLC<2>& PLC, std::vector<RealType>& PLCpoints ) {
    unsigned i,j;
    BGPolygon<RealType, 2> polygon;
    // Walk the facets and add the first node

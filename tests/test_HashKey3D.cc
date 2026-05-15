@@ -29,14 +29,17 @@ namespace {
 //------------------------------------------------------------------------------
 // Type alias for HashKey3D
 //------------------------------------------------------------------------------
-using HashKey3D = HashKey<3, double>;
+using HashKey3D = HashKey<3>;
+using CoordHash = typename HashKey3D::CoordHash;
+using IntType = typename HashKey3D::IntType;
+using IntPoint = typename HashKey3D::IntPoint;
 
 //------------------------------------------------------------------------------
 // Test that hash/unhash are inverses
 //------------------------------------------------------------------------------
-void testRoundTrip(const Point3<uint64_t>& p, const string& label) {
+void testRoundTrip(const IntPoint& p, const string& label) {
   auto key = HashKey3D::hash(p);
-  Point3<uint64_t> p2 = HashKey3D::unhash(key);
+  auto p2 = HashKey3D::unhash(key);
 
   POLY_CHECK2(p.x == p2.x && p.y == p2.y && p.z == p2.z,
               label << ": Round-trip failed for (" << p.x << ", " << p.y << ", " << p.z
@@ -46,7 +49,7 @@ void testRoundTrip(const Point3<uint64_t>& p, const string& label) {
 //------------------------------------------------------------------------------
 // Test that identical points produce identical hashes
 //------------------------------------------------------------------------------
-void testIdenticalPoints(const Point3<uint64_t>& p) {
+void testIdenticalPoints(const IntPoint& p) {
   auto key1 = HashKey3D::hash(p);
   auto key2 = HashKey3D::hash(p);
 
@@ -58,7 +61,7 @@ void testIdenticalPoints(const Point3<uint64_t>& p) {
 //------------------------------------------------------------------------------
 // Test that different points produce different hashes
 //------------------------------------------------------------------------------
-void testDistinctPoints(const Point3<uint64_t>& p1, const Point3<uint64_t>& p2) {
+void testDistinctPoints(const IntPoint& p1, const IntPoint& p2) {
   if (p1.x == p2.x && p1.y == p2.y && p1.z == p2.z) return;
 
   auto key1 = HashKey3D::hash(p1);
@@ -72,8 +75,8 @@ void testDistinctPoints(const Point3<uint64_t>& p1, const Point3<uint64_t>& p2) 
 //------------------------------------------------------------------------------
 // Test uniqueness - N distinct points produce N distinct hashes
 //------------------------------------------------------------------------------
-void testUniqueness(const vector<Point3<uint64_t>>& points) {
-  map<unsigned __int128, vector<unsigned>> collisions;
+void testUniqueness(const vector<IntPoint>& points) {
+  map<CoordHash, vector<IntType>> collisions;
 
   for (unsigned i = 0; i < points.size(); ++i) {
     auto key = HashKey3D::hash(points[i]);
@@ -110,19 +113,19 @@ void testSpatialLocality() {
 
   // Create a regular 3D grid of points (16x16x16 = 4096 points)
   const unsigned gridSize = 16;
-  vector<Point3<uint64_t>> points;
+  vector<IntPoint> points;
   points.reserve(gridSize * gridSize * gridSize);
 
   for (unsigned i = 0; i < gridSize; ++i) {
     for (unsigned j = 0; j < gridSize; ++j) {
       for (unsigned k = 0; k < gridSize; ++k) {
-        points.push_back(Point3<uint64_t>(uint64_t(i), uint64_t(j), uint64_t(k)));
+        points.push_back(IntPoint(i, j, k));
       }
     }
   }
 
   // Hash and sort by Morton code
-  vector<pair<unsigned __int128, unsigned>> hashed;
+  vector<pair<CoordHash, unsigned>> hashed;
   for (unsigned i = 0; i < points.size(); ++i) {
     auto key = HashKey3D::hash(points[i]);
     hashed.push_back(make_pair(key, i));
@@ -172,45 +175,46 @@ void testEdgeCases() {
   cout << "Testing edge cases..." << endl;
 
   // Origin
-  testRoundTrip(Point3<uint64_t>(0, 0, 0), "Origin");
+  IntType zero = 0;
+  testRoundTrip(IntPoint(zero, zero, zero), "Origin");
 
   // Max values for coordinate type (42 bits per dimension)
-  const uint64_t maxVal = HashKey3D::coordMax();
-  testRoundTrip(Point3<uint64_t>(maxVal, maxVal, maxVal), "Max coordinates");
-  testRoundTrip(Point3<uint64_t>(maxVal, 0, 0), "Max X");
-  testRoundTrip(Point3<uint64_t>(0, maxVal, 0), "Max Y");
-  testRoundTrip(Point3<uint64_t>(0, 0, maxVal), "Max Z");
-  testRoundTrip(Point3<uint64_t>(maxVal, maxVal, 0), "Max X,Y");
-  testRoundTrip(Point3<uint64_t>(maxVal, 0, maxVal), "Max X,Z");
-  testRoundTrip(Point3<uint64_t>(0, maxVal, maxVal), "Max Y,Z");
+  const auto maxVal = HashKey3D::coordMax();
+  testRoundTrip(IntPoint(maxVal, maxVal, maxVal), "Max coordinates");
+  testRoundTrip(IntPoint(maxVal, zero, zero), "Max X");
+  testRoundTrip(IntPoint(zero, maxVal, zero), "Max Y");
+  testRoundTrip(IntPoint(zero, zero, maxVal), "Max Z");
+  testRoundTrip(IntPoint(maxVal, maxVal, zero), "Max X,Y");
+  testRoundTrip(IntPoint(maxVal, zero, maxVal), "Max X,Z");
+  testRoundTrip(IntPoint(zero, maxVal, maxVal), "Max Y,Z");
 
   // Powers of 2
-  for (unsigned bit = 0; bit < min(20u, HashKey3D::num1DBits()); ++bit) {
-    uint64_t val = uint64_t(1) << bit;
-    testRoundTrip(Point3<uint64_t>(val, 0, 0), "Power of 2 in X");
-    testRoundTrip(Point3<uint64_t>(0, val, 0), "Power of 2 in Y");
-    testRoundTrip(Point3<uint64_t>(0, 0, val), "Power of 2 in Z");
-    testRoundTrip(Point3<uint64_t>(val, val, val), "Power of 2 in all");
+  for (auto bit = 0; bit < min(20u, HashKey3D::num1DBits()); ++bit) {
+    auto val = IntType(1) << bit;
+    testRoundTrip(IntPoint(val, zero, zero), "Power of 2 in X");
+    testRoundTrip(IntPoint(zero, val, zero), "Power of 2 in Y");
+    testRoundTrip(IntPoint(zero, zero, val), "Power of 2 in Z");
+    testRoundTrip(IntPoint(val, val, val), "Power of 2 in all");
   }
 
   // Small integer grid
-  for (uint64_t x = 0; x < 8; ++x) {
-    for (uint64_t y = 0; y < 8; ++y) {
-      for (uint64_t z = 0; z < 8; ++z) {
-        testRoundTrip(Point3<uint64_t>(x, y, z), "Small integers");
-        testIdenticalPoints(Point3<uint64_t>(x, y, z));
+  for (auto x = 0; x < 8; ++x) {
+    for (auto y = 0; y < 8; ++y) {
+      for (auto z = 0; z < 8; ++z) {
+        testRoundTrip(IntPoint(x, y, z), "Small integers");
+        testIdenticalPoints(IntPoint(x, y, z));
 
         if (x + 1 < 8) {
-          testDistinctPoints(Point3<uint64_t>(x, y, z),
-                           Point3<uint64_t>(x+1, y, z));
+          testDistinctPoints(IntPoint(x, y, z),
+                           IntPoint(x+1, y, z));
         }
         if (y + 1 < 8) {
-          testDistinctPoints(Point3<uint64_t>(x, y, z),
-                           Point3<uint64_t>(x, y+1, z));
+          testDistinctPoints(IntPoint(x, y, z),
+                           IntPoint(x, y+1, z));
         }
         if (z + 1 < 8) {
-          testDistinctPoints(Point3<uint64_t>(x, y, z),
-                           Point3<uint64_t>(x, y, z+1));
+          testDistinctPoints(IntPoint(x, y, z),
+                           IntPoint(x, y, z+1));
         }
       }
     }
@@ -224,15 +228,15 @@ void test128BitStructure() {
   cout << "\n=== Testing 128-bit structure ===" << endl;
 
   // Test that we can represent 42 bits per dimension = 126 bits total
-  Point3<uint64_t> p(0, 0, 0);
+  IntPoint p(0, 0, 0);
 
   // Set high bit in each dimension
-  p.x = uint64_t(1) << 41;
-  p.y = uint64_t(1) << 41;
-  p.z = uint64_t(1) << 41;
+  p.x = IntType(1) << 41;
+  p.y = IntType(1) << 41;
+  p.z = IntType(1) << 41;
 
   auto key = HashKey3D::hash(p);
-  Point3<uint64_t> p2 = HashKey3D::unhash(key);
+  auto p2 = HashKey3D::unhash(key);
 
   POLY_CHECK2(p.x == p2.x && p.y == p2.y && p.z == p2.z,
               "Failed to represent 42-bit values: (" << p.x << ", " << p.y
@@ -276,12 +280,12 @@ int main(int argc, char** argv) {
     // Random points in 42-bit range
     cout << "Testing random points (42-bit range)..." << endl;
     const unsigned n = 800;
-    vector<Point3<uint64_t>> points;
+    vector<IntPoint> points;
     for (unsigned i = 0; i < n; ++i) {
-      uint64_t x = uint64_t(random01() * (1ULL << 40));
-      uint64_t y = uint64_t(random01() * (1ULL << 40));
-      uint64_t z = uint64_t(random01() * (1ULL << 40));
-      points.push_back(Point3<uint64_t>(x, y, z));
+      auto x = IntType(random01() * (IntType(1) << 40));
+      auto y = IntType(random01() * (IntType(1) << 40));
+      auto z = IntType(random01() * (IntType(1) << 40));
+      points.push_back(IntPoint(x, y, z));
       testRoundTrip(points.back(), "Random point");
     }
 
@@ -296,12 +300,12 @@ int main(int argc, char** argv) {
     cout << "\n=== Testing HashKey3D with 20-bit range ===" << endl;
 
     const unsigned n = 800;
-    vector<Point3<uint64_t>> points;
+    vector<IntPoint> points;
     for (unsigned i = 0; i < n; ++i) {
-      uint64_t x = uint64_t(random01() * (1ULL << 20));
-      uint64_t y = uint64_t(random01() * (1ULL << 20));
-      uint64_t z = uint64_t(random01() * (1ULL << 20));
-      points.push_back(Point3<uint64_t>(x, y, z));
+      auto x = IntType(random01() * (IntType(1) << 20));
+      auto y = IntType(random01() * (IntType(1) << 20));
+      auto z = IntType(random01() * (IntType(1) << 20));
+      points.push_back(IntPoint(x, y, z));
       testRoundTrip(points.back(), "Random 20-bit point");
     }
 
@@ -318,12 +322,12 @@ int main(int argc, char** argv) {
     cout << "Performing " << nOps << " hash/unhash operations..." << endl;
 
     for (unsigned i = 0; i < nOps; ++i) {
-      uint64_t x = uint64_t(random01() * (1ULL << 40));
-      uint64_t y = uint64_t(random01() * (1ULL << 40));
-      uint64_t z = uint64_t(random01() * (1ULL << 40));
+      auto x = IntType(random01() * (IntType(1) << 40));
+      auto y = IntType(random01() * (IntType(1) << 40));
+      auto z = IntType(random01() * (IntType(1) << 40));
 
-      auto key = HashKey3D::hash(Point3<uint64_t>(x, y, z));
-      Point3<uint64_t> recovered = HashKey3D::unhash(key);
+      auto key = HashKey3D::hash(IntPoint(x, y, z));
+      auto recovered = HashKey3D::unhash(key);
 
       POLY_CHECK(recovered.x == x && recovered.y == y && recovered.z == z);
     }
@@ -336,9 +340,9 @@ int main(int argc, char** argv) {
   {
     cout << "\n=== Testing operators ===" << endl;
 
-    auto key1 = HashKey3D::hash(Point3<uint64_t>(42, 73, 101));
-    auto key2 = HashKey3D::hash(Point3<uint64_t>(42, 73, 101));
-    auto key3 = HashKey3D::hash(Point3<uint64_t>(101, 73, 42));
+    auto key1 = HashKey3D::hash(IntPoint(42, 73, 101));
+    auto key2 = HashKey3D::hash(IntPoint(42, 73, 101));
+    auto key3 = HashKey3D::hash(IntPoint(101, 73, 42));
 
     // Equality
     POLY_CHECK(key1 == key2);
@@ -360,11 +364,11 @@ int main(int argc, char** argv) {
     // Test that both lo and hi bits are used
     uint64_t lo_or = 0, hi_or = 0;
     for (unsigned i = 0; i < 1000; ++i) {
-      uint64_t x = uint64_t(random01() * (1ULL << 41));
-      uint64_t y = uint64_t(random01() * (1ULL << 41));
-      uint64_t z = uint64_t(random01() * (1ULL << 41));
+      auto x = IntType(random01() * (IntType(1) << 41));
+      auto y = IntType(random01() * (IntType(1) << 41));
+      auto z = IntType(random01() * (IntType(1) << 41));
 
-      auto key = HashKey3D::hash(Point3<uint64_t>(x, y, z));
+      auto key = HashKey3D::hash(IntPoint(x, y, z));
       lo_or |= (uint64_t)key;
       hi_or |= (uint64_t)(key >> 64);
     }
@@ -388,7 +392,7 @@ int main(int argc, char** argv) {
     cout << "\n=== Testing flag bit functionality ===" << endl;
 
     // Test that freshly hashed points have flag disabled (inner box)
-    auto key1 = HashKey3D::hash(Point3<uint64_t>(100, 200, 300));
+    auto key1 = HashKey3D::hash(IntPoint(100, 200, 300));
     POLY_CHECK2(!HashKey3D::getOuterFlag(key1),
                 "Freshly hashed point should have outer flag disabled");
 
@@ -403,13 +407,13 @@ int main(int argc, char** argv) {
                 "Flag should be disabled after disableOuterFlag()");
 
     // Test that flag doesn't affect unhashing
-    Point3<uint64_t> p(12345, 67890, 11111);
+    IntPoint p(12345, 67890, 11111);
     auto key2 = HashKey3D::hash(p);
     auto key3 = key2;
     HashKey3D::enableOuterFlag(key3);
 
-    Point3<uint64_t> p2 = HashKey3D::unhash(key2);
-    Point3<uint64_t> p3 = HashKey3D::unhash(key3);
+    auto p2 = HashKey3D::unhash(key2);
+    auto p3 = HashKey3D::unhash(key3);
 
     POLY_CHECK2(p2.x == p.x && p2.y == p.y && p2.z == p.z,
                 "Unhashing with flag disabled should recover original point");
@@ -417,7 +421,7 @@ int main(int argc, char** argv) {
                 "Unhashing with flag enabled should recover original point");
 
     // Test that two hashes differ only in flag bit
-    auto keyInner = HashKey3D::hash(Point3<uint64_t>(500, 750, 999));
+    auto keyInner = HashKey3D::hash(IntPoint(500, 750, 999));
     auto keyOuter = keyInner;
     HashKey3D::enableOuterFlag(keyOuter);
 
@@ -431,9 +435,9 @@ int main(int argc, char** argv) {
                 "Flag bit should be at position 127 for 3D");
 
     // Test that flag mask has only one bit set
-    unsigned __int128 mask = HashKey3D::FlagMask();
+    CoordHash mask = HashKey3D::FlagMask();
     unsigned bitCount = 0;
-    unsigned __int128 temp = mask;
+    CoordHash temp = mask;
     while (temp) {
       bitCount += temp & 1;
       temp >>= 1;
@@ -442,7 +446,7 @@ int main(int argc, char** argv) {
                 "Flag mask should have exactly one bit set, found " << bitCount);
 
     // Test flag operations are idempotent
-    auto key4 = HashKey3D::hash(Point3<uint64_t>(111, 222, 333));
+    auto key4 = HashKey3D::hash(IntPoint(111, 222, 333));
     HashKey3D::enableOuterFlag(key4);
     HashKey3D::enableOuterFlag(key4);  // Enable twice
     POLY_CHECK2(HashKey3D::getOuterFlag(key4),
@@ -455,13 +459,13 @@ int main(int argc, char** argv) {
 
     // Test that flag doesn't interfere with spatial locality
     // Hash the same point with and without flag - should sort adjacently
-    Point3<uint64_t> testPt(1000, 2000, 3000);
+    IntPoint testPt(1000, 2000, 3000);
     auto hashInner = HashKey3D::hash(testPt);
     auto hashOuter = hashInner;
     HashKey3D::enableOuterFlag(hashOuter);
 
     // XOR should only have the flag bit set
-    unsigned __int128 diff = hashInner ^ hashOuter;
+    CoordHash diff = hashInner ^ hashOuter;
     POLY_CHECK2(diff == HashKey3D::FlagMask(),
                 "Flag operations should only affect the flag bit");
 

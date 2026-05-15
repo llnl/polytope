@@ -43,7 +43,7 @@ int main(int argc, char** argv) {
     -1.0,  1.0,  1.0   // 15
   };
 
-  polytope::PLC<3, double> plc;
+  polytope::PLC<3> plc;
 
   // Outer cube has 6 faces (each face is a quad)
   plc.facets.resize(6);
@@ -184,7 +184,7 @@ int main(int argc, char** argv) {
       0.5, 0.5, 1.0    // 3
     };
 
-    polytope::PLC<3, double> tetPLC;
+    polytope::PLC<3> tetPLC;
     tetPLC.facets.resize(4);
     tetPLC.facets[0] = {0, 2, 1};  // base
     tetPLC.facets[1] = {0, 1, 3};  // side 1

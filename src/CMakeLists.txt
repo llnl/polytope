@@ -44,6 +44,7 @@ set(polytope_headers
   QuantizedTessellation2d.hh
   QuantizedTessellation3d.hh
   QuantTessellation.hh
+  Quantizer.hh
   ReducedPLC.hh
   removeElements.hh
   Segment.hh
@@ -131,6 +132,7 @@ endif()
 
 get_property(POLYTOPE_TPL_DEPENDS GLOBAL PROPERTY POLYTOPE_TPL_DEPENDS)
 get_property(POLYTOPE_CXX_COMPILE_FLAGS GLOBAL PROPERTY POLYTOPE_CXX_COMPILE_FLAGS)
+get_property(POLYTOPE_CXX_LINK_FLAGS GLOBAL PROPERTY POLYTOPE_CXX_LINK_FLAGS)
 blt_add_library(NAME polytopeC
   HEADERS    ${polytope_headers}
   SOURCES    ${polytope_sources}
@@ -139,6 +141,7 @@ blt_add_library(NAME polytopeC
 )
 
 target_compile_options(polytopeC PRIVATE ${POLYTOPE_CXX_COMPILE_FLAGS})
+target_link_options(polytopeC PUBLIC ${POLYTOPE_CXX_LINK_FLAGS})
 
 # We must set the polytope python target to be "polytope"
 # so the module is named polytope. So our C++ target is called

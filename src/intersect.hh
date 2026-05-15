@@ -104,7 +104,7 @@ intersect(const RealType* point1,
           const RealType* point2,
           const unsigned numVertices,
           const RealType* vertices,
-          const PLC<Dimension, RealType>& plc) {
+          const PLC<Dimension>& plc) {
 
   // Check the outer boundary of the PLC.
   auto result = intersectFacets<Dimension, RealType>(point1, point2, numVertices, vertices, plc.facets);

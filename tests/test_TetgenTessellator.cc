@@ -193,7 +193,7 @@ void plcBoundedTessellation(const vector<double>& generators) {
   // PLCpoints[3*7+0] = x2; PLCpoints[3*7+1] = y2; PLCpoints[3*7+2] = z1;
 
   // // 6 facets
-  // PLC<3, double> box;
+  // PLC<3> box;
   // box.facets.resize(6);
 
   // // facet 0 -- bottom face.

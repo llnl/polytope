@@ -40,7 +40,7 @@ int main(int argc, char** argv) {
                           1.0, -1.0,
                           0.0, -2.5,
                          -1.0, -1.0};
-  polytope::PLC<2, double> plc;
+  polytope::PLC<2> plc;
   plc.facets.resize(5);
   plc.holes.resize(1);
   plc.holes[0].resize(5);
@@ -66,7 +66,7 @@ int main(int argc, char** argv) {
                          2.0, 2.0, 1.3, 2.0,
                          1.3, 1.7, 1.2, 1.7,
                          1.2, 2.0, 1.0, 2.0};
-     polytope::PLC<2,double> boundary;
+     polytope::PLC<2> boundary;
      boundary.facets.resize(nvert, std::vector<int>(2));
      for (unsigned i = 0; i != nvert; ++i) {
         boundary.facets[i][0] = i;

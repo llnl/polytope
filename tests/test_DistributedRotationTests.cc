@@ -187,7 +187,7 @@ void runTest(Tessellator<2,double>& tessellator,
   PLCpoints.push_back(xmin);  PLCpoints.push_back(ymax);
 
   // The unit square PLC facets
-  PLC<2,double> boundary;
+  PLC<2> boundary;
   boundary.facets.resize(4, vector<int>(2));
   for (int i = 0; i != 4; ++i) {
     boundary.facets[i][0] = i;

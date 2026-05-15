@@ -125,17 +125,17 @@ void deserialize(T& val,
 //------------------------------------------------------------------------------
 // Serialize a PLC.
 //------------------------------------------------------------------------------
-template<int Dimension, typename RealType>
-struct Serializer<PLC<Dimension, RealType> >
+template<int Dimension>
+struct Serializer<PLC<Dimension>>
 {
 
-  static void serializeImpl(const PLC<Dimension, RealType>& val,
+  static void serializeImpl(const PLC<Dimension>& val,
                             std::vector<char>& buffer) {
     serialize(val.facets, buffer);
     serialize(val.holes, buffer);
   }
 
-  static void deserializeImpl(PLC<Dimension, RealType>& val,
+  static void deserializeImpl(PLC<Dimension>& val,
                               std::vector<char>::const_iterator& bufItr,
                               const std::vector<char>::const_iterator& endItr) {
     deserialize(val.facets, bufItr, endItr);

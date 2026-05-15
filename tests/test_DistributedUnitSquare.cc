@@ -111,7 +111,7 @@ void runTest(Tessellator<2,double>& tessellator) {
     // PLCpoints.push_back(xmax[0]);  PLCpoints.push_back(xmin[1]);
     // PLCpoints.push_back(xmax[0]);  PLCpoints.push_back(xmax[1]);
     // PLCpoints.push_back(xmin[0]);  PLCpoints.push_back(xmax[1]);
-    // polytope::PLC<2, double> boundary;
+    // polytope::PLC<2> boundary;
     // boundary.facets.resize(4, vector<int>(2));
     // for (int i = 0; i != 4; ++i) { boundary.facets[i][0] = i;  boundary.facets[i][1] = (i+1)%4; }
     // distTest.tessellate(generators, PLCpoints, boundary, mesh);

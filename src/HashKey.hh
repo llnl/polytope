@@ -2,7 +2,7 @@
 // HashKey
 //
 // Generalized class for handling hash keys.
-//----------------------------------------------------------------------------//
+//-----------------------------------------------------------------------------//
 #ifndef __Polytope_HashKey__
 #define __Polytope_HashKey__
 
@@ -11,19 +11,22 @@
 #include <memory>
 #include <functional>
 
-#include "polytope.hh"
-#include "polytope_serialize.hh"
+#include "Point.hh"
 
 namespace polytope {
 
-template<int Dimension, typename RealType> struct HashKey;
+template<int Dimension> struct HashKey;
 
-template<typename RealType> struct HashKey<2, RealType> {
+template<> struct HashKey<2> {
   using CoordHash = uint64_t;
-  using CoordPoint = Point2<CoordHash>;
-  using RealPoint = Point2<RealType>;
+  using IntType = unsigned int; // Number of bits must exceed num1DBits
+  using IntPoint = typename PointType<2, IntType>::type;
 
-  static constexpr unsigned  flagBit()   { return 63; }
+  static constexpr unsigned flagBit()   { return 63; }
+  static constexpr unsigned num1DBits() { return 31; }
+  static constexpr IntType  coordMax()  { return (1ULL << (num1DBits() - 1ULL)) - 1ULL; }
+
+  // Bit mask for the flag bit
   static constexpr CoordHash FlagMask() {
     return static_cast<CoordHash>(1) << flagBit();
   }
@@ -43,10 +46,7 @@ template<typename RealType> struct HashKey<2, RealType> {
     hash &= ~FlagMask();
   }
 
-  static constexpr unsigned  num1DBits() { return 31; }
-  static constexpr CoordHash coordMax()  { return (1ULL << (num1DBits() - 1ULL)) - 1ULL; }
-
-  static CoordHash hash(const CoordPoint& point) {
+  static CoordHash hash(const IntPoint& point) {
     CoordHash key = 0;
     for (auto i = 0; i < num1DBits(); ++i) {
       key |= ((point.x >> i) & 1UL) << (2*i);
@@ -55,51 +55,26 @@ template<typename RealType> struct HashKey<2, RealType> {
     return key;
   }
 
-  static CoordPoint unhash(const CoordHash& key) {
-    CoordPoint point(0, 0);
+  static IntPoint unhash(const CoordHash& key) {
+    IntType x = 0, y = 0;
     for (auto i = 0; i < num1DBits(); ++i) {
-      point.x |= ((key >> (2*i))   & 1UL) << i;
-      point.y |= ((key >> (2*i+1)) & 1UL) << i;
+      x |= ((key >> (2*i))   & 1UL) << i;
+      y |= ((key >> (2*i+1)) & 1UL) << i;
     }
-    return point;
+    return IntPoint(x, y);
   }
-
-  static CoordHash hashPosition(const RealPoint& pos,
-                                const RealPoint& length) {
-    RealPoint dx = length / static_cast<RealType>(coordMax());
-    return hash(CoordPoint(pos, dx));
-  }
-
-  static CoordHash hashPosition(const RealPoint& pos,
-                                const RealPoint& bhi,
-                                const RealPoint& blo) {
-    RealPoint length = bhi - blo;
-    RealPoint dx = length / static_cast<RealType>(coordMax());
-    return hash(CoordPoint(pos, blo, dx));
-  }
-
-  static RealPoint unhashPosition(const CoordHash& hashed_pos,
-                                  const RealPoint& length) {
-    RealPoint dx = length / static_cast<RealType>(coordMax());
-    return unhash(hashed_pos).realPoint(dx);
-  }
-
-  static CoordHash unhashPosition(const CoordHash& hashed_pos,
-                                  const RealPoint& bhi,
-                                  const RealPoint& blo) {
-    RealPoint length = bhi - blo;
-    RealPoint dx = length / static_cast<RealType>(coordMax());
-    return unhash(hashed_pos).realPoint(blo, dx);
-  }
-
 };
 
-template<typename RealType> struct HashKey<3, RealType> {
+template<> struct HashKey<3> {
   using CoordHash = unsigned __int128;
-  using CoordPoint = Point3<uint64_t>;
-  using RealPoint = Point3<RealType>;
+  using IntType = uint64_t; // Number of bits must exceed num1DBits
+  using IntPoint = typename PointType<3, IntType>::type;
 
-  static constexpr unsigned  flagBit()   { return 127; }
+  static constexpr unsigned flagBit()   { return 127; }
+  static constexpr unsigned num1DBits() { return 42; }
+  static constexpr IntType coordMax()  { return (1ULL << (num1DBits() - 1ULL)) - 1ULL; }
+
+  // Bit mask for the flag bit
   static constexpr CoordHash FlagMask() {
     return static_cast<CoordHash>(1) << flagBit();
   }
@@ -116,10 +91,7 @@ template<typename RealType> struct HashKey<3, RealType> {
     hash &= ~FlagMask();
   }
 
-  static constexpr unsigned  num1DBits() { return 42; }
-  static constexpr CoordHash coordMax()  { return (1ULL << (num1DBits() - 1ULL)) - 1ULL; }
-
-  static CoordHash hash(const CoordPoint& point) {
+  static CoordHash hash(const IntPoint& point) {
     CoordHash key = 0;
     for (auto i = 0; i < num1DBits(); ++i) {
       key |= (static_cast<CoordHash>((point.x >> i) & 1ULL) << (3*i));
@@ -129,44 +101,46 @@ template<typename RealType> struct HashKey<3, RealType> {
     return key;
   }
 
-  static CoordPoint unhash(const CoordHash& key) {
-    uint64_t x = 0, y = 0, z = 0;
+  static IntPoint unhash(const CoordHash& key) {
+    IntType x = 0, y = 0, z = 0;
     for (auto i = 0; i < num1DBits(); ++i) {
       x |= ((key >> (3*i))   & 1ULL) << i;
       y |= ((key >> (3*i+1)) & 1ULL) << i;
       z |= ((key >> (3*i+2)) & 1ULL) << i;
     }
-    return CoordPoint(x, y, z);
+    return IntPoint(x, y, z);
   }
-
-  static CoordHash hashPosition(const RealPoint& pos,
-                                const RealPoint& length) {
-    RealPoint dx = length / static_cast<RealType>(coordMax());
-    return hash(CoordPoint(pos, dx));
-  }
-
-  static CoordHash hashPosition(const RealPoint& pos,
-                                const RealPoint& bhi,
-                                const RealPoint& blo) {
-    RealPoint length = bhi - blo;
-    RealPoint dx = length / static_cast<RealType>(coordMax());
-    return hash(CoordPoint(pos, blo, dx));
-  }
-
-  static RealPoint unhashPosition(const CoordHash& hashed_pos,
-                                  const RealPoint& length) {
-    RealPoint dx = length / static_cast<RealType>(coordMax());
-    return unhash(hashed_pos).realPoint(dx);
-  }
-
-  static RealPoint unhashPosition(const CoordHash& hashed_pos,
-                                  const RealPoint& bhi,
-                                  const RealPoint& blo) {
-    RealPoint length = bhi - blo;
-    RealPoint dx = length / static_cast<RealType>(coordMax());
-    return unhash(hashed_pos).realPoint(blo, dx);
-  }
-
 };
+
+template<int Dimension, typename CoordType>
+struct NewDimensionTraits {
+  using PointType = typename PointType<Dimension, CoordType>::type;
+
+  // Convert flattened array into vector of points
+  static std::vector<PointType>
+  extractCoords(const std::vector<CoordType>& allCoords,
+                const std::vector<unsigned>& indices) {
+    std::vector<PointType> result;
+    result.reserve(indices.size());
+    for (std::vector<unsigned>::const_iterator itr = indices.begin();
+         itr != indices.end(); ++itr) {
+      const unsigned i = *itr;
+      result.push_back(PointType(&(allCoords[Dimension*i]), i));
+    }
+    return result;
+  }
+
+  static std::vector<PointType>
+  extractCoords(const std::vector<CoordType>& allCoords) {
+    std::vector<PointType> result;
+    auto n = allCoords.size()/Dimension;
+    result.reserve(n);
+    for (auto i = 0; i < n; ++i) {
+      result.push_back(PointType(&(allCoords[Dimension*i]), i));
+    }
+    return result;
+  }
+};
+
 }
 #endif

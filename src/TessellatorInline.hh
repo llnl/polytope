@@ -56,7 +56,7 @@ void
 Tessellator<nDim, RealType>::
 tessellate(const std::vector<RealType>& points,
            const std::vector<RealType>& PLCpoints,
-           const PLC<nDim, RealType>& geometry,
+           const PLC<nDim>& geometry,
            Tessellation<nDim, RealType>& mesh) const {
   
   // Pre-conditions
@@ -154,7 +154,7 @@ std::vector<unsigned>
 Tessellator<nDim, RealType>::
 tessellateDegenerate(const std::vector<RealType>& points,
                      const std::vector<RealType>& PLCpoints,
-                     const PLC<nDim, RealType>& geometry,
+                     const PLC<nDim>& geometry,
                      const RealType tol,
                      Tessellation<nDim, RealType>& mesh) const {
 

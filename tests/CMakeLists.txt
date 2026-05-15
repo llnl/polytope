@@ -53,6 +53,8 @@ polytope_add_test(convexIntersect_3d)
 polytope_add_test(hash)
 polytope_add_test(HashKey2D)
 polytope_add_test(HashKey3D)
+polytope_add_test(Quantizer)
+polytope_add_test(main3D)
 
 #-----------------------------------------------------------------------------
 # Serial Tessellator Tests

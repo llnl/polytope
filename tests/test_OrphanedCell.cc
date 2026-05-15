@@ -46,7 +46,7 @@ void test(Tessellator<2,double>& tessellator,
   // Initialize the bounded tessellation shtuff
   std::vector<double> PLCpoints;
   std::vector<double> points;
-  PLC<2,double> boundary;
+  PLC<2> boundary;
   Tessellation<2,double> mesh;
 
   // Test name for output

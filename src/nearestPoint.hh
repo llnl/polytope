@@ -76,7 +76,7 @@ RealType
 nearestPoint(const RealType* point,
              const unsigned numVertices,
              const RealType* vertices,
-             const PLC<Dimension, RealType>& plc,
+             const PLC<Dimension>& plc,
              RealType* result) {
 
   // Check the outer boundary of the PLC.

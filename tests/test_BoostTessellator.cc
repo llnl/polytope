@@ -52,7 +52,7 @@ void test1(Tessellator<2,double>& tessellator) {
   PLCpoints.push_back(x2);  PLCpoints.push_back(y2);
   PLCpoints.push_back(x1);  PLCpoints.push_back(y2);
 
-  PLC<2,double> boundary;
+  PLC<2> boundary;
   int nSides = 4;
   boundary.facets.resize(nSides, vector<int>(2));
   for (int i = 0; i != nSides; ++i) {
@@ -95,7 +95,7 @@ void test2(Tessellator<2,double>& tessellator) {
   points.push_back(0.8);  points.push_back(0.25001);
 
   // Facets
-  PLC<2,double> boundary;
+  PLC<2> boundary;
   int nSides = 4;
   boundary.facets.resize(nSides, vector<int>(2));
   for (int i = 0; i != nSides; ++i) {

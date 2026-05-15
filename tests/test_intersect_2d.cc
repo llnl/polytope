@@ -52,7 +52,7 @@ int main(int argc, char** argv) {
                           1.0, -1.0,
                           1.0,  1.0,
                          -1.0,  1.0};
-  polytope::PLC<2, double> plc;
+  polytope::PLC<2> plc;
   plc.facets.resize(4);
   plc.holes.resize(1);
   plc.holes[0].resize(4);

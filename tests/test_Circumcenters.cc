@@ -35,7 +35,7 @@ void test(Tessellator<2,double>& tessellator) {
   PLCpoints.push_back(3.0);  PLCpoints.push_back(2.0);
   PLCpoints.push_back(0.0);  PLCpoints.push_back(2.0);
 
-  PLC<2,double> boundary;
+  PLC<2> boundary;
   boundary.facets.resize(4, vector<int>(2));
   for (unsigned i=0; i != 4; ++i) {
      boundary.facets[i][0] = i;

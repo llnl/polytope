@@ -16,7 +16,7 @@ namespace polytope {
 //!  a) contains its own generating points,
 //!  b) is reduced to just the generating points that are used in the PLC.
 template<int Dimension, typename RealType>
-class ReducedPLC: public PLC<Dimension, RealType> {
+class ReducedPLC: public PLC<Dimension> {
 public:
 
   //! This array of size (Dimension*numPoints) contains components of 
@@ -25,19 +25,18 @@ public:
 
   //! Default constructor.
   ReducedPLC(): 
-    PLC<Dimension, RealType>(),
+    PLC<Dimension>(),
     points() {}
 
   //! Construct from a normal PLC, copying the necessary generator coordinates
   //! to our internal data.
-  ReducedPLC(const PLC<Dimension, RealType>& plc,
+  ReducedPLC(const PLC<Dimension>& plc,
              const std::vector<RealType>& allpoints): 
-    PLC<Dimension, RealType>(plc),
-    points()
-  {
+    PLC<Dimension>(plc),
+    points() {
     std::set<int> indices;
     size_t i;
-    for (i = 0u; i != plc.facets.size(); ++i) {
+    for (i = 0u; i < plc.facets.size(); ++i) {
       std::copy(plc.facets[i].begin(), plc.facets[i].end(), std::inserter(indices, indices.end()));
     }
     std::map<int, int> old2new;
@@ -59,7 +58,7 @@ public:
   //! output operator.
   friend std::ostream& operator<<(std::ostream& s, const ReducedPLC& plc)
   {
-    s << dynamic_cast<const PLC<Dimension, RealType>&>(plc) << std::endl
+    s << dynamic_cast<const PLC<Dimension>&>(plc) << std::endl
       << "PLC points : " << std::endl;
     const auto n = plc.points.size()/Dimension;
     for (auto i = 0u; i != n; ++i) {

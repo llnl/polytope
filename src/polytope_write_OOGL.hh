@@ -19,7 +19,7 @@ namespace polytope {
 // Write a 2D OFF polylist file.
 //------------------------------------------------------------------------------
 template<typename RealType>
-void writePLCtoOFF(const PLC<2, RealType>& plc,
+void writePLCtoOFF(const PLC<2>& plc,
                    const std::vector<RealType>& coords,
                    const std::string filename) {
   
@@ -88,7 +88,7 @@ void writePLCtoOFF(const PLC<2, RealType>& plc,
 // Write a 3D OFF polylist file.
 //------------------------------------------------------------------------------
 template<typename RealType>
-void writePLCtoOFF(const PLC<3, RealType>& plc,
+void writePLCtoOFF(const PLC<3>& plc,
                    const std::vector<RealType>& coords,
                    const std::string filename) {
 

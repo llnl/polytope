@@ -21,7 +21,7 @@ namespace polytope {
 template<typename RealType>
 void snapToBoundary(Tessellation<2, RealType>& mesh,
                     const vector<RealType>& points,
-                    const PLC<2, RealType>& geometry,
+                    const PLC<2>& geometry,
                     const RealType degeneracy) {
 
   typedef Point2<RealType> RealPoint;
@@ -41,8 +41,7 @@ void snapToBoundary(Tessellation<2, RealType>& mesh,
   set<unsigned> indices;
   for (unsigned ii = 0; ii < points.size()/2; ++ii) indices.insert(ii);
   for (set<unsigned>::iterator iitr = indices.begin();  
-       iitr != indices.end();
-       ) {
+       iitr != indices.end();) {
     unsigned ipoint = *iitr;
     unsigned inode;
     const RealPoint rp = RealPoint(points[2*ipoint], points[2*ipoint+1]);
@@ -109,21 +108,16 @@ void snapToBoundary(Tessellation<2, RealType>& mesh,
                                  &points[0],
                                  geometry,
                                  &result.x);
-    if (dist >= tol) {
-      cerr << "Possible internal boundary node "
-           << (*nodeItr) << " at ("
-           << mesh.nodes[2*(*nodeItr)  ] << ","
-           << mesh.nodes[2*(*nodeItr)+1] << ")";
-#ifndef NDEBUG
-      cerr << " wants to move distance " << dist << " to "
-           << "(" << result[0] << "," << result[1] << ")";
-#endif
-      cerr << endl;
-    } else {
-      mesh.nodes[2*(*nodeItr)  ] = result.x;
-      mesh.nodes[2*(*nodeItr)+1] = result.y;
-    }
-    POLY_ASSERT(dist < tol);
+    POLY_ASSERT2(dist < tol,
+                 "Possible internal boundary node "
+                 << (*nodeItr) << " at ("
+                 << mesh.nodes[2*(*nodeItr)  ] << ","
+                 << mesh.nodes[2*(*nodeItr)+1] << ")"
+                 << " wants to move distance " << dist << " to "
+                 << "(" << result[0] << "," << result[1]
+                 << ") over tolerance " << tol);
+    mesh.nodes[2*(*nodeItr)  ] = result.x;
+    mesh.nodes[2*(*nodeItr)+1] = result.y;
   }
 }
 
@@ -133,7 +127,7 @@ void snapToBoundary(Tessellation<2, RealType>& mesh,
 template<typename RealType>
 void snapToBoundary(Tessellation<3, RealType>& mesh,
                     const vector<RealType>& points,
-                    const PLC<3, RealType>& geometry,
+                    const PLC<3>& geometry,
                     const RealType degeneracy) {
   (void) degeneracy;
   (void) geometry;
@@ -147,11 +141,11 @@ void snapToBoundary(Tessellation<3, RealType>& mesh,
 //------------------------------------------------------------------------------
 template void snapToBoundary<double>(Tessellation<2, double>& mesh,
                                      const vector<double>& points,
-                                     const PLC<2, double>& geometry,
+                                     const PLC<2>& geometry,
                                      const double degeneracy);
 template void snapToBoundary<double>(Tessellation<3, double>& mesh,
                                      const vector<double>& points,
-                                     const PLC<3, double>& geometry,
+                                     const PLC<3>& geometry,
                                      const double degeneracy);
 
 }

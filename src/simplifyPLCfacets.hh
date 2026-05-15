@@ -24,7 +24,7 @@ namespace polytope {
 //------------------------------------------------------------------------------
 template<typename RealType>
 ReducedPLC<2, RealType>
-simplifyPLCfacets(const PLC<2, RealType>& plc,
+simplifyPLCfacets(const PLC<2>& plc,
                   const std::vector<RealType>& points,
                   const RealType* xmin,
                   const RealType* xmax,
@@ -138,7 +138,7 @@ simplifyPLCfacets(const PLC<2, RealType>& plc,
 //------------------------------------------------------------------------------
 template<typename RealType>
 ReducedPLC<3, RealType>
-simplifyPLCfacets(const PLC<3, RealType>& plc,
+simplifyPLCfacets(const PLC<3>& plc,
                   const std::vector<RealType>& points,
                   const RealType* xmin,
                   const RealType* xmax,

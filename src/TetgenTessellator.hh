@@ -44,7 +44,7 @@ public:
   // Tessellate obeying the given boundaries.
   void tessellate(const std::vector<RealType>& points,
                   const std::vector<RealType>& PLCpoints,
-                  const PLC<3, RealType>& geometry,
+                  const PLC<3>& geometry,
                   Tessellation<3, RealType>& mesh) const;
 
   // Tessellate obeying the given boundaries expressed as a ReducedPLC.

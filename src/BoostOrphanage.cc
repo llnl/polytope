@@ -747,7 +747,7 @@ template class BoostOrphanage<double>;
 //       }
       
 //       // Form the bounding PLC
-//       PLC<2, RealType> subPLC;
+//       PLC<2> subPLC;
 //       subPLC.facets.resize(nSides, std::vector<int>(2) );
 //       for (unsigned ii = 0; ii < nSides; ++ii) {
 //         subPLC.facets[ii][0] = ii;

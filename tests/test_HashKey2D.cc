@@ -29,14 +29,17 @@ namespace {
 //------------------------------------------------------------------------------
 // Type alias for HashKey2D
 //------------------------------------------------------------------------------
-using HashKey2D = HashKey<2, double>;
+using HashKey2D = HashKey<2>;
+using CoordHash = typename HashKey2D::CoordHash;
+using IntType = typename HashKey2D::IntType;
+using IntPoint = typename HashKey2D::IntPoint;
 
 //------------------------------------------------------------------------------
 // Test that hash/unhash are inverses
 //------------------------------------------------------------------------------
-void testRoundTrip(const Point2<uint64_t>& p, const string& label) {
+void testRoundTrip(const IntPoint& p, const string& label) {
   auto key = HashKey2D::hash(p);
-  Point2<uint64_t> p2 = HashKey2D::unhash(key);
+  auto p2 = HashKey2D::unhash(key);
 
   POLY_CHECK2(p.x == p2.x && p.y == p2.y,
               label << ": Round-trip failed for (" << p.x << ", " << p.y << ") -> ("
@@ -46,7 +49,7 @@ void testRoundTrip(const Point2<uint64_t>& p, const string& label) {
 //------------------------------------------------------------------------------
 // Test that identical points produce identical hashes
 //------------------------------------------------------------------------------
-void testIdenticalPoints(const Point2<uint64_t>& p) {
+void testIdenticalPoints(const IntPoint& p) {
   auto key1 = HashKey2D::hash(p);
   auto key2 = HashKey2D::hash(p);
 
@@ -57,7 +60,7 @@ void testIdenticalPoints(const Point2<uint64_t>& p) {
 //------------------------------------------------------------------------------
 // Test that different points produce different hashes
 //------------------------------------------------------------------------------
-void testDistinctPoints(const Point2<uint64_t>& p1, const Point2<uint64_t>& p2) {
+void testDistinctPoints(const IntPoint& p1, const IntPoint& p2) {
   if (p1.x == p2.x && p1.y == p2.y) return;
 
   auto key1 = HashKey2D::hash(p1);
@@ -77,17 +80,17 @@ void testSpatialLocality() {
 
   // Create a regular grid of points (32x32 = 1024 points)
   const unsigned gridSize = 32;
-  vector<Point2<uint64_t>> points;
+  vector<IntPoint> points;
   points.reserve(gridSize * gridSize);
 
   for (unsigned i = 0; i < gridSize; ++i) {
     for (unsigned j = 0; j < gridSize; ++j) {
-      points.push_back(Point2<uint64_t>(uint64_t(i), uint64_t(j)));
+      points.push_back(IntPoint(i, j));
     }
   }
 
   // Hash and sort by Morton code
-  vector<pair<uint64_t, unsigned>> hashed;
+  vector<pair<CoordHash, unsigned>> hashed;
   for (unsigned i = 0; i < points.size(); ++i) {
     auto key = HashKey2D::hash(points[i]);
     hashed.push_back(make_pair(key, i));
@@ -130,9 +133,9 @@ void testSpatialLocality() {
 //------------------------------------------------------------------------------
 // Test uniqueness - N distinct points produce N distinct hashes
 //------------------------------------------------------------------------------
-void testUniqueness(const vector<Point2<uint64_t>>& points) {
-  set<uint64_t> hashes;
-  map<uint64_t, vector<unsigned>> collisions;
+void testUniqueness(const vector<IntPoint>& points) {
+  set<CoordHash> hashes;
+  map<CoordHash, vector<IntType>> collisions;
 
   for (unsigned i = 0; i < points.size(); ++i) {
     auto key = HashKey2D::hash(points[i]);
@@ -170,33 +173,34 @@ void testEdgeCases() {
   cout << "Testing edge cases..." << endl;
 
   // Origin
-  testRoundTrip(Point2<uint64_t>(0, 0), "Origin");
+  IntType zero = 0;
+  testRoundTrip(IntPoint(zero, zero), "Origin");
 
   // Max values for the coordinate type
-  const uint64_t maxVal = HashKey2D::coordMax();
-  testRoundTrip(Point2<uint64_t>(maxVal, maxVal), "Max coordinates");
-  testRoundTrip(Point2<uint64_t>(maxVal, 0), "Max X, zero Y");
-  testRoundTrip(Point2<uint64_t>(0, maxVal), "Zero X, max Y");
+  const auto maxVal = HashKey2D::coordMax();
+  testRoundTrip(IntPoint(maxVal, maxVal), "Max coordinates");
+  testRoundTrip(IntPoint(maxVal, zero), "Max X, zero Y");
+  testRoundTrip(IntPoint(zero, maxVal), "Zero X, max Y");
 
   // Powers of 2
-  for (unsigned bit = 0; bit < min(20u, HashKey2D::num1DBits()); ++bit) {
-    uint64_t val = uint64_t(1) << bit;
-    testRoundTrip(Point2<uint64_t>(val, 0), "Power of 2 in X");
-    testRoundTrip(Point2<uint64_t>(0, val), "Power of 2 in Y");
-    testRoundTrip(Point2<uint64_t>(val, val), "Power of 2 in both");
+  for (auto bit = 0; bit < min(20u, HashKey2D::num1DBits()); ++bit) {
+    auto val = IntType(1) << bit;
+    testRoundTrip(IntPoint(val, zero), "Power of 2 in X");
+    testRoundTrip(IntPoint(zero, val), "Power of 2 in Y");
+    testRoundTrip(IntPoint(val, val), "Power of 2 in both");
   }
 
   // Adjacent coordinates
-  for (uint64_t x = 0; x < 10; ++x) {
-    for (uint64_t y = 0; y < 10; ++y) {
-      testRoundTrip(Point2<uint64_t>(x, y), "Small integers");
-      testIdenticalPoints(Point2<uint64_t>(x, y));
+  for (auto x = 0; x < 10; ++x) {
+    for (auto y = 0; y < 10; ++y) {
+      testRoundTrip(IntPoint(x, y), "Small integers");
+      testIdenticalPoints(IntPoint(x, y));
 
       if (x + 1 < 10) {
-        testDistinctPoints(Point2<uint64_t>(x, y), Point2<uint64_t>(x+1, y));
+        testDistinctPoints(IntPoint(x, y), IntPoint(x+1, y));
       }
       if (y + 1 < 10) {
-        testDistinctPoints(Point2<uint64_t>(x, y), Point2<uint64_t>(x, y+1));
+        testDistinctPoints(IntPoint(x, y), IntPoint(x, y+1));
       }
     }
   }
@@ -211,6 +215,9 @@ int main(int argc, char** argv) {
 
 #ifdef POLYTOPE_ENABLE_MPI
   MPI_Init(&argc, &argv);
+#else
+  POLY_CONTRACT_VAR(argc);
+  POLY_CONTRACT_VAR(argv);
 #endif
 
   //----------------------------------------------------------------------------
@@ -225,11 +232,11 @@ int main(int argc, char** argv) {
     // Random points in 32-bit range
     cout << "Testing random points (32-bit range)..." << endl;
     const unsigned n = 1000;
-    vector<Point2<uint64_t>> points;
+    vector<IntPoint> points;
     for (unsigned i = 0; i < n; ++i) {
-      uint64_t x = uint64_t(random01() * (uint64_t(1) << 31));
-      uint64_t y = uint64_t(random01() * (uint64_t(1) << 31));
-      points.push_back(Point2<uint64_t>(x, y));
+      auto x = IntType(random01() * (IntType(1) << 31));
+      auto y = IntType(random01() * (IntType(1) << 31));
+      points.push_back(IntPoint(x, y));
       testRoundTrip(points.back(), "Random point");
     }
 
@@ -247,11 +254,11 @@ int main(int argc, char** argv) {
     cout << "\n=== Testing HashKey2D with 16-bit range ===" << endl;
 
     const unsigned n = 1000;
-    vector<Point2<uint64_t>> points;
+    vector<IntPoint> points;
     for (unsigned i = 0; i < n; ++i) {
-      uint64_t x = uint64_t(random01() * 65536);
-      uint64_t y = uint64_t(random01() * 65536);
-      points.push_back(Point2<uint64_t>(x, y));
+      auto x = IntType(random01() * 65536);
+      auto y = IntType(random01() * 65536);
+      points.push_back(IntPoint(x, y));
       testRoundTrip(points.back(), "Random 16-bit point");
     }
 
@@ -268,11 +275,11 @@ int main(int argc, char** argv) {
     cout << "Performing " << nOps << " hash/unhash operations..." << endl;
 
     for (unsigned i = 0; i < nOps; ++i) {
-      uint64_t x = uint64_t(random01() * (uint64_t(1) << 31));
-      uint64_t y = uint64_t(random01() * (uint64_t(1) << 31));
+      auto x = IntType(random01() * (IntType(1) << 31));
+      auto y = IntType(random01() * (IntType(1) << 31));
 
-      auto key = HashKey2D::hash(Point2<uint64_t>(x, y));
-      Point2<uint64_t> recovered = HashKey2D::unhash(key);
+      auto key = HashKey2D::hash(IntPoint(x, y));
+      auto recovered = HashKey2D::unhash(key);
 
       POLY_CHECK(recovered.x == x && recovered.y == y);
     }
@@ -285,9 +292,9 @@ int main(int argc, char** argv) {
   {
     cout << "\n=== Testing operators ===" << endl;
 
-    auto key1 = HashKey2D::hash(Point2<uint64_t>(42, 73));
-    auto key2 = HashKey2D::hash(Point2<uint64_t>(42, 73));
-    auto key3 = HashKey2D::hash(Point2<uint64_t>(73, 42));
+    auto key1 = HashKey2D::hash(IntPoint(42, 73));
+    auto key2 = HashKey2D::hash(IntPoint(42, 73));
+    auto key3 = HashKey2D::hash(IntPoint(73, 42));
 
     // Equality
     POLY_CHECK(key1 == key2);
@@ -307,7 +314,7 @@ int main(int argc, char** argv) {
     cout << "\n=== Testing flag bit functionality ===" << endl;
 
     // Test that freshly hashed points have flag disabled (inner box)
-    auto key1 = HashKey2D::hash(Point2<uint64_t>(100, 200));
+    auto key1 = HashKey2D::hash(IntPoint(100, 200));
     POLY_CHECK2(!HashKey2D::getOuterFlag(key1),
                 "Freshly hashed point should have outer flag disabled");
 
@@ -322,13 +329,13 @@ int main(int argc, char** argv) {
                 "Flag should be disabled after disableOuterFlag()");
 
     // Test that flag doesn't affect unhashing
-    Point2<uint64_t> p(12345, 67890);
+    IntPoint p(12345, 67890);
     auto key2 = HashKey2D::hash(p);
     auto key3 = key2;
     HashKey2D::enableOuterFlag(key3);
 
-    Point2<uint64_t> p2 = HashKey2D::unhash(key2);
-    Point2<uint64_t> p3 = HashKey2D::unhash(key3);
+    auto p2 = HashKey2D::unhash(key2);
+    auto p3 = HashKey2D::unhash(key3);
 
     POLY_CHECK2(p2.x == p.x && p2.y == p.y,
                 "Unhashing with flag disabled should recover original point");
@@ -336,7 +343,7 @@ int main(int argc, char** argv) {
                 "Unhashing with flag enabled should recover original point");
 
     // Test that two hashes differ only in flag bit
-    auto keyInner = HashKey2D::hash(Point2<uint64_t>(500, 750));
+    auto keyInner = HashKey2D::hash(IntPoint(500, 750));
     auto keyOuter = keyInner;
     HashKey2D::enableOuterFlag(keyOuter);
 
@@ -350,13 +357,13 @@ int main(int argc, char** argv) {
                 "Flag bit should be at position 63 for 2D");
 
     // Test that flag mask has only one bit set
-    uint64_t mask = HashKey2D::FlagMask();
+    auto mask = HashKey2D::FlagMask();
     unsigned bitCount = __builtin_popcountll(mask);
     POLY_CHECK2(bitCount == 1,
                 "Flag mask should have exactly one bit set, found " << bitCount);
 
     // Test flag operations are idempotent
-    auto key4 = HashKey2D::hash(Point2<uint64_t>(111, 222));
+    auto key4 = HashKey2D::hash(IntPoint(111, 222));
     HashKey2D::enableOuterFlag(key4);
     HashKey2D::enableOuterFlag(key4);  // Enable twice
     POLY_CHECK2(HashKey2D::getOuterFlag(key4),

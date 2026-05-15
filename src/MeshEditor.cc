@@ -741,7 +741,7 @@ cleanMesh(std::vector<unsigned>& cellMap,
   }
 
   // If there was a convex hull in the mesh, it's probably no longer valid.
-  mMesh.convexHull = PLC<Dimension, RealType>();
+  mMesh.convexHull = PLC<Dimension>();
 
   // Clear out the masks. We're done.
   mCellMask.clear();

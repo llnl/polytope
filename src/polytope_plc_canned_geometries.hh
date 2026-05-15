@@ -71,7 +71,7 @@ plc_sphere(const Point3<RealType>& center,
                            center.y - 1.1*radius,
                            center.z - 1.1*radius};
   const RealType dx = radius/(1 << 21);
-  const PLC<3, RealType> hull = convexHull_3d(result.points, low, dx);
+  const PLC<3> hull = convexHull_3d(result.points, low, dx);
 
   // Put that topology in our result and we're done.
   result.facets = hull.facets;
@@ -109,7 +109,7 @@ plc_cylinder(const Point3<RealType>& center,
                            center.y - 1.1*radius,
                            center.z - 0.6*length};
   const RealType dx = length/(1 << 21);
-  const PLC<3, RealType> hull = convexHull_3d(result.points, low, dx);
+  const PLC<3> hull = convexHull_3d(result.points, low, dx);
 
   // Put that topology in our result and we're done.
   result.facets = hull.facets;

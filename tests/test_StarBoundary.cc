@@ -108,6 +108,9 @@ int main(int argc, char** argv)
 {
 #ifdef POLYTOPE_ENABLE_MPI
   MPI_Init(&argc, &argv);
+#else
+  POLY_CONTRACT_VAR(argc);
+  POLY_CONTRACT_VAR(argv);
 #endif
 
 

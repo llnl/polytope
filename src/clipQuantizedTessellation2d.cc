@@ -54,7 +54,7 @@ removeCollinearPoints(bp::polygon_data<IntType>& poly) {
 template<typename IntType, typename RealType>
 void clipQuantizedTessellation(QuantizedTessellation2d<IntType, RealType>& qmesh,
                                const std::vector<RealType>& PLCpoints,
-                               const PLC<2, RealType>& geometry,
+                               const PLC<2>& geometry,
                                const Tessellator<2, RealType>& tessellator) {
 
   using namespace bp;
@@ -505,7 +505,7 @@ template
 void
 clipQuantizedTessellation<int, double>(QuantizedTessellation2d<int, double>& qmesh,
                                        const std::vector<double>& PLCpoints,
-                                       const PLC<2, double>& geometry,
+                                       const PLC<2>& geometry,
                                        const Tessellator<2, double>& tessellator);
 
 }
