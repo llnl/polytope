@@ -18,12 +18,12 @@ namespace polytope {
 template<int Dimension> struct HashKey;
 
 template<> struct HashKey<2> {
-  using CoordHash = uint64_t;
-  using IntType = unsigned int; // Number of bits must exceed num1DBits
-  using IntPoint = typename PointType<2, IntType>::type;
+  using CoordHash = int64_t;
+  using IntType = int; // Number of bits must exceed num1DBits
+  using IntPoint = Point<2, IntType>;
 
   static constexpr unsigned flagBit()   { return 63; }
-  static constexpr unsigned num1DBits() { return 31; }
+  static constexpr unsigned num1DBits() { return 30; }
   static constexpr IntType  coordMax()  { return (1ULL << (num1DBits() - 1ULL)) - 1ULL; }
 
   // Bit mask for the flag bit
@@ -66,11 +66,11 @@ template<> struct HashKey<2> {
 };
 
 template<> struct HashKey<3> {
-  using CoordHash = unsigned __int128;
-  using IntType = uint64_t; // Number of bits must exceed num1DBits
-  using IntPoint = typename PointType<3, IntType>::type;
+  using CoordHash = __int128;
+  using IntType = int64_t; // Number of bits must exceed num1DBits
+  using IntPoint = Point<3, IntType>;
 
-  static constexpr unsigned flagBit()   { return 127; }
+  static constexpr unsigned flagBit()   { return 126; }
   static constexpr unsigned num1DBits() { return 42; }
   static constexpr IntType coordMax()  { return (1ULL << (num1DBits() - 1ULL)) - 1ULL; }
 
@@ -109,36 +109,6 @@ template<> struct HashKey<3> {
       z |= ((key >> (3*i+2)) & 1ULL) << i;
     }
     return IntPoint(x, y, z);
-  }
-};
-
-template<int Dimension, typename CoordType>
-struct NewDimensionTraits {
-  using PointType = typename PointType<Dimension, CoordType>::type;
-
-  // Convert flattened array into vector of points
-  static std::vector<PointType>
-  extractCoords(const std::vector<CoordType>& allCoords,
-                const std::vector<unsigned>& indices) {
-    std::vector<PointType> result;
-    result.reserve(indices.size());
-    for (std::vector<unsigned>::const_iterator itr = indices.begin();
-         itr != indices.end(); ++itr) {
-      const unsigned i = *itr;
-      result.push_back(PointType(&(allCoords[Dimension*i]), i));
-    }
-    return result;
-  }
-
-  static std::vector<PointType>
-  extractCoords(const std::vector<CoordType>& allCoords) {
-    std::vector<PointType> result;
-    auto n = allCoords.size()/Dimension;
-    result.reserve(n);
-    for (auto i = 0; i < n; ++i) {
-      result.push_back(PointType(&(allCoords[Dimension*i]), i));
-    }
-    return result;
   }
 };
 

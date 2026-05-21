@@ -21,6 +21,7 @@ set(polytope_headers
   ErrorHandler.hh
   findBoundaryElements.hh
   HashKey.hh
+  Intersections.hh
   intersect.hh
   IntPointMap.hh
   KeyTraits.hh
@@ -45,6 +46,7 @@ set(polytope_headers
   QuantizedTessellation3d.hh
   QuantTessellation.hh
   Quantizer.hh
+  QuantPLC.hh
   ReducedPLC.hh
   removeElements.hh
   Segment.hh
@@ -64,6 +66,7 @@ set(polytope_sources
   PLC_CSG.cc
   QuantizedTessellation2d.cc
   QuantizedTessellation3d.cc
+  QuantPLC.cc
   clipQuantizedTessellation2d.cc
   clipQuantizedTessellation3d.cc
   snapToBoundary.cc

@@ -9,23 +9,26 @@ namespace polytope {
 
 //! \class PLC - A Piecewise Linear Complex in 3D, or a Planar Straight Line 
 //! Graph (PSLG) in 2D.
-template<int Dimension, typename IndexType>
-class PLCBase {
+template<int Dimension>
+class PLC {
 public:
 
-  //! This array defines the topology of the facets of the 
+  PLC() = default;
+  virtual ~PLC() = default;
+
+  //! This two-dimensional array defines the topology of the facets of the 
   //! piecewise linear complex in terms of connections to generating points. 
   //! A facet has an arbitrary number of points in 3D and 2 points in 2D. 
-  //! facets[i] gives the index of the generating point of the ith 
+  //! facets[i][j] gives the index of the jth generating point of the ith 
   //! facet.
-  std::vector<IndexType > facets;
+  std::vector<std::vector<int>> facets;
 
-  //! This array defines the topology of the inner facets
+  //! This three dimensional array defines the topology of the inner facets
   //! or holes in the geometry.  The outer-most dimension is the number of 
   //! holes, and the remaining are facets using the same convention as the
-  //! the "facets" member.  In other words, holes[k][i] is the
+  //! the "facets" member.  In other words, holes[k][i][j] is the jth
   //! generating point of the ith facet of the kth hole.
-  std::vector<std::vector<IndexType > > holes;
+  std::vector<std::vector<std::vector<int> > > holes;
   
   //! Clears facets and holes to empty the PLC
   void clear() {
@@ -38,14 +41,6 @@ public:
     return (facets.empty() and holes.empty());
   }
 
-  virtual bool valid() const = 0;
-};
-
-template<int Dimension>
-class PLC : public PLCBase<Dimension, std::vector<int>> {
-public:
-  using PLCBase<Dimension, std::vector<int>>::facets;
-  using PLCBase<Dimension, std::vector<int>>::holes;
   //! Returns true if this PLC is valid (at first glance), false if it 
   //! is obviously invalid. This is not a rigorous check!
   bool valid() const {

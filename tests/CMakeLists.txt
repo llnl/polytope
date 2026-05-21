@@ -54,6 +54,9 @@ polytope_add_test(hash)
 polytope_add_test(HashKey2D)
 polytope_add_test(HashKey3D)
 polytope_add_test(Quantizer)
+polytope_add_test(QuantPLC)
+polytope_add_test(QuantConvex2d)
+polytope_add_test(QuantConvex3d)
 polytope_add_test(main3D)
 
 #-----------------------------------------------------------------------------

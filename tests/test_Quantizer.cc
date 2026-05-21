@@ -32,7 +32,7 @@ void test2DQuantizer() {
 
   using RealType = double;
   using RealPoint = Point2<RealType>;
-  using Quantizer2D = Quantizer<2, RealType>;
+  using Quantizer2D = Quantizer<2>;
   using IntPoint = typename Quantizer2D::IntPoint;
 
   // Define a bounding box: [0, 10] x [0, 10]
@@ -107,7 +107,7 @@ void test3DQuantizer() {
 
   using RealType = double;
   using RealPoint = Point3<RealType>;
-  using Quantizer3D = Quantizer<3, RealType>;
+  using Quantizer3D = Quantizer<3>;
   using IntPoint = typename Quantizer3D::IntPoint;
 
   // Define a bounding box: [-5, 5]^3
@@ -174,7 +174,7 @@ void testBoundaryAccuracy() {
 
   using RealType = double;
   using RealPoint2D = Point2<RealType>;
-  using Quantizer2D = Quantizer<2, RealType>;
+  using Quantizer2D = Quantizer<2>;
 
   // Small bounding box to test precision
   RealPoint2D xlo(0.0, 0.0);
@@ -220,7 +220,7 @@ void testHashUniqueness() {
 
   using RealType = double;
   using RealPoint = Point2<RealType>;
-  using Quantizer2D = Quantizer<2, RealType>;
+  using Quantizer2D = Quantizer<2>;
 
   RealPoint xlo(0.0, 0.0);
   RealPoint xhi(100.0, 100.0);
@@ -266,7 +266,7 @@ void testGridAlignment() {
 
   using RealType = double;
   using RealPoint = Point2<RealType>;
-  using Quantizer2D = Quantizer<2, RealType>;
+  using Quantizer2D = Quantizer<2>;
   using IntPoint = typename Quantizer2D::IntPoint;
 
   RealPoint xlo(0.0, 0.0);
@@ -310,7 +310,7 @@ void testHashConsistency() {
 
   using RealType = double;
   using RealPoint = Point2<RealType>;
-  using Quantizer2D = Quantizer<2, RealType>;
+  using Quantizer2D = Quantizer<2>;
 
   RealPoint xlo(-10.0, -10.0);
   RealPoint xhi(10.0, 10.0);
@@ -342,7 +342,7 @@ void stressTest() {
 
   using RealType = double;
   using RealPoint = Point2<RealType>;
-  using Quantizer2D = Quantizer<2, RealType>;
+  using Quantizer2D = Quantizer<2>;
 
   RealPoint xlo(-1000.0, -1000.0);
   RealPoint xhi(1000.0, 1000.0);

@@ -10,14 +10,15 @@
 
 namespace polytope {
 
-template<int Dimension, typename RealType>
+template<int Dimension>
 class Quantizer {
 public:
+  using RealType = double;
   using Hasher = HashKey<Dimension>;
   using CoordHash = typename Hasher::CoordHash;
   using IntType = typename Hasher::IntType;
-  using IntPoint = typename PointType<Dimension, IntType>::type;
-  using RealPoint = typename PointType<Dimension, RealType>::type;
+  using IntPoint = Point<Dimension, IntType>;
+  using RealPoint = Point<Dimension, RealType>;
 
   // Lower case represents coordinates in physical space
   // Upper case represents coordinates in transformed space

@@ -110,6 +110,15 @@ if(POLYTOPE_ENABLE_SILO)
   list(APPEND IMPORTED_LIBS silo)
 endif()
 
+# Qhull
+#-----------------------------------------------------------------------------------
+if (NOT Qhull_FOUND)
+  list(APPEND FP_TPLS Qhull)
+  list(APPEND FP_DIRS ${qhull_DIR})
+  find_package(Qhull REQUIRED NO_DEFAULT_PATH PATHS ${qhull_DIR})
+  list(APPEND POLYTOPE_TPL_DEPENDS Qhull::qhull_r Qhull::qhullcpp)
+endif()
+
 # Triangle
 #-----------------------------------------------------------------------------------
 # Spack does not install Triangle in any useful way so we have to install it ourselves
