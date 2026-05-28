@@ -38,15 +38,23 @@ public:
 
   virtual ~QuantPLC() = default;
 
-  QuantPLC(const PLC<Dimension> plc,
+  QuantPLC(const PLC<Dimension>& plc,
            const Quant& Q,
-           const std::vector<RealType>& allpoints,
-           bool doReduce = true);
+           const std::vector<RealType>& allpoints);
+
+  QuantPLC(const Quant& Q,
+           const std::vector<RealType>& allpoints);
+
+  // Remove any degenerate points
+  void removeDegeneracies();
 
   // Reduce to only the points used in the boundary facets, if they exist
-  void reduce(const std::vector<RealPoint>& rpoints);
+  void reduce();
 
   void makeConvex();
+
+  // Order facets to form proper boundaries
+  void orderFacets();
 
   bool within(const IntPoint& point) const;
 
@@ -75,7 +83,7 @@ public:
       }
     }
     return facetSet;
-  }    
+  }
 
   static bool compareFacets(const QuantPLC<Dimension>& lhs,
                             const QuantPLC<Dimension>& rhs) {
@@ -95,10 +103,13 @@ public:
       if (!found) return false;
     }
     return true;
-  }      
+  }
 
-  using PLC<Dimension>::facets;
-  using PLC<Dimension>::holes;
+  //------------------------------------------------------------------------------
+  // Member data
+  //------------------------------------------------------------------------------
+  using PLC<Dimension>::facets;  // Facets as vertex index lists
+  using PLC<Dimension>::holes;  // Holes (each hole is a list of facets)
   const Quant m_Q;
   std::vector<CoordHash> m_hashes;
   std::vector<IntPoint> m_points;
@@ -111,6 +122,12 @@ public:
 private:
   template<int D = Dimension>
   std::enable_if_t<D == 2, void> makeConvex2D();
+
+  template<int D = Dimension>
+  std::enable_if_t<D == 2, void> orderFacets2D();
+
+  template<int D = Dimension>
+  std::enable_if_t<D == 3, void> orderFacets3D();
 
   template<int D = Dimension>
   std::enable_if_t<D == 3, void> makeConvex3D();

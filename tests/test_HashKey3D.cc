@@ -1,7 +1,7 @@
 // Unit tests for HashKey3D Morton encoding/decoding (128-bit)
 //
-// NOTE: HashKey3D only supports non-negative coordinates.
-// The implementation uses unsigned integer bit manipulation internally.
+// NOTE: HashKey3D uses signed integers (int64_t) for coordinates,
+// but only non-negative values (>= 0) are used in practice.
 
 #include <iostream>
 #include <vector>
@@ -269,22 +269,23 @@ int main(int argc, char** argv) {
   test128BitStructure();
 
   //----------------------------------------------------------------------------
-  // Test 64-bit unsigned integers (using 42 bits per dimension)
+  // Test with 42-bit range (non-negative values)
   //----------------------------------------------------------------------------
   {
-    cout << "\n=== Testing HashKey3D with uint64_t ===" << endl;
+    cout << "\n=== Testing HashKey3D with 42-bit range ===" << endl;
 
     // Edge cases
     testEdgeCases();
 
-    // Random points in 42-bit range
-    cout << "Testing random points (42-bit range)..." << endl;
+    // Random points in non-negative 42-bit range
+    cout << "Testing random points (42-bit non-negative range)..." << endl;
     const unsigned n = 800;
     vector<IntPoint> points;
+    const auto range = HashKey3D::coordMax();
     for (unsigned i = 0; i < n; ++i) {
-      auto x = IntType(random01() * (IntType(1) << 40));
-      auto y = IntType(random01() * (IntType(1) << 40));
-      auto z = IntType(random01() * (IntType(1) << 40));
+      auto x = IntType(random01() * range);
+      auto y = IntType(random01() * range);
+      auto z = IntType(random01() * range);
       points.push_back(IntPoint(x, y, z));
       testRoundTrip(points.back(), "Random point");
     }
@@ -321,10 +322,11 @@ int main(int argc, char** argv) {
     const unsigned nOps = 5000;
     cout << "Performing " << nOps << " hash/unhash operations..." << endl;
 
+    const auto range = HashKey3D::coordMax();
     for (unsigned i = 0; i < nOps; ++i) {
-      auto x = IntType(random01() * (IntType(1) << 40));
-      auto y = IntType(random01() * (IntType(1) << 40));
-      auto z = IntType(random01() * (IntType(1) << 40));
+      auto x = IntType(random01() * range);
+      auto y = IntType(random01() * range);
+      auto z = IntType(random01() * range);
 
       auto key = HashKey3D::hash(IntPoint(x, y, z));
       auto recovered = HashKey3D::unhash(key);
@@ -363,10 +365,11 @@ int main(int argc, char** argv) {
 
     // Test that both lo and hi bits are used
     uint64_t lo_or = 0, hi_or = 0;
+    const auto range = HashKey3D::coordMax();
     for (unsigned i = 0; i < 1000; ++i) {
-      auto x = IntType(random01() * (IntType(1) << 41));
-      auto y = IntType(random01() * (IntType(1) << 41));
-      auto z = IntType(random01() * (IntType(1) << 41));
+      auto x = IntType(random01() * range);
+      auto y = IntType(random01() * range);
+      auto z = IntType(random01() * range);
 
       auto key = HashKey3D::hash(IntPoint(x, y, z));
       lo_or |= (uint64_t)key;
@@ -431,8 +434,8 @@ int main(int argc, char** argv) {
                 "Hashes should differ only in the flag bit");
 
     // Test flag bit position
-    POLY_CHECK2(HashKey3D::flagBit() == 127,
-                "Flag bit should be at position 127 for 3D");
+    POLY_CHECK2(HashKey3D::flagBit() == 126,
+                "Flag bit should be at position 126 for 3D");
 
     // Test that flag mask has only one bit set
     CoordHash mask = HashKey3D::FlagMask();

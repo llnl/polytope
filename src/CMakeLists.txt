@@ -20,6 +20,7 @@ set(polytope_headers
   DistributedTessellator.hh
   ErrorHandler.hh
   findBoundaryElements.hh
+  GeomUtils.hh
   HashKey.hh
   Intersections.hh
   intersect.hh
@@ -99,9 +100,11 @@ if (POLYTOPE_ENABLE_BOOST)
     RegisterBoostPolygonTypes.hh
     BoostOrphanage.hh
     BoostTessellator.hh
-    BoostTessellatorTraits.hh)
+    BoostTessellatorTraits.hh
+    NewBoostTessellator.hh)
   list(APPEND polytope_sources
     BoostTessellator.cc
+    NewBoostTessellator.cc
     MeshEditor.cc)
 endif()
 

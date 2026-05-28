@@ -4,12 +4,13 @@
 #ifndef __polytope_clipQuantizedTessellation__
 #define __polytope_clipQuantizedTessellation__
 
-#include "Tessellator.hh"
-#include "QuantizedTessellation2d.hh"
-#include "QuantizedTessellation3d.hh"
 #include "PLC.hh"
 
 namespace polytope {
+
+template<int Dimension, typename RealType> class Tessellator;
+template<typename IntType, typename RealType> class QuantizedTessellation2d;
+template<typename IntType, typename RealType> class QuantizedTessellation3d;
 
 // 2D
 template<typename IntType, typename RealType>

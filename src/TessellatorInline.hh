@@ -1,7 +1,8 @@
-#include "clipQuantizedTessellation.hh"
+//#include "clipQuantizedTessellation.hh"
 #include "makeBoxPLC.hh"
 #include "findBoundaryElements.hh"
 #include "snapToBoundary.hh"
+#include "polytope_geometric_utilities.hh"
 
 namespace polytope {
 
@@ -69,7 +70,7 @@ tessellate(const std::vector<RealType>& points,
   this->tessellateQuantized(quantmesh);
 
   // Clip against the boundary.
-  clipQuantizedTessellation(quantmesh, PLCpoints, geometry, *this);
+  //clipQuantizedTessellation(quantmesh, PLCpoints, geometry, *this);
 
   // Copy the QuantTessellation to the output.
   quantmesh.fillTessellation(mesh);
@@ -185,49 +186,6 @@ tessellateDegenerate(const std::vector<RealType>& points,
                      const RealType tol,
                      Tessellation<nDim, RealType>& mesh) const {
   return this->tessellateDegenerate(points, geometry.points, geometry, tol, mesh);
-}
-
-//------------------------------------------------------------------------------
-// Normalize points into a unit cube, optionally computing the bounds first.
-//------------------------------------------------------------------------------
-template<int nDim, typename RealType>
-inline
-std::vector<RealType>
-Tessellator<nDim, RealType>::
-computeNormalizedPoints(const std::vector<RealType>& points,
-                        const std::vector<RealType>& PLCpoints,
-                        const bool computeBounds,
-                        RealType* low,
-                        RealType* high) const {
-  POLY_ASSERT(points.size() > 0);
-  POLY_ASSERT(points.size() % nDim == 0);
-  POLY_ASSERT(PLCpoints.empty() || PLCpoints.size() % nDim == 0);
-
-  if (computeBounds) {
-    geometry::computeBoundingBox<nDim, RealType>(points, false, low, high);
-    if (!PLCpoints.empty()) {
-      RealType plcLow[nDim], plcHigh[nDim];
-      geometry::computeBoundingBox<nDim, RealType>(PLCpoints, false, plcLow, plcHigh);
-      for (unsigned j = 0; j != nDim; ++j) {
-        low[j] = std::min(low[j], plcLow[j]);
-        high[j] = std::max(high[j], plcHigh[j]);
-      }
-    }
-  }
-
-  RealType length = RealType(0);
-  for (unsigned j = 0; j != nDim; ++j) length = std::max(length, high[j] - low[j]);
-
-  std::vector<RealType> result(points.size(), RealType(0));
-  if (length > RealType(0)) {
-    for (unsigned i = 0; i != points.size()/nDim; ++i) {
-      for (unsigned j = 0; j != nDim; ++j) {
-        result[nDim*i + j] = (points[nDim*i + j] - low[j])/length;
-      }
-    }
-  }
-
-  return result;
 }
 
 }

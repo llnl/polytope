@@ -1,7 +1,7 @@
 // Unit tests for HashKey2D Morton encoding/decoding
 //
-// NOTE: HashKey2D only supports non-negative coordinates.
-// The implementation uses unsigned integer bit manipulation internally.
+// NOTE: HashKey2D uses signed integers (int) for coordinates,
+// but only non-negative values (>= 0) are used in practice.
 
 #include <iostream>
 #include <vector>
@@ -144,7 +144,7 @@ void testUniqueness(const vector<IntPoint>& points) {
       collisions[key].push_back(i);
     } else {
       hashes.insert(key);
-      collisions[key] = {i};
+      collisions[key] = {IntType(i)};
     }
   }
 
@@ -190,7 +190,7 @@ void testEdgeCases() {
     testRoundTrip(IntPoint(val, val), "Power of 2 in both");
   }
 
-  // Adjacent coordinates
+  // Small coordinates
   for (auto x = 0; x < 10; ++x) {
     for (auto y = 0; y < 10; ++y) {
       testRoundTrip(IntPoint(x, y), "Small integers");
@@ -221,21 +221,22 @@ int main(int argc, char** argv) {
 #endif
 
   //----------------------------------------------------------------------------
-  // Test 64-bit unsigned integers (using 32 bits per dimension)
+  // Test with 30-bit range (non-negative values)
   //----------------------------------------------------------------------------
   {
-    cout << "\n=== Testing HashKey2D with uint64_t ===" << endl;
+    cout << "\n=== Testing HashKey2D with 30-bit range ===" << endl;
 
     // Edge cases
     testEdgeCases();
 
-    // Random points in 32-bit range
-    cout << "Testing random points (32-bit range)..." << endl;
+    // Random points in non-negative range
+    cout << "Testing random points (30-bit non-negative range)..." << endl;
     const unsigned n = 1000;
     vector<IntPoint> points;
+    const auto range = HashKey2D::coordMax();
     for (unsigned i = 0; i < n; ++i) {
-      auto x = IntType(random01() * (IntType(1) << 31));
-      auto y = IntType(random01() * (IntType(1) << 31));
+      auto x = IntType(random01() * range);
+      auto y = IntType(random01() * range);
       points.push_back(IntPoint(x, y));
       testRoundTrip(points.back(), "Random point");
     }
@@ -274,9 +275,10 @@ int main(int argc, char** argv) {
     const unsigned nOps = 10000;
     cout << "Performing " << nOps << " hash/unhash operations..." << endl;
 
+    const auto range = HashKey2D::coordMax();
     for (unsigned i = 0; i < nOps; ++i) {
-      auto x = IntType(random01() * (IntType(1) << 31));
-      auto y = IntType(random01() * (IntType(1) << 31));
+      auto x = IntType(random01() * range);
+      auto y = IntType(random01() * range);
 
       auto key = HashKey2D::hash(IntPoint(x, y));
       auto recovered = HashKey2D::unhash(key);

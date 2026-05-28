@@ -11,17 +11,5 @@
 #cmakedefine POLYTOPE_ENABLE_TRIANGLE
 #cmakedefine POLYTOPE_ENABLE_TETGEN
 #cmakedefine POLYTOPE_ENABLE_BOOST
-#include "polytope_internal.hh"
-#include "Tessellator.hh"
-#include "Tessellation.hh"
-
-#ifdef POLYTOPE_ENABLE_BOOST
-#include "BoostTessellator.hh"
-#endif
-#ifdef POLYTOPE_ENABLE_TETGEN
-#include "TetgenTessellator.hh"
-#endif
-#include "SiloWriter.hh"
-#include "SiloReader.hh"
 
 #endif

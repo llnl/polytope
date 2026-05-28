@@ -6,6 +6,7 @@
 #ifndef __Polytope_Quantizer__
 #define __Polytope_Quantizer__
 
+#include "Point.hh"
 #include "HashKey.hh"
 
 namespace polytope {
@@ -65,6 +66,10 @@ public:
 
   RealPoint unhash_dequantize(const CoordHash& h) const {
     return dequantize(unhash(h));
+  }
+
+  RealPoint degeneracy() const {
+    return m_dx_o;
   }
 
 };

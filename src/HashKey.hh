@@ -22,9 +22,10 @@ template<> struct HashKey<2> {
   using IntType = int; // Number of bits must exceed num1DBits
   using IntPoint = Point<2, IntType>;
 
-  static constexpr unsigned flagBit()   { return 63; }
-  static constexpr unsigned num1DBits() { return 30; }
-  static constexpr IntType  coordMax()  { return (1ULL << (num1DBits() - 1ULL)) - 1ULL; }
+  static constexpr unsigned  flagBit()   { return 63; }
+  static constexpr unsigned  num1DBits() { return 30; }
+  static constexpr IntType   coordMax()  { return (1ULL << (num1DBits() - 1ULL)) - 1ULL; }
+  static constexpr CoordHash hashMax()   { return (1ULL << (flagBit() - 1ULL)) - 1ULL; }
 
   // Bit mask for the flag bit
   static constexpr CoordHash FlagMask() {
@@ -70,9 +71,10 @@ template<> struct HashKey<3> {
   using IntType = int64_t; // Number of bits must exceed num1DBits
   using IntPoint = Point<3, IntType>;
 
-  static constexpr unsigned flagBit()   { return 126; }
-  static constexpr unsigned num1DBits() { return 42; }
-  static constexpr IntType coordMax()  { return (1ULL << (num1DBits() - 1ULL)) - 1ULL; }
+  static constexpr unsigned  flagBit()   { return 126; }
+  static constexpr unsigned  num1DBits() { return 42; }
+  static constexpr IntType   coordMax()  { return (1ULL << (num1DBits() - 1ULL)) - 1ULL; }
+  static constexpr CoordHash hashMax()   { return ((unsigned CoordHash)1 << (flagBit() - 1ULL)) - 1ULL; }
 
   // Bit mask for the flag bit
   static constexpr CoordHash FlagMask() {

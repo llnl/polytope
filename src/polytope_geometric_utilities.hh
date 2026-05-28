@@ -4,11 +4,8 @@
 // A semi-random collection of stuff related to geometric computations for use
 // internally in polytope.
 //------------------------------------------------------------------------------
-#include <cmath>
-#include <cstdlib>
-#include <limits>
-#include <algorithm>
 
+#include "polytope_internal.hh"
 #include "Tessellation.hh"
 #include "ReducedPLC.hh"
 
@@ -17,9 +14,11 @@
 #include "polytope_parallel_utilities.hh"
 #endif
 
-using std::abs;
-using std::min;
-using std::max;
+#include <cmath>
+#include <cstdlib>
+#include <limits>
+#include <algorithm>
+#include <vector>
 
 // --- These live in predicates.cc
 // Compute the orientation of point c relative to points a and b

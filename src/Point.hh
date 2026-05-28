@@ -5,14 +5,31 @@
 #ifndef __polytope_Point__
 #define __polytope_Point__
 
+#include "polytope_serialize.hh"
+#include "polytope_internal.hh"
+
 #include <iostream>
 #include <iterator>
 #include <cmath>
 
-#include "polytope_serialize.hh"
-#include "polytope_internal.hh"
-
 namespace polytope {
+
+// namespace {
+// std::ostream& operator<<(std::ostream& os, __int128 n) {
+//   if (n == 0) return os << "0";
+//   if (n < 0) {
+//     os << "-";
+//     n = -n;
+//   }
+//   std::string s;
+//   while (n > 0) {
+//     s += (char)('0' + (n % 10));
+//     n /= 10;
+//   }
+//   std::reverse(s.begin(), s.end());
+//   return os << s;
+// }
+// }
 
 //------------------------------------------------------------------------------
 // A integer version of the simple 2D point.
@@ -78,6 +95,11 @@ struct Point<2, CoordType> {
             x == rhs.x and y < rhs.y ? true :
             false);
   }
+  bool operator>(const Point<2, CoordType>& rhs) const {
+    return (x > rhs.x                ? true :
+            x == rhs.x and y > rhs.y ? true :
+            false);
+  }
 
   template<typename RealType>
   RealType realx(const RealType& xmin, const RealType& dx) const {
@@ -100,6 +122,7 @@ struct Point<2, CoordType> {
   Point operator-() const { return Point(-x, -y); }
   CoordType  operator[](const size_t i) const { POLY_ASSERT(i < 2); return *(&x + i); }
   CoordType& operator[](const size_t i)       { POLY_ASSERT(i < 2); return *(&x + i); }
+  bool iszero() const { return (x == 0 && y == 0) ? true : false; }
   void zero() { x = 0; y = 0; }
   void one() { x = 1; y = 1; }
 
@@ -145,6 +168,14 @@ struct Point<2, CoordType> {
 
   int maxAxis() const {
     return (x >= y) ? 0 : 1;
+  }
+
+  template<typename IntType>
+  Point<2, IntType> bitShift(const int shift) const {
+    return Point<2, IntType>(
+      static_cast<IntType>(x >> shift),
+      static_cast<IntType>(y >> shift)
+    );
   }
 };
 
@@ -242,6 +273,12 @@ struct Point<3, CoordType> {
             x == rhs.x and y == rhs.y and z < rhs.z ? true :
             false);
   }
+  bool operator>(const Point& rhs) const {
+    return (x > rhs.x                               ? true :
+            x == rhs.x and y > rhs.y                ? true :
+            x == rhs.x and y == rhs.y and z > rhs.z ? true :
+            false);
+  }
 
   template<typename RealType>
   Point(const RealType& xi, const RealType& yi, const RealType& zi,
@@ -278,6 +315,7 @@ struct Point<3, CoordType> {
   Point operator-() const { return Point(-x, -y, -z); }
   CoordType  operator[](const size_t i) const { POLY_ASSERT(i < 3); return *(&x + i); }
   CoordType& operator[](const size_t i)       { POLY_ASSERT(i < 3); return *(&x + i); }
+  bool iszero() const { return (x == 0 && y == 0 && z == 0) ? true : false; }
   void zero() { x = 0; y = 0; z = 0; }
   void one() { x = 1; y = 1; z = 1; }
 
@@ -334,6 +372,15 @@ struct Point<3, CoordType> {
       return 1;
     }
     return 2;
+  }
+
+  template<typename IntType>
+  Point<3, IntType> bitShift(const int shift) const {
+    return Point<3, IntType>(
+      static_cast<IntType>(x >> shift),
+      static_cast<IntType>(y >> shift),
+      static_cast<IntType>(z >> shift)
+    );
   }
 };
 
@@ -425,6 +472,6 @@ flattenCoords(std::vector<Point<Dimension, CoordType>> allpoints) {
   }
   return result;
 }
-  
+
 } // namespace polytope
 #endif

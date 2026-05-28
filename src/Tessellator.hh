@@ -1,15 +1,9 @@
 #ifndef POLYTOPE_TESSELLATOR_HH
 #define POLYTOPE_TESSELLATOR_HH
 
-#include <vector>
-#include <float.h>
-#include "Tessellation.hh"
-#include "Tessellator.hh"
-#include "PLC.hh"
-#include "ReducedPLC.hh"
-#include "DimensionTraits.hh"
+#include "QuantTessellation.hh"
 #include "polytope_internal.hh"
-#include "polytope_geometric_utilities.hh"
+#include "Tessellation.hh"
 
 namespace polytope {
 
@@ -20,11 +14,12 @@ template<int Dimension, typename RealType>
 class Tessellator {
 public:
 
-  // The type of QuantizedTessellation we'll be using.
-  typedef typename DimensionTraits<Dimension, RealType>::QuantizedTessellation QuantizedTessellation;
+  using QuantizedTessellation = QuantTessellation<Dimension>;
+  using Quant = Quantizer<Dimension>;
 
   //! Default constructor.
-  Tessellator() {}
+  Tessellator() = default;
+  Tessellator(const Quant& Q) : m_Q(Q) {}
 
   //! Destructor.
   virtual ~Tessellator() {}
@@ -35,6 +30,21 @@ public:
   //! \param points A (Dimension*numPoints) array containing point coordinates.
   //! \param mesh This will store the resulting tessellation.
   virtual void tessellate(const std::vector<RealType>& points,
+                          Tessellation<Dimension, RealType>& mesh) const;
+
+  //! Generate a Voronoi-like tessellation for the given set of generator 
+  //! points and a description of the geometry in which they exist.
+  //! The coordinates of these points are stored in point-major order and 
+  //! the 0th component of the ith point appears in points[Dimension*i].
+  //! This default implementation issues an error explaining that the 
+  //! Tessellator does not support PLCs.
+  //! \param points A (Dimension*numPoints) array containing point coordinates.
+  //! \param PLCpoints A (Dimension*n) array containing point coordinates for the PLC.
+  //! \param geometry A description of the geometry in Piecewise Linear Complex form.
+  //! \param mesh This will store the resulting tessellation.
+  virtual void tessellate(const std::vector<RealType>& points,
+                          const std::vector<RealType>& PLCpoints,
+                          const PLC<Dimension>& geometry,
                           Tessellation<Dimension, RealType>& mesh) const;
 
   //! Generate a Voronoi tessellation for the given set of generator points
@@ -51,21 +61,6 @@ public:
   virtual void tessellate(const std::vector<RealType>& points,
                           RealType* low,
                           RealType* high,
-                          Tessellation<Dimension, RealType>& mesh) const;
-
-  //! Generate a Voronoi-like tessellation for the given set of generator 
-  //! points and a description of the geometry in which they exist.
-  //! The coordinates of these points are stored in point-major order and 
-  //! the 0th component of the ith point appears in points[Dimension*i].
-  //! This default implementation issues an error explaining that the 
-  //! Tessellator does not support PLCs.
-  //! \param points A (Dimension*numPoints) array containing point coordinates.
-  //! \param PLCpoints A (Dimension*n) array containing point coordinates for the PLC.
-  //! \param geometry A description of the geometry in Piecewise Linear Complex form.
-  //! \param mesh This will store the resulting tessellation.
-  virtual void tessellate(const std::vector<RealType>& points,
-                          const std::vector<RealType>& PLCpoints,
-                          const PLC<Dimension>& geometry,
                           Tessellation<Dimension, RealType>& mesh) const;
 
   //! Generate a Voronoi-like tessellation for the given set of generator 
@@ -147,22 +142,9 @@ public:
   virtual RealType degeneracy() const = 0;
   virtual void degeneracy(const RealType val) const {};
 
-  protected:
+private:
 
-  // //! This helper method creates a piecewise linear complex (PLC) 
-  // //! representing the bounding box containing the given points and 
-  // //! adds the corners of the bounding box to \a points.
-  // PLC<Dimension> boundingBox(std::vector<RealType>& points) const;
-
-  //! Return a normalized set of coordinates, also returning the bounding low/high points.
-  std::vector<RealType> computeNormalizedPoints(const std::vector<RealType>& points,
-                                                const std::vector<RealType>& PLCpoints,
-                                                const bool computeBounds,
-                                                RealType* low,
-                                                RealType* high) const;
-
-  private:
-
+  Quant m_Q;
   // Disallowed.
   Tessellator(const Tessellator&);
   Tessellator& operator=(const Tessellator&);

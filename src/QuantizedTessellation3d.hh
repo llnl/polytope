@@ -11,6 +11,7 @@
 #include <utility>   // For std::pair
 
 #include "Point.hh"
+#include "Tessellation.hh"
 #include "polytope_tessellator_utilities.hh"
 
 namespace polytope {

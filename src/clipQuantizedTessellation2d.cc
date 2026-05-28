@@ -12,6 +12,8 @@
 #include "RegisterBoostPolygonTypes.hh"
 #include "removeElements.hh"
 #include "IntPointMap.hh"
+#include "Tessellator.hh"
+#include "QuantizedTessellation2d.hh"
 
 using namespace std;
 namespace bp = boost::polygon;

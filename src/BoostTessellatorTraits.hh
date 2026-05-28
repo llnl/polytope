@@ -28,6 +28,8 @@
 // project: Project a point to the infinite bounding sphere using a vertex
 //          location (int or float point) and a floating point direction.
 //------------------------------------------------------------------------
+#ifndef __Polytope_BoostTessellatorTraits__
+#define __Polytope_BoostTessellatorTraits__
 #include "Point.hh"
 #include "QuantizedCoordinates.hh"
 
@@ -106,3 +108,4 @@ struct BoostTessellatorTraits<RealType, typename polytope::DimensionTraits<2, Re
     return coords.quantize(&pinf.x);
   }
 };
+#endif

@@ -16,7 +16,7 @@
 
 #include "Tessellator.hh"
 #include "Point.hh"
-#include "QuantTessellation.hh"
+#include "OldQuantTessellation.hh"
 #include "ReducedPLC.hh"
 
 namespace polytope {

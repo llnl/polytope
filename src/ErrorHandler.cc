@@ -9,8 +9,7 @@
 // }
 #endif
 
-namespace polytope
-{
+namespace polytope {
 
 namespace {
 

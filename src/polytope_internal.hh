@@ -22,13 +22,13 @@ void internal_abort();
   if (!(x)) \
   { \
     std::cout << "Assertion " << #x << " failed\nat " << __FILE__ << ":" << __LINE__ << std::endl; \
-    polytope::internal_abort(); \
+    internal_abort(); \
   }
 #define POLY_ASSERT2(x, msg) \
   if (!(x)) \
   { \
     std::cout << "Assertion " << #x << " failed\nat " << __FILE__ << ":" << __LINE__ << std::endl << msg << std::endl; \
-    polytope::internal_abort(); \
+    internal_abort(); \
   }
 #define POLY_BEGIN_CONTRACT_SCOPE { 
 #define POLY_END_CONTRACT_SCOPE }
@@ -45,12 +45,12 @@ void internal_abort();
 #define POLY_VERIFY(x)                                     \
   if (!(x)) {                                              \
     std::cout << "Assertion " << #x << " failed\nat " << __FILE__ << ":" << __LINE__ << std::endl; \
-    polytope::internal_abort();                                         \
+    internal_abort();                                         \
   }
 #define POLY_VERIFY2(x, msg)                                            \
   if (!(x)) {                                                           \
     std::cout << "Assertion " << #x << " failed\nat " << __FILE__ << ":" << __LINE__ << std::endl << msg << std::endl; \
-    polytope::internal_abort();                                         \
+    internal_abort();                                         \
   }
 
 #define POLY_CHECK(x)                                                   \

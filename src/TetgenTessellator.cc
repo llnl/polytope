@@ -959,7 +959,7 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
 
   // Compute the normalized generators.
   const unsigned numGenerators = points.size() / 3;
-  qmesh.generators = this->computeNormalizedPoints(points, nonGeneratingPoints, true, &qmesh.low_labframe.x, &qmesh.high_labframe.x);
+  //qmesh.generators = this->computeNormalizedPoints(points, nonGeneratingPoints, true, &qmesh.low_labframe.x, &qmesh.high_labframe.x);
   unsigned i, j, k;
 
   // Build the input to tetgen.

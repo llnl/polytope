@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "KeyTraits.hh"
-#include "DimensionTraits.hh"
 #include "convexHull_2d.hh"
 #include "convexHull_3d.hh"
 #include "QuantizedTessellation2d.hh"

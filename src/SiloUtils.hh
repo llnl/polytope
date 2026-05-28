@@ -1,5 +1,8 @@
 // A collection of low-level utilities to help with silo file input/output.
 
+#ifndef POLYTOPE_SILOUTILS_HH
+#define POLYTOPE_SILOUTILS_HH
+
 #include <string>
 #include <vector>
 #include <map>
@@ -103,3 +106,4 @@ putMultivarInFile(const std::map<std::string, RealType*>& fields,
 //-------------------------------------------------------------------
 
 }
+#endif
