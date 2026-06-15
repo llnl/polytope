@@ -87,10 +87,12 @@ endif()
 include(cmake/InstallTPLs.cmake)
 
 add_subdirectory(src)
+add_subdirectory(newsrc)
 
 if (POLYTOPE_ENABLE_TESTING)
   enable_testing()
   add_subdirectory(tests)
+  add_subdirectory(newtests)
 endif()
 
 # Export package to allow it to be installed with find_package

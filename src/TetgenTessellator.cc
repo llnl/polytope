@@ -1,13 +1,9 @@
 //------------------------------------------------------------------------
 // TetgenTessellator
 //------------------------------------------------------------------------
-#include <iostream>
-#include <algorithm>
-#include <map>
-#include <set>
-#include <limits>
-#include <sstream>
 
+#include "TetgenTessellator.hh"
+#include "QuantTessellation.hh"
 #include "polytope.hh" // Pulls in POLY_ASSERT and TetgenTessellator.hh.
 #include "Point.hh"
 #include "PLC_CSG_3d.hh"
@@ -15,6 +11,13 @@
 #include "simplifyPLCfacets.hh"
 #include "polytope_write_OOGL.hh"
 #include "polytope_plc_canned_geometries.hh"
+
+#include <iostream>
+#include <algorithm>
+#include <map>
+#include <set>
+#include <limits>
+#include <sstream>
 
 // Pull in tetgen stuff.
 #define TETLIBRARY
@@ -959,7 +962,7 @@ computeUnboundedQuantizedTessellation(const vector<double>& points,
 
   // Compute the normalized generators.
   const unsigned numGenerators = points.size() / 3;
-  //qmesh.generators = this->computeNormalizedPoints(points, nonGeneratingPoints, true, &qmesh.low_labframe.x, &qmesh.high_labframe.x);
+  qmesh.generators = this->computeNormalizedPoints(points, nonGeneratingPoints, true, &qmesh.low_labframe.x, &qmesh.high_labframe.x);
   unsigned i, j, k;
 
   // Build the input to tetgen.

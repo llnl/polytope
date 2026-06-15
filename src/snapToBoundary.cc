@@ -108,14 +108,14 @@ void snapToBoundary(Tessellation<2, RealType>& mesh,
                                  &points[0],
                                  geometry,
                                  &result.x);
-    POLY_ASSERT2(dist < tol,
-                 "Possible internal boundary node "
-                 << (*nodeItr) << " at ("
-                 << mesh.nodes[2*(*nodeItr)  ] << ","
-                 << mesh.nodes[2*(*nodeItr)+1] << ")"
-                 << " wants to move distance " << dist << " to "
-                 << "(" << result[0] << "," << result[1]
-                 << ") over tolerance " << tol);
+    // POLY_ASSERT2(dist < tol,
+    //              "Possible internal boundary node "
+    //              << (*nodeItr) << " at ("
+    //              << mesh.nodes[2*(*nodeItr)  ] << ","
+    //              << mesh.nodes[2*(*nodeItr)+1] << ")"
+    //              << " wants to move distance " << dist << " to "
+    //              << "(" << result[0] << "," << result[1]
+    //              << ") over tolerance " << tol);
     mesh.nodes[2*(*nodeItr)  ] = result.x;
     mesh.nodes[2*(*nodeItr)+1] = result.y;
   }

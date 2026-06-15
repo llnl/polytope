@@ -8,6 +8,7 @@
 //------------------------------------------------------------------------
 #ifndef __Polytope_TetgenTessellator__
 #define __Polytope_TetgenTessellator__
+#include "polytope.hh"
 
 #ifdef POLYTOPE_ENABLE_TETGEN
 
@@ -16,7 +17,7 @@
 
 #include "Tessellator.hh"
 #include "Point.hh"
-#include "OldQuantTessellation.hh"
+#include "QuantTessellation.hh"
 #include "ReducedPLC.hh"
 
 namespace polytope {

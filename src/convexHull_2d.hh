@@ -15,6 +15,7 @@
 #include "polytope_internal.hh"
 #include "polytope_geometric_utilities.hh"
 #include "Point.hh"
+#include "DimensionTraits.hh"
 
 namespace polytope {
 

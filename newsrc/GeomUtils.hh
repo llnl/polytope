@@ -1,0 +1,590 @@
+#ifndef POLYTOPE_GEOMUTILS_HH
+#define POLYTOPE_GEOMUTILS_HH
+
+#include "Point.hh"
+#include "HashKey.hh"
+#include "EdgeUtils.hh"
+
+namespace polytope {
+
+//------------------------------------------------------------------------------
+// Type alias for wide integer type used in overflow-safe arithmetic
+// Based on CoordType size to ensure safety when 2D methods are called from 3D
+// - 32-bit or smaller coords → int64_t (safe for products)
+// - 64-bit coords → __int128 (safe for products)
+// - Floating-point types → same type (no widening needed)
+//------------------------------------------------------------------------------
+template<typename CoordType>
+struct WideIntHelper {
+  using type = typename std::conditional<
+    std::is_floating_point<CoordType>::value,
+    CoordType,  // For float/double, return same type
+    typename std::conditional<
+      (sizeof(CoordType) <= 4),
+      int64_t,
+      __int128
+    >::type
+  >::type;
+};
+
+template<typename CoordType>
+using WideInt = typename WideIntHelper<CoordType>::type;
+
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// General helper routines
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+//------------------------------------------------------------------------------
+// Normalize a scalar by bit-shifting to fit within target bit width
+//
+// Right-shifts the value so it fits within target_bits.
+// Preserves sign and is useful for scale-invariant parametric calculations.
+//
+// Returns: shift_amount
+//------------------------------------------------------------------------------
+template<typename IntType>
+int bitShiftAmount(IntType value,
+                   const int target_bits = 21) {
+  if (value == 0) return 0;
+
+  // Get absolute value for bit counting
+  IntType abs_val = value < 0 ? -value : value;
+
+  // Count bits used
+  int bits_used = 0;
+  IntType temp = abs_val;
+  while (temp > 0) {
+    ++bits_used;
+    temp >>= 1;
+  }
+
+  // Determine shift needed
+  const int shift_amount = std::max(0, bits_used - target_bits);
+
+  if (shift_amount == 0) {
+    return 0;
+  }
+
+  return shift_amount;
+}
+
+//------------------------------------------------------------------------------
+// Normalize a vector by bit-shifting to fit within target bit width
+//
+// Finds the largest component (by absolute value) and right-shifts all
+// components uniformly so the max fits within target_bits.
+//
+// This preserves direction while reducing magnitude, making it safe to use
+// in scale-invariant calculations (e.g., parametric line-plane intersection).
+//
+// target_bits should be less than the bit width of CoordType to leave room
+// for subsequent operations.
+//------------------------------------------------------------------------------
+template<typename CoordType, typename Wide>
+Point2<CoordType> normalizeByBitShift(const Point2<Wide>& vec,
+                                      const int target_bits = 42) {
+  // Find largest absolute value component
+  Wide abs_x = vec.x < 0 ? -vec.x : vec.x;
+  Wide abs_y = vec.y < 0 ? -vec.y : vec.y;
+  Wide max_val = std::max({abs_x, abs_y});
+
+  if (max_val == 0) return Point2<CoordType>(0, 0);
+
+  // Determine bit shift amount
+  auto shift = bitShiftAmount(max_val, target_bits);
+
+  // Shift all components uniformly and cast to target type
+  return vec.template bitShift<CoordType>(shift);
+}
+
+template<typename CoordType, typename Wide>
+Point3<CoordType> normalizeByBitShift(const Point3<Wide>& vec,
+                                      const int target_bits = 42) {
+
+  // Find largest absolute value component
+  Wide abs_x = vec.x < 0 ? -vec.x : vec.x;
+  Wide abs_y = vec.y < 0 ? -vec.y : vec.y;
+  Wide abs_z = vec.z < 0 ? -vec.z : vec.z;
+  Wide max_val = std::max({abs_x, abs_y, abs_z});
+
+  if (max_val == 0) return Point3<CoordType>(0, 0, 0);
+
+  // Determine bit shift amount
+  auto shift = bitShiftAmount(max_val, target_bits);
+
+  // Shift all components uniformly and cast to target type
+  return vec.template bitShift<CoordType>(shift);
+}
+
+//------------------------------------------------------------------------------
+// Quantized dot product with overflow protection
+// Casts to WideInt before multiplication to prevent overflow
+//------------------------------------------------------------------------------
+template<int Dim, typename CoordType>
+WideInt<CoordType> qdot(const Point<Dim, CoordType>& a,
+                        const Point<Dim, CoordType>& b) {
+  using Wide = WideInt<CoordType>;
+  const auto ah = a.template type_cast<Wide>();
+  const auto bh = b.template type_cast<Wide>();
+
+  Wide sum = 0;
+  for (int i = 0; i < Dim; ++i) {
+    sum += ah[i] * bh[i];
+  }
+  return sum;
+}
+
+//------------------------------------------------------------------------------
+// Quantized 2D cross product (returns scalar z-component)
+// Computes: a.x * b.y - a.y * b.x
+//------------------------------------------------------------------------------
+template<typename CoordType>
+WideInt<CoordType> qcross(const Point2<CoordType>& a,
+                          const Point2<CoordType>& b) {
+  using Wide = WideInt<CoordType>;
+  const auto ah = a.template type_cast<Wide>();
+  const auto bh = b.template type_cast<Wide>();
+  return (ah.x * bh.y) - (ah.y * bh.x);
+}
+
+//------------------------------------------------------------------------------
+// Quantized 3D cross product (returns vector)
+// Computes: a × b
+//------------------------------------------------------------------------------
+template<typename CoordType>
+Point3<WideInt<CoordType>> qcross(const Point3<CoordType>& a,
+                                  const Point3<CoordType>& b) {
+  using Wide = WideInt<CoordType>;
+  const auto ah = a.template type_cast<Wide>();
+  const auto bh = b.template type_cast<Wide>();
+
+  const Wide cx = (ah.y * bh.z) - (ah.z * bh.y);
+  const Wide cy = (ah.z * bh.x) - (ah.x * bh.z);
+  const Wide cz = (ah.x * bh.y) - (ah.y * bh.x);
+
+  return Point3<Wide>(cx, cy, cz);
+}
+
+template<typename CoordType>
+Point3<CoordType> norm_qcross(const Point3<CoordType>& v0,
+                              const Point3<CoordType>& v1) {
+  const auto cross_full = qcross(v0, v1);
+  return normalizeByBitShift<CoordType>(cross_full);
+}
+
+//------------------------------------------------------------------------------
+// Compare the magnitude of 2 points. Return true if p1 > p2
+//------------------------------------------------------------------------------
+template<int Dimension, typename CoordType>
+bool magComparison(const Point<Dimension, CoordType>& p1,
+                   const Point<Dimension, CoordType>& p2) {
+  using Wide = WideInt<CoordType>;
+  auto p1w = p1.template type_cast<Wide>();
+  auto p2w = p2.template type_cast<Wide>();
+  Wide mag1 = 0, mag2 = 0;
+  for (int d = 0; d < Dimension; ++d) {
+    mag1 += p1w[d]*p1w[d];
+    mag2 += p2w[d]*p2w[d];
+  }
+  return (mag1 > mag2) ? true : false;
+}
+
+//------------------------------------------------------------------------------
+// From 3 points, compute the plane normal and normalize it by bit shifting
+//------------------------------------------------------------------------------
+template<typename CoordType>
+Point3<CoordType> computeNormal(const Point3<CoordType>& v0,
+                                const Point3<CoordType>& v1,
+                                const Point3<CoordType>& v2) {
+  const auto edge1 = v1 - v0;
+  const auto edge2 = v2 - v0;
+  const auto plane_normal_full = qcross<CoordType>(edge1, edge2);
+  return normalizeByBitShift<CoordType>(plane_normal_full);
+}
+
+//------------------------------------------------------------------------------
+// Determine if a point is collinear with a line
+//   1. Check collinearity: (point - vi) × (vj - vi) == 0
+//   2. Check if point is between vi and vj using bounding box test
+//------------------------------------------------------------------------------
+template<typename CoordType>
+bool collinear(const Point2<CoordType>& segStart,
+               const Point2<CoordType>& segEnd,
+               const Point2<CoordType>& point) {
+  auto vp = point - segStart;
+  auto vj = segEnd - segStart;
+  if (qcross(vp, vj) != 0) {
+    return false;
+  }
+  // Point is collinear with line - check if it's between endpoints
+  // Use bounding box test for each coordinate
+  auto min = segStart.minElements(segEnd);
+  auto max = segStart.maxElements(segEnd);
+  if (point.allGreaterEqual(min) && point.allLessEqual(max)) {
+    return true;
+  }
+  return false;
+}
+
+//------------------------------------------------------------------------------
+// Project a 3D point to 2D by dropping the specified axis
+//   projAxis = 0: drop x, keep (y, z)
+//   projAxis = 1: drop y, keep (x, z)
+//   projAxis = 2: drop z, keep (x, y)
+//------------------------------------------------------------------------------
+template<typename CoordType>
+Point2<CoordType> projectTo2D(const Point3<CoordType>& point,
+                              const int projAxis) {
+  switch (projAxis) {
+    case 0:  return Point2<CoordType>(point.y, point.z);
+    case 1:  return Point2<CoordType>(point.x, point.z);
+    default: return Point2<CoordType>(point.x, point.y);
+  }
+}
+
+//------------------------------------------------------------------------------
+// Compare a point to a line or plane to determine if the point is inside the
+// interior half-plane, inside the exterior half-plane, or collinear/coplanar.
+// Returns -1, 1, or 0, respectively.
+// p: Point of interest
+// 2D version takes the start and end of the facet.
+// 3D version takes a point on the facets plane and the bit-shifted normalized
+// plane normal.
+//------------------------------------------------------------------------------
+template<typename CoordType>
+int aboveBelow(const Point2<CoordType>& a,
+               const Point2<CoordType>& b,
+               const Point2<CoordType>& p) {
+  auto ab = b - a;
+  auto ap = p - a;
+  auto ztest = qcross<CoordType>(ab, ap);
+  return -(ztest < 0 ? -1 :
+           ztest > 0 ? 1 :
+           0);
+}
+
+template<typename CoordType>
+int aboveBelow(const Point3<CoordType>& a,
+               const Point3<CoordType>& n,
+               const Point3<CoordType>& p) {
+  auto ap = p - a;
+  auto ztest = qdot<3>(ap, n);
+  return (ztest < 0 ? -1 :
+          ztest > 0 ? 1 :
+          0);
+}
+
+template<int Dimension, typename CoordType>
+bool aboveBelow(const Point<Dimension, CoordType>& v0,
+                const Point<Dimension, CoordType>& n,
+                const std::vector<Point<Dimension, CoordType>>& points) {
+  const auto NP = points.size();
+  const int result = aboveBelow(v0, n, points[0]);
+  if (result == 0) {
+    return true;
+  }
+  for (auto i = 1; i < NP; ++i) {
+    if (result != aboveBelow(v0, n, points[i])) {
+      return true;
+    }
+  }
+  return false;
+}
+
+//------------------------------------------------------------------------------
+// Determine if a separating axis exists
+//------------------------------------------------------------------------------
+template<typename CoordType>
+bool SAT(const std::vector<Point3<CoordType>>& pointsA,
+         const std::vector<Point3<CoordType>>& pointsB,
+         const Point3<CoordType>& axis) {
+  using Wide = WideInt<CoordType>;
+  Wide minA = HashKey<3>::hashMax();
+  Wide minB = minA, maxA = -minA, maxB = maxA;
+  for (const auto& p : pointsA) {
+    auto ztest = qdot<3>(p, axis);
+    if (ztest < minA) {
+      minA = ztest;
+    }
+    if (ztest > maxA) {
+      maxA = ztest;
+    }
+  }
+  for (const auto& p : pointsB) {
+    auto ztest = qdot<3>(p, axis);
+    if (ztest < minB) {
+      minB = ztest;
+    }
+    if (ztest > maxB) {
+      maxB = ztest;
+    }
+  }
+  return maxA < minB || maxB < minA;
+}
+
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// Topology utilities
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+//------------------------------------------------------------------------------
+// Orient a 3D facet so its normal points away from a reference point (centroid)
+// Version 2: Uses precomputed normal
+//------------------------------------------------------------------------------
+template<typename CoordType, typename WideType>
+void orientFacetOutward(std::vector<int>& facet,
+                        const std::vector<Point3<CoordType>>& points,
+                        const Point3<CoordType>& precomputedNormal,
+                        const Point3<WideType>& centroid,
+                        WideType numPoints) {
+  if (facet.size() < 3) return;
+
+  // Vector from centroid to facet (use v0 as representative point)
+  const auto& v0 = points[facet[0]];
+  auto toFace = normalizeByBitShift<CoordType>(numPoints * v0.template type_cast<WideType>() - centroid);
+  WideType dot = qdot<3, CoordType>(precomputedNormal, toFace);
+
+  // If dot < 0, normal points inward - reverse vertex order
+  if (dot < 0) {
+    std::reverse(facet.begin(), facet.end());
+  }
+}
+
+//------------------------------------------------------------------------------
+// Remove coplanar adjacent faces by merging them
+// Uses precomputed normals (updates normal array as faces merge)
+//------------------------------------------------------------------------------
+template<typename CoordType>
+void mergeCoplanarFaces(std::vector<std::vector<int>>& faces,
+                        std::vector<Point3<CoordType>>& normals,
+                        const std::vector<Point3<CoordType>>& points) {
+  if (faces.size() < 2) return;
+
+  bool merged = true;
+  while (merged) {
+    merged = false;
+    // Try to find a pair of adjacent coplanar faces to merge
+    for (size_t i = 0; i < faces.size()-1 && !merged; ++i) {
+      edge::EdgeToFaceMap uniqueEdges;
+      edge::addUniqueEdges(faces[i], uniqueEdges);
+      for (size_t j = i + 1; j < faces.size() && !merged; ++j) {
+        if (normals[i] != normals[j]) continue;
+        if (!edge::sharedEdges(faces[j], uniqueEdges)) continue;
+        merged = true;
+        faces.erase(faces.begin() + j);
+        normals.erase(normals.begin() + j);
+        // Get new merged face
+        faces[i] = edge::traceBoundary(uniqueEdges);
+        // Reverse order if normals are different
+        if (computeNormal(points[faces[i][0]],
+                          points[faces[i][1]],
+                          points[faces[i][2]]) == -normals[i]) {
+          std::reverse(faces[i].begin(), faces[i].end());
+        }
+      }
+    }
+  }
+}
+
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// Precomputation helpers for normals and centroids
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+//------------------------------------------------------------------------------
+// Compute normalized normal for a single face
+//------------------------------------------------------------------------------
+template<typename CoordType>
+Point3<CoordType> computeFaceNormal(const std::vector<int>& face,
+                                    const std::vector<Point3<CoordType>>& vertices) {
+  if (face.size() < 3) return Point3<CoordType>(0, 0, 0);
+
+  const auto& v0 = vertices[face[0]];
+  const auto& v1 = vertices[face[1]];
+  const auto& v2 = vertices[face[2]];
+
+  return computeNormal(v0, v1, v2);
+}
+
+//------------------------------------------------------------------------------
+// Compute normalized normals for all faces
+//------------------------------------------------------------------------------
+template<typename CoordType>
+std::vector<Point3<CoordType>> computeFaceNormals(
+    const std::vector<Point3<CoordType>>& vertices,
+    const std::vector<std::vector<int>>& faces) {
+
+  std::vector<Point3<CoordType>> normals;
+  normals.reserve(faces.size());
+
+  for (const auto& face : faces) {
+    normals.push_back(computeFaceNormal(face, vertices));
+  }
+
+  return normals;
+}
+
+//------------------------------------------------------------------------------
+// Compute centroid for a single face (as unnormalized sum)
+// Returns: (sum of vertices, count of vertices)
+//------------------------------------------------------------------------------
+template<typename CoordType>
+std::pair<Point3<WideInt<CoordType>>, WideInt<CoordType>>
+computeFaceCentroid(const std::vector<int>& face,
+                    const std::vector<Point3<CoordType>>& vertices) {
+  using Wide = WideInt<CoordType>;
+  Point3<Wide> sum(0, 0, 0);
+
+  for (int idx : face) {
+    sum = sum + vertices[idx].template type_cast<Wide>();
+  }
+
+  return {sum, static_cast<Wide>(face.size())};
+}
+
+//------------------------------------------------------------------------------
+// Compute centroids for all faces (as unnormalized sums)
+// Returns vector of (sum, count) pairs
+//------------------------------------------------------------------------------
+template<typename CoordType>
+std::vector<std::pair<Point3<WideInt<CoordType>>, WideInt<CoordType>>>
+computeFaceCentroids(const std::vector<Point3<CoordType>>& vertices,
+                     const std::vector<std::vector<int>>& faces) {
+  using Wide = WideInt<CoordType>;
+  std::vector<std::pair<Point3<Wide>, Wide>> centroids;
+  centroids.reserve(faces.size());
+
+  for (const auto& face : faces) {
+    centroids.push_back(computeFaceCentroid(face, vertices));
+  }
+
+  return centroids;
+}
+
+//------------------------------------------------------------------------------
+// Compute volume-weighted centroid for a polyhedron (as unnormalized sum)
+// Uses tetrahedral decomposition from origin
+// Returns: (weighted sum, total weight)
+//------------------------------------------------------------------------------
+template<typename CoordType>
+std::pair<Point3<WideInt<CoordType>>, WideInt<CoordType>>
+computePolyhedronCentroid(const std::vector<Point3<CoordType>>& vertices,
+                          const std::vector<std::vector<int>>& faces) {
+  using Wide = WideInt<CoordType>;
+  Point3<Wide> weightedSum(0, 0, 0);
+  Wide totalWeight = 0;
+
+  // Decompose polyhedron into tetrahedra from origin
+  for (const auto& face : faces) {
+    if (face.size() < 3) continue;
+
+    // Triangulate face (simple fan triangulation)
+    const auto& v0 = vertices[face[0]];
+    for (size_t i = 1; i + 1 < face.size(); ++i) {
+      const auto& v1 = vertices[face[i]];
+      const auto& v2 = vertices[face[i + 1]];
+
+      // Signed volume of tetrahedron (origin, v0, v1, v2) = dot(v0, cross(v1, v2)) / 6
+      // We'll skip the /6 and accumulate the unnormalized weight
+      auto cross_full = qcross(v1.template type_cast<Wide>(),
+                               v2.template type_cast<Wide>());
+      Wide signedVol6 = qdot<3>(v0.template type_cast<Wide>(), cross_full);
+
+      // Centroid of tetrahedron is at (v0 + v1 + v2) / 4 (plus origin / 4)
+      // Weighted contribution: signedVol6 * (v0 + v1 + v2) / 4
+      // We keep unnormalized: signedVol6 * (v0 + v1 + v2)
+      auto tetCenter = v0.template type_cast<Wide>() +
+                       v1.template type_cast<Wide>() +
+                       v2.template type_cast<Wide>();
+
+      // Normalize both operands before multiplication to prevent overflow
+      // signedVol6 can be ~coord^3, tetCenter components can be ~3*coord
+      // Product would be ~coord^4 which overflows __int128 for large coords
+      // Shift both to fit in ~60 bits so product fits in ~120 bits (< 127 for __int128)
+      Wide vol_abs = signedVol6 < 0 ? -signedVol6 : signedVol6;
+      Wide max_center = std::max({tetCenter.x < 0 ? -tetCenter.x : tetCenter.x,
+                                  tetCenter.y < 0 ? -tetCenter.y : tetCenter.y,
+                                  tetCenter.z < 0 ? -tetCenter.z : tetCenter.z});
+
+      int vol_shift = bitShiftAmount(vol_abs, 60);
+      int center_shift = bitShiftAmount(max_center, 60);
+
+      Wide vol_norm = signedVol6 >> vol_shift;
+      auto center_norm = tetCenter.template bitShift<Wide>(center_shift);
+
+      // Accumulate with normalized values
+      weightedSum = weightedSum + center_norm * vol_norm;
+      totalWeight += vol_norm;
+    }
+  }
+
+  // Return unnormalized weighted sum and total weight
+  // Actual centroid would be: weightedSum / (4 * totalWeight)
+  // But we keep it unnormalized to avoid division
+  return {weightedSum, totalWeight * 4};
+}
+
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// Double and pointer operations
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+template<int Dimension, typename RealType>
+RealType dot(const RealType* a,
+             const RealType* b) {
+  RealType sum = 0.;
+  for (int i = 0; i < Dimension; ++i) {
+    sum += a[i]*b[i];
+  }
+  return sum;
+}
+
+//------------------------------------------------------------------------------
+// Determine if the given points are collinear to some accuracy.
+//------------------------------------------------------------------------------
+template<int Dimension, typename RealType>
+bool
+collinear(const RealType* a, const RealType* b, const RealType* c, const RealType tol) {
+  double ab[Dimension], ac[Dimension], abmag = 0.0, acmag = 0.0;
+  for (unsigned j = 0; j != Dimension; ++j) {
+    ab[j] = b[j] - a[j];
+    ac[j] = c[j] - a[j];
+    abmag += ab[j]*ab[j];
+    acmag += ac[j]*ac[j];
+  }
+  if (abmag < tol or acmag < tol) return true;
+  abmag = std::sqrt(abmag);
+  acmag = std::sqrt(acmag);
+  for (unsigned j = 0; j != Dimension; ++j) {
+    ab[j] /= abmag;
+    ac[j] /= acmag;
+  }
+  return std::abs(std::abs(dot<Dimension, double>(ab, ac)) - 1.0) < tol;
+}
+
+template<int Dimension, typename RealType>
+void UnitVector(RealType* a) {
+  if constexpr (Dimension == 2) {
+    const RealType mag = std::max(1.E-100, std::sqrt(a[0]*a[0] + a[1]*a[1]));
+    a[0] /= mag;
+    a[1] /= mag;
+  } else if constexpr (Dimension == 3) {
+    const RealType mag = std::max(1.0e-100, sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2]));
+    a[0] /= mag;
+    a[1] /= mag;
+    a[2] /= mag;
+  }
+}
+
+template<int Dimension, typename RealType>
+void cross(const RealType* a,
+           const RealType* b,
+           RealType* c) {
+  if constexpr (Dimension == 2) {
+    c[2] = a[0]*b[1] - a[1]*b[0];
+  } else if constexpr (Dimension == 3) {
+    c[0] = a[1]*b[2] - a[2]*b[1];
+    c[1] = a[2]*b[0] - a[0]*b[2];
+    c[2] = a[0]*b[1] - a[1]*b[0];
+  }
+}
+
+}
+#endif

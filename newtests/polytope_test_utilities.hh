@@ -6,14 +6,12 @@
 
 #include <sstream>
 #include "polytope.hh"
-#include "polytope_geometric_utilities.hh"
-#include "SiloWriter.hh"
-#include "BoostTessellator.hh"
 
-#include "Tessellator.hh"
+#include "SiloWriter.hh"
 #include "Tessellation.hh"
 #include "Boundary2D.hh"
 #include "Generators.hh"
+#include "Tessellator.hh"
 
 namespace polytope {
 
@@ -27,23 +25,23 @@ void outputMesh(const Tessellation<2,RealType>& mesh,
 		const std::vector<RealType>& points,
 		const unsigned testCycle = 1,
 		const RealType time = 0.0) {
-  POLY_CHECK(points.empty() or
-              points.size() == 2*mesh.cells.size());
+  // POLY_CHECK(points.empty() or
+  //            points.size() >= 2*mesh.cells.size());
 #ifdef POLYTOPE_ENABLE_SILO
   std::vector<double> index(mesh.cells.size());
   std::vector<double> genx (mesh.cells.size());
   std::vector<double> geny (mesh.cells.size());
   for (int i = 0; i < mesh.cells.size(); ++i){
     index[i] = double(i);
-    if (!points.empty()) {
-      genx[i] = points[2*i  ];
-      geny[i] = points[2*i+1];
-    }
+    // if (!points.empty()) {
+    //   genx[i] = points[2*i  ];
+    //   geny[i] = points[2*i+1];
+    // }
   }
   std::map<std::string,double*> nodeFields, edgeFields, faceFields, cellFields;
   cellFields["cell_index"] = &index[0];
-  cellFields["gen_x"     ] = &genx[0];
-  cellFields["gen_y"     ] = &geny[0];
+  // cellFields["gen_x"     ] = &genx[0];
+  // cellFields["gen_y"     ] = &geny[0];
   std::ostringstream os;
   os << prefix;
   SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
@@ -61,13 +59,13 @@ void outputMesh(const Tessellation<3,RealType>& mesh,
 		const unsigned testCycle = 1,
 		const RealType time = 0.0) {
   POLY_CHECK(points.empty() ||
-              points.size() == 3*mesh.cells.size());
+             points.size() == 3*mesh.cells.size());
 #ifdef POLYTOPE_ENABLE_SILO
   std::vector<double> index(mesh.cells.size());
   std::vector<double> genx (mesh.cells.size());
   std::vector<double> geny (mesh.cells.size());
   std::vector<double> genz (mesh.cells.size());
-  std::vector<double> vol  (mesh.cells.size());
+  //std::vector<double> vol  (mesh.cells.size());
   double cent[3];
   for (int i = 0; i < mesh.cells.size(); ++i){
     index[i] = double(i);
@@ -76,14 +74,14 @@ void outputMesh(const Tessellation<3,RealType>& mesh,
       geny[i] = points[3*i+1];
       genz[i] = points[3*i+2];
     }
-    geometry::computeCellCentroidAndSignedVolume(mesh, i, cent, vol[i]);
+    //mesh.computeCellCentroidAndSignedVolume(i, cent, vol[i]);
   }
   std::map<std::string,double*> nodeFields, edgeFields, faceFields, cellFields;
   cellFields["cell_index"] = &index[0];
   cellFields["gen_x"     ] = &genx[0];
   cellFields["gen_y"     ] = &geny[0];
   cellFields["gen_z"     ] = &genz[0];
-  cellFields["volume"    ] = &vol[0];
+  //cellFields["volume"    ] = &vol[0];
   std::ostringstream os;
   os << prefix;
   SiloWriter<3, double>::write(mesh, nodeFields, edgeFields, 

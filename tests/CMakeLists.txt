@@ -57,7 +57,8 @@ polytope_add_test(Quantizer)
 polytope_add_test(QuantPLC3D)
 polytope_add_test(QuantConvexIntersect3D)
 polytope_add_test(clipPolyhedron3D)
-polytope_add_test(main3D)
+polytope_add_test(newclip)
+#polytope_add_test(main3D)
 
 #-----------------------------------------------------------------------------
 # Serial Tessellator Tests

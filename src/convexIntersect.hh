@@ -7,6 +7,7 @@
 #include "PLC.hh"
 #include "polytope_geometric_utilities.hh"
 
+namespace polytope {
 namespace { // anonymous
 
 //------------------------------------------------------------------------------
@@ -19,8 +20,6 @@ hashEdge(const int i, const int j) {
 }
 
 }           // anonymous
-
-namespace polytope {
 
 //------------------------------------------------------------------------------
 // Convex polygon intersection.
