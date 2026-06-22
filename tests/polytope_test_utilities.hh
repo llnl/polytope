@@ -15,6 +15,10 @@
 #include "Boundary2D.hh"
 #include "Generators.hh"
 
+#ifdef POLYTOPE_ENABLE_TRIANGLE
+#include "TriangleTessellator.hh"
+#endif
+
 namespace polytope {
 
 //------------------------------------------------------------------------------

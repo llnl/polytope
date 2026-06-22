@@ -79,9 +79,6 @@ public:
   //! Compute the quantized tessellation.  This is the basic method all
   //! Tessellator implementations must provide, on which the other tessellation methods
   //! in polytope build.
-  //! If running this function during the clipping procedure, pass doClipping = true.
-  virtual void
-  tessellateQuantized(QuantizedTessellation& qmesh, bool doClipping = false) const = 0;
   virtual void
   tessellateQuantized(const QuantPLC<Dimension>& qplc,
                       QuantizedTessellation& qmesh) const = 0;

@@ -36,10 +36,70 @@ inline Edge orderEdge(const int v0, const int v1) {
   return v0 < v1 ? std::make_pair(v0, v1) : std::make_pair(v1, v0);
 }
 
+inline Edge orderEdge(const Edge edge) {
+  return edge.first < edge.second ? edge : std::make_pair(edge.second, edge.first);
+}
+
 //------------------------------------------------------------------------------
 // Order a loop of edges to form a connected chain
 // Ensures edges[i][1] connects to edges[i+1][0]
 //------------------------------------------------------------------------------
+inline void orderEdgeLoop(std::vector<edge::Edge>& edges,
+                          std::map<int, int>& oldToNew) {
+  if (edges.empty()) return;
+
+  std::vector<edge::Edge> ordered;
+  ordered.reserve(edges.size());
+  oldToNew.clear();
+
+  // Build map: start vertex -> list of edge indices starting at that vertex
+  std::map<int, std::vector<int>> startMap;
+  for (size_t i = 0; i < edges.size(); ++i) {
+    startMap[edges[i].first].push_back(i);
+  }
+
+  // Follow the chain starting from first edge
+  std::set<int> used;
+  int current = 0;
+
+  while (used.size() < edges.size()) {
+    // Add current edge to ordered list
+    oldToNew[current] = ordered.size();
+    ordered.push_back(edges[current]);
+    used.insert(current);
+
+    // Find next edge: one that starts where this one ends
+    int nextVertex = edges[current].second;
+    bool foundNext = false;
+
+    if (startMap.count(nextVertex)) {
+      for (int candidate : startMap[nextVertex]) {
+        if (!used.count(candidate)) {
+          current = candidate;
+          foundNext = true;
+          break;
+        }
+      }
+    }
+
+    // If chain is broken but we haven't used all edges, find an unused edge to continue
+    if (!foundNext && used.size() < edges.size()) {
+      for (size_t i = 0; i < edges.size(); ++i) {
+        if (!used.count(i)) {
+          current = i;
+          foundNext = true;
+          break;
+        }
+      }
+    }
+
+    // If we still can't find an edge, we're done
+    if (!foundNext) break;
+  }
+
+  edges = ordered;
+}
+
 inline void orderEdgeLoop(std::vector<std::vector<int>>& edges,
                           std::map<int, int>& oldToNew) {
   if (edges.empty()) return;
@@ -227,6 +287,35 @@ inline std::pair<int, int> getOrientedNodes(int signedIndex,
 //------------------------------------------------------------------------------
 inline int reverseOrientation(int signedIndex) {
   return ~signedIndex;
+}
+
+//------------------------------------------------------------------------------
+// Modify the nodes list if points do not exist in a given node id map
+//------------------------------------------------------------------------------
+template<int Dimension, typename CoordType>
+inline edge::Edge updateNodeMap(const Point<Dimension, CoordType>& p0,
+                                const Point<Dimension, CoordType>& p1,
+                                std::map<Point<Dimension, CoordType>, int>& node2id,
+                                std::vector<Point<Dimension, CoordType>>& nodes) {
+  auto it0 = node2id.find(p0);
+  int n0;
+  if (it0 == node2id.end()) {
+    n0 = nodes.size();
+    node2id[p0] = n0;
+    nodes.push_back(p0);
+  } else {
+    n0 = it0->second;
+  }
+  auto it1 = node2id.find(p1);
+  int n1;
+  if (it1 == node2id.end()) {
+    n1 = nodes.size();
+    node2id[p1] = n1;
+    nodes.push_back(p1);
+  } else {
+    n1 = it1->second;
+  }
+  return edge::Edge(std::make_pair(n0, n1));
 }
 
 }

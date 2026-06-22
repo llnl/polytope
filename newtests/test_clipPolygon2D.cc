@@ -18,6 +18,7 @@
 #include "Boundary2D.hh"
 #include "QuantTessellation.hh"
 #include "BoostTessellator.hh"
+#include "TriangleTessellator.hh"
 
 #ifdef POLYTOPE_ENABLE_MPI
 #include "mpi.h"
@@ -377,8 +378,10 @@ void testSequentialClipping(const int tnum) {
 //------------------------------------------------------------------------------
 // Test 10: Complex clipping (multiple edges)
 //------------------------------------------------------------------------------
-void testSquare(const int tnum) {
+void testSquare(const int tnum, bool boostTess) {
   cout << "\n=== Test " << tnum << ": Square Clipping ===" << endl;
+  std::string outname = (boostTess) ? "boost" : "triangle";
+  outname += std::to_string(tnum);
   Boundary2D<double> boundary;
   boundary.setDefaultBoundary(0);
   Quantizer<2> Q(boundary.mQ);
@@ -387,39 +390,36 @@ void testSquare(const int tnum) {
   double len = hiv - lov;
   unsigned Nx = 2;
   double dx = len/double(Nx);
-  vector<double> points;
-  for (auto j = 0; j < Nx; ++j) {
-    auto yloc = lov + dx*(j + 0.5);
-    for (auto i = 0; i < Nx; ++i) {
-      auto xloc = lov + dx*(i + 0.5);
-      points.push_back(xloc);
-      points.push_back(yloc);
-    }
-  }
+  vector<double> points = {0.05, 0.025, 0.025, 0.05, 0.05, -0.05, -0.05, -0.05, -0.05, 0.05};
   QuantTessellation<2> quantMesh(Q, points);
   QuantPLC<2> QPLC(boundary.mPLC, Q, boundary.mPLCpoints);
-  BoostTessellator boost(Q);
-  boost.tessellateQuantized(QPLC, quantMesh);
-  quantMesh.clipTessellation(QPLC, boost);
+  if (boostTess) {
+    BoostTessellator boost(Q);
+    boost.tessellateQuantized(QPLC, quantMesh);
+    quantMesh.clipTessellation(QPLC, boost);
+  } else {
+    TriangleTessellator tri(Q);
+    tri.tessellateQuantized(QPLC, quantMesh);
+    quantMesh.clipTessellation(QPLC, tri);
+  }
   Tessellation<2, double> mesh;
   quantMesh.fillTessellation(mesh);
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
-  outputMesh(mesh, "testsquare", points, 0, 0.0);
+  outputMesh(mesh, outname, points, 0, 0.0);
 }
 
 //------------------------------------------------------------------------------
 // Test 10: Complex clipping (multiple edges)
 //------------------------------------------------------------------------------
-void testSquareTriangle(const int tnum) {
+void testSquareTriangle(const int tnum, bool boostTess) {
   cout << "\n=== Test " << tnum << ": Square Triangle Clipping ===" << endl;
+  std::string outname = (boostTess) ? "boost" : "triangle";
+  outname += std::to_string(tnum);
   Boundary2D<double> boundary;
   boundary.setDefaultBoundary(0);
-  double lov = -0.05;
-  double hiv = 0.05;
-  // Add a triangle hole
   vector<double> points = {0.05, 0.025, 0.025, 0.05, 0.05, -0.05, -0.05, -0.05, -0.05, 0.05};
+  // Add a triangle hole
   vector<double> newPoints = {0.3, -0.4, 0.2, 0.4, 0.2, -0.4};
-  //vector<double> newPoints = {0.2, -0.4, 0.2, 0.4, 0.3, -0.4};
   auto Nf = newPoints.size()/2;
   auto N = boundary.mPLCpoints.size()/2;
   copy(newPoints.begin(), newPoints.end(), back_inserter(boundary.mPLCpoints));
@@ -436,20 +436,28 @@ void testSquareTriangle(const int tnum) {
   Quantizer<2> Q(boundary.mQ);
   QuantTessellation<2> quantMesh(Q, points);
   QuantPLC<2> QPLC(boundary.mPLC, Q, boundary.mPLCpoints);
-  BoostTessellator boost(Q);
-  boost.tessellateQuantized(QPLC, quantMesh);
-  quantMesh.clipTessellation(QPLC, boost);
+  if (boostTess) {
+    BoostTessellator boost(Q);
+    boost.tessellateQuantized(QPLC, quantMesh);
+    quantMesh.clipTessellation(QPLC, boost);
+  } else {
+    TriangleTessellator tri(Q);
+    tri.tessellateQuantized(QPLC, quantMesh);
+    quantMesh.clipTessellation(QPLC, tri);
+  }
   Tessellation<2, double> mesh;
   quantMesh.fillTessellation(mesh);
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
-  outputMesh(mesh, "squaretriangle", points, 0, 0.0);
+  outputMesh(mesh, outname, points, 0, 0.0);
 }
 
 //------------------------------------------------------------------------------
 // Test 10: Complex clipping (multiple edges)
 //------------------------------------------------------------------------------
-void testDiamond(const int tnum) {
+void testDiamond(const int tnum, bool boostTess) {
   cout << "\n=== Test " << tnum << ": Complex Clipping ===" << endl;
+  std::string outname = (boostTess) ? "boost" : "triangle";
+  outname += std::to_string(tnum);
   Boundary2D<double> boundary;
   boundary.setDefaultBoundary(0);
   Quantizer<2> Q(boundary.mQ);
@@ -458,13 +466,19 @@ void testDiamond(const int tnum) {
   vector<double> points = {lov, 0, hiv, 0, 0, lov, 0, hiv};
   QuantTessellation<2> quantMesh(Q, points);
   QuantPLC<2> QPLC(boundary.mPLC, Q, boundary.mPLCpoints);
-  BoostTessellator boost(Q);
-  boost.tessellateQuantized(QPLC, quantMesh);
-  quantMesh.clipTessellation(QPLC, boost);
+  if (boostTess) {
+    BoostTessellator boost(Q);
+    boost.tessellateQuantized(QPLC, quantMesh);
+    quantMesh.clipTessellation(QPLC, boost);
+  } else {
+    TriangleTessellator tri(Q);
+    tri.tessellateQuantized(QPLC, quantMesh);
+    quantMesh.clipTessellation(QPLC, tri);
+  }
   Tessellation<2, double> mesh;
   quantMesh.fillTessellation(mesh);
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
-  outputMesh(mesh, "testdiamond", points, 0, 0.0);
+  outputMesh(mesh, outname, points, 0, 0.0);
 }
 
 
@@ -480,9 +494,13 @@ int main(int argc, char** argv) {
 
   try {
     int test = 1;
-    testSquare(test++);
-    testSquareTriangle(test++);
-    testDiamond(test++);
+    bool boost = true;
+    for (int i = 0; i < 2; ++i) {
+      testSquare(test++, boost);
+      testSquareTriangle(test++, boost);
+      testDiamond(test++, boost);
+      boost = false;
+    }
     testPointLineClassification(test++);
     testEdgeLineClipping(test++);
     testClipSquareHorizontal(test++);

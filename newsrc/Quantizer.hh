@@ -106,6 +106,8 @@ public:
     if (degeneracy > 0.) {
       m_dx_o = degeneracy*m_lx_o;
       maxCoord = (m_lx_o/m_dx_o).template type_cast<IntType>();
+      maxBound = maxCoord - 1;
+      rmaxBound = maxBound.template type_cast<RealType>();
     } else {
       m_dx_o = m_lx_o/static_cast<RealType>(m_coordMax);
     }

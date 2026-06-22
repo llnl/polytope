@@ -9,6 +9,7 @@ configure_file(
 
 set(polytope_headers
   Cell.hh
+  Clipping2D.hh
   EdgeUtils.hh
   ErrorHandler.hh
   GeomUtils.hh
@@ -75,6 +76,9 @@ endif()
 if (POLYTOPE_ENABLE_TRIANGLE)
   list(APPEND polytope_headers TriangleTessellator.hh)
   list(APPEND polytope_sources TriangleTessellator.cc)
+  if (NOT POLYTOPE_ENABLE_TETGEN)
+    list(APPEND polytope_source predicates.cc)
+  endif()
 endif()
 
 # VORO++ tessellator

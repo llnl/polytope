@@ -15,6 +15,7 @@
 #include "RegisterBoostPolygonTypes.hh"
 #include "Shapes.hh"
 #include "QuantPLC.hh"
+#include "Clipping2D.hh"
 
 // The Voronoi tools in Boost.Polygon
 #include <boost/polygon/voronoi.hpp>
@@ -25,38 +26,46 @@ namespace bp = boost::polygon;
 
 namespace {
 using IntType = HashKey<2>::IntType;
+using PolygonWithHoles = bp::polygon_with_holes_data<IntType>;
+using PolygonSet = bp::polygon_set_data<IntType>;
 void printpoint(const Quantizer<2>& Q,
                 const Point2<IntType>& point) {
   auto qp = Q.dequantize(point);
   std::cout << qp << std::endl;
 }
+void printPolygon(const Quantizer<2>& Q,
+                  const PolygonWithHoles& polygon) {
+  auto hole_points = bp::innerPoints(polygon);
+  auto points = bp::outerPoints(polygon);
+  std::cout << "v = [";
+  for (const auto& point : points) {
+    printpoint(Q, point);
+  }
+  std::cout << "vertices.append(v)" << std::endl;
+  for (const auto& hole : hole_points) {
+    std::cout << "hole " << std::endl;
+    for (const auto& p : hole) {
+      printpoint(Q, p);
+    }
+  }
 }
-
-void
-BoostTessellator::
-tessellateQuantized(const QuantPLC<2>& qplc,
-                    QuantizedTessellation& result) const {
-  POLY_CONTRACT_VAR(qplc);
-  tessellateQuantized(result);
+void printCell(const Quantizer<2>& Q,
+               const Cell<2, IntType>::CellType& pcell) {
+  PolygonWithHoles polygon;
+  bp::set_points(polygon, pcell.begin(), pcell.end());
+  printPolygon(Q, polygon);
+}
 }
 
 //------------------------------------------------------------------------------
 // Compute the QuantizedTessellation
 //
-// There are two ways to handle infinite edges provided by Boost.
-// 1. If doClipping is disabled, infinite edges are extended to the bounding box
-//    and edges are added to close the shape. If infinite edges span corners,
-//    two edges are added around the corner.
-// 2. If doClipping is enabled, extra generators (called guard generators) are
-//    added at the maximum extents. Any infinite edges will be relative to these
-//    generators. These generators are ignored altogether.
-// During the first pass of tessellation, doClipping should be disabled. If
-// tessellating is necessary during the clipping routine, doClipping should be
-// enabled
 //------------------------------------------------------------------------------
 void
 BoostTessellator::
-tessellateQuantized(QuantizedTessellation& result, bool doClipping) const {
+tessellateQuantized(const QuantPLC<2>& qplc,
+                    QuantizedTessellation& result) const {
+  POLY_CONTRACT_VAR(qplc);
   // Type aliases
   using IntType = typename QuantTessellation<2>::IntType;
   using IntPoint = typename QuantTessellation<2>::IntPoint;
@@ -65,9 +74,6 @@ tessellateQuantized(QuantizedTessellation& result, bool doClipping) const {
   // Get the generators
   std::vector<IntPoint> generators = result.getIntPoints();
   const size_t numGenerators = generators.size();
-  if (doClipping) {
-   result.guardGenerators(generators);
-  }
 
   // Invoke the Boost.Voronoi diagram constructor
   VD voronoi;
@@ -108,7 +114,6 @@ tessellateQuantized(QuantizedTessellation& result, bool doClipping) const {
     // Walk edges CCW around this cell
     const typename VD::edge_type* firstEdge = cellItr->incident_edge();
     const typename VD::edge_type* edge = firstEdge;
-    int nodeIndx = 0;
 
     // List of local edges
     std::vector<edge::Edge> localEdges;
@@ -117,114 +122,54 @@ tessellateQuantized(QuantizedTessellation& result, bool doClipping) const {
     int firstClippedNode = -1;
     // Which box side each infinite edge intersects
     shapes::BoxSide firstBoxSide;
-    bool didskip = false;
     do {
       const typename VD::vertex_type* v0 = edge->vertex0();
       const typename VD::vertex_type* v1 = edge->vertex1();
 
-      // TODO: Generalize infinite edge clipping
       // An edge is considered infinite if Boost provides a null pointer
-      bool v0inf = (!v0) ? true : false;
-      bool v1inf = (!v1) ? true : false;
-      Point2<double> vp0, vp1;
-      IntPoint p0, p1;
-      bool bounds0 = true;
-      bool bounds1 = true;
-      shapes::BoxSide curSide;
-      // There are two types of infinite points: Boost null pointer infinite points
-      // and points provided by Boost that exceed our bounding box.
-      // Each are handled differently
-      if (v0) {
-        vp0 = Point2<double>(v0->x(), v0->y());
-        p0 = round<2, IntType>(vp0);
-        bounds0 = Q.inQBounds(vp0);
-      }
-      if (v1) {
-        vp1 = Point2<double>(v1->x(), v1->y());
-        p1 = round<2, IntType>(vp1);
-        bounds1 = Q.inQBounds(vp1);
-      }
-      // If both points are now infinite, we must extract the vertices
       auto gindx1 = cellIndex;
       auto gindx2 = edge->twin()->cell()->source_index();
-      bool bothInf = false;
-      if (v0inf && v1inf) {
-        p1 = midPoint(result.m_points[gindx2], result.m_points[gindx1]);
-        bothInf = true;
-      } else if ((!bounds0 && !v1) || (!bounds1 && !v0) || (!bounds1 && !bounds0)) {
-        didskip = true;
+
+      Clip2D<IntType> clipper;
+      clipper.gen0 = result.m_points[gindx1];
+      clipper.gen1 = result.m_points[gindx2];
+      if (v0) {
+        clipper.rp0 = Point2<double>(v0->x(), v0->y());
+      } else {
+        clipper.inf0 = true;
+      }
+      if (v1) {
+        clipper.rp1 = Point2<double>(v1->x(), v1->y());
+      } else {
+        clipper.inf1 = true;
+      }
+      if (clipper.doClipping(Q)) {
         edge = edge->next();
         continue;
       }
-      if (v0inf) {
-        // If vertex 0 is a Boost infinite vertex
-        IntPoint outwardRay = normalRay(result.m_points[gindx2],
-                                        result.m_points[gindx1]);
-        clipInfiniteRay(p1, outwardRay, Q.minBound, Q.maxBound, p0, curSide);
-        if (bothInf) {
-          firstBoxSide = curSide;
-        }
-      } else if (!bounds0) {
-        // If vertex 0 is outside our bounding box
-        auto diff = vp0 - vp1;
-        clipInfiniteRay(vp1, diff, Q.rminBound, Q.rmaxBound, vp0, curSide);
-        p0 = round<2, IntType>(vp0);
-        v0inf = true;
-      }
-      if (v1inf) {
-        IntPoint outwardRay = normalRay(result.m_points[gindx1],
-                                        result.m_points[gindx2]);
-        clipInfiniteRay(p0, outwardRay, Q.minBound, Q.maxBound, p1, curSide);
-      } else if (!bounds1) {
-        auto diff = vp1 - vp0;
-        clipInfiniteRay(vp0, diff, Q.rminBound, Q.rmaxBound, vp1, curSide);
-        p1 = round<2, IntType>(vp1);
-        v1inf = true;
-      }
-      bool isInfinite = (v0inf || v1inf);
-      // Deduplicate by final IntPoint value, not by Boost vertex pointer
-      auto it0 = node2id.find(p0);
-      int n0;
-      if (it0 == node2id.end()) {
-        n0 = result.m_nodes.size();
-        node2id[p0] = n0;
-        p0.index = nodeIndx++;
-        result.m_nodes.push_back(p0);
-      } else {
-        n0 = it0->second;
-      }
+      bool isInfinite = (clipper.inf0 || clipper.inf1);
+      edge::Edge curEdge = edge::updateNodeMap(clipper.p0, clipper.p1, node2id, result.m_nodes);
 
-      auto it1 = node2id.find(p1);
-      int n1;
-      if (it1 == node2id.end()) {
-        n1 = result.m_nodes.size();
-        node2id[p1] = n1;
-        p1.index = nodeIndx++;
-        result.m_nodes.push_back(p1);
-      } else {
-        n1 = it1->second;
-      }
-
-      if (n0 == n1) {
+      if (curEdge.first == curEdge.second) {
         edge = edge->next();
         continue;
       }
-      edge::Edge curEdge = std::make_pair(n0, n1);
       // If both edges are infinite, make the start point n0
-      if (bothInf) {
-        firstClippedNode = n0;
-        v0inf = false;
+      if (clipper.bothInf) {
+        firstClippedNode = curEdge.first;
+        firstBoxSide = clipper.firstSide;
+        clipper.inf0 = false;
       }
       // Care must be taken when dealing with infinite edges
       if (isInfinite && firstClippedNode < 0) {
         // First infinite edge, remember the intersecting edge
-        firstBoxSide = curSide;
-        firstClippedNode = (v0inf) ? n0 : n1;
+        firstBoxSide = clipper.curSide;
+        firstClippedNode = (clipper.inf0) ? curEdge.first : curEdge.second;
         localEdges.push_back(curEdge);
       } else if (isInfinite) {
         // Second infinite edge, walk the exterior and accumulate corner points
-        shapes::walkBoxEdges(firstBoxSide, curSide, cornerIndices,
-                             curEdge, firstClippedNode, v0inf, localEdges);        
+        shapes::walkBoxEdges(firstBoxSide, clipper.curSide, cornerIndices,
+                             curEdge, firstClippedNode, clipper.inf0, localEdges);
       } else {
         localEdges.push_back(curEdge);
       }

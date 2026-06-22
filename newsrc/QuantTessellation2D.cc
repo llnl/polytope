@@ -118,6 +118,9 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
         }
       }
     }
+    // Skip if no valid neighboring cells found
+    if (genPoints.empty()) continue;
+
     // If only 1 cell is nearby, simply add orphan to it
     std::vector<PolygonWithHoles> orphanBound;
     orphanBounds.get(orphanBound);
@@ -127,7 +130,7 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
     } else {
       // Retessellate with these select generators, convert final product into boost polygons for simplicity
       QuantTessellation<2> newQT(genPoints, *this);
-      tessellator.tessellateQuantized(newQT);
+      tessellator.tessellateQuantized(QPLC, newQT);
       POLY_ASSERT2(newQT.m_cells.size() == genIndex.size(), "Number of gen points should not change");
       for (auto i = 0; i < newQT.m_cells.size(); ++i) {
         std::vector<PolygonWithHoles> newPolygon = boostIntersect(newQT.getCell(i), orphanBound[0]);
@@ -182,8 +185,7 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
     }
     newCells.push_back(cellEdgeIndices);
     newPoints.push_back(m_points[i]);
-    newHashes.push_back(m_hashes[i]);
-    i++;
+    newHashes.push_back(m_hashes[i++]);
   }
   m_nodes = std::move(newNodes);
   m_faces = std::move(newFaces);

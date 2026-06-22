@@ -13,6 +13,7 @@
 #include "libqhullcpp/QhullVertexSet.h"
 #include <map>
 #include <set>
+#include "Shapes.hh"
 
 namespace polytope {
 namespace { // Anonymous namespace for internal helpers
@@ -35,6 +36,22 @@ int zcross_sign(const Point<Dimension, IntType>& p1,
 }
 
 } // end anonymous namespace
+
+template<int Dimension>
+QuantPLC<Dimension>::QuantPLC(const Quant& Q) :
+  m_Q(Q) {
+  if constexpr (Dimension == 2) {
+      m_points = shapes::createSquarePoints(Q.minBound, Q.maxBound);
+      facets = shapes::createSquareFaces();
+      unsigned i = 0;
+      for (auto& ip : m_points) {
+        ip.index = i++;
+        m_hashes.push_back(m_Q.hash(ip));
+      }
+      removeDegeneracies();
+      orderFacets();
+    }
+}
 
 template<int Dimension>
 QuantPLC<Dimension>::QuantPLC(const PLC<Dimension>& plc,

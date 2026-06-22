@@ -27,8 +27,9 @@ tessellate(const std::vector<RealType>& points,
   POLY_ASSERT(points.size() % nDim == 0);
 
   // Invoke the descendant method to fill the quant mesh.
-  QuantPLC<nDim> qplc;
   QuantizedTessellation quantmesh(m_Q, points);
+  // Make a QPLC that is just the outer extends.
+  QuantPLC<nDim> qplc(m_Q);
   this->tessellateQuantized(qplc, quantmesh);
 
   // Copy the QuantTessellation to the output.
@@ -60,12 +61,12 @@ tessellate(const std::vector<RealType>& points,
 
   // Invoke the descendant method to fill the quant mesh.
   QuantizedTessellation quantmesh(m_Q, points);
-  QuantPLC<nDim> QPLC(geometry, m_Q, PLCpoints);
-  this->tessellateQuantized(QPLC, quantmesh);
+  QuantPLC<nDim> qplc(geometry, m_Q, PLCpoints);
+  this->tessellateQuantized(qplc, quantmesh);
 
   // Clip against the boundary.
   // Remove non-facet points and merge collinear facets
-  quantmesh.clipTessellation(QPLC, *this);
+  quantmesh.clipTessellation(qplc, *this);
 
   // Copy the QuantTessellation to the output.
   quantmesh.fillTessellation(mesh);

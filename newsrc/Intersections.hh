@@ -297,8 +297,10 @@ void removeCollinear(std::vector<edge::Edge>& edges,
 template<typename CoordType>
 Point2<CoordType> normalRay(const Point2<CoordType>& gen0,
                             const Point2<CoordType>& gen1) {
-  Point2<CoordType> diffg = gen1 - gen0;
-  return Point2<CoordType>(-diffg.y, diffg.x);
+  using Wide = WideInt<CoordType>;
+  Point2<Wide> diffg = (gen1.template type_cast<Wide>() - gen0.template type_cast<Wide>());
+  Point2<Wide> norm(-diffg.y, diffg.x);
+  return normalizeByBitShift<CoordType, Wide>(norm, 30);
 }
 
 //------------------------------------------------------------------------------

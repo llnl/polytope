@@ -17,6 +17,7 @@
 #include "intersect.hh"
 #include "PLC_Boost_2d.hh"
 #include "polytope_plc_canned_geometries.hh"
+#include "TriangleTessellator.hh"
 
 // Pull in triangle. Since triangle isn't built to work out-of-the-box with C++, 
 // we slurp in its source here, bracketing it with the necessary dressing.

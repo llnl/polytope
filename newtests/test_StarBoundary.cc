@@ -16,6 +16,10 @@
 #include "mpi.h"
 #endif
 
+#ifdef POLYTOPE_ENABLE_TRIANGLE
+#include "TriangleTessellator.hh"
+#endif
+
 using namespace std;
 using namespace polytope;
 
@@ -26,11 +30,11 @@ void test(Tessellator<2,double>& tessellator) {
   unsigned i;
   int test = 1;
   string testName = "StarBoundary_" + tessellator.name();
-  
+
   // Set the boundary and tessellator
   Boundary2D<double> boundary;
   boundary.setDefaultBoundary(8);
-  
+
   // 9 input generators points
   double gens[18] = {0.11,  0.11,
                      0.10,  0.44,
@@ -56,7 +60,6 @@ void test(Tessellator<2,double>& tessellator) {
     outputMesh(mesh,testName,points,test);
     ++test;
   }
-  
 
   // Test 2: Input generators + boundary generators
   {
@@ -75,26 +78,25 @@ void test(Tessellator<2,double>& tessellator) {
     outputMesh(mesh,testName,points,test);
     ++test;
   }
-  
 
   // Test 3: 800 random generators
   {
     cout << "\nTest 3: 800 random generators" << endl;
     Generators<2,double> generators(boundary);
-    generators.randomPoints(800);
+    generators.randomPoints(800, 10);
     Tessellation<2,double> mesh;
     tessellator.setQuantizer(boundary.mQ);
     tessellator.tessellate(generators.mPoints,boundary.mPLCpoints,boundary.mPLC,mesh);
     outputMesh(mesh,testName,generators.mPoints,test);
     ++test;
   }
-  
+
 
   // Test 4: 2000 random generators
   {
     cout << "\nTest 4: 2000 random generators" << endl;
     Generators<2,double> generators(boundary);
-    generators.randomPoints(2000);
+    generators.randomPoints(2000, 10);
     Tessellation<2,double> mesh;
     tessellator.setQuantizer(boundary.mQ);
     tessellator.tessellate(generators.mPoints,boundary.mPLCpoints,boundary.mPLC,mesh);
@@ -117,15 +119,6 @@ int main(int argc, char** argv)
 #endif
 
 
-#ifdef POLYTOPE_ENABLE_TRIANGLE
-  {
-    cout << "\nTriangle Tessellator:\n" << endl;
-    TriangleTessellator<double> tessellator;
-    test(tessellator);  
-  }
-#endif   
-
-
 #ifdef POLYTOPE_ENABLE_BOOST
   {
     cout << "\nBoost Tessellator:\n" << endl;
@@ -133,11 +126,18 @@ int main(int argc, char** argv)
     test(tessellator);
   }
 #endif
-   
-  
+
+#ifdef POLYTOPE_ENABLE_TRIANGLE
+  {
+    cout << "\nTriangle Tessellator:\n" << endl;
+    TriangleTessellator tessellator;
+    test(tessellator);
+  }
+#endif
+
 
 #ifdef POLYTOPE_ENABLE_MPI
   MPI_Finalize();
 #endif
-   return 0;
+  return 0;
 }

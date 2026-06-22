@@ -44,6 +44,8 @@ public:
   QuantPLC() = default;
   virtual ~QuantPLC() = default;
 
+  QuantPLC(const Quant& Q);
+
   QuantPLC(const PLC<Dimension>& plc,
            const Quant& Q,
            const std::vector<RealType>& allpoints);
@@ -80,6 +82,7 @@ public:
 
   bool within(const RealPoint& point) const;
 
+  // Returns quantized points cast as reals to give to the tessellator
   std::vector<RealPoint> getRealPoints() const {
     std::vector<RealPoint> realPoints;
     realPoints.reserve(m_points.size());
@@ -89,6 +92,7 @@ public:
     return realPoints;
   }
 
+  // Returns dequantized points cast as a flattened vector of reals
   std::vector<RealType> getRealCoords() const {
     std::vector<RealPoint> realPoints;
     realPoints.reserve(m_points.size());

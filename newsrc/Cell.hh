@@ -70,7 +70,7 @@ template<typename CoordType> struct Cell<3, CoordType> {
         if (f < 0) {
           facePoints.back().push_back(points[~f]);
         } else {
-          facePoints.back().push_back(points[~f]);
+          facePoints.back().push_back(points[f]);
         }
       }
     }

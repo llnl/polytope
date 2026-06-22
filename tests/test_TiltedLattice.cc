@@ -147,7 +147,7 @@ int main(int argc, char** argv)
   {
     cout << "\nTriangle Tessellator:\n" << endl;
     TriangleTessellator<double> tessellator;
-    generateMeshes(tessellator, true, Nmin, Nmax, increment);
+    generateMesh(tessellator, true, Nmin, Nmax, increment);
   }
 #endif   
 

@@ -7,6 +7,8 @@
 #define POLYTOPE_QUANTTESSELLATION_HH
 
 #include <vector>
+#include <algorithm>
+#include <numeric>
 #include "HashKey.hh"
 #include "Point.hh"
 #include "Quantizer.hh"
@@ -56,6 +58,7 @@ public:
       m_hashes.push_back(m_Q.hash(ip));
       m_points.push_back(ip);
     }
+    sortByHash();
   }
 
   // Construct a smaller instance, useful during clipping
@@ -130,6 +133,43 @@ public:
 
   IntCell getCell (const unsigned cellIndx) const {
     return Cell<Dimension, IntType>::extractCell(m_nodes, m_cells[cellIndx], m_faces);
+  }
+
+  // Reorder points and cells based on sorted hashes for deterministic output
+  void sortByHash() {
+    const auto numPoints = m_points.size();
+    if (numPoints == 0) return;
+
+    // Create index vector and sort by hash
+    std::vector<unsigned> sortedIndices(numPoints);
+    std::iota(sortedIndices.begin(), sortedIndices.end(), 0);
+    std::sort(sortedIndices.begin(), sortedIndices.end(),
+              [this](unsigned a, unsigned b) { return m_hashes[a] < m_hashes[b]; });
+
+    // Create mapping from old index to new index
+    std::vector<unsigned> oldToNew(numPoints);
+    for (unsigned i = 0; i < numPoints; ++i) {
+      oldToNew[sortedIndices[i]] = i;
+    }
+
+    // Reorder points and hashes
+    std::vector<IntPoint> newPoints(numPoints);
+    std::vector<CoordHash> newHashes(numPoints);
+    for (unsigned i = 0; i < numPoints; ++i) {
+      newPoints[i] = m_points[sortedIndices[i]];
+      newHashes[i] = m_hashes[sortedIndices[i]];
+    }
+    m_points = std::move(newPoints);
+    m_hashes = std::move(newHashes);
+
+    // Reorder cells array using the same permutation
+    if (m_cells.size() > 0) {
+      std::vector<std::vector<int>> newCells(numPoints);
+      for (unsigned i = 0; i < numPoints; ++i) {
+        newCells[i] = std::move(m_cells[sortedIndices[i]]);
+      }
+      m_cells = std::move(newCells);
+    }
   }
 
   //------------------------------------------------------------------------------

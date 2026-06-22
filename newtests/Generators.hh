@@ -6,6 +6,8 @@
 #include "polytope_boost_utilities.hh"
 #include "Boundary2D.hh"
 
+#include <random>
+
 using namespace std;
 
 namespace polytope {
@@ -33,9 +35,11 @@ public:
   //------------------------------------------------------------------------
   // Place random generators into spatial domain
   //------------------------------------------------------------------------
-  void randomPoints(unsigned nGenerators) {
+  void randomPoints(unsigned nGenerators, unsigned seed = 0) {
     mPoints.clear();
     nPoints = nGenerators;
+    std::mt19937 gen(seed);
+    std::uniform_real_distribution<double> distrib(0., 1.);
 
     auto bHigh = mBoundary.mQ.m_xhi;
     auto bLow = mBoundary.mQ.m_xlo;
@@ -45,8 +49,7 @@ public:
       bool inside = false;
       while( !inside ) {
         for (unsigned n = 0; n < Dimension; ++n){
-          pos[n] = (bHigh[n]-bLow[n]) * 
-            RealType(::random())/RAND_MAX + bLow[n];
+          pos[n] = (bHigh[n]-bLow[n]) * distrib(gen) + bLow[n];
         }
         inside = boost::geometry::within( makeBGPoint(pos),
                                           mBoundary.mBGboundary );

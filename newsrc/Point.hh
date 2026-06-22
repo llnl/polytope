@@ -158,7 +158,7 @@ struct Point<2, CoordType> {
   template<typename RealType>
   Point<2, RealType> convertx(const Point<2, RealType>& blo,
                               const Point<2, RealType>& dx) const {
-    POLY_ASSERT(typeid(CoordType) != typeid(RealType));
+    //POLY_ASSERT(typeid(CoordType) != typeid(RealType));
     RealType xOut, yOut;
     // Dequantize: IntType -> RealType
     xOut = dx.x*(static_cast<RealType>(this->x) - 0.5) + blo.x;
@@ -202,6 +202,17 @@ template<typename CoordType>
 std::ostream&
 operator<<(std::ostream& os, const Point<2, CoordType>& p) {
   os << "[" << p.x << ", " << p.y << "]";//(" << p.index << ")";
+  return os;
+}
+
+template<typename CoordType>
+std::ostream&
+operator<<(std::ostream& os, const std::vector<Point<2, CoordType>>& pv) {
+  os << "v = [";
+  for (const auto& p : pv) {
+    os << p << "," << std::endl;
+  }
+  os << "]";
   return os;
 }
 
