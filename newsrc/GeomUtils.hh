@@ -5,11 +5,12 @@
 #include "Point.hh"
 #include "HashKey.hh"
 #include "EdgeUtils.hh"
+#include "Quantizer.hh"
 
-// #ifdef POLYTOPE_ENABLE_TRIANGLE
-// // From predicates.cc
-// extern double orient2d(double* a, double* b, double* c);
-// #endif
+#ifdef POLYTOPE_ENABLE_TRIANGLE
+// From predicates.cc
+extern double orient2d(double* a, double* b, double* c);
+#endif
 
 namespace polytope {
 
@@ -196,6 +197,65 @@ bool magComparison(const Point<Dimension, CoordType>& p1,
 }
 
 //------------------------------------------------------------------------------
+// Determine if a ray (an origin and direction) is completely external
+// to a bounding box
+//------------------------------------------------------------------------------
+template<int Dimension, typename CoordType>
+bool isRayExternal(const Point<Dimension, double>& origin,
+                   const Point<Dimension, CoordType>& dir,
+                   const Quantizer<Dimension>& Q) {
+  Point<Dimension, int> outdirs = Q.externalSides(origin);
+  for (int d = 0; d < Dimension; ++d) {
+    if (outdirs[d] < 0 && dir[d] < 0) {
+      return true;
+    } else if (outdirs[d] > 0 && dir[d] > 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+//------------------------------------------------------------------------------
+// Given two generator points, return the midpoint
+//------------------------------------------------------------------------------
+template<typename CoordType>
+Point2<CoordType> midPoint(const Point2<CoordType>& gen0,
+                           const Point2<CoordType>& gen1) {
+  using Wide = WideInt<CoordType>;
+  Point2<Wide> sum = gen0.template type_cast<Wide>() + gen1.template type_cast<Wide>();
+  return (sum/2).template type_cast<CoordType>();
+}
+
+//------------------------------------------------------------------------------
+// Given two generator points, return a vector normal to the segment between them
+//------------------------------------------------------------------------------
+template<typename CoordType>
+Point2<CoordType> outwardRay(const Point2<CoordType>& gen0,
+                             const Point2<CoordType>& gen1) {
+  auto diff = gen1 - gen0;
+  return Point2<CoordType>(-diff.y, diff.x);
+}
+
+//------------------------------------------------------------------------------
+// Given 3 points on a triangle and the circumcenter, determine the outward
+// ray direction for the a->b edge.
+//------------------------------------------------------------------------------
+template<typename CoordType>
+Point2<CoordType> outwardRay(const Point2<CoordType>& a,
+                             const Point2<CoordType>& b,
+                             const Point2<CoordType>& c,
+                             const Point2<double>& circent) {
+  auto diff = a - b;
+  double test1 = (static_cast<double>(c.x) - circent.x)*static_cast<double>(a.y - b.y);
+  double test2 = (static_cast<double>(c.y) - circent.y)*static_cast<double>(b.x - a.x);
+  if (test1 > -test2) {
+    return Point2<CoordType>(diff.y, -diff.x);
+  } else {
+    return Point2<CoordType>(-diff.y, diff.x);
+  }
+}
+
+//------------------------------------------------------------------------------
 // From 3 points, compute the plane normal and normalize it by bit shifting
 //------------------------------------------------------------------------------
 template<typename CoordType>
@@ -359,6 +419,30 @@ Point2<double> circumcenter(const Point2<double>& a,
   // return Point2<double>(orient2d(a0,b0,c0)/d, orient2d(a1,b1,c1)/d);
 }
 #endif
+
+//------------------------------------------------------------------------------
+// Determine which point is the obtuse generator for an obtuse triangle
+//------------------------------------------------------------------------------
+template<typename CoordType>
+int obtusePoint(const int ia,
+                const int ib,
+                const int ic,
+                const std::vector<Point2<CoordType>>& points) {
+  auto a = points[ia].template type_cast<double>();
+  auto b = points[ib].template type_cast<double>();
+  auto c = points[ic].template type_cast<double>();
+  auto ba = b - a;
+  auto ca = c - a;
+  auto bc = b - c;
+  double dotA = ba.x*ca.x + ba.y*ca.y;
+  if (dotA < 0.) return 0;
+  double dotB = ba.x*bc.x + ba.y*bc.y;
+  if (dotB < 0.) return 1;
+  double dotC = -ca.x*bc.x - ca.y*bc.y;
+  if (dotC < 0.) return 2;
+  return -1.;
+}
+
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Topology utilities
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -571,6 +655,16 @@ RealType dot(const RealType* a,
     sum += a[i]*b[i];
   }
   return sum;
+}
+
+template<int Dimension, typename RealType>
+RealType distance(const RealType* a,
+                  const RealType* b) {
+  RealType sum = 0.;
+  for (int i = 0; i < Dimension; ++i) {
+    sum += (a[i] - b[i])*(a[i] - b[i]);
+  }
+  return std::sqrt(sum);
 }
 
 //------------------------------------------------------------------------------

@@ -529,7 +529,7 @@ template<int Dimension, typename CoordType>
 Point<Dimension, CoordType> round(const Point<Dimension, double>& point) {
   Point<Dimension, CoordType> out;
   for (int d = 0; d < Dimension; ++d) {
-    out[d] = static_cast<CoordType>(std::round(point[d]));
+    out[d] = static_cast<CoordType>(std::floor(point[d]));
   }
   return out;
 }

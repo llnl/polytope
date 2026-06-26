@@ -52,6 +52,7 @@ public:
     size_t i = 0;
     for (const auto& rp : rpoints) {
       auto ip = m_Q.quantize(rp);
+      POLY_ASSERT2(m_Q.inQBounds(ip), "Point provided that exceeds quantizer bounds");
       ip.index = i++;
       m_loBounds = m_loBounds.minElements(ip);
       m_hiBounds = m_hiBounds.maxElements(ip);
@@ -157,6 +158,7 @@ public:
     std::vector<CoordHash> newHashes(numPoints);
     for (unsigned i = 0; i < numPoints; ++i) {
       newPoints[i] = m_points[sortedIndices[i]];
+      newPoints[i].index = i;
       newHashes[i] = m_hashes[sortedIndices[i]];
     }
     m_points = std::move(newPoints);

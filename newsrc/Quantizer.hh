@@ -33,9 +33,8 @@ public:
   // Current maximum coordinate in a single direction
   IntPoint maxCoord = IntPoint(m_coordMax);
   IntPoint minCoord = IntPoint();
-  IntType boundVal = 1;
-  IntPoint maxBound = maxCoord - 1;
-  IntPoint minBound = minCoord + 1;
+  IntPoint maxBound = maxCoord - 1000;
+  IntPoint minBound = minCoord + 1000;
   RealPoint rmaxBound = maxBound.template type_cast<RealType>();
   RealPoint rminBound = minBound.template type_cast<RealType>();
   bool m_init = false;
@@ -132,6 +131,13 @@ public:
     return false;
   }
 
+  bool inQBounds(const IntPoint& point) const {
+    if (point.allLess(maxBound) && point.allGreater(minBound)) {
+      return true;
+    }
+    return false;
+  }
+
   bool inQBounds(const RealPoint& point) const {
     if (point.allLess(rmaxBound) && point.allGreater(rminBound)) {
       return true;
@@ -139,6 +145,22 @@ public:
     return false;
   }
 
+  // Determine exactly which sides of a box a point is external to
+  // 1:  Outside upper side
+  // 0:  Not outside
+  // -1: Outside lower side
+  Point<Dimension, int> externalSides(const RealPoint& point) const {
+    Point<Dimension, int> out;
+    out.zero();
+    for (int dir = 0; dir < Dimension; ++dir) {
+      if (point[dir] > rmaxBound[dir]) {
+        out[dir] = 1;
+      } else if (point[dir] < rminBound[dir]) {
+        out[dir] = -1;
+      }
+    }
+    return out;
+  }
 };
 } // namespace polytope
 #endif

@@ -134,6 +134,7 @@ tessellateQuantized(const QuantPLC<2>& qplc,
   std::vector<std::set<unsigned>> gen2tri(numGenerators);
   std::vector<Point2<double>> centers;
   centers.reserve(ntri);
+  bool check = false;
 
   // Extract the circumcenters of triangles (these become Voronoi vertices)
   for (auto i = 0; i < ntri; ++i) {
@@ -145,12 +146,20 @@ tessellateQuantized(const QuantPLC<2>& qplc,
     auto c = result.m_points[ic].template type_cast<double>();
     Point2<double> rcen = circumcenter(a, b, c);
     centers.push_back(rcen);
+    // Use original coordinates and quantize them but keep them as doubles
+    // Point2<double> a(generators[2*ia], generators[2*ia+1]);
+    // Point2<double> b(generators[2*ib], generators[2*ib+1]);
+    // Point2<double> c(generators[2*ic], generators[2*ic+1]);
+    // Point2<double> rcen = circumcenter(a, b, c);
+    // Point2<double> rcenq = rcen.convertXi<double, double>(Q.m_xlo_o, Q.m_dx_o);
+    // centers.push_back(rcenq);
     gen2tri[ia].insert(i);
     gen2tri[ib].insert(i);
     gen2tri[ic].insert(i);
   }
 
   // Process each generator to build its Voronoi cell
+  // TODO: Retain edges for other generators to eliminate redundant calculations
   for (int cellIndex = 0; cellIndex < numGenerators; ++cellIndex) {
     // Walk edges around this generator point
     auto genit = gen2tri[cellIndex].begin();
@@ -165,8 +174,8 @@ tessellateQuantized(const QuantPLC<2>& qplc,
       int v0 = out.trianglelist[3*it];
       int v1 = out.trianglelist[3*it+1];
       // Find which vertex is the generator
-      int localIdx = (v0 == cellIndex) ? 0 : (v1 == cellIndex) ? 1 : 2;
-      int prevSide = (localIdx + 2)%3;
+      int localIndex = (v0 == cellIndex) ? 0 : (v1 == cellIndex) ? 1 : 2;
+      int prevSide = (localIndex + 2)%3;
       bool curBound = Q.inQBounds(centers[it]);
       int prevTri = out.neighborlist[3*it+prevSide];
       bool prevBound = true;
@@ -186,14 +195,14 @@ tessellateQuantized(const QuantPLC<2>& qplc,
       int tri[3] = {v0, v1, v2};
 
       // Find which vertex is the generator
-      int localIdx = (v0 == cellIndex) ? 0 : (v1 == cellIndex) ? 1 : 2;
+      int localIndex = (v0 == cellIndex) ? 0 : (v1 == cellIndex) ? 1 : 2;
 
-      int ccwSide = (localIdx + 1)%3;
-      int cwSide = (localIdx + 2)%3;
+      int ccwSide = (localIndex + 1)%3;
+      int cwSide = (localIndex + 2)%3;
       int localSide = (ccwDir) ? ccwSide : cwSide;
       int nextTri = out.neighborlist[3*curTri+localSide];
       Clip2D<IntType> clipper;
-      int otherGen = tri[3 - localIdx - localSide];
+      int otherGen = tri[3 - localIndex - localSide];
       int indx1 = (ccwDir) ? cellIndex : otherGen;
       int indx2 = (ccwDir) ? otherGen : cellIndex;
       clipper.gen0 = result.m_points[indx1];
@@ -201,14 +210,15 @@ tessellateQuantized(const QuantPLC<2>& qplc,
       clipper.rp0 = centers[curTri];
       if (nextTri == -1) {
         clipper.inf1 = true;
+        auto thirdPoint = result.m_points[tri[localSide]];
+        clipper.normalRay = outwardRay(clipper.gen0, clipper.gen1,
+                                       thirdPoint, clipper.rp0);
+        
       } else {
         clipper.rp1 = centers[nextTri];
       }
-      // This likely never gets triggered
       if (clipper.doClipping(Q)) {
-        if (!ccwDir) {
-          break;
-        }
+        if (!ccwDir) break;
         if (nextTri == -1) {
           ccwDir = false;
           nextTri = startTri;
@@ -252,7 +262,7 @@ tessellateQuantized(const QuantPLC<2>& qplc,
     } while (true);
 
     // Remove collinear points from the edge loop
-    removeCollinear(localEdges, result.m_nodes);
+    //removeCollinear(localEdges, result.m_nodes);
     // Create faces and add to cell
     for (const auto& cedge : localEdges) {
       int signedFaceIndex = edge::addOrientedEdge(cedge.first, cedge.second, result.m_faces, edgeToFace);

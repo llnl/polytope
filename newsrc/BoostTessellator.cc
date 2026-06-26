@@ -123,16 +123,23 @@ tessellateQuantized(const QuantPLC<2>& qplc,
     // Which box side each infinite edge intersects
     shapes::BoxSide firstBoxSide;
     do {
+      bool flippedEdge = false;
+      const VD::edge_type* nextEdge = edge->next();
+      if (!edge->vertex0() && edge->vertex1()) {
+        edge = edge->twin();
+        flippedEdge = true;
+      }
       const typename VD::vertex_type* v0 = edge->vertex0();
       const typename VD::vertex_type* v1 = edge->vertex1();
 
       // An edge is considered infinite if Boost provides a null pointer
-      auto gindx1 = cellIndex;
+      auto gindx1 = edge->cell()->source_index();//cellIndex;
       auto gindx2 = edge->twin()->cell()->source_index();
 
       Clip2D<IntType> clipper;
       clipper.gen0 = result.m_points[gindx1];
       clipper.gen1 = result.m_points[gindx2];
+      clipper.normalRay = outwardRay(clipper.gen1, clipper.gen0);
       if (v0) {
         clipper.rp0 = Point2<double>(v0->x(), v0->y());
       } else {
@@ -144,18 +151,22 @@ tessellateQuantized(const QuantPLC<2>& qplc,
         clipper.inf1 = true;
       }
       if (clipper.doClipping(Q)) {
-        edge = edge->next();
+        edge = nextEdge;
         continue;
+      }
+      if (flippedEdge) {
+        std::swap(clipper.p0, clipper.p1);
+        std::swap(clipper.inf0, clipper.inf1);
       }
       bool isInfinite = (clipper.inf0 || clipper.inf1);
       edge::Edge curEdge = edge::updateNodeMap(clipper.p0, clipper.p1, node2id, result.m_nodes);
 
       if (curEdge.first == curEdge.second) {
-        edge = edge->next();
+        edge = nextEdge;
         continue;
       }
       // If both edges are infinite, make the start point n0
-      if (clipper.bothInf) {
+      if (clipper.inf0 && clipper.inf1) {
         firstClippedNode = curEdge.first;
         firstBoxSide = clipper.firstSide;
         clipper.inf0 = false;
@@ -174,10 +185,10 @@ tessellateQuantized(const QuantPLC<2>& qplc,
         localEdges.push_back(curEdge);
       }
 
-      edge = edge->next();
+      edge = nextEdge;
     } while (edge != firstEdge);
     // Create faces and cells from local edges
-    removeCollinear(localEdges, result.m_nodes);
+    //removeCollinear(localEdges, result.m_nodes);
     for (const auto& cedge : localEdges) {
       int signedFaceIndex = edge::addOrientedEdge(cedge.first, cedge.second, result.m_faces, edgeToFace);
       result.m_cells[cellIndex].push_back(signedFaceIndex);

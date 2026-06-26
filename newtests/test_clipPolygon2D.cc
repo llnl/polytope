@@ -381,7 +381,6 @@ void testSequentialClipping(const int tnum) {
 void testSquare(const int tnum, bool boostTess) {
   cout << "\n=== Test " << tnum << ": Square Clipping ===" << endl;
   std::string outname = (boostTess) ? "boost" : "triangle";
-  outname += std::to_string(tnum);
   Boundary2D<double> boundary;
   boundary.setDefaultBoundary(0);
   Quantizer<2> Q(boundary.mQ);
@@ -405,7 +404,7 @@ void testSquare(const int tnum, bool boostTess) {
   Tessellation<2, double> mesh;
   quantMesh.fillTessellation(mesh);
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
-  outputMesh(mesh, outname, points, 0, 0.0);
+  outputMesh(mesh, outname, points, tnum, 0.0);
 }
 
 //------------------------------------------------------------------------------
@@ -414,7 +413,6 @@ void testSquare(const int tnum, bool boostTess) {
 void testSquareTriangle(const int tnum, bool boostTess) {
   cout << "\n=== Test " << tnum << ": Square Triangle Clipping ===" << endl;
   std::string outname = (boostTess) ? "boost" : "triangle";
-  outname += std::to_string(tnum);
   Boundary2D<double> boundary;
   boundary.setDefaultBoundary(0);
   vector<double> points = {0.05, 0.025, 0.025, 0.05, 0.05, -0.05, -0.05, -0.05, -0.05, 0.05};
@@ -448,7 +446,7 @@ void testSquareTriangle(const int tnum, bool boostTess) {
   Tessellation<2, double> mesh;
   quantMesh.fillTessellation(mesh);
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
-  outputMesh(mesh, outname, points, 0, 0.0);
+  outputMesh(mesh, outname, points, tnum, 0.0);
 }
 
 //------------------------------------------------------------------------------
@@ -457,12 +455,11 @@ void testSquareTriangle(const int tnum, bool boostTess) {
 void testDiamond(const int tnum, bool boostTess) {
   cout << "\n=== Test " << tnum << ": Complex Clipping ===" << endl;
   std::string outname = (boostTess) ? "boost" : "triangle";
-  outname += std::to_string(tnum);
   Boundary2D<double> boundary;
   boundary.setDefaultBoundary(0);
   Quantizer<2> Q(boundary.mQ);
-  double lov = -0.5;
-  double hiv = 0.5;
+  double lov = -0.4;
+  double hiv = 0.4;
   vector<double> points = {lov, 0, hiv, 0, 0, lov, 0, hiv};
   QuantTessellation<2> quantMesh(Q, points);
   QuantPLC<2> QPLC(boundary.mPLC, Q, boundary.mPLCpoints);
@@ -478,7 +475,7 @@ void testDiamond(const int tnum, bool boostTess) {
   Tessellation<2, double> mesh;
   quantMesh.fillTessellation(mesh);
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
-  outputMesh(mesh, outname, points, 0, 0.0);
+  outputMesh(mesh, outname, points, tnum, 0.0);
 }
 
 

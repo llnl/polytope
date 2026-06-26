@@ -16,7 +16,6 @@
 #include "polytope.hh"
 #include "polytope_test_utilities.hh"
 #include "BoostTessellator.hh"
-//#include "MeshEditor.hh"
 
 #ifdef POLYTOPE_ENABLE_MPI
 #include "mpi.h"
@@ -123,7 +122,6 @@ void test(Tessellator<2,double>& tessellator) {
   unsigned step = 0;
   double time = 0.0;
   Tessellation<2,double> mesh;
-  //MeshEditor<2,double> meshEditor(mesh);
   tessellator.setQuantizer(boundary.mQ);
   tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
   outputMesh(mesh, testName, points, step, time);
@@ -144,7 +142,6 @@ void test(Tessellator<2,double>& tessellator) {
     time += dt;
     ++step;
     tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
-    //meshEditor.cleanEdges(0.001);
     outputMesh(mesh, testName, points, step, time);
   }
 }
@@ -157,6 +154,9 @@ int main(int argc, char** argv)
 {
 #ifdef POLYTOPE_ENABLE_MPI
    MPI_Init(&argc, &argv);
+#else
+  POLY_CONTRACT_VAR(argc);
+  POLY_CONTRACT_VAR(argv);
 #endif
 
 

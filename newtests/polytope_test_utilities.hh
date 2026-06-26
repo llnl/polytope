@@ -33,15 +33,15 @@ void outputMesh(const Tessellation<2,RealType>& mesh,
   std::vector<double> geny (mesh.cells.size());
   for (int i = 0; i < mesh.cells.size(); ++i){
     index[i] = double(i);
-    // if (!points.empty()) {
-    //   genx[i] = points[2*i  ];
-    //   geny[i] = points[2*i+1];
-    // }
+    if (!points.empty()) {
+      genx[i] = points[2*i  ];
+      geny[i] = points[2*i+1];
+    }
   }
   std::map<std::string,double*> nodeFields, edgeFields, faceFields, cellFields;
   cellFields["cell_index"] = &index[0];
-  // cellFields["gen_x"     ] = &genx[0];
-  // cellFields["gen_y"     ] = &geny[0];
+  cellFields["gen_x"     ] = &genx[0];
+  cellFields["gen_y"     ] = &geny[0];
   std::ostringstream os;
   os << prefix;
   SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 

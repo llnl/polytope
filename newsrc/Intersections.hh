@@ -155,6 +155,10 @@ bool convexIntersection(const std::vector<Point3<CoordType>>& pointsA,
 }
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// General (potentially non-convex) intersection methods
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Boost Polygon methods
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -207,11 +211,6 @@ boostIntersect(const Cell<2, IntType2D>::CellType& pcell,
   cellDSet.get(out);
   return out;
 }
-               
-
-//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// General (potentially non-convex) intersection methods
-//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 //------------------------------------------------------------------------------
 // Remove collinear points and combine edges where necessary
@@ -289,29 +288,6 @@ void removeCollinear(std::vector<edge::Edge>& edges,
   }
 
   edges = std::move(result);
-}
-
-//------------------------------------------------------------------------------
-// Given two generator points, return a vector normal to the segment between them
-//------------------------------------------------------------------------------
-template<typename CoordType>
-Point2<CoordType> normalRay(const Point2<CoordType>& gen0,
-                            const Point2<CoordType>& gen1) {
-  using Wide = WideInt<CoordType>;
-  Point2<Wide> diffg = (gen1.template type_cast<Wide>() - gen0.template type_cast<Wide>());
-  Point2<Wide> norm(-diffg.y, diffg.x);
-  return normalizeByBitShift<CoordType, Wide>(norm, 30);
-}
-
-//------------------------------------------------------------------------------
-// Given two generator points, return the midpoint
-//------------------------------------------------------------------------------
-template<typename CoordType>
-Point2<CoordType> midPoint(const Point2<CoordType>& gen0,
-                           const Point2<CoordType>& gen1) {
-  using Wide = WideInt<CoordType>;
-  Point2<Wide> sum = gen0.template type_cast<Wide>() + gen1.template type_cast<Wide>();
-  return (sum/2).template type_cast<CoordType>();
 }
 
 //------------------------------------------------------------------------------
@@ -530,7 +506,7 @@ bool segmentIntersection2D(const Point2<CoordType>& a,
   }
 
   // Normalize denom and t_num to prevent overflow in final computation
-  // Target: 21 bits to leave room for coordinate multiplication (31 + 21 = 52 < 64)
+  // Target: 30 bits to leave room for coordinate multiplication (31 + 30 = 52 < 64)
   auto shift = bitShiftAmount(denom, 21);
   auto denom_norm = denom >> shift;
   Wide t_num_norm = t_num >> shift;
@@ -597,44 +573,23 @@ bool segmentRayIntersection2D(const Point2<CoordType>& a,
     // Integer implementation with overflow protection
     using Wide = WideInt<CoordType>;
 
-    // Direction vectors
-    const Point2<CoordType> s = b - a;  // Direction of segment [a, b]
-    const Point2<CoordType> ca = a - c;  // Vector from c to a
+    const Point2<CoordType> s = b - a;
+    const Point2<CoordType> ca = a - c;
 
-    // Compute denominator (n x s)
     Wide denom = qcross<CoordType>(n, s);
-
-    // Parallel or collinear segments
     if (denom == 0) return false;
-
-    // Compute parametric coordinates
     Wide t_num = qcross<CoordType>(ca, s);
     Wide u_num = qcross<CoordType>(ca, n);
-
-    // Normalize signs (make denominator positive)
     if (denom < 0) {
       t_num = -t_num;
       u_num = -u_num;
       denom = -denom;
     }
-
-    // Check if intersection is within the segment [0, 1] and the ray (t >= 0)
-    if (t_num < 0 || u_num < 0 || u_num > denom) {
-      return false;
-    }
-    // Normalize denom and t_num to prevent overflow in final computation
-    // Target: 21 bits to leave room for coordinate multiplication (31 + 21 = 52 < 64)
-    auto shift = bitShiftAmount(denom, 21);
-    auto denom_norm = denom >> shift;
-    Wide t_num_norm = t_num >> shift;
-
-    // Compute intersection point: c + t * n
-    // Keep in high-precision until final conversion
-    const auto ch = c.template type_cast<Wide>();
-    const auto nh = n.template type_cast<Wide>();
-    const auto intersect = (ch * denom_norm + nh * t_num_norm) / denom_norm;
-
-    result = intersect.template type_cast<CoordType>();
+    if (t_num < 0 || u_num < 0 || u_num > denom) return false;
+    CoordType q = t_num/denom;
+    auto r = static_cast<double>(t_num%denom);
+    auto frac = round<2, CoordType>(r*n.template type_cast<double>()/static_cast<double>(denom));
+    result = c + q*n + frac;
     return true;
   }
 }

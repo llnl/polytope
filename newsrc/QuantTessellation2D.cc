@@ -84,14 +84,26 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
       while (fragIndex < NFrag and not bp::contains(cellSet[fragIndex], genPoint)) ++fragIndex;
       for (unsigned iPoly = 0; iPoly < NFrag; ++iPoly) {
         if (iPoly != fragIndex) {
-          orphans.push_back(cellSet[iPoly]);
+          // Check if orphan can be added to other orphans
+          bool foundUnion = false;
+          for (auto& orphan : orphans) {
+            auto trialUnion = boostUnion(orphan, cellSet[iPoly]);
+            if (trialUnion.size() == 1) {
+              orphan = trialUnion[0];
+              foundUnion = true;
+              break;
+            }
+          }
+          if (!foundUnion) {
+            orphans.push_back(cellSet[iPoly]);
+          }
         }
       }
     } // End of multiple fragment check
     const auto curP = cellPolygons.size();
     // Hash and map the vertices for this polygon
-    for (const auto& vertex : cellSet[fragIndex]) {
-      auto vertexHash = m_Q.hash(BoostToPolytope(vertex));
+    for (const auto& v : cellSet[fragIndex]) {
+      auto vertexHash = m_Q.hash(BoostToPolytope(v));
       vertexMap[vertexHash].insert(curP);
     }
     localGenPoints.push_back(m_points[i]);
@@ -102,13 +114,13 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
   for (auto& orphan : orphans) {
     std::vector<Point2<IntType>> genPoints;
     std::set<unsigned> genIndex;
-    // For converting between this smaller subet of generators to the larger one
+    // For converting between this smaller subset of generators to the larger one
     std::unordered_map<unsigned, unsigned> smallToLarge;
     PolygonSet orphanBounds;
     orphanBounds += orphan;
     // Grab any neighboring cells by looping over the vertices
-    for (const auto& vertex : orphan) {
-      auto vertexHash = m_Q.hash(BoostToPolytope(vertex));
+    for (const auto& v : orphan) {
+      auto vertexHash = m_Q.hash(BoostToPolytope(v));
       for (const auto& pi : vertexMap[vertexHash]) {
         auto [it, added] = genIndex.insert(pi);
         if (added) {
@@ -154,10 +166,10 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
   // Map from canonical edge to face index (for oriented edge tracking)
   edge::EdgeToFaceMap edgeToFace;
   unsigned i = 0;
-  std::vector<PolygonWithHoles> extendCell;
+  std::vector<Polygon> extendCell;
   for (auto& cellPoly : cellPolygons) {
     std::vector<IntPoint> keptVertices = bp::BoostToPolytope(cellPoly);
-    removeCollinear(keptVertices);
+    //removeCollinear(keptVertices);
     auto nv = keptVertices.size();
     std::vector<int> localCellIndex;
     localCellIndex.reserve(nv);

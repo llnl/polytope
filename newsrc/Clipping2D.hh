@@ -13,56 +13,52 @@ template<typename CoordType>
 struct Clip2D {
   // Input parameters
   Point2<double> rp0, rp1;
-  // Generator nodes
   Point2<CoordType> gen0, gen1;
+  Point2<CoordType> normalRay;
 
   // Output parameters
   shapes::BoxSide firstSide; // In case both are infinite
   shapes::BoxSide curSide;
   Point2<CoordType> p0, p1;
-  bool bothInf = false;
-  bool bounds0 = true, bounds1 = true;
 
   // Input and output parameters
   bool inf0 = false, inf1 = false;
 
   // Returns true if edge should be skipped entirely
   bool doClipping(const Quantizer<2>& Q) {
-    if (!inf0) {
-      bounds0 = Q.inQBounds(rp0);
+    p1 = midPoint(gen1, gen0);
+    if (inf0 && inf1) {
+      normalRay = outwardRay(gen1, gen0);
+      clipInfiniteRay(p1, normalRay, Q.minBound, Q.maxBound, p0, curSide);
+      firstSide = curSide;
+      clipInfiniteRay(p0, -normalRay, Q.minBound, Q.maxBound, p1, curSide);
+      return false;
     }
-    if (!inf1) {
-      bounds1 = Q.inQBounds(rp1);
-    }
-    // If points are near boundary edges, skip point
-    if ((!bounds0 && inf1) || (!bounds1 && inf0) || (!bounds0 && !bounds1)) {
+    POLY_ASSERT2(!inf0, "Cannot have only inf0");
+    // Check if entire ray is external
+    bool extRay = isRayExternal(rp0, normalRay, Q);
+    if (extRay) {
+      // If so, skip this ray entirely
       return true;
     }
-    bool doReturn = false;
-    if (bounds0 && !inf0) {
-      p0 = round<2, CoordType>(rp0);
-      doReturn = true;
-    }
-    if (bounds1 && !inf1) {
+    // Check if endpoint is outside the bounding box
+    // If it is, leave it as the midpoint
+    bool validp1 = (!inf1 && Q.inQBounds(rp1));
+    if (validp1) {
       p1 = round<2, CoordType>(rp1);
-      if (doReturn) return false;
     }
-    // If both vertices are infinite, start ray at the midpoint between the generators
-    if (inf0 && inf1) {
-      p1 = midPoint(gen1, gen0);
-      bothInf = true;
-    }
-    if (inf0 || !bounds0) {
-      Point2<CoordType> outwardRay = normalRay(gen1, gen0);
-      clipInfiniteRay(p1, outwardRay, Q.minBound, Q.maxBound, p0, curSide);
-      if (bothInf) {
-        firstSide = curSide;
-      }
+    bool bounds0 = Q.inQBounds(rp0);
+    // If the origin is outside the bounds, clip it
+    if (!bounds0) {
+      clipInfiniteRay(p1, normalRay, Q.minBound, Q.maxBound, p0, curSide);
+      firstSide = curSide;
       inf0 = true;
+    } else {
+      p0 = round<2, CoordType>(rp0);
     }
-    if (inf1 || !bounds1) {
-      Point2<CoordType> outwardRay = normalRay(gen0, gen1);
-      clipInfiniteRay(p0, outwardRay, Q.minBound, Q.maxBound, p1, curSide);
+    // Endpoint is outside bounding box
+    if (!validp1) {
+      clipInfiniteRay(p0, -normalRay, Q.minBound, Q.maxBound, p1, curSide);
       inf1 = true;
     }
     return false;
