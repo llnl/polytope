@@ -93,10 +93,11 @@ tessellateQuantized(const QuantPLC<2>& qplc,
 
   // Add nodes for the box extent and keep track of their indices
   std::vector<IntPoint> box = shapes::createBoxPoints(Q.minBound, Q.maxBound);
-  std::map<shapes::BoxCorner, unsigned> cornerIndices; // Ordered lower left and CCW
+  std::map<shapes::BoxSide, unsigned> cornerIndices; // Ordered lower left and CCW
+  shapes::BoxSides sides;
   for (unsigned i = 0; i < 4; i++) {
     const auto n = result.m_nodes.size();
-    cornerIndices[static_cast<shapes::BoxCorner>(i)] = n;
+    cornerIndices[sides.corner(i)] = n;
     node2id[box[i]] = n;
     result.m_nodes.push_back(box[i]);
   }
@@ -135,11 +136,9 @@ tessellateQuantized(const QuantPLC<2>& qplc,
       // An edge is considered infinite if Boost provides a null pointer
       auto gindx1 = edge->cell()->source_index();//cellIndex;
       auto gindx2 = edge->twin()->cell()->source_index();
-
       Clip2D<IntType> clipper;
       clipper.gen0 = result.m_points[gindx1];
       clipper.gen1 = result.m_points[gindx2];
-      clipper.normalRay = outwardRay(clipper.gen1, clipper.gen0);
       if (v0) {
         clipper.rp0 = Point2<double>(v0->x(), v0->y());
       } else {
@@ -147,8 +146,10 @@ tessellateQuantized(const QuantPLC<2>& qplc,
       }
       if (v1) {
         clipper.rp1 = Point2<double>(v1->x(), v1->y());
+        clipper.normalRay = pointDirection<IntType>(clipper.rp1, clipper.rp0);
       } else {
         clipper.inf1 = true;
+        clipper.normalRay = outwardRay(clipper.gen1, clipper.gen0);
       }
       if (clipper.doClipping(Q)) {
         edge = nextEdge;
@@ -188,7 +189,7 @@ tessellateQuantized(const QuantPLC<2>& qplc,
       edge = nextEdge;
     } while (edge != firstEdge);
     // Create faces and cells from local edges
-    //removeCollinear(localEdges, result.m_nodes);
+    removeCollinear(localEdges, result.m_nodes);
     for (const auto& cedge : localEdges) {
       int signedFaceIndex = edge::addOrientedEdge(cedge.first, cedge.second, result.m_faces, edgeToFace);
       result.m_cells[cellIndex].push_back(signedFaceIndex);

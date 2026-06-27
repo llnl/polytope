@@ -319,6 +319,11 @@ clipInfiniteRay(const Point2<CoordType>& validVertex,
   POLY_ASSERT(xint || yint);
   bool hitX = true;
   if (xint && yint) {
+    if (intersectionx == intersectiony) {
+      result = intersectionx;
+      side = shapes::getBoxCorner(LR, TB);
+      return;
+    }
     // Assume it intersects both planes, check if ||p-x|| is longer than ||p-y||
     if (magComparison(validVertex - intersectionx, validVertex - intersectiony)) {
       hitX = false;
@@ -588,7 +593,7 @@ bool segmentRayIntersection2D(const Point2<CoordType>& a,
     if (t_num < 0 || u_num < 0 || u_num > denom) return false;
     CoordType q = t_num/denom;
     auto r = static_cast<double>(t_num%denom);
-    auto frac = round<2, CoordType>(r*n.template type_cast<double>()/static_cast<double>(denom));
+    auto frac = (r*n.template type_cast<double>()/static_cast<double>(denom)).template type_cast<CoordType>();
     result = c + q*n + frac;
     return true;
   }

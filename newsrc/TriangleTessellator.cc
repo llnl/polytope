@@ -60,10 +60,11 @@ tessellateQuantized(const QuantPLC<2>& qplc,
 
   // Add nodes for the box extent
   std::vector<IntPoint> box = shapes::createBoxPoints(Q.minBound, Q.maxBound);
-  std::map<shapes::BoxCorner, unsigned> cornerIndices;
+  std::map<shapes::BoxSide, unsigned> cornerIndices;
+  shapes::BoxSides sides;
   for (unsigned i = 0; i < 4; i++) {
     const auto n = result.m_nodes.size();
-    cornerIndices[static_cast<shapes::BoxCorner>(i)] = n;
+    cornerIndices[sides.corner(i)] = n;
     node2id[box[i]] = n;
     result.m_nodes.push_back(box[i]);
   }
@@ -213,9 +214,9 @@ tessellateQuantized(const QuantPLC<2>& qplc,
         auto thirdPoint = result.m_points[tri[localSide]];
         clipper.normalRay = outwardRay(clipper.gen0, clipper.gen1,
                                        thirdPoint, clipper.rp0);
-        
       } else {
         clipper.rp1 = centers[nextTri];
+        clipper.normalRay = pointDirection<IntType>(clipper.rp0, clipper.rp1);
       }
       if (clipper.doClipping(Q)) {
         if (!ccwDir) break;
@@ -262,7 +263,7 @@ tessellateQuantized(const QuantPLC<2>& qplc,
     } while (true);
 
     // Remove collinear points from the edge loop
-    //removeCollinear(localEdges, result.m_nodes);
+    removeCollinear(localEdges, result.m_nodes);
     // Create faces and add to cell
     for (const auto& cedge : localEdges) {
       int signedFaceIndex = edge::addOrientedEdge(cedge.first, cedge.second, result.m_faces, edgeToFace);

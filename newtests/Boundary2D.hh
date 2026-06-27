@@ -28,6 +28,7 @@ public:
   PLC<2> mPLC;
   // Vector of generators to define the boundary
   std::vector<RealType> mPLCpoints;
+  double mDiff = 0.5;
   // Ranges of bounding box
   RealType mCenter[3], mArea;
 
@@ -44,7 +45,7 @@ public:
     cardioid           = 6,
     trogdor            = 7,
     starwithhole       = 8,
-    trogdor2           = 9,
+    trogdor2           = 9
   };
   
   // Boundary type
@@ -144,10 +145,10 @@ public:
   void setUnitSquare() {
     this->clear();
 
-    const RealType x1 = mCenter[0] - 0.5;
-    const RealType x2 = mCenter[0] + 0.5;
-    const RealType y1 = mCenter[1] - 0.5;
-    const RealType y2 = mCenter[1] + 0.5;
+    const RealType x1 = mCenter[0] - mDiff;
+    const RealType x2 = mCenter[0] + mDiff;
+    const RealType y1 = mCenter[1] - mDiff;
+    const RealType y2 = mCenter[1] + mDiff;
     Point2<RealType> low(x1, y1);
     Point2<RealType> hi(x2, y2);
     std::vector<Point2<RealType>> points = shapes::createSquarePoints(low, hi);
@@ -156,7 +157,7 @@ public:
     mType = square;
     this->finalize();
   }
-   
+
   //------------------------------------------------------------------------
   // setUnitCircle
   //------------------------------------------------------------------------

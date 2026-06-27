@@ -30,6 +30,7 @@ public:
   vector<RealType> mPLCpoints;
   // Ranges of bounding box
   RealType mCenter[3], mLow[3], mHigh[3], mArea;
+  RealType mDiff = 0.5;
 
   BGPolygon<RealType, 2> mBGboundary;
   
@@ -145,10 +146,10 @@ public:
   //------------------------------------------------------------------------
   void setUnitSquare() {
     this->clear();
-    const RealType x1 = mCenter[0] - 0.5;
-    const RealType x2 = mCenter[0] + 0.5;
-    const RealType y1 = mCenter[1] - 0.5;
-    const RealType y2 = mCenter[1] + 0.5;
+    const RealType x1 = mCenter[0] - mDiff;
+    const RealType x2 = mCenter[0] + mDiff;
+    const RealType y1 = mCenter[1] - mDiff;
+    const RealType y2 = mCenter[1] + mDiff;
     
     mPLCpoints.push_back( x1 );   mPLCpoints.push_back( y1 );
     mPLCpoints.push_back( x2 );   mPLCpoints.push_back( y1 );

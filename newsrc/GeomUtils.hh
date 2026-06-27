@@ -197,6 +197,22 @@ bool magComparison(const Point<Dimension, CoordType>& p1,
 }
 
 //------------------------------------------------------------------------------
+// Get the direction between two double points into an integer type.
+//------------------------------------------------------------------------------
+template<typename CoordType>
+Point2<CoordType> pointDirection(const Point2<double>& p1,
+                                 const Point2<double>& p2) {
+  auto diff = p2 - p1;
+  double len = std::hypot(diff[0], diff[1]);
+  if (len == 0.) {
+    return Point2<CoordType>(0, 0);
+  }
+  auto norm = diff/len;
+  const double SCALE = (static_cast<double>(std::numeric_limits<CoordType>::max()) + 1.0)/2.0;
+  return (norm*SCALE).template type_cast<CoordType>();
+}
+
+//------------------------------------------------------------------------------
 // Determine if a ray (an origin and direction) is completely external
 // to a bounding box
 //------------------------------------------------------------------------------

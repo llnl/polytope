@@ -12,48 +12,44 @@
 namespace polytope {
 namespace shapes {
 
-enum BoxCorner {
-    LL, // Lower left
-    LR, // Lower right
-    UR, // Upper right
-    UL  // Upper left
-};
-
 enum BoxSide {
     L, // Left
+    LL,
     B, // Bottom
+    LR,
     R, // Right
+    UR,
     T, // Top
+    UL
 };
 
 struct BoxSides {
-  std::array<BoxSide, 4> sides;
+  std::array<BoxSide, 8> sides;
+  std::array<BoxSide, 4> corners;
   BoxSides() {
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < 8; ++i) {
       sides[i] = static_cast<BoxSide>(i);
+    }
+    for (int i = 0; i < 4; ++i) {
+      corners[i] = static_cast<BoxSide>(2*i+1);
     }
   }
   BoxSide next(const BoxSide& side) {
     auto i = static_cast<int>(side);
-    return sides[(i+1)%4];
+    return sides[(i+1)%8];
   }
   BoxSide prev(const BoxSide& side) {
     auto i = static_cast<int>(side);
-    return sides[(i+4-1)%4];
+    return sides[(i+8-1)%8];
   }
-  static BoxSide opposite(const BoxSide& side) {
-    switch (side) {
-    case BoxSide::T:
-      return BoxSide::B;
-    case BoxSide::B:
-      return BoxSide::T;
-    case BoxSide::L:
-      return BoxSide::R;
-    case BoxSide::R:
-      return BoxSide::L;
-    }
+  BoxSide corner(const int i) {
+    return corners[i];
   }
 };
+
+inline bool isCorner(const BoxSide& side) {
+  return (static_cast<int>(side)%2 == 1);
+}
 
 // 2D specialization with explicit CCW ordering
 template<typename CoordType>
@@ -131,61 +127,97 @@ inline std::vector<std::vector<int>> createSquareFaces() {
 }
 
 // Return the corner based on two sides
-inline BoxCorner getBoxCorner(const BoxSide& s1, const BoxSide& s2) {
+inline BoxSide getBoxCorner(const BoxSide& s1, const BoxSide& s2) {
   if ((s1 == BoxSide::L && s2 == BoxSide::B) ||
       (s1 == BoxSide::B && s2 == BoxSide::L)) {
-    return BoxCorner::LL;
+    return BoxSide::LL;
   } else if ((s1 == BoxSide::R && s2 == BoxSide::B) ||
              (s1 == BoxSide::B && s2 == BoxSide::R)) {
-    return BoxCorner::LR;
+    return BoxSide::LR;
   } else if ((s1 == BoxSide::R && s2 == BoxSide::T) ||
              (s1 == BoxSide::T && s2 == BoxSide::R)) {
-    return BoxCorner::UR;
+    return BoxSide::UR;
   } else if ((s1 == BoxSide::L && s2 == BoxSide::T) ||
              (s1 == BoxSide::T && s2 == BoxSide::L)) {
-    return BoxCorner::UL;
+    return BoxSide::UL;
   }
 }
 
-// If curEdge is (inf, valid vertex), endAtCurEdge = true
+// Walk box edges from origSide to curSide, adding corner vertices along the way
+//
+// When clipping against a box boundary, cells may need to traverse multiple
+// box sides. This function adds edges that walk along the box perimeter from
+// one side to another, visiting corners in counter-clockwise order.
+//
+// Parameters:
+//   origSide, curSide: Box sides to walk between (L, B, R, or T - NOT corners)
+//   cornerIndices: Map from corner BoxSide (LL, LR, UR, UL) to vertex indices
+//   curEdge: The clipped edge that intersects the boundary
+//   origPoint: Starting vertex index
+//   endAtCurEdge: Walk direction
+//     - true: Walk origSide -> curSide, then add curEdge
+//     - false: Add curEdge first, then walk curSide -> origSide
+//   edges: Output edge list
+//
+// Example (endAtCurEdge=true):
+//   origSide=L, curSide=B, origPoint=3 (UL), curEdge=(1,4) (LR->mid)
+//   Walks L -> LL (add 3->0) -> B (add 0->1) -> adds curEdge (1->4)
+//   Result: [(3,0), (0,1), (1,4)]
 inline void walkBoxEdges(const BoxSide& origSide,
                          const BoxSide& curSide,
-                         const std::map<BoxCorner, unsigned>& cornerIndices,
+                         const std::map<BoxSide, unsigned>& cornerIndices,
                          const edge::Edge& curEdge,
                          const unsigned& origPoint,
                          const bool endAtCurEdge,
                          std::vector<edge::Edge>& edges) {
-  BoxSide thisSide = (endAtCurEdge) ? origSide : curSide;
-  BoxSide endSide = (endAtCurEdge) ? curSide : origSide;
-  unsigned curIndx = (endAtCurEdge) ? origPoint : curEdge.second;
-  unsigned nextIndx = (endAtCurEdge) ? curEdge.first : origPoint;
   BoxSides sides;
+
   if (endAtCurEdge) {
+    // Walk origSide -> curSide, visiting corners, then add curEdge
+    BoxSide thisSide = origSide;
+    BoxSide endSide = curSide;
+    unsigned curIndx = origPoint;
+
     while (thisSide != endSide) {
-      auto nextSide = sides.next(thisSide);
-      BoxCorner corner = getBoxCorner(thisSide, nextSide);
-      nextIndx = cornerIndices.at(corner);
-      if (curIndx != nextIndx) {
-        edges.push_back(std::make_pair(curIndx, nextIndx));
-        curIndx = nextIndx;
+      if (isCorner(thisSide)) {
+        unsigned nextIndx = cornerIndices.at(thisSide);
+        if (curIndx != nextIndx) {
+          edges.push_back(std::make_pair(curIndx, nextIndx));
+          curIndx = nextIndx;
+        }
       }
-      thisSide = nextSide;
+      thisSide = sides.next(thisSide);
     }
-    edges.push_back(std::make_pair(curIndx, curEdge.first));
+
+    // Connect to curEdge start if not already there
+    if (curIndx != curEdge.first) {
+      edges.push_back(std::make_pair(curIndx, curEdge.first));
+    }
     edges.push_back(curEdge);
+
   } else {
+    // Add curEdge first, then walk curSide -> origSide
     edges.push_back(curEdge);
+
+    BoxSide thisSide = curSide;
+    BoxSide endSide = origSide;
+    unsigned curIndx = curEdge.second;
+
     while (thisSide != endSide) {
-      auto nextSide = sides.next(thisSide);
-      BoxCorner corner = getBoxCorner(thisSide, nextSide);
-      nextIndx = cornerIndices.at(corner);
-      if (curIndx != nextIndx) {
-        edges.push_back(std::make_pair(curIndx, nextIndx));
-        curIndx = nextIndx;
+      if (isCorner(thisSide)) {
+        unsigned nextIndx = cornerIndices.at(thisSide);
+        if (curIndx != nextIndx) {
+          edges.push_back(std::make_pair(curIndx, nextIndx));
+          curIndx = nextIndx;
+        }
       }
-      thisSide = nextSide;
+      thisSide = sides.next(thisSide);
     }
-    edges.push_back(std::make_pair(curIndx, origPoint));
+
+    // Close back to origPoint if needed
+    if (curIndx != origPoint) {
+      edges.push_back(std::make_pair(curIndx, origPoint));
+    }
   }
 }
 }

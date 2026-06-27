@@ -478,6 +478,39 @@ void testDiamond(const int tnum, bool boostTess) {
   outputMesh(mesh, outname, points, tnum, 0.0);
 }
 
+//------------------------------------------------------------------------------
+// Test 10: Complex clipping (multiple edges)
+//------------------------------------------------------------------------------
+void testObtuse(const int tnum, bool boostTess) {
+  cout << "\n=== Test " << tnum << ": Obtuse Triangle ===" << endl;
+  std::string outname = (boostTess) ? "boost" : "triangle";
+  Boundary2D<double> boundary;
+  boundary.mDiff = 1.;
+  boundary.setDefaultBoundary(0);
+  Quantizer<2> Q(boundary.mQ);
+  // vector<double> points = {0.67, -0.14,
+  //                          //0.91, 0.3,
+  //                          0.99, 0.3,
+  //                          0.49, -0.4};
+  vector<double> points = {0.7, -0.14,
+                           1.0, 0.3,
+                           0.5, -0.4};
+  QuantTessellation<2> quantMesh(Q, points);
+  QuantPLC<2> QPLC(boundary.mPLC, Q, boundary.mPLCpoints);
+  if (boostTess) {
+    BoostTessellator boost(Q);
+    boost.tessellateQuantized(QPLC, quantMesh);
+    //quantMesh.clipTessellation(QPLC, boost);
+  } else {
+    TriangleTessellator tri(Q);
+    tri.tessellateQuantized(QPLC, quantMesh);
+    //quantMesh.clipTessellation(QPLC, tri);
+  }
+  Tessellation<2, double> mesh;
+  quantMesh.fillTessellation(mesh);
+  findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
+  outputMesh(mesh, outname, points, tnum, 0.0);
+}
 
 } // anonymous namespace
 
@@ -496,6 +529,7 @@ int main(int argc, char** argv) {
       testSquare(test++, boost);
       testSquareTriangle(test++, boost);
       testDiamond(test++, boost);
+      testObtuse(test++, boost);
       boost = false;
     }
     testPointLineClassification(test++);

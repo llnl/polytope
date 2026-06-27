@@ -45,7 +45,7 @@ struct Clip2D {
     // If it is, leave it as the midpoint
     bool validp1 = (!inf1 && Q.inQBounds(rp1));
     if (validp1) {
-      p1 = round<2, CoordType>(rp1);
+      p1 = rp1.template type_cast<CoordType>();
     }
     bool bounds0 = Q.inQBounds(rp0);
     // If the origin is outside the bounds, clip it
@@ -54,7 +54,7 @@ struct Clip2D {
       firstSide = curSide;
       inf0 = true;
     } else {
-      p0 = round<2, CoordType>(rp0);
+      p0 = rp0.template type_cast<CoordType>();
     }
     // Endpoint is outside bounding box
     if (!validp1) {

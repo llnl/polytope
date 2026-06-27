@@ -116,7 +116,7 @@ public:
   void init(const std::vector<RealType>& points,
             const RealType& degeneracy = -1.,
             const RealType& pad = -1.) {
-    RealPoint minPoint(std::numeric_limits<RealType>::max());
+    RealPoint minPoint(0.99*std::numeric_limits<RealType>::max());
     RealPoint maxPoint = -minPoint;
     std::vector<RealPoint> rpoints = extractCoords<Dimension, RealType>(points);
     findBoundingElements<Dimension, RealType>(rpoints, minPoint, maxPoint);
@@ -153,9 +153,9 @@ public:
     Point<Dimension, int> out;
     out.zero();
     for (int dir = 0; dir < Dimension; ++dir) {
-      if (point[dir] > rmaxBound[dir]) {
+      if (point[dir] > rmaxBound[dir] - 10.) {
         out[dir] = 1;
-      } else if (point[dir] < rminBound[dir]) {
+      } else if (point[dir] < rminBound[dir] + 10.) {
         out[dir] = -1;
       }
     }
