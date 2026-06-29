@@ -259,16 +259,26 @@ Point2<CoordType> outwardRay(const Point2<CoordType>& gen0,
 template<typename CoordType>
 Point2<CoordType> outwardRay(const Point2<CoordType>& a,
                              const Point2<CoordType>& b,
-                             const Point2<CoordType>& c,
-                             const Point2<double>& circent) {
+                             const Point2<CoordType>& c) {
+  //const Point2<double>& circent) {
   auto diff = a - b;
-  double test1 = (static_cast<double>(c.x) - circent.x)*static_cast<double>(a.y - b.y);
-  double test2 = (static_cast<double>(c.y) - circent.y)*static_cast<double>(b.x - a.x);
-  if (test1 > -test2) {
-    return Point2<CoordType>(diff.y, -diff.x);
-  } else {
+  auto ad = a.template type_cast<double>();
+  auto bd = b.template type_cast<double>();
+  auto cd = c.template type_cast<double>();
+  auto delta = (bd.x - ad.x)*(cd.y - ad.y) - (bd.y - ad.y)*(cd.x - ad.x);
+  if (delta > 0.) {
     return Point2<CoordType>(-diff.y, diff.x);
+  } else {
+    return Point2<CoordType>(diff.y, -diff.x);
   }
+  // auto diff = a - b;
+  // double test1 = (static_cast<double>(c.x) - circent.x)*static_cast<double>(a.y - b.y);
+  // double test2 = (static_cast<double>(c.y) - circent.y)*static_cast<double>(b.x - a.x);
+  // if (test1 > -test2) {
+  //   return Point2<CoordType>(-diff.y, diff.x);
+  // } else {
+  //   return Point2<CoordType>(diff.y, -diff.x);
+  // }
 }
 
 //------------------------------------------------------------------------------

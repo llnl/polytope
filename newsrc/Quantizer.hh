@@ -26,7 +26,7 @@ public:
   // Original coordinate locations
   RealPoint m_xlo, m_xhi;
   // Percent to pad the bounding box for good measure
-  RealType m_pad = 1.;
+  RealType m_pad = 0.5;
   // Maximum possible coordinate in a single direction
   // Not necessarily the max for this instance
   constexpr static IntType m_coordMax = HashKey<Dimension>::coordMax();

@@ -118,11 +118,7 @@ tessellateQuantized(const QuantPLC<2>& qplc,
 
     // List of local edges
     std::vector<edge::Edge> localEdges;
-
-    // Flags for handling infinite edges
-    int firstClippedNode = -1;
-    // Which box side each infinite edge intersects
-    shapes::BoxSide firstBoxSide;
+    std::vector<std::pair<int, int>> clippedNodeSides;
     do {
       bool flippedEdge = false;
       const VD::edge_type* nextEdge = edge->next();
@@ -134,7 +130,7 @@ tessellateQuantized(const QuantPLC<2>& qplc,
       const typename VD::vertex_type* v1 = edge->vertex1();
 
       // An edge is considered infinite if Boost provides a null pointer
-      auto gindx1 = edge->cell()->source_index();//cellIndex;
+      auto gindx1 = edge->cell()->source_index();
       auto gindx2 = edge->twin()->cell()->source_index();
       Clip2D<IntType> clipper;
       clipper.gen0 = result.m_points[gindx1];
@@ -146,51 +142,44 @@ tessellateQuantized(const QuantPLC<2>& qplc,
       }
       if (v1) {
         clipper.rp1 = Point2<double>(v1->x(), v1->y());
-        clipper.normalRay = pointDirection<IntType>(clipper.rp1, clipper.rp0);
+        clipper.normalRay = pointDirection<IntType>(clipper.rp0, clipper.rp1);
       } else {
         clipper.inf1 = true;
-        clipper.normalRay = outwardRay(clipper.gen1, clipper.gen0);
+        clipper.normalRay = outwardRay(clipper.gen0, clipper.gen1);
       }
       if (clipper.doClipping(Q)) {
         edge = nextEdge;
         continue;
       }
+      int startSide = -1;
+      int endSide = -1;
+      if (clipper.inf0) {
+        startSide = static_cast<int>(clipper.firstSide);
+      }
+      if (clipper.inf1) {
+        endSide = static_cast<int>(clipper.secondSide);
+      }
       if (flippedEdge) {
         std::swap(clipper.p0, clipper.p1);
         std::swap(clipper.inf0, clipper.inf1);
+        std::swap(startSide, endSide);
       }
-      bool isInfinite = (clipper.inf0 || clipper.inf1);
       edge::Edge curEdge = edge::updateNodeMap(clipper.p0, clipper.p1, node2id, result.m_nodes);
 
       if (curEdge.first == curEdge.second) {
         edge = nextEdge;
         continue;
       }
-      // If both edges are infinite, make the start point n0
-      if (clipper.inf0 && clipper.inf1) {
-        firstClippedNode = curEdge.first;
-        firstBoxSide = clipper.firstSide;
-        clipper.inf0 = false;
-      }
-      // Care must be taken when dealing with infinite edges
-      if (isInfinite && firstClippedNode < 0) {
-        // First infinite edge, remember the intersecting edge
-        firstBoxSide = clipper.curSide;
-        firstClippedNode = (clipper.inf0) ? curEdge.first : curEdge.second;
-        localEdges.push_back(curEdge);
-      } else if (isInfinite) {
-        // Second infinite edge, walk the exterior and accumulate corner points
-        shapes::walkBoxEdges(firstBoxSide, clipper.curSide, cornerIndices,
-                             curEdge, firstClippedNode, clipper.inf0, localEdges);
-      } else {
-        localEdges.push_back(curEdge);
-      }
+      clippedNodeSides.push_back(std::make_pair(startSide, endSide));
+      localEdges.push_back(curEdge);
 
       edge = nextEdge;
     } while (edge != firstEdge);
+    // Walk edges and clipped nodes to connect them
+    std::vector<edge::Edge> finalEdges = shapes::closeClippedEdges(localEdges, clippedNodeSides, cornerIndices);
     // Create faces and cells from local edges
-    removeCollinear(localEdges, result.m_nodes);
-    for (const auto& cedge : localEdges) {
+    removeCollinear(finalEdges, result.m_nodes);
+    for (const auto& cedge : finalEdges) {
       int signedFaceIndex = edge::addOrientedEdge(cedge.first, cedge.second, result.m_faces, edgeToFace);
       result.m_cells[cellIndex].push_back(signedFaceIndex);
     }

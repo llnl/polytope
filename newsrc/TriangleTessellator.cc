@@ -72,10 +72,8 @@ tessellateQuantized(const QuantPLC<2>& qplc,
   if (numGenerators == 2) {
     Clip2D<IntType> clipper;
     // Compute perpendicular bisector between the two generators
-    int indx0 = 1;
-    int indx1 = 0;
-    clipper.gen0 = result.m_points[indx0];
-    clipper.gen1 = result.m_points[indx1];
+    clipper.gen0 = result.m_points[1];
+    clipper.gen1 = result.m_points[0];
     clipper.inf0 = true;
     clipper.inf1 = true;
     if (clipper.doClipping(Q)) {
@@ -88,7 +86,7 @@ tessellateQuantized(const QuantPLC<2>& qplc,
                          curEdge, curEdge.first, false, localEdges);
     for (const auto& cedge : localEdges) {
       int signedFaceIndex = edge::addOrientedEdge(cedge.first, cedge.second, result.m_faces, edgeToFace);
-      result.m_cells[indx0].push_back(signedFaceIndex);
+      result.m_cells[1].push_back(signedFaceIndex);
     }
     curEdge = edge::updateNodeMap(clipper.p1, clipper.p0, node2id, result.m_nodes);
     localEdges.clear();
@@ -96,7 +94,7 @@ tessellateQuantized(const QuantPLC<2>& qplc,
                          curEdge, curEdge.second, false, localEdges);
     for (const auto& cedge : localEdges) {
       int signedFaceIndex = edge::addOrientedEdge(cedge.first, cedge.second, result.m_faces, edgeToFace);
-      result.m_cells[indx1].push_back(signedFaceIndex);
+      result.m_cells[0].push_back(signedFaceIndex);
     }
     return;
   }
@@ -135,7 +133,6 @@ tessellateQuantized(const QuantPLC<2>& qplc,
   std::vector<std::set<unsigned>> gen2tri(numGenerators);
   std::vector<Point2<double>> centers;
   centers.reserve(ntri);
-  bool check = false;
 
   // Extract the circumcenters of triangles (these become Voronoi vertices)
   for (auto i = 0; i < ntri; ++i) {
@@ -166,9 +163,9 @@ tessellateQuantized(const QuantPLC<2>& qplc,
     auto genit = gen2tri[cellIndex].begin();
     int curTri = *genit;
     bool ccwDir = true;
-    int firstClippedNode = -1;
-    shapes::BoxSide firstBoxSide;
     std::vector<edge::Edge> localEdges;
+    // List of sides associated with clipped nodes
+    std::vector<std::pair<int, int>> clippedNodeSides;
     // Walk the edges, if there is an infinite edge in the
     // CW direction of this cell, start there
     for (auto it : gen2tri[cellIndex]) {
@@ -212,60 +209,68 @@ tessellateQuantized(const QuantPLC<2>& qplc,
       if (nextTri == -1) {
         clipper.inf1 = true;
         auto thirdPoint = result.m_points[tri[localSide]];
-        clipper.normalRay = outwardRay(clipper.gen0, clipper.gen1,
-                                       thirdPoint, clipper.rp0);
+        clipper.normalRay = outwardRay(clipper.gen0, clipper.gen1, thirdPoint);
       } else {
         clipper.rp1 = centers[nextTri];
         clipper.normalRay = pointDirection<IntType>(clipper.rp0, clipper.rp1);
       }
       if (clipper.doClipping(Q)) {
-        if (!ccwDir) break;
         if (nextTri == -1) {
+          if (!ccwDir) break;
           ccwDir = false;
           nextTri = startTri;
         }
         curTri = nextTri;
         continue;
       }
+      int startSide = -1;
+      int endSide = -1;
+      if (clipper.inf0) {
+        startSide = static_cast<int>(clipper.firstSide);
+      }
+      if (clipper.inf1) {
+        endSide = static_cast<int>(clipper.secondSide);
+      }
       if (!ccwDir) {
         std::swap(clipper.p0, clipper.p1);
         std::swap(clipper.inf0, clipper.inf1);
+        std::swap(startSide, endSide);
       }
-      bool isInfinite = (clipper.inf0 || clipper.inf1);
-      if (clipper.p0 == clipper.p1) {
-        curTri = nextTri;
-        if (curTri == startTri) break;
+      edge::Edge curEdge = edge::updateNodeMap(clipper.p0, clipper.p1,
+                                               node2id, result.m_nodes);
+      if (curEdge.first == curEdge.second) {
+        if (nextTri == -1) {
+          if (!ccwDir) break;
+          ccwDir = false;
+          nextTri = startTri;
+        } else {
+          curTri = nextTri;
+          if (curTri == startTri) break;
+        }
         continue;
       }
-      edge::Edge curEdge = edge::updateNodeMap(clipper.p0, clipper.p1, node2id, result.m_nodes);
-      if (isInfinite && firstClippedNode < 0) {
-        // First infinite edge: record the clipped node (should be p1/second after proper orientation)
-        firstClippedNode = (clipper.inf1) ? curEdge.second : curEdge.first;
-        firstBoxSide = clipper.curSide;
+      if (ccwDir) {
         localEdges.push_back(curEdge);
-        // Switch to CW direction and advance one step from start to avoid re-processing same edge
-        ccwDir = false;
-        curTri = startTri;
-      } else if (isInfinite) {
-        // Second infinite edge: determine which node was clipped for this edge
-        shapes::walkBoxEdges(firstBoxSide, clipper.curSide, cornerIndices,
-                             curEdge, firstClippedNode, clipper.inf0, localEdges);
-        break;
+        clippedNodeSides.push_back(std::make_pair(startSide, endSide));
       } else {
-        if (ccwDir) {
-          localEdges.push_back(curEdge);
-        } else {
-          localEdges.insert(localEdges.begin(), curEdge);
-        }
+        localEdges.insert(localEdges.begin(), curEdge);
+        clippedNodeSides.insert(clippedNodeSides.begin(),
+                                std::make_pair(startSide, endSide));
+      }
+      if (nextTri == -1) {
+        if (!ccwDir) break;
+        curTri = startTri;
+        ccwDir = false;
+      } else {
         curTri = nextTri;
         if (curTri == startTri) break;
       }
     } while (true);
-
+    std::vector<edge::Edge> finalEdges = shapes::closeClippedEdges(localEdges, clippedNodeSides, cornerIndices);
     // Remove collinear points from the edge loop
-    removeCollinear(localEdges, result.m_nodes);
+    removeCollinear(finalEdges, result.m_nodes);
     // Create faces and add to cell
-    for (const auto& cedge : localEdges) {
+    for (const auto& cedge : finalEdges) {
       int signedFaceIndex = edge::addOrientedEdge(cedge.first, cedge.second, result.m_faces, edgeToFace);
       result.m_cells[cellIndex].push_back(signedFaceIndex);
     }

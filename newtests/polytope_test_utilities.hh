@@ -31,12 +31,10 @@ void outputMesh(const Tessellation<2,RealType>& mesh,
   std::vector<double> index(mesh.cells.size());
   std::vector<double> genx (mesh.cells.size());
   std::vector<double> geny (mesh.cells.size());
-  for (int i = 0; i < mesh.cells.size(); ++i){
+  for (int i = 0; i < mesh.cells.size(); ++i) {
     index[i] = double(i);
-    if (!points.empty()) {
-      genx[i] = points[2*i  ];
-      geny[i] = points[2*i+1];
-    }
+    genx[i] = mesh.points[2*i];
+    geny[i] = mesh.points[2*i+1];
   }
   std::map<std::string,double*> nodeFields, edgeFields, faceFields, cellFields;
   cellFields["cell_index"] = &index[0];
@@ -70,9 +68,9 @@ void outputMesh(const Tessellation<3,RealType>& mesh,
   for (int i = 0; i < mesh.cells.size(); ++i){
     index[i] = double(i);
     if (!points.empty()) {
-      genx[i] = points[3*i  ];
-      geny[i] = points[3*i+1];
-      genz[i] = points[3*i+2];
+      genx[i] = mesh.points[3*i  ];
+      geny[i] = mesh.points[3*i+1];
+      genz[i] = mesh.points[3*i+2];
     }
     //mesh.computeCellCentroidAndSignedVolume(i, cent, vol[i]);
   }
@@ -123,10 +121,12 @@ void outputMesh(Tessellation<2,RealType>& mesh,
   std::vector<double> geny (mesh.cells.size());
   for (int i = 0; i < mesh.cells.size(); ++i){
     index[i] = double(i);
-    if (!points.empty()) {
-      genx[i] = points[2*i  ];
-      geny[i] = points[2*i+1];
-    }
+    genx[i] = mesh.points[2*i];
+    geny[i] = mesh.points[2*i+1];
+    // if (!points.empty()) {
+    //   genx[i] = points[2*i  ];
+    //   geny[i] = points[2*i+1];
+    // }
   }
   std::map<std::string,double*> nodeFields, edgeFields, faceFields, cellFields;
   cellFields["cell_index"] = &index[0];
@@ -150,12 +150,12 @@ template <typename RealType>
 void tessellate2D(std::vector<RealType>& points,
                   Boundary2D<RealType>& boundary,
                   Tessellator<2,RealType>& tessellator,
-                  Tessellation<2,RealType>& mesh){
-   if( tessellator.handlesPLCs() ){
-      tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
-   }else{
-      tessellator.tessellate(points, boundary.mLow, boundary.mHigh, mesh);
-   }
+                  Tessellation<2,RealType>& mesh) {
+  if (tessellator.handlesPLCs()) {
+    tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
+  } else {
+    tessellator.tessellate(points, boundary.mLow, boundary.mHigh, mesh);
+  }
 }
 
 //------------------------------------------------------------------------------
@@ -163,23 +163,23 @@ void tessellate2D(std::vector<RealType>& points,
 //------------------------------------------------------------------------------
 template <typename RealType>
 RealType computeTessellationArea( Tessellation<2,RealType>& mesh ) {
-   RealType area = 0;
-   for (unsigned i = 0; i != mesh.cells.size(); ++i) {
-      std::vector<RealType> nodeCell;
-      for (std::vector<int>::const_iterator faceItr = mesh.cells[i].begin();
-           faceItr != mesh.cells[i].end(); ++faceItr){
-         const unsigned iface = *faceItr < 0 ? ~(*faceItr) : *faceItr;
-         POLY_CHECK(iface < mesh.faceCells.size());
-         POLY_CHECK(mesh.faces[iface].size() == 2);
-         const unsigned inode = *faceItr < 0 ? mesh.faces[iface][1] : mesh.faces[iface][0];
-         nodeCell.push_back( mesh.nodes[2*inode  ] );
-         nodeCell.push_back( mesh.nodes[2*inode+1] );
-      }
-      BGPolygon<RealType,2> cellPolygon = makeBGPolygon<RealType>( nodeCell );
-      area += boost::geometry::area( cellPolygon );
-      nodeCell.clear();
-   }
-   return area;
+  RealType area = 0;
+  for (unsigned i = 0; i != mesh.cells.size(); ++i) {
+    std::vector<RealType> nodeCell;
+    for (std::vector<int>::const_iterator faceItr = mesh.cells[i].begin();
+         faceItr != mesh.cells[i].end(); ++faceItr){
+      const unsigned iface = *faceItr < 0 ? ~(*faceItr) : *faceItr;
+      POLY_CHECK(iface < mesh.faceCells.size());
+      POLY_CHECK(mesh.faces[iface].size() == 2);
+      const unsigned inode = *faceItr < 0 ? mesh.faces[iface][1] : mesh.faces[iface][0];
+      nodeCell.push_back( mesh.nodes[2*inode  ] );
+      nodeCell.push_back( mesh.nodes[2*inode+1] );
+    }
+    BGPolygon<RealType,2> cellPolygon = makeBGPolygon<RealType>( nodeCell );
+    area += boost::geometry::area( cellPolygon );
+    nodeCell.clear();
+  }
+  return area;
 }
 
 }

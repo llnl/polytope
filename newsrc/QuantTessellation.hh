@@ -185,6 +185,9 @@ public:
   void clipTessellation(const QuantPLC<Dimension>& QPLC,
                         const Tessellator<Dimension, double>& tessellator);
 
+  // Remove any external generator points
+  void cullExternalPoints(const QuantPLC<Dimension>& QPLC);
+
   //------------------------------------------------------------------------------
   // Member data
   //------------------------------------------------------------------------------

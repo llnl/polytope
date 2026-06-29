@@ -46,14 +46,14 @@ traverseNodes(const Tessellation<2, RealType>& mesh,
   }
   nodes.push_back(nodes.front());
 
-#ifndef NDEBUG
+  //#ifndef NDEBUG
   // Make sure we don't have any garbage in our list of nodes.
   for (size_t n = 0; n < nodes.size(); ++n)
   {
     POLY_ASSERT(nodes[n] >= 0);
     POLY_ASSERT(nodes[n] < mesh.nodes.size()/2);
   }
-#endif
+  //#endif
 }
 //-------------------------------------------------------------------
 
@@ -106,40 +106,6 @@ PMPIO_closeFile(void* file,
 //-------------------------------------------------------------------
 
 #endif
-}
-
-template<typename RealType>
-void
-SiloWriter<2, RealType>::writePoint(const std::vector<RealType>& pointCoords,
-                                    const string& filename,
-                                    const string& name,
-                                    const string& dirname,
-                                    int cycle,
-                                    RealType time) {
-  DBoptlist* optlist = DBMakeOptlist(10);
-  DBAddOption(optlist, DBOPT_CYCLE, &cycle);
-  DBAddOption(optlist, DBOPT_DTIME, &time);
-  int driver = DB_HDF5;
-  DBfile* file = DBCreate(filename.c_str(), 0, DB_LOCAL, 0, driver);
-  DBMkDir(file, dirname.c_str());
-  DBSetDir(file, dirname.c_str());
-  const unsigned npoints = pointCoords.size()/2;
-  vector<RealType> x(npoints), y(npoints);
-  for (unsigned i = 0; i < npoints; ++i) {
-    x[i] = pointCoords[2*i];
-    y[i] = pointCoords[2*i+1];
-  }
-  RealType* coords[2];
-  coords[0] = &(x[0]);
-  coords[1] = &(y[0]);
-  const int result = DBPutPointmesh(file,
-                                    name.c_str(),
-                                    2,
-                                    coords,
-                                    npoints,
-                                    DB_DOUBLE,
-                                    optlist);
-  DBClose(file);
 }
 
 //-------------------------------------------------------------------
@@ -265,17 +231,6 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
   coords[0] = &(x[0]);
   coords[1] = &(y[0]);
 
-  // Generator coordinates
-  int numPoints = mesh.points.size() / 2;
-  vector<double> xp(numPoints), yp(numPoints);
-  for (int i = 0; i < numPoints; ++i) {
-    xp[i] = mesh.points[2*i];
-    yp[i] = mesh.points[2*i+1];
-  }
-  double* pcoords[2];
-  pcoords[0] = &(xp[0]);
-  pcoords[1] = &(yp[0]);
-
   // Build the list of nodes describing the boundary faces.
   int numBoundaryFaces = mesh.boundaryFaces.size();
   vector<int> boundaryNodes(2*numBoundaryFaces);
@@ -332,11 +287,13 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
   vector<int> conn(numCells);
   int elemlengths[3];
   char* elemnames[3];
-  for (int c = 0; c < numCells; ++c)
-    conn[c] = mesh.cells[c].size();
   for (int c = 0; c < numCells; ++c) {
-    for (size_t f = 0; f < mesh.cells[c].size(); ++f)
+    conn[c] = mesh.cells[c].size();
+  }
+  for (int c = 0; c < numCells; ++c) {
+    for (size_t f = 0; f < mesh.cells[c].size(); ++f) {
       conn.push_back(mesh.cells[c][f]);
+    }
   }
   for (size_t f = 0; f < mesh.faceCells.size(); ++f) {
     conn.push_back(mesh.faceCells[f][0]);
@@ -380,17 +337,7 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
   writeTagsToFile(faceTags, file, DB_FACECENT);
   writeTagsToFile(cellTags, file, DB_ZONECENT);
 
-  // Create POINTS directory and write point mesh and node fields there
-  DBSetDir(file, "/");
-  DBMkDir(file, "POINTS");
-  DBSetDir(file, "POINTS");
-
-  // Write point mesh
-  DBPutPointmesh(file, (char*)"points", 2, pcoords,
-                 numPoints, DB_DOUBLE, optlist);
-
   // FIXME: We really should try to use the number of edges for edge fields.
-  DBSetDir(file, "/CELLS");
   const int numFaces = mesh.faces.size();
   writeFieldsToFile<RealType>(nodeFields, file, numNodes, DB_NODECENT, optlist);
 
@@ -398,6 +345,24 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
   writeFieldsToFile<RealType>(edgeFields, file, numFaces, DB_EDGECENT, optlist);
   writeFieldsToFile<RealType>(faceFields, file, numFaces, DB_FACECENT, optlist);
   writeFieldsToFile<RealType>(cellFields, file, numCells, DB_ZONECENT, optlist);
+
+  // Create POINTS directory and write point mesh and node fields there
+  DBSetDir(file, "/");
+  DBMkDir(file, "POINTS");
+  DBSetDir(file, "POINTS");
+  // Generator coordinates
+  int numPoints = mesh.points.size() / 2;
+  vector<double> xp(numPoints), yp(numPoints);
+  for (int i = 0; i < numPoints; ++i) {
+    xp[i] = mesh.points[2*i];
+    yp[i] = mesh.points[2*i+1];
+  }
+  double* pcoords[2];
+  pcoords[0] = &(xp[0]);
+  pcoords[1] = &(yp[0]);
+  // Write point mesh
+  DBPutPointmesh(file, (char*)"points", 2, pcoords,
+                 numPoints, DB_DOUBLE, optlist);
 
 #if 0
   // Vector fields.

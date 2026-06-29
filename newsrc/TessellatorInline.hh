@@ -1,4 +1,3 @@
-//#include "clipQuantizedTessellation.hh"
 // #include "makeBoxPLC.hh"
 #include "findBoundaryElements.hh"
 #include "SiloWriter.hh"
@@ -62,6 +61,8 @@ tessellate(const std::vector<RealType>& points,
   // Invoke the descendant method to fill the quant mesh.
   QuantizedTessellation quantmesh(m_Q, points);
   QuantPLC<nDim> qplc(geometry, m_Q, PLCpoints);
+  // Remove any external points
+  quantmesh.cullExternalPoints(qplc);
   this->tessellateQuantized(qplc, quantmesh);
 
   // Clip against the boundary.

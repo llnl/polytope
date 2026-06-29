@@ -46,6 +46,41 @@ void printPolygon(const Quantizer<2>& Q,
 }
 }
 
+// Remove any generator points that are outside our clipping region
+template<>
+void
+QuantTessellation<2>::cullExternalPoints(const QuantPLC<2>& QPLC) {
+  auto boundaryPoints = QPLC.getFacetPoints();
+  PolygonWithHoles boundary;
+  bp::set_points(boundary, boundaryPoints.begin(), boundaryPoints.end());
+  auto holePoints = QPLC.getHolePoints();
+  std::vector<Polygon> holes_vector;
+  for (const auto& hole : holePoints) {
+    Polygon holepoly;
+    bp::set_points(holepoly, hole.begin(), hole.end());
+    holes_vector.push_back(holepoly);
+  }
+  if (holePoints.size() > 0) {
+    bp::set_holes(boundary, holes_vector.begin(), holes_vector.end());
+  }
+  auto N = m_points.size();
+  std::vector<IntPoint> newPoints;
+  newPoints.reserve(N);
+  std::vector<CoordHash> newHashes;
+  newHashes.reserve(N);
+  unsigned indx = 0;
+  for (int i = 0; i < N; ++i) {
+    auto point = m_points[i];
+    bp::point_data<IntType> genPoint = bp::construct<IntPoint>(point.x, point.y);
+    if (!bp::contains(boundary, genPoint)) continue;
+    point.index = indx++;
+    newPoints.push_back(point);
+    newHashes.push_back(m_Q.hash(point));
+  }
+  m_points = std::move(newPoints);
+  m_hashes = std::move(newHashes);
+}
+
 template<>
 void
 QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
@@ -68,17 +103,18 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
   std::vector<PolygonWithHoles> orphans;
   std::vector<PolygonWithHoles> cellPolygons;
   std::vector<Point2<IntType>> localGenPoints;
+  std::vector<int> polyIndex;
   // Map between hashed vertices to associated polygons in cellPolygons
   std::unordered_map<CoordHash, std::set<unsigned>> vertexMap;
 
   // Loop over cells and intersect them with the boundary
   for (auto i = 0; i < m_cells.size(); ++i) {
+    bp::point_data<IntType> genPoint = bp::construct<IntPoint>(m_points[i].x, m_points[i].y);
     std::vector<PolygonWithHoles> cellSet = boostIntersect(getCell(i), boundary);
     auto NFrag = cellSet.size();
     if (NFrag == 0) continue; // Cell was completely outside the boundary
     // Check if orphans were generated
     unsigned fragIndex = 0;
-    bp::point_data<IntType> genPoint = bp::construct<IntPoint>(m_points[i].x, m_points[i].y);
     if (NFrag > 1) {
       // Find which part owns the generator
       while (fragIndex < NFrag and not bp::contains(cellSet[fragIndex], genPoint)) ++fragIndex;
@@ -106,6 +142,7 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
       auto vertexHash = m_Q.hash(BoostToPolytope(v));
       vertexMap[vertexHash].insert(curP);
     }
+    polyIndex.push_back(i);
     localGenPoints.push_back(m_points[i]);
     cellPolygons.push_back(cellSet[fragIndex]);
   }
@@ -130,6 +167,7 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
         }
       }
     }
+
     // Skip if no valid neighboring cells found
     if (genPoints.empty()) continue;
 
@@ -166,8 +204,8 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
   // Map from canonical edge to face index (for oriented edge tracking)
   edge::EdgeToFaceMap edgeToFace;
   unsigned i = 0;
-  std::vector<Polygon> extendCell;
   for (auto& cellPoly : cellPolygons) {
+    int curIndex = polyIndex[i];
     std::vector<IntPoint> keptVertices = bp::BoostToPolytope(cellPoly);
     //removeCollinear(keptVertices);
     auto nv = keptVertices.size();
@@ -196,8 +234,9 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
       cellEdgeIndices.push_back(signedFaceIndex);
     }
     newCells.push_back(cellEdgeIndices);
-    newPoints.push_back(m_points[i]);
-    newHashes.push_back(m_hashes[i++]);
+    newPoints.push_back(m_points[curIndex]);
+    newHashes.push_back(m_hashes[curIndex]);
+    i++;
   }
   m_nodes = std::move(newNodes);
   m_faces = std::move(newFaces);

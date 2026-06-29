@@ -143,6 +143,30 @@ inline BoxSide getBoxCorner(const BoxSide& s1, const BoxSide& s2) {
   }
 }
 
+// Walk box edges only in CCW direction
+
+inline void walkBoxEdges(const BoxSide& startSide,
+                         const BoxSide& endSide,
+                         const unsigned& startPoint,
+                         const unsigned& endPoint,
+                         const std::map<BoxSide, unsigned>& cornerIndices,
+                         std::vector<edge::Edge>& edges) {
+  BoxSides sides;
+  BoxSide thisSide = startSide;
+  unsigned curPoint = startPoint;
+  while (thisSide != endSide) {
+    if (isCorner(thisSide)) {
+      unsigned nextPoint = cornerIndices.at(thisSide);
+      if (curPoint != nextPoint) {
+        edges.push_back(std::make_pair(curPoint, nextPoint));
+        curPoint = nextPoint;
+      }
+    }
+    thisSide = sides.next(thisSide);
+  }
+  edges.push_back(std::make_pair(curPoint, endPoint));
+}
+
 // Walk box edges from origSide to curSide, adding corner vertices along the way
 //
 // When clipping against a box boundary, cells may need to traverse multiple
@@ -163,6 +187,7 @@ inline BoxSide getBoxCorner(const BoxSide& s1, const BoxSide& s2) {
 //   origSide=L, curSide=B, origPoint=3 (UL), curEdge=(1,4) (LR->mid)
 //   Walks L -> LL (add 3->0) -> B (add 0->1) -> adds curEdge (1->4)
 //   Result: [(3,0), (0,1), (1,4)]
+
 inline void walkBoxEdges(const BoxSide& origSide,
                          const BoxSide& curSide,
                          const std::map<BoxSide, unsigned>& cornerIndices,
@@ -219,6 +244,35 @@ inline void walkBoxEdges(const BoxSide& origSide,
       edges.push_back(std::make_pair(curIndx, origPoint));
     }
   }
+}
+
+inline std::vector<edge::Edge> closeClippedEdges(const std::vector<edge::Edge>& origEdges,
+                                                 const std::vector<std::pair<int, int>>& clippedNodeSides,
+                                                 const std::map<BoxSide, unsigned>& cornerIndices) {
+  auto N = origEdges.size();
+  POLY_ASSERT2(N > 0, "Must have at least 1 edge");
+  std::vector<edge::Edge> out;
+  out.reserve(N);
+  if (N == 1) {
+    BoxSide endSide = static_cast<BoxSide>(clippedNodeSides[0].first);
+    BoxSide startSide = static_cast<BoxSide>(clippedNodeSides[0].second);
+    out.push_back(origEdges[0]);
+    walkBoxEdges(startSide, endSide, origEdges[0].second, origEdges[0].first, cornerIndices, out);
+    return out;
+  }
+  for (auto i = 0; i < N; ++i) {
+    auto curEdge = origEdges[i];
+    auto side1 = clippedNodeSides[i].second;
+    out.push_back(curEdge);
+    if (side1 >= 0) {
+      auto ip = (i+1)%N;
+      auto nextEdge = origEdges[ip];
+      BoxSide endSide = static_cast<BoxSide>(clippedNodeSides[ip].first);
+      BoxSide startSide = static_cast<BoxSide>(side1);
+      walkBoxEdges(startSide, endSide, curEdge.second, nextEdge.first, cornerIndices, out);
+    }
+  }
+  return out;
 }
 }
 }

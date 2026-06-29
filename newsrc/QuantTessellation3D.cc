@@ -10,14 +10,12 @@
 
 namespace polytope {
 
-// template<>
-// std::vector<std::vector<Point3<HashKey<3>::IntType>>>
-// QuantTessellation<3>::getCell(const unsigned cellIndx) const {
-//   auto numFaces = m_cells[cellIndx];
-//   IntCell polygon;
-//   // TODO: implement me
-//   return polygon;
-// }
+// Remove any generator points that are outside our clipping region
+template<>
+void
+QuantTessellation<3>::cullExternalPoints(const QuantPLC<3>& QPLC) {
+  // TODO: Implement me
+}
 
 //------------------------------------------------------------------------------
 // Clip 3D tessellation against PLC boundary planes
