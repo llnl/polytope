@@ -113,7 +113,7 @@ tessellateQuantized(const QuantPLC<2>& qplc,
     ntri = out.numberoftriangles;
   }
   //-------------------------------------------------------------------
-  // Collinear or only 2 generators
+  // Special collinear or 2 generators cases
   //-------------------------------------------------------------------
   if (ntri == 0) {
     // Points are already ordered by hash so walk them in order and solve
@@ -164,13 +164,6 @@ tessellateQuantized(const QuantPLC<2>& qplc,
     auto c = result.m_points[ic].template type_cast<double>();
     Point2<double> rcen = circumcenter(a, b, c);
     centers.push_back(rcen);
-    // Use original coordinates and quantize them but keep them as doubles
-    // Point2<double> a(generators[2*ia], generators[2*ia+1]);
-    // Point2<double> b(generators[2*ib], generators[2*ib+1]);
-    // Point2<double> c(generators[2*ic], generators[2*ic+1]);
-    // Point2<double> rcen = circumcenter(a, b, c);
-    // Point2<double> rcenq = rcen.convertXi<double, double>(Q.m_xlo_o, Q.m_dx_o);
-    // centers.push_back(rcenq);
     gen2tri[ia].insert(i);
     gen2tri[ib].insert(i);
     gen2tri[ic].insert(i);
@@ -206,7 +199,11 @@ tessellateQuantized(const QuantPLC<2>& qplc,
     }
     int startTri = curTri;
     do {
-      POLY_ASSERT2(curTri >= 0, "Cannot have negative curTri");
+      if (curTri == -1) {
+        if (!ccwDir) break;
+        curTri = startTri;
+        ccwDir = false;
+      }
       int v0 = out.trianglelist[3*curTri];
       int v1 = out.trianglelist[3*curTri+1];
       int v2 = out.trianglelist[3*curTri+2];
@@ -234,11 +231,6 @@ tessellateQuantized(const QuantPLC<2>& qplc,
         clipper.normalRay = pointDirection<IntType>(clipper.rp0, clipper.rp1);
       }
       if (clipper.doClipping(Q)) {
-        if (nextTri == -1) {
-          if (!ccwDir) break;
-          ccwDir = false;
-          nextTri = startTri;
-        }
         curTri = nextTri;
         continue;
       }
@@ -257,27 +249,13 @@ tessellateQuantized(const QuantPLC<2>& qplc,
       }
       edge::Edge curEdge = edge::updateNodeMap(clipper.p0, clipper.p1, node2id, result.m_nodes);
       if (curEdge.first == curEdge.second) {
-        if (nextTri == -1) {
-          if (!ccwDir) break;
-          ccwDir = false;
-          nextTri = startTri;
-        } else {
-          curTri = nextTri;
-          if (curTri == startTri) break;
-        }
+        curTri = nextTri;
         continue;
       }
       localEdges.push_back(curEdge);
       clippedNodeSides.push_back(std::make_pair(startSide, endSide));
-      if (nextTri == -1) {
-        if (!ccwDir) break;
-        curTri = startTri;
-        ccwDir = false;
-      } else {
-        curTri = nextTri;
-        if (curTri == startTri) break;
-      }
-    } while (true);
+      curTri = nextTri;
+    } while (curTri != startTri);
     std::vector<edge::Edge> finalEdges = shapes::closeClippedEdges(localEdges, clippedNodeSides, cornerIndices);
     // Remove collinear points from the edge loop
     removeCollinear(finalEdges, result.m_nodes);

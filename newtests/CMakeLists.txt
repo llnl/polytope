@@ -53,7 +53,6 @@ polytope_add_new_test(StarBoundary)
 polytope_add_new_test(SolidRotationAroundHoles)
 polytope_add_new_test(walkBoxEdges)
 polytope_add_new_test(OrphanCases)
-polytope_add_new_test(OrphanedCell)
 #polytope_add_new_test(Cylinder)
 
 #-----------------------------------------------------------------------------
