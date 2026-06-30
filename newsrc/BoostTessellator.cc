@@ -81,7 +81,7 @@ tessellateQuantized(const QuantPLC<2>& qplc,
 
   // Build the tessellation data structures
   // In 2D: nodes are Voronoi vertices, faces are edges, cells are Voronoi cells
-  result.m_nodes.reserve(voronoi.num_vertices());
+  result.m_nodes.reserve(voronoi.num_vertices()+4);
   result.m_faces.reserve(voronoi.num_edges());
   result.m_cells.resize(numGenerators);
 
@@ -120,16 +120,12 @@ tessellateQuantized(const QuantPLC<2>& qplc,
     std::vector<edge::Edge> localEdges;
     std::vector<std::pair<int, int>> clippedNodeSides;
     do {
-      bool flippedEdge = false;
       const VD::edge_type* nextEdge = edge->next();
-      if (!edge->vertex0() && edge->vertex1()) {
-        edge = edge->twin();
-        flippedEdge = true;
-      }
       const typename VD::vertex_type* v0 = edge->vertex0();
       const typename VD::vertex_type* v1 = edge->vertex1();
 
       // An edge is considered infinite if Boost provides a null pointer
+      // gen0 should always be the current cell's generator
       auto gindx1 = edge->cell()->source_index();
       auto gindx2 = edge->twin()->cell()->source_index();
       Clip2D<IntType> clipper;
@@ -139,13 +135,16 @@ tessellateQuantized(const QuantPLC<2>& qplc,
         clipper.rp0 = Point2<double>(v0->x(), v0->y());
       } else {
         clipper.inf0 = true;
+        clipper.normalRay = outwardRay(clipper.gen0, clipper.gen1);
       }
       if (v1) {
         clipper.rp1 = Point2<double>(v1->x(), v1->y());
-        clipper.normalRay = pointDirection<IntType>(clipper.rp0, clipper.rp1);
       } else {
         clipper.inf1 = true;
         clipper.normalRay = outwardRay(clipper.gen0, clipper.gen1);
+      }
+      if (v1 && v0) {
+        clipper.normalRay = pointDirection<IntType>(clipper.rp0, clipper.rp1);
       }
       if (clipper.doClipping(Q)) {
         edge = nextEdge;
@@ -158,11 +157,6 @@ tessellateQuantized(const QuantPLC<2>& qplc,
       }
       if (clipper.inf1) {
         endSide = static_cast<int>(clipper.secondSide);
-      }
-      if (flippedEdge) {
-        std::swap(clipper.p0, clipper.p1);
-        std::swap(clipper.inf0, clipper.inf1);
-        std::swap(startSide, endSide);
       }
       edge::Edge curEdge = edge::updateNodeMap(clipper.p0, clipper.p1, node2id, result.m_nodes);
 

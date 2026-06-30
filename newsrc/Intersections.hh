@@ -298,7 +298,7 @@ void removeCollinear(std::vector<edge::Edge>& edges,
 //------------------------------------------------------------------------------
 
 template<typename CoordType>
-void
+bool
 clipInfiniteRay(const Point2<CoordType>& validVertex,
                 const Point2<CoordType>& normdiffg,
                 const Point2<CoordType>& bmin,
@@ -316,13 +316,15 @@ clipInfiniteRay(const Point2<CoordType>& validVertex,
   Point2<CoordType> planex1(x_lim, bmin.y);
   Point2<CoordType> planex2(x_lim, bmax.y);
   bool xint = segmentRayIntersection2D(planex1, planex2, validVertex, normdiffg, intersectionx);
-  POLY_ASSERT(xint || yint);
+  if (!xint && !yint) {
+    return false;
+  }
   bool hitX = true;
   if (xint && yint) {
     if (intersectionx == intersectiony) {
       result = intersectionx;
       side = shapes::getBoxCorner(LR, TB);
-      return;
+      return true;
     }
     // Assume it intersects both planes, check if ||p-x|| is longer than ||p-y||
     if (magComparison(validVertex - intersectionx, validVertex - intersectiony)) {
@@ -338,6 +340,7 @@ clipInfiniteRay(const Point2<CoordType>& validVertex,
     result = intersectiony;
     side = TB;
   }
+  return true;
 }
 
 //------------------------------------------------------------------------------

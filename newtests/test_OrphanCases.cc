@@ -110,7 +110,7 @@ void test(Tessellator<2,double>& tessellator) {
     Tessellation<2,double> mesh;
     tessellator.setQuantizer(boundary.mQ);
     tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
-    outputMesh(mesh, testName, generators.mPoints, i);
+    outputMesh(mesh, testName,i);
     printArea(boundary,mesh);
     POLY_CHECK(checkNearestNode(mesh, dist));
     ++i;
@@ -124,7 +124,7 @@ void test(Tessellator<2,double>& tessellator) {
     generators.randomPoints(20, seed);
     Tessellation<2,double> mesh;
     tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
-    outputMesh(mesh, testName, generators.mPoints, i);
+    outputMesh(mesh, testName,i);
     printArea(boundary,mesh);
     POLY_CHECK(checkNearestNode(mesh,dist));
     ++i;
@@ -138,7 +138,7 @@ void test(Tessellator<2,double>& tessellator) {
     generators.randomPoints(20, seed);
     Tessellation<2,double> mesh;
     tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
-    outputMesh(mesh, testName, generators.mPoints, i);
+    outputMesh(mesh, testName, i);
     printArea(boundary,mesh);
     POLY_CHECK(checkNearestNode(mesh, dist));
     ++i;
@@ -152,7 +152,7 @@ void test(Tessellator<2,double>& tessellator) {
     generators.randomPoints(20, seed);
     Tessellation<2,double> mesh;
     tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
-    outputMesh(mesh, testName, generators.mPoints, i);
+    outputMesh(mesh, testName, i);
     printArea(boundary,mesh);
     POLY_CHECK(checkNearestNode(mesh, dist));
     ++i;
@@ -166,7 +166,7 @@ void test(Tessellator<2,double>& tessellator) {
     generators.randomPoints(20, seed);
     Tessellation<2,double> mesh;
     tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
-    outputMesh(mesh, testName, generators.mPoints, i);
+    outputMesh(mesh, testName, i);
     printArea(boundary,mesh);
     POLY_CHECK(checkNearestNode(mesh, dist));
     ++i;
@@ -200,7 +200,7 @@ void test(Tessellator<2,double>& tessellator) {
     }
     Tessellation<2,double> mesh;
     tessellator.tessellate(points, PLCpoints, boundary, mesh);
-    outputMesh(mesh, testName, points, i);
+    outputMesh(mesh, testName, i);
     ++i;
   }
   
@@ -243,7 +243,7 @@ void test(Tessellator<2,double>& tessellator) {
     Quantizer<2> Q(PLCpoints, -1, 0.5);
     tessellator.setQuantizer(Q);
     tessellator.tessellate(points, PLCpoints, boundary, mesh);
-    outputMesh(mesh, testName, points, i);
+    outputMesh(mesh, testName, i);
     const double trueArea = 8.74;
     const double tessArea = computeTessellationArea(mesh);
     const double fracerr  = std::abs(trueArea - tessArea)/trueArea;
@@ -267,7 +267,7 @@ void test(Tessellator<2,double>& tessellator) {
       generators.randomPoints(50, seed);
       Tessellation<2,double> mesh;
       tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
-      outputMesh(mesh, testName, generators.mPoints, i+iter);
+      outputMesh(mesh, testName, i+iter);
       cout << iter << endl;
       printArea(boundary,mesh);
       bool result = checkNearestNode(mesh, dist);

@@ -30,7 +30,8 @@ public:
   std::vector<RealType> mPLCpoints;
   double mDiff = 0.5;
   // Ranges of bounding box
-  RealType mCenter[3], mArea;
+  RealType mCenter[3] = {0.0, 0.0, 0.0};
+  RealType mArea;
 
   BGPolygon<RealType, 2> mBGboundary;
   
@@ -102,8 +103,6 @@ public:
   //------------------------------------------------------------------------
   void setDefaultBoundary(const int bType)
   {
-    mCenter[0] = 0.0;
-    mCenter[1] = 0.0;
 
     switch(bType){
     case square:

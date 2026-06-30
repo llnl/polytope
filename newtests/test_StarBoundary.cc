@@ -57,7 +57,7 @@ void test(Tessellator<2,double>& tessellator) {
     Tessellation<2,double> mesh;
     tessellator.setQuantizer(boundary.mQ);
     tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
-    outputMesh(mesh,testName,points,test);
+    outputMesh(mesh,testName,test);
     ++test;
   }
 
@@ -75,7 +75,7 @@ void test(Tessellator<2,double>& tessellator) {
     Tessellation<2,double> mesh;
     tessellator.setQuantizer(boundary.mQ);
     tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC,mesh);
-    outputMesh(mesh,testName,points,test);
+    outputMesh(mesh,testName,test);
     ++test;
   }
 
@@ -87,7 +87,7 @@ void test(Tessellator<2,double>& tessellator) {
     Tessellation<2,double> mesh;
     tessellator.setQuantizer(boundary.mQ);
     tessellator.tessellate(generators.mPoints,boundary.mPLCpoints,boundary.mPLC,mesh);
-    outputMesh(mesh,testName,generators.mPoints,test);
+    outputMesh(mesh,testName,test);
     ++test;
   }
 
@@ -100,7 +100,7 @@ void test(Tessellator<2,double>& tessellator) {
     Tessellation<2,double> mesh;
     tessellator.setQuantizer(boundary.mQ);
     tessellator.tessellate(generators.mPoints,boundary.mPLCpoints,boundary.mPLC,mesh);
-    outputMesh(mesh,testName,generators.mPoints,test);
+    outputMesh(mesh,testName,test);
     ++test;
   }
 }

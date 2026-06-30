@@ -51,7 +51,7 @@ void testSquare(const int tnum, bool boostTess) {
   Tessellation<2, double> mesh;
   quantMesh.fillTessellation(mesh);
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
-  outputMesh(mesh, outname, points, tnum, 0.0);
+  outputMesh(mesh, outname, tnum, 0.0);
 }
 
 //------------------------------------------------------------------------------
@@ -78,7 +78,7 @@ void testCutSquare(const int tnum, bool boostTess) {
   Tessellation<2, double> mesh;
   quantMesh.fillTessellation(mesh);
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
-  outputMesh(mesh, outname, points, tnum, 0.0);
+  outputMesh(mesh, outname, tnum, 0.0);
 }
 
 //------------------------------------------------------------------------------
@@ -120,7 +120,7 @@ void testCutSquareHole(const int tnum, bool boostTess) {
   Tessellation<2, double> mesh;
   quantMesh.fillTessellation(mesh);
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
-  outputMesh(mesh, outname, points, tnum, 0.0);
+  outputMesh(mesh, outname, tnum, 0.0);
 }
 
 //------------------------------------------------------------------------------
@@ -149,7 +149,7 @@ void testDiamond(const int tnum, bool boostTess) {
   Tessellation<2, double> mesh;
   quantMesh.fillTessellation(mesh);
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
-  outputMesh(mesh, outname, points, tnum, 0.0);
+  outputMesh(mesh, outname, tnum, 0.0);
 }
 
 //------------------------------------------------------------------------------
@@ -180,7 +180,7 @@ void testObtuse(const int tnum, bool boostTess) {
   Tessellation<2, double> mesh;
   quantMesh.fillTessellation(mesh);
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
-  outputMesh(mesh, outname, points, tnum, 0.0);
+  outputMesh(mesh, outname, tnum, 0.0);
 }
 
 //------------------------------------------------------------------------------
@@ -206,7 +206,6 @@ void testClippedObtuse(const int tnum, bool boostTess) {
   quantMesh.cullExternalPoints(QPLC);
   if (boostTess) {
     BoostTessellator boost(Q);
-    boost.setQuantizer(boundary.mQ);
     boost.tessellateQuantized(QPLC, quantMesh);
     quantMesh.clipTessellation(QPLC, boost);
   } else {
@@ -217,7 +216,38 @@ void testClippedObtuse(const int tnum, bool boostTess) {
   Tessellation<2, double> mesh;
   quantMesh.fillTessellation(mesh);
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
-  outputMesh(mesh, outname, points, tnum, 0.0);
+  outputMesh(mesh, outname, tnum, 0.0);
+}
+
+//------------------------------------------------------------------------------
+// Nearly external edge
+//------------------------------------------------------------------------------
+void testExternalEdge(const int tnum, bool boostTess) {
+  cout << "\n=== Test " << tnum << ": External Edge ===" << endl;
+  std::string outname = (boostTess) ? "boost" : "triangle";
+  Boundary2D<double> boundary;
+  boundary.setDefaultBoundary(0);
+  Quantizer<2> Q(boundary.mQ);
+  vector<double> points = {0.49, -0.1,
+                           0.495, 0.,
+                           0.485, 0.,
+                           0.49, 0.1};
+  QuantPLC<2> QPLC(boundary.mPLC, Q, boundary.mPLCpoints);
+  QuantTessellation<2> quantMesh(Q, points);
+  quantMesh.cullExternalPoints(QPLC);
+  if (boostTess) {
+    BoostTessellator boost(Q);
+    boost.tessellateQuantized(QPLC, quantMesh);
+    quantMesh.clipTessellation(QPLC, boost);
+  } else {
+    TriangleTessellator tri(Q);
+    tri.tessellateQuantized(QPLC, quantMesh);
+    quantMesh.clipTessellation(QPLC, tri);
+  }
+  Tessellation<2, double> mesh;
+  quantMesh.fillTessellation(mesh);
+  findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
+  outputMesh(mesh, outname, tnum, 0.0);
 }
 
 //------------------------------------------------------------------------------
@@ -244,7 +274,7 @@ void testTwoPoints(const int tnum, bool boostTess) {
   Tessellation<2, double> mesh;
   quantMesh.fillTessellation(mesh);
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
-  outputMesh(mesh, outname, points, tnum, 0.0);
+  outputMesh(mesh, outname, tnum, 0.0);
 }
 
 //------------------------------------------------------------------------------
@@ -276,7 +306,37 @@ void testClippedPoint(const int tnum, bool boostTess) {
   Tessellation<2, double> mesh;
   quantMesh.fillTessellation(mesh);
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
-  outputMesh(mesh, outname, points, tnum, 0.0);
+  outputMesh(mesh, outname, tnum, 0.0);
+}
+
+//------------------------------------------------------------------------------
+// Collinear
+//------------------------------------------------------------------------------
+void testCollinear(const int tnum, bool boostTess) {
+  cout << "\n=== Test " << tnum << ": Collinear ===" << endl;
+  std::string outname = (boostTess) ? "boost" : "triangle";
+  Boundary2D<double> boundary;
+  boundary.mDiff = 1.0;
+  boundary.setDefaultBoundary(0);
+  Quantizer<2> Q(boundary.mQ);
+  vector<double> points = {0.1, 0.3, 0.7, 0.3, 0.4, 0.3};
+  QuantTessellation<2> quantMesh(Q, points);
+  QuantPLC<2> QPLC(boundary.mPLC, Q, boundary.mPLCpoints);
+  if (boostTess) {
+    BoostTessellator boost(Q);
+    quantMesh.cullExternalPoints(QPLC);
+    boost.tessellateQuantized(QPLC, quantMesh);
+    quantMesh.clipTessellation(QPLC, boost);
+  } else {
+    TriangleTessellator tri(Q);
+    quantMesh.cullExternalPoints(QPLC);
+    tri.tessellateQuantized(QPLC, quantMesh);
+    quantMesh.clipTessellation(QPLC, tri);
+  }
+  Tessellation<2, double> mesh;
+  quantMesh.fillTessellation(mesh);
+  findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
+  outputMesh(mesh, outname, tnum, 0.0);
 }
 
 } // anonymous namespace
@@ -290,16 +350,19 @@ int main(int argc, char** argv) {
 #endif
 
   try {
-    int test = 1;
     bool boost = true;
     for (int i = 0; i < 2; ++i) {
+      int test = 1;
       testSquare(test++, boost);
       testCutSquare(test++, boost);
       testCutSquareHole(test++, boost);
       testDiamond(test++, boost);
       testObtuse(test++, boost);
+      testClippedObtuse(test++, boost);
+      testExternalEdge(test++, boost);
       testTwoPoints(test++, boost);
       testClippedPoint(test++, boost);
+      testCollinear(test++, boost);
       boost = false;
     }
 

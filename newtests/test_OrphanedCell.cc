@@ -95,7 +95,7 @@ void test(Tessellator<2,double>& tessellator,
   tessellator.tessellate(points, PLCpoints, boundary, mesh);
 
   // Store the mesh using SiloWriter
-  outputMesh(mesh, testName, points);
+  outputMesh(mesh, testName);
 
   if (checkMesh) {
     // Total mesh checks

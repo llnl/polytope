@@ -22,6 +22,6 @@ int main() {
   int test = 1;
   tessellator.setQuantizer(boundary.mQ);
   tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
-  outputMesh(mesh, testName, points, test);
+  outputMesh(mesh, testName, test);
   return 0;
 }

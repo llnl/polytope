@@ -19,7 +19,6 @@ struct Clip2D {
   // Output parameters
   shapes::BoxSide firstSide = shapes::BoxSide::L;
   shapes::BoxSide secondSide = shapes::BoxSide::L;
-  shapes::BoxSide curSide;
   Point2<CoordType> p0, p1;
 
   // Input and output parameters
@@ -27,46 +26,42 @@ struct Clip2D {
 
   // Returns true if edge should be skipped entirely
   bool doClipping(const Quantizer<2>& Q) {
+    bool clip1 = true;
+    bool clip2 = true;
     p1 = midPoint(gen1, gen0);
     if (inf0 && inf1) {
-      normalRay = outwardRay(gen1, gen0);
-      clipInfiniteRay(p1, -normalRay, Q.minBound, Q.maxBound, p0, curSide);
-      firstSide = curSide;
-      clipInfiniteRay(p0, normalRay, Q.minBound, Q.maxBound, p1, curSide);
-      secondSide = curSide;
-      return false;
+      clip1 = clipInfiniteRay(p1, -normalRay, Q.minBound, Q.maxBound, p0, firstSide);
+      clip2 = clipInfiniteRay(p0, normalRay, Q.minBound, Q.maxBound, p1, secondSide);
+      POLY_ASSERT(clip1 == clip2);
+      return !clip1;
     }
-    POLY_ASSERT2(!inf0, "Cannot have only inf0");
-    // Check if entire ray is external
-    bool extRay = isRayExternal(rp0, normalRay, Q);
-    if (extRay) {
-      // If so, skip this ray entirely
-      return true;
+    bool bounds0 = (!inf0) ? Q.inQBounds(rp0) : true;
+    bool validp0 = (!inf0 && bounds0);
+    if (validp0) {
+      p0 = rp0.template type_cast<CoordType>();
     }
-    // Check if endpoint is outside the bounding box
-    // If it is, leave it as the midpoint
     bool bounds1 = (!inf1) ? Q.inQBounds(rp1) : true;
     bool validp1 = (!inf1 && bounds1);
     if (validp1) {
       p1 = rp1.template type_cast<CoordType>();
     }
-    bool bounds0 = Q.inQBounds(rp0);
-    if (!bounds0 && !bounds1) {
+    if (validp0 && validp1) {
+      return false;
+    }
+    if (!bounds0 && isRayExternal(rp0, normalRay, Q)) {
+      return true;
+    } else if (!bounds1 && isRayExternal(rp1, -normalRay, Q)) {
       return true;
     }
-    // If the origin is outside the bounds, clip it
-    if (!bounds0) {
-      clipInfiniteRay(p1, -normalRay, Q.minBound, Q.maxBound, p0, curSide);
-      firstSide = curSide;
+    if (!validp0) {
+      clip1 = clipInfiniteRay(p1, -normalRay, Q.minBound, Q.maxBound, p0, firstSide);
       inf0 = true;
-    } else {
-      p0 = rp0.template type_cast<CoordType>();
+      if (!clip1) return true;
     }
-    // Endpoint is outside bounding box
     if (!validp1) {
-      clipInfiniteRay(p0, normalRay, Q.minBound, Q.maxBound, p1, curSide);
-      secondSide = curSide;
+      clip2 = clipInfiniteRay(p0, normalRay, Q.minBound, Q.maxBound, p1, secondSide);
       inf1 = true;
+      if (!clip2) return true;
     }
     return false;
   }

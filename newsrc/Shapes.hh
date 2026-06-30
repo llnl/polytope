@@ -144,7 +144,6 @@ inline BoxSide getBoxCorner(const BoxSide& s1, const BoxSide& s2) {
 }
 
 // Walk box edges only in CCW direction
-
 inline void walkBoxEdges(const BoxSide& startSide,
                          const BoxSide& endSide,
                          const unsigned& startPoint,
@@ -154,6 +153,8 @@ inline void walkBoxEdges(const BoxSide& startSide,
   BoxSides sides;
   BoxSide thisSide = startSide;
   unsigned curPoint = startPoint;
+  POLY_ASSERT(static_cast<int>(thisSide) >= 0);
+  POLY_ASSERT(static_cast<int>(endSide) >= 0);
   while (thisSide != endSide) {
     if (isCorner(thisSide)) {
       unsigned nextPoint = cornerIndices.at(thisSide);
@@ -167,85 +168,7 @@ inline void walkBoxEdges(const BoxSide& startSide,
   edges.push_back(std::make_pair(curPoint, endPoint));
 }
 
-// Walk box edges from origSide to curSide, adding corner vertices along the way
-//
-// When clipping against a box boundary, cells may need to traverse multiple
-// box sides. This function adds edges that walk along the box perimeter from
-// one side to another, visiting corners in counter-clockwise order.
-//
-// Parameters:
-//   origSide, curSide: Box sides to walk between (L, B, R, or T - NOT corners)
-//   cornerIndices: Map from corner BoxSide (LL, LR, UR, UL) to vertex indices
-//   curEdge: The clipped edge that intersects the boundary
-//   origPoint: Starting vertex index
-//   endAtCurEdge: Walk direction
-//     - true: Walk origSide -> curSide, then add curEdge
-//     - false: Add curEdge first, then walk curSide -> origSide
-//   edges: Output edge list
-//
-// Example (endAtCurEdge=true):
-//   origSide=L, curSide=B, origPoint=3 (UL), curEdge=(1,4) (LR->mid)
-//   Walks L -> LL (add 3->0) -> B (add 0->1) -> adds curEdge (1->4)
-//   Result: [(3,0), (0,1), (1,4)]
-
-inline void walkBoxEdges(const BoxSide& origSide,
-                         const BoxSide& curSide,
-                         const std::map<BoxSide, unsigned>& cornerIndices,
-                         const edge::Edge& curEdge,
-                         const unsigned& origPoint,
-                         const bool endAtCurEdge,
-                         std::vector<edge::Edge>& edges) {
-  BoxSides sides;
-
-  if (endAtCurEdge) {
-    // Walk origSide -> curSide, visiting corners, then add curEdge
-    BoxSide thisSide = origSide;
-    BoxSide endSide = curSide;
-    unsigned curIndx = origPoint;
-
-    while (thisSide != endSide) {
-      if (isCorner(thisSide)) {
-        unsigned nextIndx = cornerIndices.at(thisSide);
-        if (curIndx != nextIndx) {
-          edges.push_back(std::make_pair(curIndx, nextIndx));
-          curIndx = nextIndx;
-        }
-      }
-      thisSide = sides.next(thisSide);
-    }
-
-    // Connect to curEdge start if not already there
-    if (curIndx != curEdge.first) {
-      edges.push_back(std::make_pair(curIndx, curEdge.first));
-    }
-    edges.push_back(curEdge);
-
-  } else {
-    // Add curEdge first, then walk curSide -> origSide
-    edges.push_back(curEdge);
-
-    BoxSide thisSide = curSide;
-    BoxSide endSide = origSide;
-    unsigned curIndx = curEdge.second;
-
-    while (thisSide != endSide) {
-      if (isCorner(thisSide)) {
-        unsigned nextIndx = cornerIndices.at(thisSide);
-        if (curIndx != nextIndx) {
-          edges.push_back(std::make_pair(curIndx, nextIndx));
-          curIndx = nextIndx;
-        }
-      }
-      thisSide = sides.next(thisSide);
-    }
-
-    // Close back to origPoint if needed
-    if (curIndx != origPoint) {
-      edges.push_back(std::make_pair(curIndx, origPoint));
-    }
-  }
-}
-
+// Close any clipped edges
 inline std::vector<edge::Edge> closeClippedEdges(const std::vector<edge::Edge>& origEdges,
                                                  const std::vector<std::pair<int, int>>& clippedNodeSides,
                                                  const std::map<BoxSide, unsigned>& cornerIndices) {

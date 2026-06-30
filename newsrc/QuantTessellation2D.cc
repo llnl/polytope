@@ -205,7 +205,6 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
   edge::EdgeToFaceMap edgeToFace;
   unsigned i = 0;
   for (auto& cellPoly : cellPolygons) {
-    int curIndex = polyIndex[i];
     std::vector<IntPoint> keptVertices = bp::BoostToPolytope(cellPoly);
     //removeCollinear(keptVertices);
     auto nv = keptVertices.size();
@@ -233,10 +232,10 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
       int signedFaceIndex = edge::addOrientedEdge(n0, n1, newFaces, edgeToFace);
       cellEdgeIndices.push_back(signedFaceIndex);
     }
+    int curIndex = polyIndex[i++];
     newCells.push_back(cellEdgeIndices);
     newPoints.push_back(m_points[curIndex]);
     newHashes.push_back(m_hashes[curIndex]);
-    i++;
   }
   m_nodes = std::move(newNodes);
   m_faces = std::move(newFaces);

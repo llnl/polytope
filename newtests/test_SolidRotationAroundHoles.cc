@@ -124,7 +124,7 @@ void test(Tessellator<2,double>& tessellator) {
   Tessellation<2,double> mesh;
   tessellator.setQuantizer(boundary.mQ);
   tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
-  outputMesh(mesh, testName, points, step, time);
+  outputMesh(mesh, testName, step, time);
 
   // Update the point positions and generate the mesh
   vector<double> halfTimePositions(points.size());
@@ -142,7 +142,7 @@ void test(Tessellator<2,double>& tessellator) {
     time += dt;
     ++step;
     tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
-    outputMesh(mesh, testName, points, step, time);
+    outputMesh(mesh, testName, step, time);
   }
 }
 

@@ -22,11 +22,8 @@ namespace polytope {
 template <typename RealType>
 void outputMesh(const Tessellation<2,RealType>& mesh,
 		std::string prefix,
-		const std::vector<RealType>& points,
 		const unsigned testCycle = 1,
 		const RealType time = 0.0) {
-  // POLY_CHECK(points.empty() or
-  //            points.size() >= 2*mesh.cells.size());
 #ifdef POLYTOPE_ENABLE_SILO
   std::vector<double> index(mesh.cells.size());
   std::vector<double> genx (mesh.cells.size());
@@ -53,11 +50,8 @@ void outputMesh(const Tessellation<2,RealType>& mesh,
 template <typename RealType>
 void outputMesh(const Tessellation<3,RealType>& mesh,
 		std::string prefix,
-		const std::vector<RealType>& points,
 		const unsigned testCycle = 1,
 		const RealType time = 0.0) {
-  POLY_CHECK(points.empty() ||
-             points.size() == 3*mesh.cells.size());
 #ifdef POLYTOPE_ENABLE_SILO
   std::vector<double> index(mesh.cells.size());
   std::vector<double> genx (mesh.cells.size());
@@ -67,7 +61,7 @@ void outputMesh(const Tessellation<3,RealType>& mesh,
   double cent[3];
   for (int i = 0; i < mesh.cells.size(); ++i){
     index[i] = double(i);
-    if (!points.empty()) {
+    if (!mesh.points.empty()) {
       genx[i] = mesh.points[3*i  ];
       geny[i] = mesh.points[3*i+1];
       genz[i] = mesh.points[3*i+2];
@@ -95,22 +89,19 @@ template <int nDim, typename RealType>
 void outputMesh(const Tessellation<nDim,RealType>& mesh,
 		std::string prefix,
 		const unsigned testCycle) {
-  std::vector<RealType> points;
-  outputMesh(mesh, prefix, points, testCycle, 0.0);
+  outputMesh(mesh, prefix, testCycle, 0.0);
 }
 //------------------------------------------------------------------------------
 template <int nDim, typename RealType>
 void outputMesh(const Tessellation<nDim,RealType>& mesh,
 		std::string prefix) {
-  std::vector<RealType> points;
-  outputMesh(mesh, prefix, points, 1, 0.0);
+  outputMesh(mesh, prefix, 1, 0.0);
 }
 //------------------------------------------------------------------------------
 // a cell-centered field given
 template <typename RealType>
 void outputMesh(Tessellation<2,RealType>& mesh,
 		std::string prefix,
-		const std::vector<RealType>& points,
                 std::vector<RealType>& cellField,
 		const unsigned testCycle = 1,
 		const RealType time = 0.0) {
@@ -123,10 +114,6 @@ void outputMesh(Tessellation<2,RealType>& mesh,
     index[i] = double(i);
     genx[i] = mesh.points[2*i];
     geny[i] = mesh.points[2*i+1];
-    // if (!points.empty()) {
-    //   genx[i] = points[2*i  ];
-    //   geny[i] = points[2*i+1];
-    // }
   }
   std::map<std::string,double*> nodeFields, edgeFields, faceFields, cellFields;
   cellFields["cell_index"] = &index[0];
@@ -141,28 +128,11 @@ void outputMesh(Tessellation<2,RealType>& mesh,
 #endif
 }
 
-
-
-//------------------------------------------------------------------------------
-// Wrapper to tessellate a 2D boundary for both VoroPP_2D and Triangle
-//------------------------------------------------------------------------------
-template <typename RealType>
-void tessellate2D(std::vector<RealType>& points,
-                  Boundary2D<RealType>& boundary,
-                  Tessellator<2,RealType>& tessellator,
-                  Tessellation<2,RealType>& mesh) {
-  if (tessellator.handlesPLCs()) {
-    tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
-  } else {
-    tessellator.tessellate(points, boundary.mLow, boundary.mHigh, mesh);
-  }
-}
-
 //------------------------------------------------------------------------------
 // Compute the area of a polytope tessellation cell-by-cell using Boost.Geometry
 //------------------------------------------------------------------------------
-template <typename RealType>
-RealType computeTessellationArea( Tessellation<2,RealType>& mesh ) {
+template<typename RealType>
+RealType computeTessellationArea(Tessellation<2,RealType>& mesh) {
   RealType area = 0;
   for (unsigned i = 0; i != mesh.cells.size(); ++i) {
     std::vector<RealType> nodeCell;
