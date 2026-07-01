@@ -18,13 +18,12 @@ using namespace std;
 //------------------------------------------------------------------------------
 // Helper to check if a point is in the result set
 //------------------------------------------------------------------------------
-template<typename RealType>
-bool containsPoint(const set<array<RealType, 2>>& result,
-                   const RealType* point,
-                   const RealType tol) {
-  for (const auto& pt : result) {
-    RealType dx = pt[0] - point[0];
-    RealType dy = pt[1] - point[1];
+bool containsPoint(const vector<double>& result,
+                   const double* point,
+                   const double tol) {
+  for (int i = 0; i < result.size()/2; ++i) {
+    double dx = result[2*i] - point[0];
+    double dy = result[2*i+1] - point[1];
     if (dx*dx + dy*dy < tol*tol) {
       return true;
     }
@@ -68,7 +67,8 @@ int main(int argc, char** argv) {
   { // Test 1: 1 intersection with outside boundary
     double p1[2] = {-10.0, 0.0};
     double p2[2] = {-4.0, 0.0};
-    auto result = intersect(p1, p2, numVertices, vertices, plc);
+    std::vector<double> result;
+    const unsigned nint = intersect(p1, p2, numVertices, vertices, plc, result);
     POLY_CHECK2(result.size() == 1, "Test 1: size=" << result.size());
     double expected[2] = {-5.0, 0.0};
     POLY_CHECK2(containsPoint(result, expected, tol), "Test 1: missing expected intersection");
@@ -78,7 +78,8 @@ int main(int argc, char** argv) {
   { // Test 2: 2 intersections - entry and exit through opposite sides
     double p1[2] = {-6.0, 2.0};
     double p2[2] = {6.0, 2.0};
-    auto result = intersect(p1, p2, numVertices, vertices, plc);
+    std::vector<double> result;
+    const unsigned nint = intersect(p1, p2, numVertices, vertices, plc, result);
     POLY_CHECK2(result.size() == 2, "Test 2: size=" << result.size());
     double expected1[2] = {-5.0, 2.0};
     double expected2[2] = {5.0, 2.0};
@@ -90,7 +91,8 @@ int main(int argc, char** argv) {
   { // Test 3: Intersection with corner vertex
     double p1[2] = {4.0, -6.0};
     double p2[2] = {6.0, -4.0};
-    auto result = intersect(p1, p2, numVertices, vertices, plc);
+    std::vector<double> result;
+    const unsigned nint = intersect(p1, p2, numVertices, vertices, plc, result);
     POLY_CHECK2(result.size() == 1, "Test 3: size=" << result.size());
     double expected[2] = {5.0, -5.0};
     POLY_CHECK2(containsPoint(result, expected, tol), "Test 3: missing corner intersection");
@@ -100,7 +102,8 @@ int main(int argc, char** argv) {
   { // Test 4: Ray passing through hole (4 intersections total)
     double p1[2] = {0.0, -6.0};
     double p2[2] = {0.0, 6.0};
-    auto result = intersect(p1, p2, numVertices, vertices, plc);
+    std::vector<double> result;
+    const unsigned nint = intersect(p1, p2, numVertices, vertices, plc, result);
     POLY_CHECK2(result.size() == 4, "Test 4: size=" << result.size() << " (expected 4)");
     double expected[4][2] = {
       {0.0, -5.0},  // outer bottom
@@ -118,7 +121,8 @@ int main(int argc, char** argv) {
   { // Test 5: Ray along edge
     double p1[2] = {5.0, -6.0};
     double p2[2] = {5.0, 6.0};
-    auto result = intersect(p1, p2, numVertices, vertices, plc);
+    std::vector<double> result;
+    const unsigned nint = intersect(p1, p2, numVertices, vertices, plc, result);
     POLY_CHECK2(result.size() == 2, "Test 5: size=" << result.size() << " (expected 2)");
     double expected1[2] = {5.0, -5.0};
     double expected2[2] = {5.0, 5.0};
@@ -130,7 +134,8 @@ int main(int argc, char** argv) {
   { // Test 6: Diagonal ray through square (should hit 4 intersections with hole)
     double p1[2] = {-6.0, -6.0};
     double p2[2] = {6.0, 6.0};
-    auto result = intersect(p1, p2, numVertices, vertices, plc);
+    std::vector<double> result;
+    const unsigned nint = intersect(p1, p2, numVertices, vertices, plc, result);
     POLY_CHECK2(result.size() == 4, "Test 6: size=" << result.size() << " (expected 4)");
     double expected[4][2] = {
       {-5.0, -5.0},  // outer entry
@@ -148,7 +153,8 @@ int main(int argc, char** argv) {
   { // Test 7: Ray parallel to edge (no intersection)
     double p1[2] = {-6.0, 0.0};
     double p2[2] = {-6.0, 3.0};
-    auto result = intersect(p1, p2, numVertices, vertices, plc);
+    std::vector<double> result;
+    const unsigned nint = intersect(p1, p2, numVertices, vertices, plc, result);
     POLY_CHECK2(result.size() == 0, "Test 7: size=" << result.size() << " (expected 0)");
     cerr << "Test 7 passed: no intersection (parallel ray outside)" << endl;
   }

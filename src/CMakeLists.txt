@@ -20,8 +20,6 @@ set(polytope_headers
   DistributedTessellator.hh
   ErrorHandler.hh
   findBoundaryElements.hh
-  GeomUtils.hh
-  HashKey.hh
   Intersections.hh
   intersect.hh
   IntPointMap.hh
@@ -46,8 +44,6 @@ set(polytope_headers
   QuantizedTessellation2d.hh
   QuantizedTessellation3d.hh
   QuantTessellation.hh
-  Quantizer.hh
-  QuantPLC.hh
   ReducedPLC.hh
   removeElements.hh
   Segment.hh
@@ -66,7 +62,6 @@ set(polytope_sources
   PLC_CSG.cc
   QuantizedTessellation2d.cc
   QuantizedTessellation3d.cc
-  QuantPLC.cc
   clipQuantizedTessellation2d.cc
   clipQuantizedTessellation3d.cc
   snapToBoundary.cc
