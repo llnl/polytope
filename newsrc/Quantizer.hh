@@ -88,7 +88,7 @@ public:
   }
 
   RealPoint degeneracy() const {
-    return m_dx_o;
+    return m_dx_o*m_lx_o;
   }
 
   void init(const RealPoint& xlo,

@@ -52,7 +52,7 @@ public:
   // Boundary type
   mutable BoundaryType mType;
 
-  double m_pad = 0.5;
+  double m_pad = 0.1;
   Quantizer<2> mQ;
   QuantPLC<2> mQPLC;
   
