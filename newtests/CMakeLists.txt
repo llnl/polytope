@@ -53,6 +53,9 @@ polytope_add_new_test(StarBoundary)
 polytope_add_new_test(SolidRotationAroundHoles)
 polytope_add_new_test(OrphanCases)
 polytope_add_new_test(honeyComb)
+polytope_add_new_test(BoostTessellator)
+polytope_add_new_test(RandomPoints)
+polytope_add_new_test(BoundaryJitter)
 #polytope_add_new_test(Cylinder)
 
 #-----------------------------------------------------------------------------

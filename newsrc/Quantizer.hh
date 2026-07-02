@@ -2,6 +2,7 @@
 // Quantizer
 //
 // Class for quantizing and dequantizing points or PLCs.
+// TODO: Make a singleton object
 //-----------------------------------------------------------------------------//
 #ifndef __Polytope_Quantizer__
 #define __Polytope_Quantizer__
@@ -26,7 +27,7 @@ public:
   // Original coordinate locations
   RealPoint m_xlo, m_xhi;
   // Percent to pad the bounding box for good measure
-  RealType m_pad = 0.5;
+  RealType m_pad = 0.1;
   // Maximum possible coordinate in a single direction
   // Not necessarily the max for this instance
   constexpr static IntType m_coordMax = HashKey<Dimension>::coordMax();
@@ -55,6 +56,13 @@ public:
             const RealType& degeneracy = -1.,
             const RealType& pad = -1.) {
     init(xlo, xhi, degeneracy, pad);
+  }
+
+  void extend(const RealPoint& xlo,
+              const RealPoint& xhi) {
+    m_xlo = m_xlo.minElements(xlo);
+    m_xhi = m_xhi.maxElements(xhi);
+    init(m_xlo, m_xhi, -1, m_pad);
   }
 
   IntPoint quantize(const RealPoint& x) const {

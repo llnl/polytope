@@ -40,6 +40,27 @@ template<typename CoordType> struct Cell<2, CoordType> {
     }
     return facePoints;
   }
+  // Extract with a layer of indirection
+  static CellType extractCell(const std::vector<CoordType>& points,
+                              const std::vector<int>& faceIndices,
+                              const std::vector<std::vector<unsigned>>& facets) {
+    CellType facePoints;
+    facePoints.reserve(faceIndices.size());
+    for (const auto& f : faceIndices) {
+      if (f < 0) {
+        int findx = facets[~f][1];
+        CoordType f0 = points[2*findx];
+        CoordType f1 = points[2*findx+1];
+        facePoints.push_back(Point2<CoordType>(f0, f1));
+      } else {
+        int findx = facets[f][0];
+        CoordType f0 = points[2*findx];
+        CoordType f1 = points[2*findx+1];
+        facePoints.push_back(Point2<CoordType>(f0, f1));
+      }
+    }
+    return facePoints;
+  }
 };
 
 template<typename CoordType> struct Cell<3, CoordType> {
@@ -71,6 +92,32 @@ template<typename CoordType> struct Cell<3, CoordType> {
           facePoints.back().push_back(points[~f]);
         } else {
           facePoints.back().push_back(points[f]);
+        }
+      }
+    }
+    return facePoints;
+  }
+  // Extract with a layer of indirection
+  static CellType extractCell(const std::vector<CoordType>& points,
+                              const std::vector<int>& faceIndices,
+                              const std::vector<std::vector<unsigned>>& facets) {
+    CellType facePoints;
+    facePoints.reserve(faceIndices.size());
+    for (const auto& fi : faceIndices) {
+      facePoints.push_back(std::vector<PointType>());
+      for (const auto& f : facets[fi]) {
+        if (f < 0) {
+          int findx = facets[~f];
+          CoordType f0 = points[3*findx];
+          CoordType f1 = points[3*findx+1];
+          CoordType f2 = points[3*findx+2];
+          facePoints.back().push_back(Point3<CoordType>(f0, f1, f2));
+        } else {
+          int findx = facets[f];
+          CoordType f0 = points[3*findx];
+          CoordType f1 = points[3*findx+1];
+          CoordType f2 = points[3*findx+2];
+          facePoints.back().push_back(Point3<CoordType>(f0, f1, f2));
         }
       }
     }

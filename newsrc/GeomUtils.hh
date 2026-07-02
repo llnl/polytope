@@ -205,10 +205,10 @@ Point2<CoordType> pointDirection(const Point2<double>& p1,
   auto diff = p2 - p1;
   double len = std::hypot(diff[0], diff[1]);
   if (len == 0.) {
-    return Point2<CoordType>(0, 0);
+    return Point<2, CoordType>::Zero();
   }
   auto norm = diff/len;
-  const double SCALE = (static_cast<double>(std::numeric_limits<CoordType>::max()) + 1.0)/2.0;
+  const double SCALE = std::pow(2.0, HashKey<2>::num1DBits() - 2);
   return (norm*SCALE).template type_cast<CoordType>();
 }
 

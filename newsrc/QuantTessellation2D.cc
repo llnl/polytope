@@ -18,34 +18,6 @@ namespace bp = boost::polygon;
 // Need this to use the -=, +=, etc operators
 using namespace boost::polygon::operators;
 
-namespace {
-using IntType = HashKey<2>::IntType;
-using PolygonWithHoles = bp::polygon_with_holes_data<IntType>;
-using PolygonSet = bp::polygon_set_data<IntType>;
-void printpoint(const Quantizer<2>& Q,
-                const Point2<HashKey<2>::IntType>& point) {
-  auto qp = Q.dequantize(point);
-  std::cout << qp << "," << std::endl;
-}
-
-void printPolygon(const Quantizer<2>& Q,
-                  const PolygonWithHoles& polygon) {
-  auto hole_points = bp::innerPoints(polygon);
-  auto points = bp::outerPoints(polygon);
-  std::cout << "v = [";
-  for (const auto& point : points) {
-    printpoint(Q, point);
-  }
-  std::cout << "vertices.append(v)" << std::endl;
-  for (const auto& hole : hole_points) {
-    std::cout << "hole " << std::endl;
-    for (const auto& p : hole) {
-      printpoint(Q, p);
-    }
-  }
-}
-}
-
 // Remove any generator points that are outside our clipping region
 template<>
 void
@@ -105,7 +77,7 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
   std::vector<Point2<IntType>> localGenPoints;
   std::vector<int> polyIndex;
   // Map between hashed vertices to associated polygons in cellPolygons
-  std::unordered_map<CoordHash, std::set<unsigned>> vertexMap;
+  std::unordered_map<CoordHash, std::set<unsigned>, HashType> vertexMap;
 
   // Loop over cells and intersect them with the boundary
   for (auto i = 0; i < m_cells.size(); ++i) {
@@ -206,7 +178,7 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
   unsigned i = 0;
   for (auto& cellPoly : cellPolygons) {
     std::vector<IntPoint> keptVertices = bp::BoostToPolytope(cellPoly);
-    //removeCollinear(keptVertices);
+    removeCollinear(keptVertices);
     auto nv = keptVertices.size();
     std::vector<int> localCellIndex;
     localCellIndex.reserve(nv);
@@ -249,7 +221,8 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
 //------------------------------------------------------------------------------
 template<>
 void
-QuantTessellation<2>::fillTessellation(TessellationType& mesh) const {
+QuantTessellation<2>::fillTessellation(TessellationType& mesh) {
+  compactUnusedNodesAndFaces();
   const unsigned numNodes = m_nodes.size();
   const unsigned numFaces = m_faces.size();
   const unsigned numCells = m_points.size();  // Number of generators

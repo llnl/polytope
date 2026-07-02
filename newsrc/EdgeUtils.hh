@@ -290,39 +290,32 @@ inline int reverseOrientation(int signedIndex) {
 }
 
 //------------------------------------------------------------------------------
-// Modify the nodes list if points do not exist in a given node id map
+// Check if there are nearly duplicate nodes
 //------------------------------------------------------------------------------
 template<int Dimension, typename CoordType>
-inline int searchNodeMap(const Point<Dimension, CoordType>& point,
-                         std::map<Point<Dimension, CoordType>, int>& node2id,
-                         std::vector<Point<Dimension, CoordType>>& nodes) {
-  auto it0 = node2id.find(point);
-  if (it0 != node2id.end()) {
-    return it0->second;
-  }
+inline bool hasNearDuplicates(const Point<Dimension, CoordType>& point,
+                              std::map<Point<Dimension, CoordType>, int>& node2id) {
   for (int offset : {-1, 1}) {
     for (int dim = 0; dim < Dimension; ++dim) {
       Point<Dimension, CoordType> pp(point);
       pp[dim] += offset;
       auto it = node2id.find(pp);
       if (it != node2id.end()) {
-        return it->second;
+        return true;
       }
     }
   }
-  int out = nodes.size();
-  node2id[point] = out;
-  nodes.push_back(point);
-  return out;
+  return false;
 }
 
+//------------------------------------------------------------------------------
+// Modify the nodes list if points do not exist in a given node id map
+//------------------------------------------------------------------------------
 template<int Dimension, typename CoordType>
 inline edge::Edge updateNodeMap(const Point<Dimension, CoordType>& p0,
                                 const Point<Dimension, CoordType>& p1,
                                 std::map<Point<Dimension, CoordType>, int>& node2id,
                                 std::vector<Point<Dimension, CoordType>>& nodes) {
-  // int n0 = searchNodeMap(p0, node2id, nodes);
-  // int n1 = searchNodeMap(p1, node2id, nodes);
   auto it0 = node2id.find(p0);
   int n0;
   if (it0 == node2id.end()) {

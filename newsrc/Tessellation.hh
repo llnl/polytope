@@ -6,7 +6,7 @@
 #include <iostream>
 #include "PLC.hh"
 #include "polytope_internal.hh"
-
+#include "Cell.hh"
 namespace polytope {
 
 //! \class Mesh - A basic descriptor class for a topologically-consistent 
@@ -14,7 +14,7 @@ namespace polytope {
 template<int Dimension, typename RealType>
 class Tessellation {
   public:
-
+  using RealCell = typename Cell<Dimension, RealType>::CellType;
   // Default constructor.
   Tessellation():
     points(),
@@ -157,6 +157,9 @@ class Tessellation {
     return result;
   }
   
+  RealCell getCell(const unsigned cellIndex) const {
+    return Cell<Dimension, RealType>::extractCell(nodes, cells[cellIndex], faces);
+  }
 
   //! output operator.
   friend std::ostream& operator<<(std::ostream& s, const Tessellation& mesh)

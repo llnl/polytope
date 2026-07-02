@@ -28,12 +28,17 @@ public:
   using RealType = double;
   using CoordHash = typename HashKey<Dimension>::CoordHash;
   using IntType = typename HashKey<Dimension>::IntType;
+  using HashType = typename HashKey<Dimension>::HashType;
   using IntPoint = Point<Dimension, IntType>;
   using RealPoint = Point<Dimension, RealType>;
   using QuantizerType = Quantizer<Dimension>;
   using TessellationType = Tessellation<Dimension, RealType>;
   using IntCell = typename Cell<Dimension, IntType>::CellType;
   using RealCell = typename Cell<Dimension, RealType>::CellType;
+
+  QuantTessellation() = default;
+  QuantTessellation& operator=(const QuantTessellation& other) = default;
+  QuantTessellation(const QuantTessellation& other) = default;
 
   //------------------------------------------------------------------------------
   // Constructor - common for all dimensions
@@ -132,8 +137,8 @@ public:
     }
   }
 
-  IntCell getCell (const unsigned cellIndx) const {
-    return Cell<Dimension, IntType>::extractCell(m_nodes, m_cells[cellIndx], m_faces);
+  IntCell getCell(const unsigned cellIndex) const {
+    return Cell<Dimension, IntType>::extractCell(m_nodes, m_cells[cellIndex], m_faces);
   }
 
   // Reorder points and cells based on sorted hashes for deterministic output
@@ -175,11 +180,89 @@ public:
   }
 
   //------------------------------------------------------------------------------
+  // Common methods for all dimensions
+  //------------------------------------------------------------------------------
+
+  // Remove unused nodes and faces (not referenced by any cells)
+  void compactUnusedNodesAndFaces() {
+    const unsigned numCells = m_points.size();
+
+    // Step 1: Find all faces referenced by cells
+    std::set<unsigned> usedFaces;
+    for (unsigned i = 0; i < numCells; ++i) {
+      for (auto faceIdx : m_cells[i]) {
+        // Handle signed face indices (negative means inverted orientation)
+        unsigned absFaceIdx = (faceIdx < 0) ? ~faceIdx : faceIdx;
+        usedFaces.insert(absFaceIdx);
+      }
+    }
+
+    // Step 2: Find all nodes referenced by used faces
+    std::set<unsigned> usedNodes;
+    for (auto faceIdx : usedFaces) {
+      for (auto nodeIdx : m_faces[faceIdx]) {
+        usedNodes.insert(nodeIdx);
+      }
+    }
+
+    // Step 3: Create mapping from old indices to new compact indices
+    std::map<unsigned, unsigned> oldToNewNode;
+    unsigned newNodeIdx = 0;
+    for (auto oldIdx : usedNodes) {
+      oldToNewNode[oldIdx] = newNodeIdx++;
+    }
+
+    std::map<unsigned, unsigned> oldToNewFace;
+    unsigned newFaceIdx = 0;
+    for (auto oldIdx : usedFaces) {
+      oldToNewFace[oldIdx] = newFaceIdx++;
+    }
+
+    // Step 4: Create compacted node and face arrays
+    std::vector<IntPoint> newNodes;
+    newNodes.reserve(usedNodes.size());
+    for (auto oldIdx : usedNodes) {
+      IntPoint node = m_nodes[oldIdx];
+      node.index = oldToNewNode[oldIdx];
+      newNodes.push_back(node);
+    }
+
+    std::vector<std::vector<int>> newFaces;
+    newFaces.reserve(usedFaces.size());
+    for (auto oldIdx : usedFaces) {
+      std::vector<int> face;
+      face.reserve(m_faces[oldIdx].size());
+      for (auto nodeIdx : m_faces[oldIdx]) {
+        face.push_back(oldToNewNode[nodeIdx]);
+      }
+      newFaces.push_back(face);
+    }
+
+    // Step 5: Remap cell face indices
+    for (unsigned i = 0; i < numCells; ++i) {
+      for (auto& faceIdx : m_cells[i]) {
+        if (faceIdx < 0) {
+          // Negative index: inverted face orientation
+          unsigned oldFaceIdx = ~faceIdx;
+          faceIdx = ~oldToNewFace[oldFaceIdx];
+        } else {
+          // Positive index: normal face orientation
+          faceIdx = oldToNewFace[faceIdx];
+        }
+      }
+    }
+
+    // Step 6: Replace with compacted arrays
+    m_nodes = std::move(newNodes);
+    m_faces = std::move(newFaces);
+  }
+
+  //------------------------------------------------------------------------------
   // Dimension-specific methods (implemented in separate .cc files)
   //------------------------------------------------------------------------------
 
   // Dequantize and fill the tessellation type after tessellation
-  void fillTessellation(TessellationType& mesh) const;
+  void fillTessellation(TessellationType& mesh);
 
   // Clip tessellation against PLC boundary planes
   void clipTessellation(const QuantPLC<Dimension>& QPLC,

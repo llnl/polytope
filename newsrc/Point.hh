@@ -62,34 +62,6 @@ struct Point<2, CoordType> {
         const unsigned i = 0) :
     x(ri[0]), y(ri[1]), index(i) {}
 
-  template<typename RealType>
-  Point(const RealType* ri, const RealType& dx,
-        const unsigned i = 0):
-    x(static_cast<CoordType>(ri[0]/dx + 0.5)),
-    y(static_cast<CoordType>(ri[1]/dx + 0.5)),
-    index(i) {}
-
-  template<typename RealType>
-  Point(const RealType* ri, const RealType* dx,
-        const unsigned i = 0):
-    x(static_cast<CoordType>(ri[0]/dx[0] + 0.5)),
-    y(static_cast<CoordType>(ri[1]/dx[1] + 0.5)),
-    index(i) {}
-
-  template<typename RealType>
-  Point(const RealType* ri, const RealType* rlow,
-        const RealType* dx, const unsigned i = 0):
-    x(static_cast<CoordType>((ri[0] - rlow[0])/dx[0] + 0.5)),
-    y(static_cast<CoordType>((ri[1] - rlow[1])/dx[1] + 0.5)),
-    index(i) {}
-
-  template<typename RealType>
-  Point(const RealType* ri, const RealType* rlow,
-        const RealType& dx, const unsigned i = 0):
-    x(static_cast<CoordType>((ri[0] - rlow[0])/dx + 0.5)),
-    y(static_cast<CoordType>((ri[1] - rlow[1])/dx + 0.5)),
-    index(i) {}
-
   // Operators
   bool operator==(const Point<2, CoordType>& rhs) const { return (x == rhs.x and y == rhs.y); }
   bool operator!=(const Point<2, CoordType>& rhs) const { return !(*this == rhs); }
@@ -143,6 +115,9 @@ struct Point<2, CoordType> {
   bool iszero() const { return (x == 0 && y == 0) ? true : false; }
   void zero() { x = 0; y = 0; }
   void one() { x = 1; y = 1; }
+  static Point<2, CoordType> Zero() {
+    return Point<2, int>(0, 0).template type_cast<CoordType>();
+  }
 
   template<typename IntType, typename RealType>
   Point<2, IntType> convertXi(const Point<2, RealType>& blo,
@@ -263,38 +238,6 @@ struct Point<3, CoordType> {
         const unsigned i = 0) :
     x(ri[0]), y(ri[1]), z(ri[2]), index(i) {}
 
-  template<typename RealType>
-  Point(const RealType* ri, const RealType* dx,
-        const unsigned i = 0):
-    x(static_cast<CoordType>(ri[0]/dx[0] + 0.5)),
-    y(static_cast<CoordType>(ri[1]/dx[1] + 0.5)),
-    z(static_cast<CoordType>(ri[2]/dx[2] + 0.5)),
-    index(i) {}
-
-  template<typename RealType>
-  Point(const RealType* ri, const RealType& dx,
-        const unsigned i = 0):
-    x(static_cast<CoordType>(ri[0]/dx + 0.5)),
-    y(static_cast<CoordType>(ri[1]/dx + 0.5)),
-    z(static_cast<CoordType>(ri[2]/dx + 0.5)),
-    index(i) {}
-
-  template<typename RealType>
-  Point(const RealType* ri, const RealType* rlow,
-        const RealType* dx, const unsigned i = 0):
-    x(static_cast<CoordType>((ri[0] - rlow[0])/dx[0] + 0.5)),
-    y(static_cast<CoordType>((ri[1] - rlow[1])/dx[1] + 0.5)),
-    z(static_cast<CoordType>((ri[2] - rlow[2])/dx[2] + 0.5)),
-    index(i) {}
-
-  template<typename RealType>
-  Point(const RealType* ri, const RealType* rlow,
-        const RealType& dx, const unsigned i = 0):
-    x(static_cast<CoordType>((ri[0] - rlow[0])/dx + 0.5)),
-    y(static_cast<CoordType>((ri[1] - rlow[1])/dx + 0.5)),
-    z(static_cast<CoordType>((ri[2] - rlow[2])/dx + 0.5)),
-    index(i) {}
-
   // Operators
   bool operator==(const Point& rhs) const { return (x == rhs.x and y == rhs.y and z == rhs.z); }
   bool operator!=(const Point& rhs) const { return !(*this == rhs); }
@@ -359,6 +302,9 @@ struct Point<3, CoordType> {
   bool iszero() const { return (x == 0 && y == 0 && z == 0) ? true : false; }
   void zero() { x = 0; y = 0; z = 0; }
   void one() { x = 1; y = 1; z = 1; }
+  static Point<3, CoordType> Zero() {
+    return Point<3, int>(0, 0, 0).template type_cast<CoordType>();
+  }
 
   template<typename IntType, typename RealType>
   Point<3, IntType> convertXi(const Point<3, RealType>& blo,

@@ -22,41 +22,6 @@
 
 namespace polytope {
 
-namespace bp = boost::polygon;
-
-namespace {
-using IntType = HashKey<2>::IntType;
-using PolygonWithHoles = bp::polygon_with_holes_data<IntType>;
-using PolygonSet = bp::polygon_set_data<IntType>;
-void printpoint(const Quantizer<2>& Q,
-                const Point2<IntType>& point) {
-  auto qp = Q.dequantize(point);
-  std::cout << qp << std::endl;
-}
-void printPolygon(const Quantizer<2>& Q,
-                  const PolygonWithHoles& polygon) {
-  auto hole_points = bp::innerPoints(polygon);
-  auto points = bp::outerPoints(polygon);
-  std::cout << "v = [";
-  for (const auto& point : points) {
-    printpoint(Q, point);
-  }
-  std::cout << "vertices.append(v)" << std::endl;
-  for (const auto& hole : hole_points) {
-    std::cout << "hole " << std::endl;
-    for (const auto& p : hole) {
-      printpoint(Q, p);
-    }
-  }
-}
-void printCell(const Quantizer<2>& Q,
-               const Cell<2, IntType>::CellType& pcell) {
-  PolygonWithHoles polygon;
-  bp::set_points(polygon, pcell.begin(), pcell.end());
-  printPolygon(Q, polygon);
-}
-}
-
 //------------------------------------------------------------------------------
 // Compute the QuantizedTessellation
 //
@@ -177,6 +142,9 @@ tessellateQuantized(const QuantPLC<2>& qplc,
       int signedFaceIndex = edge::addOrientedEdge(cedge.first, cedge.second, result.m_faces, edgeToFace);
       result.m_cells[cellIndex].push_back(signedFaceIndex);
     }
+    // Check for nearly duplicate nodes
+    POLY_ASSERT2(!edge::hasNearDuplicates(result.m_points[cellIndex], node2id),
+                 "Found nearly duplicate nodes.");
   }
 }
 

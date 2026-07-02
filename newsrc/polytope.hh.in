@@ -11,5 +11,6 @@
 #cmakedefine POLYTOPE_ENABLE_TRIANGLE
 #cmakedefine POLYTOPE_ENABLE_TETGEN
 #cmakedefine POLYTOPE_ENABLE_BOOST
+#cmakedefine POLYTOPE_ENABLE_DEBUG
 
 #endif

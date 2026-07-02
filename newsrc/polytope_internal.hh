@@ -9,6 +9,7 @@
 #include <map>
 #include <set>
 #include <iostream>
+#include "polytope.hh"
 
 // An POLY_ASSERT macro, if one isn't already defined.
 
@@ -17,7 +18,7 @@ namespace polytope {
 // Forward declare our helper abort method.
 void internal_abort();
 
-#ifndef NDEBUG
+#ifdef POLYTOPE_ENABLE_DEBUG
 #define POLY_ASSERT(x) \
   if (!(x)) \
   { \

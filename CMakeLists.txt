@@ -84,6 +84,10 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set(POLYTOPE_ENABLE_DEBUG ON)
+endif()
+
 include(cmake/InstallTPLs.cmake)
 
 add_subdirectory(src)

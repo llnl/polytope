@@ -28,10 +28,10 @@ struct Clip2D {
   bool doClipping(const Quantizer<2>& Q) {
     bool clip1 = true;
     bool clip2 = true;
-    p1 = midPoint(gen1, gen0);
+    Point2<CoordType> m = midPoint(gen1, gen0);
     if (inf0 && inf1) {
-      clip1 = clipInfiniteRay(p1, -normalRay, Q.minBound, Q.maxBound, p0, firstSide);
-      clip2 = clipInfiniteRay(p0, normalRay, Q.minBound, Q.maxBound, p1, secondSide);
+      clip1 = clipInfiniteRay(m, -normalRay, Q, p0, firstSide);
+      clip2 = clipInfiniteRay(m, normalRay, Q, p1, secondSide);
       POLY_ASSERT(clip1 == clip2);
       return !clip1;
     }
@@ -54,12 +54,12 @@ struct Clip2D {
       return true;
     }
     if (!validp0) {
-      clip1 = clipInfiniteRay(p1, -normalRay, Q.minBound, Q.maxBound, p0, firstSide);
+      clip1 = clipInfiniteRay(m, -normalRay, Q, p0, firstSide);
       inf0 = true;
       if (!clip1) return true;
     }
     if (!validp1) {
-      clip2 = clipInfiniteRay(p0, normalRay, Q.minBound, Q.maxBound, p1, secondSide);
+      clip2 = clipInfiniteRay(m, normalRay, Q, p1, secondSide);
       inf1 = true;
       if (!clip2) return true;
     }

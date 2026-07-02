@@ -301,20 +301,19 @@ template<typename CoordType>
 bool
 clipInfiniteRay(const Point2<CoordType>& validVertex,
                 const Point2<CoordType>& normdiffg,
-                const Point2<CoordType>& bmin,
-                const Point2<CoordType>& bmax,
+                const Quantizer<2>& Q,
                 Point2<CoordType>& result,
                 shapes::BoxSide& side) {
-  CoordType x_lim = (normdiffg.x > 0) ? bmax.x : bmin.x;
-  CoordType y_lim = (normdiffg.y > 0) ? bmax.y : bmin.y;
+  CoordType x_lim = (normdiffg.x > 0) ? Q.maxBound.x : Q.minBound.x;
+  CoordType y_lim = (normdiffg.y > 0) ? Q.maxBound.y : Q.minBound.y;
   shapes::BoxSide LR = (normdiffg.x > 0) ? shapes::BoxSide::R : shapes::BoxSide::L;
   shapes::BoxSide TB = (normdiffg.y > 0) ? shapes::BoxSide::T : shapes::BoxSide::B;
-  Point2<CoordType> planey1(bmin.x, y_lim);
-  Point2<CoordType> planey2(bmax.x, y_lim);
+  Point2<CoordType> planey1(Q.minBound.x, y_lim);
+  Point2<CoordType> planey2(Q.maxBound.x, y_lim);
   Point2<CoordType> intersectionx, intersectiony;
   bool yint = segmentRayIntersection2D(planey1, planey2, validVertex, normdiffg, intersectiony);
-  Point2<CoordType> planex1(x_lim, bmin.y);
-  Point2<CoordType> planex2(x_lim, bmax.y);
+  Point2<CoordType> planex1(x_lim, Q.minBound.y);
+  Point2<CoordType> planex2(x_lim, Q.maxBound.y);
   bool xint = segmentRayIntersection2D(planex1, planex2, validVertex, normdiffg, intersectionx);
   if (!xint && !yint) {
     return false;

@@ -25,13 +25,6 @@ extern "C" {
 namespace polytope {
 
 namespace {
-using IntType = HashKey<2>::IntType;
-void printpoint(const Quantizer<2>& Q,
-                const Point2<IntType>& point) {
-  auto qp = Q.dequantize(point);
-  std::cout << qp << std::endl;
-}
-
 void initTriangleData(triangulateio& in) {
   in.pointlist = nullptr;
   in.pointattributelist = nullptr;
@@ -264,6 +257,9 @@ tessellateQuantized(const QuantPLC<2>& qplc,
       int signedFaceIndex = edge::addOrientedEdge(cedge.first, cedge.second, result.m_faces, edgeToFace);
       result.m_cells[cellIndex].push_back(signedFaceIndex);
     }
+    // Check for nearly duplicate nodes
+    POLY_ASSERT2(!edge::hasNearDuplicates(result.m_points[cellIndex], node2id),
+                 "Found nearly duplicate nodes.");
   }
   // Clean up Triangle memory
   delete[] in.pointlist;

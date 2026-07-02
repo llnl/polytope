@@ -23,7 +23,7 @@ template<typename RealType>
 class Boundary2D {
 public:
   // -------------- Public member variables and routines ---------------- //
-  
+
   // Piecewise linear construct to define the boundary facets + holes
   PLC<2> mPLC;
   // Vector of generators to define the boundary
@@ -34,7 +34,7 @@ public:
   RealType mArea;
 
   BGPolygon<RealType, 2> mBGboundary;
-  
+
   // Define enum to keep track fo the type of boundary called for
   enum BoundaryType{
     square             = 0,
@@ -46,16 +46,17 @@ public:
     cardioid           = 6,
     trogdor            = 7,
     starwithhole       = 8,
-    trogdor2           = 9
+    trogdor2           = 9,
+    squarewithstarhole = 10,
   };
-  
+
   // Boundary type
   mutable BoundaryType mType;
 
   double m_pad = 0.1;
   Quantizer<2> mQ;
   QuantPLC<2> mQPLC;
-  
+
   //------------------------------------------------------------------------
   // Constructor, destructor
   //------------------------------------------------------------------------
@@ -64,22 +65,22 @@ public:
     this->clear();
     this->setDefaultBoundary(mType);
   }
-  
+
   ~Boundary2D() {};
-    
+
   void clear() {
     mPLC.clear();
     mPLCpoints.clear();
     boost::geometry::clear(mBGboundary);
   }
-  
+
   void finalize() {
     mQ.init(mPLCpoints, -1., m_pad);
     mQPLC.init(mPLC, mQ, mPLCpoints);
     boostMyBoundary();
     mArea = boost::geometry::area(mBGboundary);
   }
-  
+
   //------------------------------------------------------------------------
   // setCustomBoundary
   //------------------------------------------------------------------------
@@ -94,7 +95,7 @@ public:
       mPLC.facets[i][0] = i;
       mPLC.facets[i][1] = (i+1) % numVertices;
     }
-    
+
     this->finalize();
   }
 
@@ -135,6 +136,9 @@ public:
     case trogdor2:
       this->setTrogdor2();
       break;
+    case squarewithstarhole:
+      this->setSquareWithStarHole();
+      break;
     }
    }
 
@@ -166,14 +170,14 @@ public:
     unsigned Nb = 90; // 4-degree resolution.
     for (unsigned b = 0; b < Nb; ++b) {
       RealType theta = 2.0*M_PI*b/(Nb+1);
-      RealType x = mCenter[0] + cos(theta);
-      RealType y = mCenter[1] + sin(theta);
+      RealType x = mCenter[0] + 2.*mDiff*cos(theta);
+      RealType y = mCenter[1] + 2.*mDiff*sin(theta);
       mPLCpoints.push_back(x);
       mPLCpoints.push_back(y);
     }
-    
+
     // Facets.
-    mPLC.facets.resize(Nb); 
+    mPLC.facets.resize(Nb);
     for (unsigned f = 0; f < Nb; ++f) {
       unsigned fBegin =  mPLCpoints.size()/2 - Nb + f;
       unsigned fEnd   = (mPLCpoints.size()/2 - Nb + f + 1) % Nb;
@@ -184,7 +188,7 @@ public:
     mType = circle;
     this->finalize();
   }
-  
+
   //------------------------------------------------------------------------
   // setDonut
   // Unit circle with a hole of prescribed radius
@@ -192,11 +196,11 @@ public:
   void setDonut( RealType innerRadius=0.25 ) {
     POLY_CHECK2( innerRadius > 0, "Must provide a positive inner radius" );
     POLY_CHECK2( innerRadius < 1, "Inner radius may not exceed outer (unit) radius" );
-    
+
     // The outer circle
     this->clear();
     this->setUnitCircle();
-    
+
     // Inner circle.
     unsigned Nb = mPLCpoints.size()/2;
     unsigned Nh = Nb;
@@ -207,7 +211,7 @@ public:
       mPLCpoints.push_back(x);
       mPLCpoints.push_back(y);
     }
-    
+
     // Facets on the inner circle
     mPLC.holes = vector< vector< vector<int> > >(1);
     mPLC.holes[0].resize(Nh);
@@ -221,7 +225,7 @@ public:
     mType = donut;
     this->finalize();
   }
-  
+
   //------------------------------------------------------------------------
   // setMWithHoles
   // M-shaped domain with two square holes
@@ -234,28 +238,28 @@ public:
     mPLCpoints.push_back(2.0); mPLCpoints.push_back(2.0);
     mPLCpoints.push_back(1.0); mPLCpoints.push_back(1.0);
     mPLCpoints.push_back(0.0); mPLCpoints.push_back(2.0);
-    
+
     int nSides = mPLCpoints.size()/2;
     mPLC.facets.resize( nSides, vector<int>(2) );
     for (unsigned i = 0; i != nSides; ++i ) {
       mPLC.facets[i][0] = i;
       mPLC.facets[i][1] = (i+1) % nSides;
     }
-    
+
     int nHoles = 2;
-    
+
     // Square hole #1
     mPLCpoints.push_back(0.25); mPLCpoints.push_back(0.25);
     mPLCpoints.push_back(0.25); mPLCpoints.push_back(0.75);
     mPLCpoints.push_back(0.75); mPLCpoints.push_back(0.75);
     mPLCpoints.push_back(0.75); mPLCpoints.push_back(0.25);
-    
+
     // Square hole #2
     mPLCpoints.push_back(1.25); mPLCpoints.push_back(0.25);
     mPLCpoints.push_back(1.25); mPLCpoints.push_back(0.75);
     mPLCpoints.push_back(1.75); mPLCpoints.push_back(0.75);
     mPLCpoints.push_back(1.75); mPLCpoints.push_back(0.25);
-    
+
     mPLC.holes.resize(nHoles, vector<vector<int> >(4, vector<int>(nHoles)));
     for (unsigned i = 0; i != 4; ++i) {
       mPLC.holes[0][i][0] = nSides + i;
@@ -266,7 +270,7 @@ public:
     mType = mwithholes;
     this->finalize();
   }
-  
+
   //------------------------------------------------------------------------
   // setFunkyStar
   // Star-shaped(-ish) region from Misha Shashkov's Voronoi test suite
@@ -282,7 +286,7 @@ public:
       mPLCpoints.push_back( x );
       mPLCpoints.push_back( y );
     }
-    
+
     // Connect the boundary facets
     mPLC.facets.resize(Nsides);
     for (unsigned f = 0; f < Nsides; ++f ) {
@@ -302,26 +306,26 @@ public:
     this->clear();
     // The outer boundary
     this->setUnitCircle();
-    
+
     RealType theta0 = 2*M_PI/nPoints;
     RealType outerRadius = 0.75;
     RealType innerRadius = outerRadius*( sin(theta0/4.0) / sin(3*theta0/4.0) );
-    
+
     RealType theta;
     for (unsigned p = 0; p < nPoints; ++p ) {
       // For the pointy bits of the star
       theta = M_PI/2 - p*theta0;
       mPLCpoints.push_back( mCenter[0] + outerRadius*cos(theta) );
       mPLCpoints.push_back( mCenter[1] + outerRadius*sin(theta) );
-      
+
       // For the concave bits of the star
       theta = M_PI/2 - p*theta0 - theta0/2.0;
       mPLCpoints.push_back( mCenter[0] + innerRadius*cos(theta) );
       mPLCpoints.push_back( mCenter[1] + innerRadius*sin(theta) );
     }
-    
+
     // Facets on the inner circle
-    mPLC.holes = vector< vector< vector<int> > >(1);      
+    mPLC.holes = vector< vector< vector<int> > >(1);
     mPLC.holes[0].resize(2*nPoints);
     for (unsigned f = 0; f < 2*nPoints; ++f) {
       unsigned fBegin = mPLCpoints.size()/2 - 2*nPoints + f;
@@ -330,11 +334,11 @@ public:
       mPLC.holes[0][f][0] = fBegin;
       mPLC.holes[0][f][1] = fEnd;
     }
-    
+
     mType = circlewithstarhole;
     this->finalize();
   }
-   
+
   //------------------------------------------------------------------------
   // cardioid
   // Cardioid with parametric equations
@@ -349,7 +353,7 @@ public:
   void setCardioid( RealType z = 2 ) {
     POLY_CHECK2( z > 0, "Must provide a positive coefficient for the cardioid" );
     this->clear();
-    
+
     // Boundary generators.
     unsigned Nb = 90; // 4-degree resolution.
     for (unsigned b = 0; b < Nb; ++b) {
@@ -359,9 +363,9 @@ public:
       mPLCpoints.push_back(x);
       mPLCpoints.push_back(y);
     }
-    
+
     // Facets.
-    mPLC.facets.resize(Nb); 
+    mPLC.facets.resize(Nb);
     for (unsigned f = 0; f < Nb; ++f) {
       unsigned fBegin =  mPLCpoints.size()/2 - Nb + f;
       unsigned fEnd   = (mPLCpoints.size()/2 - Nb + f + 1) % Nb;
@@ -372,7 +376,7 @@ public:
     mType = cardioid;
     this->finalize();
   }
-   
+
   //------------------------------------------------------------------------
   // setTrogdor
   // No explanation necessary
@@ -380,15 +384,15 @@ public:
   void setTrogdor() {
     this->clear();
     const unsigned nSides = 30;
-    const RealType points[60] = {2.0, 9.0, 4.0, 8.9, 5.0, 9.2, 6.5, 8.8, 
-				 7.0, 8.0, 6.5, 7.0, 5.0, 6.3, 4.0, 5.5, 
+    const RealType points[60] = {2.0, 9.0, 4.0, 8.9, 5.0, 9.2, 6.5, 8.8,
+				 7.0, 8.0, 6.5, 7.0, 5.0, 6.3, 4.0, 5.5,
 				 3.7, 4.6, 4.0, 3.5, 5.5, 2.8, 6.8, 3.4,
 				 5.5, 2.5, 4.0, 2.6, 3.0, 3.0, 2.5, 4.0,
 				 2.4, 4.5, 2.5, 5.3, 3.0, 5.9, 4.5, 7.0,
 				 4.9, 7.3, 5.1, 7.7, 5.0, 8.0, 4.5, 8.0,
 				 3.5, 7.5, 2.0, 7.0, 2.0, 7.4, 3.3, 8.0,
 				 1.75, 8.0, 1.75, 9.2};
-    
+
     mPLC.facets.resize( nSides, vector<int>(2) );
     for (unsigned i = 0; i != nSides; ++i){
       unsigned j = nSides - i - 1;
@@ -397,7 +401,7 @@ public:
       mPLC.facets[i][0] = i;
       mPLC.facets[i][1] = (i+1) % nSides;
     }
-    
+
     mType = trogdor;
     this->finalize();
   }
@@ -412,20 +416,20 @@ public:
     const RealType theta0 = 2*M_PI/nPoints;
     const RealType outerRadius = 1.0;
     const RealType innerRadius = outerRadius*( sin(theta0/4.0) / sin(3*theta0/4.0) );
-    
+
     RealType theta;
     for (unsigned p = 0; p < nPoints; ++p ) {
       // For the pointy bits of the star
       theta = M_PI/2 + p*theta0;
       mPLCpoints.push_back( mCenter[0] + outerRadius*cos(theta) );
       mPLCpoints.push_back( mCenter[1] + outerRadius*sin(theta) );
-      
+
       // For the concave bits of the star
       theta = M_PI/2 + p*theta0 + theta0/2.0;
       mPLCpoints.push_back( mCenter[0] + innerRadius*cos(theta) );
       mPLCpoints.push_back( mCenter[1] + innerRadius*sin(theta) );
     }
-    
+
     // Facets on the inner circle
     mPLC.facets.resize( 2*nPoints, vector<int>(2) );
     for (unsigned f = 0; f < 2*nPoints; ++f) {
@@ -434,7 +438,7 @@ public:
       mPLC.facets[f][0] = fBegin;
       mPLC.facets[f][1] = fEnd;
     }
-    
+
     // The points that define the inner hole
     const unsigned nHolePoints = 4;
     const RealType holePoints[8] = {0.05, -0.05,
@@ -445,9 +449,9 @@ public:
       mPLCpoints.push_back( holePoints[2*p  ] );
       mPLCpoints.push_back( holePoints[2*p+1] );
     }
-    
+
     // Facets on the inner circle
-    mPLC.holes = vector< vector< vector<int> > >(1);      
+    mPLC.holes = vector< vector< vector<int> > >(1);
     mPLC.holes[0].resize(nHolePoints);
     for (unsigned f = 0; f < nHolePoints; ++f) {
       unsigned fBegin = mPLCpoints.size()/2 - nHolePoints + f;
@@ -502,7 +506,7 @@ public:
 
 //     const unsigned nHolePoints = 3;
 //     const RealType holePoints[6] = {15.0, 14.0, 15.3, 14.4, 15.6, 14.0};
-    
+
 //     mPLC.holes[0].resize(nHolePoints);
 //     for (unsigned i = 0; i != nHolePoints; ++i) {
 //       mPLCpoints.push_back(holePoints[2*i  ]);
@@ -513,15 +517,54 @@ public:
 //       mPLC.holes[0][i][0] = iBegin;
 //       mPLC.holes[0][i][1] = iEnd;
 //     }
-    
+
     mType = trogdor2;
+    this->finalize();
+  }
+
+  //------------------------------------------------------------------------
+  // squareWithStarHole
+  // Unit square with a hole shaped like a regular n-pointed star
+  //------------------------------------------------------------------------
+  void setSquareWithStarHole( int nPoints = 5 ) {
+    this->clear();
+    // The outer boundary
+    mDiff = 1.0;
+    this->setUnitSquare();
+    RealType theta0 = 2*M_PI/nPoints;
+    RealType outerRadius = 0.75;
+    RealType innerRadius = outerRadius*( sin(theta0/4.0) / sin(3*theta0/4.0) );
+    RealType theta;
+    for (unsigned p = 0; p < nPoints; ++p ) {
+      // For the pointy bits of the star
+      theta = M_PI/2 - p*theta0;
+      mPLCpoints.push_back( mCenter[0] + outerRadius*cos(theta) );
+      mPLCpoints.push_back( mCenter[1] + outerRadius*sin(theta) );
+      // For the concave bits of the star
+      theta = M_PI/2 - p*theta0 - theta0/2.0;
+      mPLCpoints.push_back( mCenter[0] + innerRadius*cos(theta) );
+      mPLCpoints.push_back( mCenter[1] + innerRadius*sin(theta) );
+    }
+
+    // Facets on the inner circle
+    mPLC.holes = vector< vector< vector<int> > >(1);
+    mPLC.holes[0].resize(2*nPoints);
+    for (unsigned f = 0; f < 2*nPoints; ++f) {
+      unsigned fBegin = mPLCpoints.size()/2 - 2*nPoints + f;
+      unsigned fEnd   = mPLCpoints.size()/2 - 2*nPoints + ((f + 1) % (2*nPoints));
+      mPLC.holes[0][f].resize(2);
+      mPLC.holes[0][f][0] = fBegin;
+      mPLC.holes[0][f][1] = fEnd;
+    }
+
+    mType = squarewithstarhole;
     this->finalize();
   }
 
   //------------------------------------------------------------------------
   //-------------------- ADDITIONAL HELPER FUNCTIONS -----------------------
   //------------------------------------------------------------------------
-  
+
   //------------------------------------------------------------------------
   // testInside
   // Tests if a given point (x,y) lies in the interior of the domain.
@@ -534,20 +577,20 @@ public:
     // POLY_CHECK( mPLCpoints.size() > 0 );
     // const unsigned nSides = mPLC.facets.size();
     // bool isInside = inside(x,y,nSides,offset);
-    
+
     // for (unsigned hIt = 0; hIt != mPLC.holes.size(); ++hIt ) {
     //   isInside ^= inside(x,y,mPLC.holes[hIt].size(),offset);
     // }
     // return isInside;
   }
-  
-  
+
+
   //------------------------------------------------------------------------
   // inside
   // Tests if (x,y) is inside the nSide-sided polygon defined by the ordered
   // set of points in mPLCpoints starting at index 'offset'
   //------------------------------------------------------------------------
-  bool inside( const RealType x, const RealType y, 
+  bool inside( const RealType x, const RealType y,
 	       const unsigned nSides, unsigned& offset ) {
     unsigned j = nSides - 1;
     bool isInside = false;
@@ -597,8 +640,8 @@ public:
 
   //------------------------------------------------------------------------
   // getPointInside
-  // Computes a random point 
-  //------------------------------------------------------------------------  
+  // Computes a random point
+  //------------------------------------------------------------------------
   void getPointInside(RealType* point) {
     using IntType = typename HashKey<2>::IntType;
     using IntPoint = Point<2, IntType>;

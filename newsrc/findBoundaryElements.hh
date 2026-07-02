@@ -23,11 +23,6 @@ findBoundaryElements(const Tessellation<Dimension, RealType>& mesh,
   boundaryFaces.clear();
   boundaryNodes.clear();
   for (unsigned iface = 0; iface < mesh.faces.size(); ++iface) {
-    // std::cout << "face " << iface;
-    // for (const auto& face : mesh.faceCells[iface]) {
-    //   std::cout << " " << face;
-    // }
-    // std::cout << std::endl;
     POLY_ASSERT2(mesh.faceCells[iface].size() == 1 or
                  mesh.faceCells[iface].size() == 2,
                  mesh.faceCells[iface].size());
@@ -46,16 +41,6 @@ findBoundaryElements(const Tessellation<Dimension, RealType>& mesh,
   POLY_ASSERT(boundaryNodes.size() <= mesh.nodes.size()/Dimension);
 }
 
-}
-
-#else
-
-namespace polytope {
-template<int Dimension, typename RealType>
-void
-findBoundaryElements(const Tessellation<Dimension, RealType>& mesh,
-                     std::vector<int>& boundaryFaces,
-                     std::vector<int>& boundaryNodes);
 }
 
 #endif

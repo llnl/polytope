@@ -259,10 +259,6 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
     // Gather the nodes from this cell in traversal order.
     vector<int> cellNodes;
     traverseNodes(mesh, i, cellNodes);
-    // cout << "cell " << i << ": ";
-    // for (int j = 0; j < cellNodes.size(); ++j)
-    // cout << cellNodes[j] << " ";
-    // cout << endl;
     // Insert the cell's node connectivity into the node list.
     nodeList.push_back(cellNodes.size());
     nodeList.insert(nodeList.end(), cellNodes.begin(), cellNodes.end());
@@ -363,7 +359,16 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
   // Write point mesh
   DBPutPointmesh(file, (char*)"points", 2, pcoords,
                  numPoints, DB_DOUBLE, optlist);
-
+#ifdef POLYTOPE_ENABLE_DEBUG
+  // Create NODES directory and write the nodes as points
+  DBSetDir(file, "/");
+  DBMkDir(file, "NODES");
+  DBSetDir(file, "NODES");
+  // Node coordinates
+  // Write point mesh of nodes
+  DBPutPointmesh(file, (char*)"nodes", 2, coords,
+                 numNodes, DB_DOUBLE, optlist);
+#endif
 #if 0
   // Vector fields.
   {

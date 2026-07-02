@@ -183,7 +183,8 @@ QuantTessellation<3>::clipTessellation(const QuantPLC<3>& QPLC,
 //------------------------------------------------------------------------------
 template<>
 void
-QuantTessellation<3>::fillTessellation(TessellationType& mesh) const {
+QuantTessellation<3>::fillTessellation(TessellationType& mesh) {
+  compactUnusedNodesAndFaces();
   const unsigned numNodes = m_nodes.size();
   const unsigned numFaces = m_faces.size();
   const unsigned numCells = m_points.size();  // Number of generators

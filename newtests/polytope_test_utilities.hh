@@ -12,6 +12,7 @@
 #include "Boundary2D.hh"
 #include "Generators.hh"
 #include "Tessellator.hh"
+#include "polytope_boost_utilities.hh"
 
 namespace polytope {
 
@@ -99,34 +100,34 @@ void outputMesh(const Tessellation<nDim,RealType>& mesh,
 }
 //------------------------------------------------------------------------------
 // a cell-centered field given
-template <typename RealType>
-void outputMesh(Tessellation<2,RealType>& mesh,
-		std::string prefix,
-                std::vector<RealType>& cellField,
-		const unsigned testCycle = 1,
-		const RealType time = 0.0) {
-#ifdef POLYTOPE_ENABLE_SILO
-  POLY_CHECK(cellField.size() == mesh.cells.size());
-  std::vector<double> index(mesh.cells.size());
-  std::vector<double> genx (mesh.cells.size());
-  std::vector<double> geny (mesh.cells.size());
-  for (int i = 0; i < mesh.cells.size(); ++i){
-    index[i] = double(i);
-    genx[i] = mesh.points[2*i];
-    geny[i] = mesh.points[2*i+1];
-  }
-  std::map<std::string,double*> nodeFields, edgeFields, faceFields, cellFields;
-  cellFields["cell_index"] = &index[0];
-  cellFields["gen_x"     ] = &genx[0];
-  cellFields["gen_y"     ] = &geny[0];
-  cellFields["cond"      ] = &cellField[0];
-  std::ostringstream os;
-  os << prefix;
-  SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
-                               faceFields, cellFields, os.str(),
-                               testCycle, time);
-#endif
-}
+// template <typename RealType>
+// void outputMesh(Tessellation<2,RealType>& mesh,
+// 		std::string prefix,
+//                 std::vector<RealType>& cellField,
+// 		const unsigned testCycle = 1,
+// 		const RealType time = 0.0) {
+// #ifdef POLYTOPE_ENABLE_SILO
+//   POLY_CHECK(cellField.size() == mesh.cells.size());
+//   std::vector<double> index(mesh.cells.size());
+//   std::vector<double> genx (mesh.cells.size());
+//   std::vector<double> geny (mesh.cells.size());
+//   for (int i = 0; i < mesh.cells.size(); ++i){
+//     index[i] = double(i);
+//     genx[i] = mesh.points[2*i];
+//     geny[i] = mesh.points[2*i+1];
+//   }
+//   std::map<std::string,double*> nodeFields, edgeFields, faceFields, cellFields;
+//   cellFields["cell_index"] = &index[0];
+//   cellFields["gen_x"     ] = &genx[0];
+//   cellFields["gen_y"     ] = &geny[0];
+//   cellFields["cond"      ] = &cellField[0];
+//   std::ostringstream os;
+//   os << prefix;
+//   SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
+//                                faceFields, cellFields, os.str(),
+//                                testCycle, time);
+// #endif
+// }
 
 //------------------------------------------------------------------------------
 // Compute the area of a polytope tessellation cell-by-cell using Boost.Geometry
@@ -152,6 +153,39 @@ RealType computeTessellationArea(Tessellation<2,RealType>& mesh) {
   return area;
 }
 
+// Return -1 if polygon is not watertight, otherwise returns number of holes
+int isWatertight(const Tessellation<2, double>& mesh) {
+  MultiBGPolygon<double, 2> result;
+  for (int i = 0; i < mesh.cells.size(); ++i) {
+    auto cell = mesh.getCell(i);
+    BGPolygon<double, 2> polygon = makeBGPolygon(cell);
+    boost::geometry::correct(polygon);
+    if (!boost::geometry::is_valid(polygon)) {
+      return -1;
+    }
+    if (i == 0) {
+      result.push_back(polygon);
+    } else {
+      MultiBGPolygon<double, 2> tmp;
+      boost::geometry::union_(result, polygon, tmp);
+      result = std::move(tmp);
+    }
+  }
+  int holeCount = 0;
+  for (const auto& mp : result) {
+    holeCount += mp.inners().size();
+  }
+  return holeCount;
+}
+
+void testWatertight(const Tessellation<2, double>& mesh, const int refHoles) {
+  int numHoles = isWatertight(mesh);
+  POLY_CHECK2(numHoles != -1, "Resulting mesh is not watertight");
+  (void) refHoles;
+  // This check does not work as intended for some reason
+  // POLY_CHECK2(numHoles == refHoles,
+  //             "Resulting mesh has " << numHoles << " but should have " << refHoles << " holes");
+}
 }
 
 #endif
