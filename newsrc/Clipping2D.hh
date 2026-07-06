@@ -49,9 +49,8 @@ struct Clip2D {
     if (validp0 && validp1) {
       return false;
     }
-    if (!bounds0 && isRayExternal(rp0, normalRay)) {
-      return true;
-    } else if (!bounds1 && isRayExternal(rp1, -normalRay)) {
+    if ((!bounds0 && isRayExternal(rp0, normalRay)) ||
+        (!bounds1 && isRayExternal(rp1, -normalRay))) {
       return true;
     }
     if (!validp0) {
