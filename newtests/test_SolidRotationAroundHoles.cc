@@ -122,7 +122,6 @@ void test(Tessellator<2,double>& tessellator) {
   unsigned step = 0;
   double time = 0.0;
   Tessellation<2,double> mesh;
-  tessellator.setQuantizer(boundary.mQ);
   tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
   outputMesh(mesh, testName, step, time);
 

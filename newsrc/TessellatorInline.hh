@@ -15,9 +15,9 @@ void
 Tessellator<nDim, RealType>::
 tessellate(const std::vector<RealType>& points,
            Tessellation<nDim, RealType>& mesh) const {
-
-  if (!m_init) {
-    m_Q.init(points);
+  auto& Q = Quantizer<nDim>::instance();
+  if (!Q.m_init) {
+    Q.init(points);
     m_init = true;
   }
   // Pre-conditions
@@ -26,9 +26,9 @@ tessellate(const std::vector<RealType>& points,
   POLY_ASSERT(points.size() % nDim == 0);
 
   // Invoke the descendant method to fill the quant mesh.
-  QuantizedTessellation quantmesh(m_Q, points);
+  QuantTessellation<nDim> quantmesh(points);
   // Make a QPLC that is just the outer extends.
-  QuantPLC<nDim> qplc(m_Q);
+  QuantPLC<nDim> qplc;
   this->tessellateQuantized(qplc, quantmesh);
 
   // Copy the QuantTessellation to the output.
@@ -49,8 +49,9 @@ tessellate(const std::vector<RealType>& points,
            const std::vector<RealType>& PLCpoints,
            const PLC<nDim>& geometry,
            Tessellation<nDim, RealType>& mesh) const {
-  if (!m_init) {
-    m_Q.init(PLCpoints);
+  auto& Q = Quantizer<nDim>::instance();
+  if (!Q.m_init) {
+    Q.init(PLCpoints);
     m_init = true;
   }
   // Pre-conditions
@@ -59,8 +60,8 @@ tessellate(const std::vector<RealType>& points,
   POLY_ASSERT(points.size() % nDim == 0);
 
   // Invoke the descendant method to fill the quant mesh.
-  QuantizedTessellation quantmesh(m_Q, points);
-  QuantPLC<nDim> qplc(geometry, m_Q, PLCpoints);
+  QuantTessellation<nDim> quantmesh(points);
+  QuantPLC<nDim> qplc(geometry, PLCpoints);
   // Remove any external points
   quantmesh.cullExternalPoints(qplc);
   this->tessellateQuantized(qplc, quantmesh);

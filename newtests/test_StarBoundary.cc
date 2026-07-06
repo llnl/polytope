@@ -55,7 +55,6 @@ void test(Tessellator<2,double>& tessellator) {
       points.push_back(gens[2*i+1]);
     }
     Tessellation<2,double> mesh;
-    tessellator.setQuantizer(boundary.mQ);
     tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
     outputMesh(mesh,testName,test);
     testWatertight(mesh, boundary.mPLC.holes.size());
@@ -74,7 +73,6 @@ void test(Tessellator<2,double>& tessellator) {
                   boundary.mPLCpoints.begin(),
                   boundary.mPLCpoints.end());
     Tessellation<2,double> mesh;
-    tessellator.setQuantizer(boundary.mQ);
     tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC,mesh);
     outputMesh(mesh,testName,test);
     testWatertight(mesh, boundary.mPLC.holes.size());
@@ -87,7 +85,6 @@ void test(Tessellator<2,double>& tessellator) {
     Generators<2,double> generators(boundary);
     generators.randomPoints(800, 10);
     Tessellation<2,double> mesh;
-    tessellator.setQuantizer(boundary.mQ);
     tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
     outputMesh(mesh,testName,test);
     testWatertight(mesh, boundary.mPLC.holes.size());
@@ -101,7 +98,6 @@ void test(Tessellator<2,double>& tessellator) {
     Generators<2,double> generators(boundary);
     generators.randomPoints(2000, 10);
     Tessellation<2,double> mesh;
-    tessellator.setQuantizer(boundary.mQ);
     tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
     outputMesh(mesh,testName,test);
     testWatertight(mesh, boundary.mPLC.holes.size());

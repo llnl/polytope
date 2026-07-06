@@ -41,9 +41,10 @@ public:
     srand(seed);
     // std::mt19937 gen(seed);
     // std::uniform_real_distribution<double> distrib(0., 1.);
+    auto& Q = Quantizer<2>::instance();
 
-    auto bHigh = mBoundary.mQ.m_xhi;
-    auto bLow = mBoundary.mQ.m_xlo;
+    auto bHigh = Q.m_xhi;
+    auto bLow = Q.m_xlo;
 
     for (unsigned iter = 0; iter < nGenerators; ++iter ){
       std::vector<RealType> pos(Dimension,0);
@@ -122,8 +123,9 @@ public:
   // for 2D problems
   //------------------------------------------------------------------------
   void cartesian2D(const unsigned nx, const unsigned ny) {
-    auto bHigh = mBoundary.mQ.m_xhi;
-    auto bLow = mBoundary.mQ.m_xlo;
+    auto& Q = Quantizer<2>::instance();
+    auto bHigh = Q.m_xhi;
+    auto bLow = Q.m_xlo;
     RealType x, y;
     RealType dx = (bHigh[0] - bLow[0]) / nx;
     RealType dy = (bHigh[1] - bLow[1]) / ny;
@@ -146,8 +148,9 @@ public:
   // for 3D problems
   //------------------------------------------------------------------------
   void cartesian3D(const unsigned nx, const unsigned ny, const unsigned nz) {
-    auto bHigh = mBoundary.mQ.m_xhi;
-    auto bLow = mBoundary.mQ.m_xlo;
+    auto& Q = Quantizer<3>::instance();
+    auto bHigh = Q.m_xhi;
+    auto bLow = Q.m_xlo;
     RealType x, y, z;
     RealType dx = (mBoundary.mHigh[0] - mBoundary.mLow[0]) / nx;
     RealType dy = (mBoundary.mHigh[1] - mBoundary.mLow[1]) / ny;

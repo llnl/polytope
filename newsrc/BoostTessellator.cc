@@ -35,7 +35,7 @@ tessellateQuantized(const QuantPLC<2>& qplc,
   using IntType = typename QuantTessellation<2>::IntType;
   using IntPoint = typename QuantTessellation<2>::IntPoint;
   using VD = boost::polygon::voronoi_diagram<RealType>;
-  const Quantizer<2>& Q = result.m_Q;
+  const auto& Q = Quantizer<2>::instance();
   // Get the generators
   std::vector<IntPoint> generators = result.getIntPoints();
   const size_t numGenerators = generators.size();

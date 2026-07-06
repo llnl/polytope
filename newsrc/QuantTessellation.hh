@@ -43,10 +43,9 @@ public:
   //------------------------------------------------------------------------------
   // Constructor - common for all dimensions
   //------------------------------------------------------------------------------
-  QuantTessellation(const QuantizerType& Q,
-                    const std::vector<RealType>& genpoints) :
-    m_Q(Q) {
-    m_loBounds = m_Q.maxCoord;
+  QuantTessellation(const std::vector<RealType>& genpoints) {
+    const auto& Q = QuantizerType::instance();
+    m_loBounds = Q.maxCoord;
     m_hiBounds = -m_loBounds;
     // Extract the unrolled coordinates
     auto rpoints = extractCoords<Dimension, RealType>(genpoints);
@@ -56,12 +55,12 @@ public:
     m_points.reserve(N);
     size_t i = 0;
     for (const auto& rp : rpoints) {
-      auto ip = m_Q.quantize(rp);
-      POLY_ASSERT2(m_Q.inQBounds(ip), "Point provided that exceeds quantizer bounds");
+      auto ip = Q.quantize(rp);
+      POLY_ASSERT2(Q.inQBounds(ip), "Point provided that exceeds quantizer bounds");
       ip.index = i++;
       m_loBounds = m_loBounds.minElements(ip);
       m_hiBounds = m_hiBounds.maxElements(ip);
-      m_hashes.push_back(m_Q.hash(ip));
+      m_hashes.push_back(Q.hash(ip));
       m_points.push_back(ip);
     }
     sortByHash();
@@ -70,16 +69,16 @@ public:
   // Construct a smaller instance, useful during clipping
   QuantTessellation(const std::vector<IntPoint>& qgenpoints,
                     const QuantTessellation& QT) :
-    m_Q(QT.m_Q),
     m_points(qgenpoints),
     m_loBounds(QT.m_loBounds),
     m_hiBounds(QT.m_hiBounds) {
+    const auto& Q = QuantizerType::instance();
     auto N = qgenpoints.size();
     m_hashes.reserve(N);
     unsigned i = 0;
     for (auto& ip : m_points) {
       ip.index = i++;
-      m_hashes.push_back(m_Q.hash(ip));
+      m_hashes.push_back(Q.hash(ip));
     }
   }
 
@@ -107,10 +106,11 @@ public:
 
   // Returns dequantized points cast as a flattened vector of reals
   std::vector<RealType> getRealCoords() const {
+    const auto& Q = QuantizerType::instance();
     std::vector<RealPoint> realPoints;
     realPoints.reserve(m_points.size());
     for (const auto& p : m_points) {
-      realPoints.push_back(m_Q.dequantize(p));
+      realPoints.push_back(Q.dequantize(p));
     }
     return flattenCoords(realPoints);
   }
@@ -120,8 +120,9 @@ public:
 
   // Create guard generators
   std::vector<IntPoint> generateGuards() const {
+    const auto& Q = QuantizerType::instance();
     std::vector<IntPoint> guards;
-    const auto len = m_Q.maxCoord - 1;
+    const auto len = Q.maxCoord - 1;
     IntPoint min;
     min.zero();
     return shapes::createBoxPoints(min, len);
@@ -274,7 +275,6 @@ public:
   //------------------------------------------------------------------------------
   // Member data
   //------------------------------------------------------------------------------
-  QuantizerType m_Q;
   // Generator points
   std::vector<CoordHash> m_hashes;
   std::vector<IntPoint> m_points;

@@ -99,7 +99,7 @@ void test(Tessellator<2,double>& tessellator) {
   
   int i = 1;
   const double dist = 1.0e-6;
-
+  auto& Q = Quantizer<2>::instance();
   
   // Test 1: Cell parents multiple orphans
   int seed = 10489593;
@@ -108,7 +108,6 @@ void test(Tessellator<2,double>& tessellator) {
     Generators<2,double> generators(boundary);
     generators.randomPoints(20, seed);
     Tessellation<2,double> mesh;
-    tessellator.setQuantizer(boundary.mQ);
     tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
     outputMesh(mesh, testName,i);
     printArea(boundary,mesh);
@@ -240,8 +239,7 @@ void test(Tessellator<2,double>& tessellator) {
       boundary.facets[j][0] = j;
       boundary.facets[j][1] = (j+1) % nSides;
     }
-    Quantizer<2> Q(PLCpoints, -1, 0.5);
-    tessellator.setQuantizer(Q);
+    Q.init(PLCpoints, -1, 0.5);
     tessellator.tessellate(points, PLCpoints, boundary, mesh);
     outputMesh(mesh, testName, i);
     const double trueArea = 8.74;
@@ -261,7 +259,7 @@ void test(Tessellator<2,double>& tessellator) {
     cout << "\nTest 8: Lots of random points" << endl;
     const unsigned N = 100;
     seed = 10332520;
-    tessellator.setQuantizer(boundary.mQ);
+    Q.init(boundary.mPLCpoints, -1., 0.1);
     for (unsigned iter = 0; iter < N; ++iter) {
       Generators<2,double> generators(boundary);
       generators.randomPoints(50, seed);

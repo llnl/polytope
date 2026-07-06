@@ -32,7 +32,6 @@ public:
   // Boundary type
   mutable BoundaryType mType;
 
-  Quantizer<3> mQ;
   QuantPLC<3> mQPLC;
   
   //------------------------------------------------------------------------
@@ -52,8 +51,9 @@ public:
   }
   
   void finalize() {
-    mQ.init(mPLCpoints);
-    mQPLC.init(mPLC, mQ, mPLCpoints);
+    auto& q = Quantizer<3>::instance();
+    q.init(mPLCpoints);
+    mQPLC.init(mPLC, mPLCpoints);
   }
 
   //------------------------------------------------------------------------
@@ -396,16 +396,18 @@ public:
   // Computes a random point 
   //------------------------------------------------------------------------  
   void getPointInside(RealType* point) {
+    auto& Q = Quantizer<3>::instance();
     using IntType = typename HashKey<3>::IntType;
     using IntPoint = Point<3, IntType>;
     bool inside = false;
     IntPoint p;
     while( !inside ){
-      p.x = static_cast<IntType>(random01())*mQ.maxCoord.x;
-      p.y = static_cast<IntType>(random01())*mQ.maxCoord.y;
+      p.x = Q.minBound.x + static_cast<IntType>(random01())*Q.maxBound.x;
+      p.y = Q.minBound.y + static_cast<IntType>(random01())*Q.maxBound.y;
+      p.z = Q.minBound.z + static_cast<IntType>(random01())*Q.maxBound.z;
       inside = mQPLC.within(p);
     }
-    Point<3, RealType> pd = mQ.dequantize(p);
+    Point<3, RealType> pd = Q.dequantize(p);
     point[0] = pd.x;
     point[1] = pd.y;
   }

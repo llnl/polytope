@@ -38,60 +38,37 @@ int zcross_sign(const Point<Dimension, IntType>& p1,
 } // end anonymous namespace
 
 template<int Dimension>
-QuantPLC<Dimension>::QuantPLC(const Quant& Q) :
-  m_Q(Q) {
-  if constexpr (Dimension == 2) {
-      m_points = shapes::createSquarePoints(Q.minBound, Q.maxBound);
-      facets = shapes::createSquareFaces();
-      unsigned i = 0;
-      for (auto& ip : m_points) {
-        ip.index = i++;
-        m_hashes.push_back(m_Q.hash(ip));
-      }
-      removeDegeneracies();
-      orderFacets();
-    }
-}
-
-template<int Dimension>
 QuantPLC<Dimension>::QuantPLC(const PLC<Dimension>& plc,
-                              const Quant& Q,
                               const std::vector<RealType>& allpoints) :
-  PLC<Dimension>(plc),
-  m_Q(Q) {
-  init(Q, allpoints);
+  PLC<Dimension>(plc) {
+  init(allpoints);
 }
 
 template<int Dimension>
 QuantPLC<Dimension>::QuantPLC(const PLC<Dimension>& plc,
-                              const Quant& Q,
                               const std::vector<IntPoint>& ipoints) :
-  PLC<Dimension>(plc),
-  m_Q(Q) {
-  init(Q, ipoints);
+  PLC<Dimension>(plc) {
+  init(ipoints);
 }
 
 template<int Dimension>
 QuantPLC<Dimension>::
-QuantPLC(const Quant& Q,
-         const std::vector<RealType>& allpoints) :
-  QuantPLC(PLC<Dimension>(), Q, allpoints) { }
+QuantPLC(const std::vector<RealType>& allpoints) :
+  QuantPLC(PLC<Dimension>(), allpoints) { }
 
 template<int Dimension>
 void
 QuantPLC<Dimension>::init(const PLC<Dimension>& plc,
-                          const Quant& Q,
                           const std::vector<RealType>& allpoints) {
   facets = plc.facets;
   holes = plc.holes;
-  init(Q, allpoints);
+  init(allpoints);
 }
 template<int Dimension>
 void
-QuantPLC<Dimension>::init(const Quant& Q,
-                          const std::vector<RealType>& allpoints) {
-  m_Q = Q;
-  m_loBounds = m_Q.maxCoord;
+QuantPLC<Dimension>::init(const std::vector<RealType>& allpoints) {
+  const auto& Q = Quant::instance();
+  m_loBounds = Q.maxCoord;
   m_hiBounds = -m_loBounds;
 
   // Extract the unrolled coordinates
@@ -102,11 +79,11 @@ QuantPLC<Dimension>::init(const Quant& Q,
   m_points.reserve(N);
   size_t i = 0;
   for (const auto& rp : rpoints) {
-    auto ip = m_Q.quantize(rp);
+    auto ip = Q.quantize(rp);
     ip.index = i++;
     m_loBounds = m_loBounds.minElements(ip);
     m_hiBounds = m_hiBounds.maxElements(ip);
-    m_hashes.push_back(m_Q.hash(ip));
+    m_hashes.push_back(Q.hash(ip));
     m_points.push_back(ip);
   }
   POLY_ASSERT2(m_loBounds < m_hiBounds,
@@ -117,10 +94,9 @@ QuantPLC<Dimension>::init(const Quant& Q,
 
 template<int Dimension>
 void
-QuantPLC<Dimension>::init(const Quant& Q,
-                          const std::vector<IntPoint>& ipoints) {
-  m_Q = Q;
-  m_loBounds = m_Q.maxCoord;
+QuantPLC<Dimension>::init(const std::vector<IntPoint>& ipoints) {
+  const auto& Q = Quant::instance();
+  m_loBounds = Q.maxCoord;
   m_hiBounds = -m_loBounds;
 
   auto N = ipoints.size();
@@ -132,7 +108,7 @@ QuantPLC<Dimension>::init(const Quant& Q,
     nip.index = i++;
     m_loBounds = m_loBounds.minElements(nip);
     m_hiBounds = m_hiBounds.maxElements(nip);
-    m_hashes.push_back(m_Q.hash(nip));
+    m_hashes.push_back(Q.hash(nip));
     m_points.push_back(nip);
   }
   POLY_ASSERT2(m_loBounds < m_hiBounds,
@@ -166,10 +142,11 @@ QuantPLC<Dimension>::removeDegeneracies() {
     }
   }
   m_hashes = std::move(new_hashes);
+  const auto& Q = Quant::instance();
   m_points.clear();
   m_points.reserve(m_hashes.size());
   for (auto& h : m_hashes) {
-    m_points.push_back(m_Q.unhash(h));
+    m_points.push_back(Q.unhash(h));
   }
   for (auto& f : facets) {
     for (auto& idx : f) {
@@ -211,12 +188,13 @@ QuantPLC<Dimension>::reduce() {
     }
   }
 
+  const auto& Q = Quant::instance();
   auto N = indices.size();
   m_hashes = newHashes;
   m_points.clear();
   m_points.reserve(N);
   for (auto h : m_hashes) {
-    m_points.push_back(m_Q.unhash(h));
+    m_points.push_back(Q.unhash(h));
   }
 
   // Remap facet indices
@@ -459,10 +437,11 @@ QuantPLC<Dimension>::orderFacets3D() {
 template<int Dimension>
 bool
 QuantPLC<Dimension>::within(const RealPoint& point) const {
-  if (!m_Q.inBounds(point)) {
+  const auto& Q = Quant::instance();
+  if (!Q.inBounds(point)) {
     return false;
   }
-  IntPoint ip = m_Q.quantize(point);
+  IntPoint ip = Q.quantize(point);
   return within(ip);
 }
 

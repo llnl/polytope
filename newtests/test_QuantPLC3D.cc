@@ -84,12 +84,13 @@ void testBasicConstruction(const int tnum) {
 
   RealPoint xlo(0.0, 0.0, 0.0);
   RealPoint xhi(1.0, 1.0, 1.0);
-  Quantizer3D Q(xlo, xhi);
+  auto& Q = Quantizer3D::instance();
+  Q.init(xlo, xhi);
 
   auto plc = createCubePLC();
   auto vertices = createCubeVertices(xlo, xhi);
 
-  QuantPLC3D qplc(plc, Q, vertices);
+  QuantPLC3D qplc(plc,  vertices);
 
   // Check that all 8 vertices were quantized
   POLY_CHECK2(qplc.m_points.size() == 8,
@@ -112,7 +113,8 @@ void testQuantizationAccuracy(const int tnum) {
 
   RealPoint xlo(-10.0, -10.0, -10.0);
   RealPoint xhi(10.0, 10.0, 10.0);
-  Quantizer3D Q(xlo, xhi);
+  auto& Q = Quantizer3D::instance();
+  Q.init(xlo, xhi);
 
   vector<RealPoint> testPoints = {
     RealPoint(0.0, 0.0, 0.0),
@@ -147,7 +149,8 @@ void testDeduplication(const int tnum) {
 
   RealPoint xlo(0.0, 0.0, 0.0);
   RealPoint xhi(1.0, 1.0, 1.0);
-  Quantizer3D Q(xlo, xhi);
+  auto& Q = Quantizer3D::instance();
+  Q.init(xlo, xhi);
 
   // Create vertices with duplicates (vertices 0 and 8 are the same)
   vector<RealType> vertices = {
@@ -168,7 +171,7 @@ void testDeduplication(const int tnum) {
   plc.facets[0] = {0, 1, 2, 8};  // Uses both 0 and 8 (same point)
 
   // Calls removeDegeneracies() in constructor
-  QuantPLC3D qplc(plc, Q, vertices);
+  QuantPLC3D qplc(plc,  vertices);
 
   // After deduplication: 8 unique points (removed duplicates 8 and 9)
   POLY_CHECK2(qplc.m_points.size() == 8,
@@ -189,7 +192,8 @@ void testReduction(const int tnum) {
 
   RealPoint xlo(0.0, 0.0, 0.0);
   RealPoint xhi(1.0, 1.0, 1.0);
-  Quantizer3D Q(xlo, xhi);
+  auto& Q = Quantizer3D::instance();
+  Q.init(xlo, xhi);
 
   // Create vertices with duplicates and unused vertices
   vector<RealType> vertices = {
@@ -207,7 +211,7 @@ void testReduction(const int tnum) {
   plc.facets.resize(1);
   plc.facets[0] = {0, 1, 2, 8};  // Uses 0, 1, 2, and 8 (8 is duplicate of 0)
 
-  QuantPLC3D qplc(plc, Q, vertices);
+  QuantPLC3D qplc(plc,  vertices);
 
   // Before reduction, should have 9 points
   POLY_CHECK2(qplc.m_points.size() == 8,
@@ -232,7 +236,8 @@ void testConvexHull(const int tnum) {
 
   RealPoint xlo(-1.0, -1.0, -1.0);
   RealPoint xhi(1.0, 1.0, 1.0);
-  Quantizer3D Q(xlo, xhi);
+  auto& Q = Quantizer3D::instance();
+  Q.init(xlo, xhi);
 
   // Create a tetrahedron with one interior point
   vector<RealType> vertices = {
@@ -244,7 +249,7 @@ void testConvexHull(const int tnum) {
   };
 
   PLC plc;  // Empty PLC, will compute hull
-  QuantPLC3D qplc(plc, Q, vertices);
+  QuantPLC3D qplc(plc,  vertices);
 
   qplc.makeConvex();
 
@@ -273,12 +278,13 @@ void testFacetOrientation(const int tnum) {
 
   RealPoint xlo(0.0, 0.0, 0.0);
   RealPoint xhi(2.0, 2.0, 2.0);
-  Quantizer3D Q(xlo, xhi);
+  auto& Q = Quantizer3D::instance();
+  Q.init(xlo, xhi);
 
   auto plc = createCubePLC();
   auto vertices = createCubeVertices();
 
-  QuantPLC3D qplc(plc, Q, vertices);
+  QuantPLC3D qplc(plc,  vertices);
   qplc.reduce();
 
   // Compute centroid in floating-point (no need for exact integer math here)
@@ -329,12 +335,13 @@ void testWithinBasic(const int tnum) {
 
   RealPoint xlo(0.0, 0.0, 0.0);
   RealPoint xhi(1.0, 1.0, 1.0);
-  Quantizer3D Q(xlo, xhi);
+  auto& Q = Quantizer3D::instance();
+  Q.init(xlo, xhi);
 
   auto plc = createCubePLC();
   auto vertices = createCubeVertices(xlo, xhi);
 
-  QuantPLC3D qplc(plc, Q, vertices);
+  QuantPLC3D qplc(plc,  vertices);
   qplc.makeConvex();
 
   // Test points inside
@@ -373,7 +380,8 @@ void testWithinHoles(const int tnum) {
 
   RealPoint xlo(-10.0, -10.0, -10.0);
   RealPoint xhi(10.0, 10.0, 10.0);
-  Quantizer3D Q(xlo, xhi);
+  auto& Q = Quantizer3D::instance();
+  Q.init(xlo, xhi);
 
   // Outer cube: [-5, 5]^3 with inner hole: [-1, 1]^3
   vector<RealType> vertices = {
@@ -415,7 +423,7 @@ void testWithinHoles(const int tnum) {
   plc.holes[0][4] = {8, 11, 15, 12};
   plc.holes[0][5] = {9, 13, 14, 10};
 
-  QuantPLC3D qplc(plc, Q, vertices);
+  QuantPLC3D qplc(plc,  vertices);
 
   // Inside outer, outside hole
   POLY_CHECK(qplc.within(RealPoint(-3.0, 0.0, 0.0)));
@@ -444,16 +452,17 @@ void testHashComparison(const int tnum) {
 
   RealPoint xlo(0.0, 0.0, 0.0);
   RealPoint xhi(1.0, 1.0, 1.0);
-  Quantizer3D Q(xlo, xhi);
+  auto& Q = Quantizer3D::instance();
+  Q.init(xlo, xhi);
 
   auto plc1 = createCubePLC();
   auto vertices1 = createCubeVertices();
-  QuantPLC3D qplc1(plc1, Q, vertices1);
+  QuantPLC3D qplc1(plc1,  vertices1);
 
   // Create identical PLC with permuted vertex indices
   auto plc2 = createCubePLC();
   auto vertices2 = createCubeVertices();
-  QuantPLC3D qplc2(plc2, Q, vertices2);
+  QuantPLC3D qplc2(plc2,  vertices2);
 
   // Should have same hashes (order-independent comparison)
   POLY_CHECK(QuantPLC3D::compareHashes(qplc1, qplc2));
@@ -473,7 +482,8 @@ void testCoplanarFaceMerging(const int tnum) {
   RealPoint xlo(0.0, 0.0, 0.0);
   RealPoint xhi(1.0, 1.0, 1.0);
   double degeneracy = 1.E-11;
-  Quantizer3D Q(xlo, xhi, degeneracy);
+  auto& Q = Quantizer3D::instance();
+  Q.init(xlo, xhi, degeneracy);
 
   // Create a cube where one face (z=1) is subdivided into 4 coplanar triangles
   vector<RealType> vertices = {
@@ -517,9 +527,9 @@ void testCoplanarFaceMerging(const int tnum) {
   refplc.facets[5] = {4, 5, 6, 7};
 
   // Calls orderFacets in constructor
-  QuantPLC3D qplc(plc, Q, vertices);
+  QuantPLC3D qplc(plc,  vertices);
 
-  QuantPLC3D refqplc(refplc, Q, vertices);
+  QuantPLC3D refqplc(refplc,  vertices);
 
   // After merging, the 4 coplanar triangles on top should merge into 1 quad
   // Total should be 6 facets (1 bottom + 4 sides + 1 top)
@@ -542,7 +552,8 @@ void testComplexCoplanarFaceMerging(const int tnum) {
   RealPoint xhi(1.0, 1.0, 1.0);
   // This test cannot use the maximum accuracy
   double degeneracy = 1.E-10;
-  Quantizer3D Q(xlo, xhi, degeneracy);
+  auto& Q = Quantizer3D::instance();
+  Q.init(xlo, xhi, degeneracy);
 
   // Create a cube where one face (z=1) is subdivided into 4 coplanar triangles
   vector<RealType> vertices = {
@@ -580,7 +591,7 @@ void testComplexCoplanarFaceMerging(const int tnum) {
   plc.facets[6] = {8, 11, 7, 4, 5, 9};
   plc.facets[7] = {10, 9, 5, 6, 7, 11};
   // Calls orderFacets in constructor
-  QuantPLC3D qplc(plc, Q, vertices);
+  QuantPLC3D qplc(plc,  vertices);
 
   // Make a PLC that swaps order of the top face
   PLC plc2(plc);
@@ -595,9 +606,9 @@ void testComplexCoplanarFaceMerging(const int tnum) {
   refplc.facets[5] = {4, 5, 6, 7};
 
   // Calls orderFacets in constructor
-  QuantPLC3D qplc2(plc2, Q, vertices);
+  QuantPLC3D qplc2(plc2,  vertices);
 
-  QuantPLC3D refqplc(refplc, Q, vertices);
+  QuantPLC3D refqplc(refplc,  vertices);
 
   // After merging, the 3 coplanar shapes on top should merge into 1 quad
   // Total should be 6 facets (1 bottom + 4 sides + 1 top)
@@ -627,7 +638,8 @@ void testStress(const int tnum) {
 
   RealPoint xlo(-100.0, -100.0, -100.0);
   RealPoint xhi(100.0, 100.0, 100.0);
-  Quantizer3D Q(xlo, xhi);
+  auto& Q = Quantizer3D::instance();
+  Q.init(xlo, xhi);
 
   // Generate random point cloud
   const unsigned nPoints = 100;
@@ -641,7 +653,7 @@ void testStress(const int tnum) {
   }
 
   PLC plc;  // Empty PLC
-  QuantPLC3D qplc(plc, Q, vertices);
+  QuantPLC3D qplc(plc, vertices);
 
   // Compute convex hull
   qplc.makeConvex();

@@ -36,6 +36,7 @@ void tests(const int tnum, bool boostTess) {
   // Number of nodes expected from test if not -1
   int numNodes = -1;
   int circleNodes = 90; // Number of nodes used to make circles
+  // Note: quantizer is initialized in the setDefaultBoundary calls
   switch (tnum) {
   case 1: // Square
     testname = "Square";
@@ -141,16 +142,15 @@ void tests(const int tnum, bool boostTess) {
     }
   }
   cout << "\n=== " << outname << " Test " << tnum << ":  " << testname << " ===" << endl;
-  auto Q = boundary.mQ;
-  QuantTessellation<2> quantMesh(Q, points);
-  QuantPLC<2> QPLC(boundary.mPLC, Q, boundary.mPLCpoints);
+  QuantTessellation<2> quantMesh(points);
+  QuantPLC<2> QPLC(boundary.mPLC, boundary.mPLCpoints);
   quantMesh.cullExternalPoints(QPLC);
   if (boostTess) {
-    BoostTessellator boost(Q);
+    BoostTessellator boost;
     boost.tessellateQuantized(QPLC, quantMesh);
     quantMesh.clipTessellation(QPLC, boost);
   } else {
-    TriangleTessellator tri(Q);
+    TriangleTessellator tri;
     tri.tessellateQuantized(QPLC, quantMesh);
     quantMesh.clipTessellation(QPLC, tri);
   }

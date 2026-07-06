@@ -44,28 +44,20 @@ public:
   QuantPLC() = default;
   virtual ~QuantPLC() = default;
 
-  QuantPLC(const Quant& Q);
-
   QuantPLC(const PLC<Dimension>& plc,
-           const Quant& Q,
            const std::vector<RealType>& allpoints);
 
-  QuantPLC(const Quant& Q,
-           const std::vector<RealType>& allpoints);
+  explicit QuantPLC(const std::vector<RealType>& allpoints);
 
   QuantPLC(const PLC<Dimension>& plc,
-           const Quant& Q,
            const std::vector<IntPoint>& ipoints);
 
   void init(const PLC<Dimension>& plc,
-            const Quant& Q,
             const std::vector<RealType>& allpoints);
 
-  void init(const Quant& Q,
-            const std::vector<RealType>& allpoints);
+  void init(const std::vector<RealType>& allpoints);
 
-  void init(const Quant& Q,
-            const std::vector<IntPoint>& ipoints);
+  void init(const std::vector<IntPoint>& ipoints);
 
   // Remove any degenerate points
   void removeDegeneracies();
@@ -94,10 +86,11 @@ public:
 
   // Returns dequantized points cast as a flattened vector of reals
   std::vector<RealType> getRealCoords() const {
+    const auto& Q = Quant::instance();
     std::vector<RealPoint> realPoints;
     realPoints.reserve(m_points.size());
     for (const auto& p : m_points) {
-      realPoints.push_back(m_Q.dequantize(p));
+      realPoints.push_back(Q.dequantize(p));
     }
     return flattenCoords(realPoints);
   }
@@ -183,7 +176,6 @@ public:
   //------------------------------------------------------------------------------
   using PLC<Dimension>::facets;  // Facets as vertex index lists
   using PLC<Dimension>::holes;  // Holes (each hole is a list of facets)
-  Quant m_Q;
   std::vector<CoordHash> m_hashes;
   std::vector<IntPoint> m_points;
 

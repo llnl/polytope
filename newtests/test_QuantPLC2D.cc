@@ -78,12 +78,13 @@ void testBasicConstruction(const int tnum) {
 
   RealPoint xlo(0.0, 0.0);
   RealPoint xhi(1.0, 1.0);
-  Quantizer2D Q(xlo, xhi);
+  auto& Q = Quantizer2D::instance();
+  Q.init(xlo, xhi);
 
   auto plc = createSquarePLC();
   auto vertices = createSquareVertices(xlo, xhi);
 
-  QuantPLC2D qplc(plc, Q, vertices);
+  QuantPLC2D qplc(plc, vertices);
 
   // Check that all 4 vertices were quantized
   POLY_CHECK2(qplc.m_points.size() == 4,
@@ -106,7 +107,8 @@ void testQuantizationAccuracy(const int tnum) {
 
   RealPoint xlo(-10.0, -10.0);
   RealPoint xhi(10.0, 10.0);
-  Quantizer2D Q(xlo, xhi);
+  auto& Q = Quantizer2D::instance();
+  Q.init(xlo, xhi);
 
   vector<RealPoint> testPoints = {
     RealPoint(0.0, 0.0),
@@ -140,7 +142,8 @@ void testDeduplication(const int tnum) {
 
   RealPoint xlo(0.0, 0.0);
   RealPoint xhi(1.0, 1.0);
-  Quantizer2D Q(xlo, xhi);
+  auto& Q = Quantizer2D::instance();
+  Q.init(xlo, xhi);
 
   // Create vertices with duplicates (vertices 0 and 4 are the same)
   vector<RealType> vertices = {
@@ -157,7 +160,7 @@ void testDeduplication(const int tnum) {
   plc.facets[0] = {0, 1};  // Uses 0
   plc.facets[1] = {4, 2};  // Uses 4 (duplicate of 0)
 
-  QuantPLC2D qplc(plc, Q, vertices);
+  QuantPLC2D qplc(plc, vertices);
 
   // Before deduplication, should have 6 points
   POLY_CHECK2(qplc.m_points.size() == 6,
@@ -181,7 +184,8 @@ void testReduction(const int tnum) {
 
   RealPoint xlo(0.0, 0.0);
   RealPoint xhi(1.0, 1.0);
-  Quantizer2D Q(xlo, xhi);
+  auto& Q = Quantizer2D::instance();
+  Q.init(xlo, xhi);
 
   // Create vertices with some unused
   vector<RealType> vertices = {
@@ -196,7 +200,7 @@ void testReduction(const int tnum) {
   plc.facets.resize(1);
   plc.facets[0] = {0, 1};  // Only uses vertices 0 and 1
 
-  QuantPLC2D qplc(plc, Q, vertices);
+  QuantPLC2D qplc(plc,  vertices);
 
   // Before reduction, should have 5 points
   POLY_CHECK2(qplc.m_points.size() == 5,
@@ -221,7 +225,8 @@ void testConvexHull(const int tnum) {
 
   RealPoint xlo(-1.0, -1.0);
   RealPoint xhi(2.0, 2.0);
-  Quantizer2D Q(xlo, xhi);
+  auto& Q = Quantizer2D::instance();
+  Q.init(xlo, xhi);
 
   // Create a set of points including some interior points
   vector<RealType> vertices = {
@@ -234,7 +239,7 @@ void testConvexHull(const int tnum) {
   };
 
   PLC plc;  // Empty PLC, will compute hull
-  QuantPLC2D qplc(plc, Q, vertices);
+  QuantPLC2D qplc(plc,  vertices);
 
   qplc.makeConvex();
 
@@ -263,12 +268,13 @@ void testEdgeOrdering(const int tnum) {
 
   RealPoint xlo(0.0, 0.0);
   RealPoint xhi(1.0, 1.0);
-  Quantizer2D Q(xlo, xhi);
+  auto& Q = Quantizer2D::instance();
+  Q.init(xlo, xhi);
 
   auto plc = createSquarePLC();
   auto vertices = createSquareVertices();
 
-  QuantPLC2D qplc(plc, Q, vertices);
+  QuantPLC2D qplc(plc,  vertices);
   qplc.reduce();  // This calls orderFacets
 
   // Check that edges form a closed loop
@@ -289,7 +295,8 @@ void testCollinearRemoval(const int tnum) {
 
   RealPoint xlo(0.0, 0.0);
   RealPoint xhi(10.0, 10.0);
-  Quantizer2D Q(xlo, xhi);
+  auto& Q = Quantizer2D::instance();
+  Q.init(xlo, xhi);
 
   // Create a square with extra collinear points on edges
   vector<RealType> vertices = {
@@ -314,7 +321,7 @@ void testCollinearRemoval(const int tnum) {
   plc.facets[6] = {6, 7};
   plc.facets[7] = {7, 0};
 
-  QuantPLC2D qplc(plc, Q, vertices);
+  QuantPLC2D qplc(plc,  vertices);
 
   // Before reduction, should have 8 edges
   POLY_CHECK2(qplc.facets.size() == 8,
@@ -342,12 +349,13 @@ void testWithinBasic(const int tnum) {
 
   RealPoint xlo(0.0, 0.0);
   RealPoint xhi(1.0, 1.0);
-  Quantizer2D Q(xlo, xhi);
+  auto& Q = Quantizer2D::instance();
+  Q.init(xlo, xhi);
 
   auto plc = createSquarePLC();
   auto vertices = createSquareVertices(xlo, xhi);
 
-  QuantPLC2D qplc(plc, Q, vertices);
+  QuantPLC2D qplc(plc,  vertices);
   qplc.makeConvex();
 
   // Test points inside
@@ -382,7 +390,8 @@ void testWithinHoles(const int tnum) {
 
   RealPoint xlo(-10.0, -10.0);
   RealPoint xhi(10.0, 10.0);
-  Quantizer2D Q(xlo, xhi);
+  auto& Q = Quantizer2D::instance();
+  Q.init(xlo, xhi);
 
   // Outer square: [-5, 5]^2 with inner hole: [-1, 1]^2
   vector<RealType> vertices = {
@@ -412,7 +421,7 @@ void testWithinHoles(const int tnum) {
   plc.holes[0][2] = {6, 7};
   plc.holes[0][3] = {7, 4};
 
-  QuantPLC2D qplc(plc, Q, vertices);
+  QuantPLC2D qplc(plc,  vertices);
 
   // Inside outer, outside hole
   POLY_CHECK(qplc.within(RealPoint(-3.0, 0.0)));
@@ -472,16 +481,17 @@ void testHashComparison(const int tnum) {
 
   RealPoint xlo(0.0, 0.0);
   RealPoint xhi(1.0, 1.0);
-  Quantizer2D Q(xlo, xhi);
+  auto& Q = Quantizer2D::instance();
+  Q.init(xlo, xhi);
 
   auto plc1 = createSquarePLC();
   auto vertices1 = createSquareVertices();
-  QuantPLC2D qplc1(plc1, Q, vertices1);
+  QuantPLC2D qplc1(plc1,  vertices1);
 
   // Create identical PLC
   auto plc2 = createSquarePLC();
   auto vertices2 = createSquareVertices();
-  QuantPLC2D qplc2(plc2, Q, vertices2);
+  QuantPLC2D qplc2(plc2,  vertices2);
 
   // Should have same hashes (order-independent comparison)
   POLY_CHECK(QuantPLC2D::compareHashes(qplc1, qplc2));
@@ -500,7 +510,8 @@ void testStress(const int tnum) {
 
   RealPoint xlo(-100.0, -100.0);
   RealPoint xhi(100.0, 100.0);
-  Quantizer2D Q(xlo, xhi);
+  auto& Q = Quantizer2D::instance();
+  Q.init(xlo, xhi);
 
   // Generate random point cloud
   const unsigned nPoints = 100;
@@ -513,7 +524,7 @@ void testStress(const int tnum) {
   }
 
   PLC plc;  // Empty PLC
-  QuantPLC2D qplc(plc, Q, vertices);
+  QuantPLC2D qplc(plc, vertices);
 
   // Compute convex hull
   qplc.makeConvex();

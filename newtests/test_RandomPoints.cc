@@ -50,7 +50,6 @@ void testBoundary(Boundary2D<double>& boundary,
 
     cout << nPoints << " points..." << endl;
     generators.randomPoints( nPoints );
-    tessellator.setQuantizer(boundary.mQ);
     tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
     outputMesh(mesh, testName, plotIndex);
     mesh.clear();

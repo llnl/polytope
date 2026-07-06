@@ -108,17 +108,18 @@ void testOverlappingCubes(const int tnum) {
 
   RealPoint xlo(-2.0, -2.0, -2.0);
   RealPoint xhi(2.0, 2.0, 2.0);
-  Quantizer3D Q(xlo, xhi);
+  auto& Q = Quantizer3D::instance();
+  Q.init(xlo, xhi);
 
   // Cube A: [0, 1]^3
   auto plcA = createCubePLC();
   auto verticesA = createCubeVertices(RealPoint(0.0, 0.0, 0.0), RealPoint(1.0, 1.0, 1.0));
-  QuantPLC3D qplcA(plcA, Q, verticesA);
+  QuantPLC3D qplcA(plcA, verticesA);
 
   // Cube B: [0.5, 1.5]^3 (overlaps with A)
   auto plcB = createCubePLC();
   auto verticesB = createCubeVertices(RealPoint(0.5, 0.5, 0.5), RealPoint(1.5, 1.5, 1.5));
-  QuantPLC3D qplcB(plcB, Q, verticesB);
+  QuantPLC3D qplcB(plcB, verticesB);
 
   // Make convex (computes normals)
   qplcA.makeConvex();
@@ -140,17 +141,18 @@ void testSeparatedCubes(const int tnum) {
 
   RealPoint xlo(-5.0, -5.0, -5.0);
   RealPoint xhi(5.0, 5.0, 5.0);
-  Quantizer3D Q(xlo, xhi);
+  auto& Q = Quantizer3D::instance();
+  Q.init(xlo, xhi);
 
   // Cube A: [0, 1]^3
   auto plcA = createCubePLC();
   auto verticesA = createCubeVertices(RealPoint(0.0, 0.0, 0.0), RealPoint(1.0, 1.0, 1.0));
-  QuantPLC3D qplcA(plcA, Q, verticesA);
+  QuantPLC3D qplcA(plcA, verticesA);
 
   // Cube B: [2, 3]^3 (separated from A in all dimensions)
   auto plcB = createCubePLC();
   auto verticesB = createCubeVertices(RealPoint(2.0, 2.0, 2.0), RealPoint(3.0, 3.0, 3.0));
-  QuantPLC3D qplcB(plcB, Q, verticesB);
+  QuantPLC3D qplcB(plcB, verticesB);
 
   // Make convex (computes normals)
   qplcA.makeConvex();
@@ -172,17 +174,18 @@ void testTouchingFaces(const int tnum) {
 
   RealPoint xlo(-2.0, -2.0, -2.0);
   RealPoint xhi(2.0, 2.0, 2.0);
-  Quantizer3D Q(xlo, xhi);
+  auto& Q = Quantizer3D::instance();
+  Q.init(xlo, xhi);
 
   // Cube A: [0, 1]^3
   auto plcA = createCubePLC();
   auto verticesA = createCubeVertices(RealPoint(0.0, 0.0, 0.0), RealPoint(1.0, 1.0, 1.0));
-  QuantPLC3D qplcA(plcA, Q, verticesA);
+  QuantPLC3D qplcA(plcA, verticesA);
 
   // Cube B: [1, 2]^3 (shares the x=1 face with A)
   auto plcB = createCubePLC();
   auto verticesB = createCubeVertices(RealPoint(1.0, 0.0, 0.0), RealPoint(2.0, 1.0, 1.0));
-  QuantPLC3D qplcB(plcB, Q, verticesB);
+  QuantPLC3D qplcB(plcB, verticesB);
 
   // Make convex (computes normals)
   qplcA.makeConvex();
@@ -204,17 +207,18 @@ void testTouchingEdges(const int tnum) {
 
   RealPoint xlo(-2.0, -2.0, -2.0);
   RealPoint xhi(2.0, 2.0, 2.0);
-  Quantizer3D Q(xlo, xhi);
+  auto& Q = Quantizer3D::instance();
+  Q.init(xlo, xhi);
 
   // Cube A: [0, 1]^3
   auto plcA = createCubePLC();
   auto verticesA = createCubeVertices(RealPoint(0.0, 0.0, 0.0), RealPoint(1.0, 1.0, 1.0));
-  QuantPLC3D qplcA(plcA, Q, verticesA);
+  QuantPLC3D qplcA(plcA, verticesA);
 
   // Cube B: [1, 2] x [1, 2] x [0, 1] (shares edge along z-axis at x=1, y=1)
   auto plcB = createCubePLC();
   auto verticesB = createCubeVertices(RealPoint(1.0, 1.0, 0.0), RealPoint(2.0, 2.0, 1.0));
-  QuantPLC3D qplcB(plcB, Q, verticesB);
+  QuantPLC3D qplcB(plcB, verticesB);
 
   // Make convex (computes normals)
   qplcA.makeConvex();
@@ -236,17 +240,18 @@ void testTouchingVertex(const int tnum) {
 
   RealPoint xlo(-2.0, -2.0, -2.0);
   RealPoint xhi(2.0, 2.0, 2.0);
-  Quantizer3D Q(xlo, xhi);
+  auto& Q = Quantizer3D::instance();
+  Q.init(xlo, xhi);
 
   // Cube A: [0, 1]^3
   auto plcA = createCubePLC();
   auto verticesA = createCubeVertices(RealPoint(0.0, 0.0, 0.0), RealPoint(1.0, 1.0, 1.0));
-  QuantPLC3D qplcA(plcA, Q, verticesA);
+  QuantPLC3D qplcA(plcA, verticesA);
 
   // Cube B: [1, 2]^3 (shares only corner vertex (1,1,1))
   auto plcB = createCubePLC();
   auto verticesB = createCubeVertices(RealPoint(1.0, 1.0, 1.0), RealPoint(2.0, 2.0, 2.0));
-  QuantPLC3D qplcB(plcB, Q, verticesB);
+  QuantPLC3D qplcB(plcB, verticesB);
 
   // Make convex (computes normals)
   qplcA.makeConvex();
@@ -268,17 +273,18 @@ void testContainment(const int tnum) {
 
   RealPoint xlo(-5.0, -5.0, -5.0);
   RealPoint xhi(5.0, 5.0, 5.0);
-  Quantizer3D Q(xlo, xhi);
+  auto& Q = Quantizer3D::instance();
+  Q.init(xlo, xhi);
 
   // Large cube: [-2, 2]^3
   auto plcA = createCubePLC();
   auto verticesA = createCubeVertices(RealPoint(-2.0, -2.0, -2.0), RealPoint(2.0, 2.0, 2.0));
-  QuantPLC3D qplcA(plcA, Q, verticesA);
+  QuantPLC3D qplcA(plcA, verticesA);
 
   // Small cube inside: [-1, 1]^3
   auto plcB = createCubePLC();
   auto verticesB = createCubeVertices(RealPoint(-1.0, -1.0, -1.0), RealPoint(1.0, 1.0, 1.0));
-  QuantPLC3D qplcB(plcB, Q, verticesB);
+  QuantPLC3D qplcB(plcB, verticesB);
 
   // Make convex (computes normals)
   qplcA.makeConvex();
@@ -300,17 +306,18 @@ void testTetrahedraIntersect(const int tnum) {
 
   RealPoint xlo(-3.0, -3.0, -3.0);
   RealPoint xhi(3.0, 3.0, 3.0);
-  Quantizer3D Q(xlo, xhi);
+  auto& Q = Quantizer3D::instance();
+  Q.init(xlo, xhi);
 
   // Tetrahedron A centered at origin
   auto plcA = createTetrahedronPLC();
   auto verticesA = createTetrahedronVertices(RealPoint(0.0, 0.0, 0.0), 1.0);
-  QuantPLC3D qplcA(plcA, Q, verticesA);
+  QuantPLC3D qplcA(plcA, verticesA);
 
   // Tetrahedron B offset slightly (overlaps with A)
   auto plcB = createTetrahedronPLC();
   auto verticesB = createTetrahedronVertices(RealPoint(0.5, 0.5, 0.5), 1.0);
-  QuantPLC3D qplcB(plcB, Q, verticesB);
+  QuantPLC3D qplcB(plcB, verticesB);
 
   // Make convex (computes normals)
   qplcA.makeConvex();
@@ -332,17 +339,18 @@ void testTetrahedraSeparated(const int tnum) {
 
   RealPoint xlo(-5.0, -5.0, -5.0);
   RealPoint xhi(5.0, 5.0, 5.0);
-  Quantizer3D Q(xlo, xhi);
+  auto& Q = Quantizer3D::instance();
+  Q.init(xlo, xhi);
 
   // Tetrahedron A centered at origin
   auto plcA = createTetrahedronPLC();
   auto verticesA = createTetrahedronVertices(RealPoint(0.0, 0.0, 0.0), 1.0);
-  QuantPLC3D qplcA(plcA, Q, verticesA);
+  QuantPLC3D qplcA(plcA, verticesA);
 
   // Tetrahedron B far away
   auto plcB = createTetrahedronPLC();
   auto verticesB = createTetrahedronVertices(RealPoint(3.0, 3.0, 3.0), 1.0);
-  QuantPLC3D qplcB(plcB, Q, verticesB);
+  QuantPLC3D qplcB(plcB, verticesB);
 
   // Make convex (computes normals)
   qplcA.makeConvex();
@@ -364,17 +372,18 @@ void testCubeTetrahedronIntersect(const int tnum) {
 
   RealPoint xlo(-3.0, -3.0, -3.0);
   RealPoint xhi(3.0, 3.0, 3.0);
-  Quantizer3D Q(xlo, xhi);
+  auto& Q = Quantizer3D::instance();
+  Q.init(xlo, xhi);
 
   // Cube: [0, 1]^3
   auto plcA = createCubePLC();
   auto verticesA = createCubeVertices(RealPoint(0.0, 0.0, 0.0), RealPoint(1.0, 1.0, 1.0));
-  QuantPLC3D qplcA(plcA, Q, verticesA);
+  QuantPLC3D qplcA(plcA, verticesA);
 
   // Tetrahedron overlapping cube
   auto plcB = createTetrahedronPLC();
   auto verticesB = createTetrahedronVertices(RealPoint(0.5, 0.5, 0.5), 0.8);
-  QuantPLC3D qplcB(plcB, Q, verticesB);
+  QuantPLC3D qplcB(plcB, verticesB);
 
   // Make convex (computes normals)
   qplcA.makeConvex();
@@ -396,17 +405,18 @@ void testCubeTetrahedronSeparated(const int tnum) {
 
   RealPoint xlo(-5.0, -5.0, -5.0);
   RealPoint xhi(5.0, 5.0, 5.0);
-  Quantizer3D Q(xlo, xhi);
+  auto& Q = Quantizer3D::instance();
+  Q.init(xlo, xhi);
 
   // Cube: [0, 1]^3
   auto plcA = createCubePLC();
   auto verticesA = createCubeVertices(RealPoint(0.0, 0.0, 0.0), RealPoint(1.0, 1.0, 1.0));
-  QuantPLC3D qplcA(plcA, Q, verticesA);
+  QuantPLC3D qplcA(plcA, verticesA);
 
   // Tetrahedron far away
   auto plcB = createTetrahedronPLC();
   auto verticesB = createTetrahedronVertices(RealPoint(3.0, 3.0, 3.0), 0.8);
-  QuantPLC3D qplcB(plcB, Q, verticesB);
+  QuantPLC3D qplcB(plcB, verticesB);
 
   // Make convex (computes normals)
   qplcA.makeConvex();
@@ -428,12 +438,13 @@ void testRotatedCubes(const int tnum) {
 
   RealPoint xlo(-3.0, -3.0, -3.0);
   RealPoint xhi(3.0, 3.0, 3.0);
-  Quantizer3D Q(xlo, xhi);
+  auto& Q = Quantizer3D::instance();
+  Q.init(xlo, xhi);
 
   // Cube A: axis-aligned [0, 1]^3
   auto plcA = createCubePLC();
   auto verticesA = createCubeVertices(RealPoint(0.0, 0.0, 0.0), RealPoint(1.0, 1.0, 1.0));
-  QuantPLC3D qplcA(plcA, Q, verticesA);
+  QuantPLC3D qplcA(plcA, verticesA);
 
   // Cube B: rotated 45 degrees around z-axis, centered at (1.5, 0.5, 0.5)
   // This creates a diamond shape in xy-plane
@@ -450,7 +461,7 @@ void testRotatedCubes(const int tnum) {
   };
 
   auto plcB = createCubePLC();
-  QuantPLC3D qplcB(plcB, Q, verticesB);
+  QuantPLC3D qplcB(plcB, verticesB);
 
   // Make convex (computes normals)
   qplcA.makeConvex();
@@ -472,12 +483,13 @@ void testShiftedRotatedCubes(const int tnum) {
 
   RealPoint xlo(-3.0, -3.0, -3.0);
   RealPoint xhi(4.0, 4.0, 4.0);
-  Quantizer3D Q(xlo, xhi);
+  auto& Q = Quantizer3D::instance();
+  Q.init(xlo, xhi);
 
   // Cube A: axis-aligned [0, 1]^3
   auto plcA = createCubePLC();
   auto verticesA = createCubeVertices(RealPoint(0.0, 0.0, 0.0), RealPoint(1.0, 1.0, 1.0));
-  QuantPLC3D qplcA(plcA, Q, verticesA);
+  QuantPLC3D qplcA(plcA, verticesA);
 
   // Cube B: rotated 45 degrees around z-axis, centered at (1.5, 0.5, 0.5)
   // This creates a diamond shape in xy-plane
@@ -494,7 +506,7 @@ void testShiftedRotatedCubes(const int tnum) {
   };
 
   auto plcB = createCubePLC();
-  QuantPLC3D qplcB(plcB, Q, verticesB);
+  QuantPLC3D qplcB(plcB, verticesB);
 
   // Make convex (computes normals)
   qplcA.makeConvex();
@@ -516,17 +528,18 @@ void testElongatedPolyhedra(const int tnum) {
 
   RealPoint xlo(-5.0, -5.0, -5.0);
   RealPoint xhi(5.0, 5.0, 5.0);
-  Quantizer3D Q(xlo, xhi);
+  auto& Q = Quantizer3D::instance();
+  Q.init(xlo, xhi);
 
   // Elongated box A along x-axis: [0, 3] x [0, 0.5] x [0, 0.5]
   auto plcA = createCubePLC();
   auto verticesA = createCubeVertices(RealPoint(0.0, 0.0, 0.0), RealPoint(3.0, 0.5, 0.5));
-  QuantPLC3D qplcA(plcA, Q, verticesA);
+  QuantPLC3D qplcA(plcA, verticesA);
 
   // Elongated box B along y-axis: [1, 1.5] x [0, 3] x [0, 0.5]
   auto plcB = createCubePLC();
   auto verticesB = createCubeVertices(RealPoint(1.0, 0.0, 0.0), RealPoint(1.5, 3.0, 0.5));
-  QuantPLC3D qplcB(plcB, Q, verticesB);
+  QuantPLC3D qplcB(plcB, verticesB);
 
   // Make convex (computes normals)
   qplcA.makeConvex();
@@ -548,17 +561,18 @@ void testNearMissSeparation(const int tnum) {
 
   RealPoint xlo(-2.0, -2.0, -2.0);
   RealPoint xhi(2.0, 2.0, 2.0);
-  Quantizer3D Q(xlo, xhi);
+  auto& Q = Quantizer3D::instance();
+  Q.init(xlo, xhi);
 
   // Cube A: [0, 1]^3
   auto plcA = createCubePLC();
   auto verticesA = createCubeVertices(RealPoint(0.0, 0.0, 0.0), RealPoint(1.0, 1.0, 1.0));
-  QuantPLC3D qplcA(plcA, Q, verticesA);
+  QuantPLC3D qplcA(plcA, verticesA);
 
   // Cube B: [1.01, 2.01]^3 (very close but separated by 0.01)
   auto plcB = createCubePLC();
   auto verticesB = createCubeVertices(RealPoint(1.01, 0.0, 0.0), RealPoint(2.01, 1.0, 1.0));
-  QuantPLC3D qplcB(plcB, Q, verticesB);
+  QuantPLC3D qplcB(plcB, verticesB);
 
   // Make convex (computes normals)
   qplcA.makeConvex();
@@ -580,7 +594,8 @@ void testSymmetry(const int tnum) {
 
   RealPoint xlo(-3.0, -3.0, -3.0);
   RealPoint xhi(3.0, 3.0, 3.0);
-  Quantizer3D Q(xlo, xhi);
+  auto& Q = Quantizer3D::instance();
+  Q.init(xlo, xhi);
 
   // Create various pairs of polyhedra
   std::vector<std::pair<QuantPLC3D, QuantPLC3D>> testPairs;
@@ -589,11 +604,11 @@ void testSymmetry(const int tnum) {
   {
     auto plcA = createCubePLC();
     auto verticesA = createCubeVertices(RealPoint(0.0, 0.0, 0.0), RealPoint(1.0, 1.0, 1.0));
-    QuantPLC3D qplcA(plcA, Q, verticesA);
+    QuantPLC3D qplcA(plcA, verticesA);
 
     auto plcB = createCubePLC();
     auto verticesB = createCubeVertices(RealPoint(0.5, 0.5, 0.5), RealPoint(1.5, 1.5, 1.5));
-    QuantPLC3D qplcB(plcB, Q, verticesB);
+    QuantPLC3D qplcB(plcB, verticesB);
 
     testPairs.push_back({qplcA, qplcB});
   }
@@ -602,11 +617,11 @@ void testSymmetry(const int tnum) {
   {
     auto plcA = createCubePLC();
     auto verticesA = createCubeVertices(RealPoint(0.0, 0.0, 0.0), RealPoint(1.0, 1.0, 1.0));
-    QuantPLC3D qplcA(plcA, Q, verticesA);
+    QuantPLC3D qplcA(plcA, verticesA);
 
     auto plcB = createCubePLC();
     auto verticesB = createCubeVertices(RealPoint(2.0, 2.0, 2.0), RealPoint(3.0, 3.0, 3.0));
-    QuantPLC3D qplcB(plcB, Q, verticesB);
+    QuantPLC3D qplcB(plcB, verticesB);
 
     testPairs.push_back({qplcA, qplcB});
   }
@@ -615,11 +630,11 @@ void testSymmetry(const int tnum) {
   {
     auto plcA = createCubePLC();
     auto verticesA = createCubeVertices(RealPoint(0.0, 0.0, 0.0), RealPoint(1.0, 1.0, 1.0));
-    QuantPLC3D qplcA(plcA, Q, verticesA);
+    QuantPLC3D qplcA(plcA, verticesA);
 
     auto plcB = createTetrahedronPLC();
     auto verticesB = createTetrahedronVertices(RealPoint(0.5, 0.5, 0.5), 0.8);
-    QuantPLC3D qplcB(plcB, Q, verticesB);
+    QuantPLC3D qplcB(plcB, verticesB);
 
     testPairs.push_back({qplcA, qplcB});
   }
@@ -653,12 +668,13 @@ void testDegenerateCases(const int tnum) {
 
   RealPoint xlo(-2.0, -2.0, -2.0);
   RealPoint xhi(2.0, 2.0, 2.0);
-  Quantizer3D Q(xlo, xhi);
+  auto& Q = Quantizer3D::instance();
+  Q.init(xlo, xhi);
 
   // Test with same polyhedron (should always intersect with itself)
   auto plcA = createCubePLC();
   auto verticesA = createCubeVertices(RealPoint(0.0, 0.0, 0.0), RealPoint(1.0, 1.0, 1.0));
-  QuantPLC3D qplcA(plcA, Q, verticesA);
+  QuantPLC3D qplcA(plcA, verticesA);
   qplcA.makeConvex();
 
   bool intersects = QuantPLC3D::convexPLCIntersection(qplcA, qplcA);
@@ -676,7 +692,8 @@ void testComplexHulls(const int tnum) {
 
   RealPoint xlo(-10.0, -10.0, -10.0);
   RealPoint xhi(10.0, 10.0, 10.0);
-  Quantizer3D Q(xlo, xhi);
+  auto& Q = Quantizer3D::instance();
+  Q.init(xlo, xhi);
 
   // Generate random point cloud A and compute its convex hull
   const unsigned nPointsA = 20;
@@ -689,7 +706,7 @@ void testComplexHulls(const int tnum) {
   }
 
   PLC plcA;  // Empty PLC
-  QuantPLC3D qplcA(plcA, Q, verticesA);
+  QuantPLC3D qplcA(plcA, verticesA);
   qplcA.makeConvex();
 
   // Generate random point cloud B (offset to ensure overlap)
@@ -703,7 +720,7 @@ void testComplexHulls(const int tnum) {
   }
 
   PLC plcB;  // Empty PLC
-  QuantPLC3D qplcB(plcB, Q, verticesB);
+  QuantPLC3D qplcB(plcB, verticesB);
   qplcB.makeConvex();
 
   // Test intersection (should likely intersect due to overlap)

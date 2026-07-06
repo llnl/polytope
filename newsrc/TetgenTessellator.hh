@@ -21,9 +21,6 @@ public:
   using RealPoint = Point<3, double>;
 
   TetgenTessellator() = default;
-  TetgenTessellator(const Quantizer<3>& Q) :
-    Tessellator(Q) {}
-
   virtual ~TetgenTessellator() = default;
 
   virtual void tessellateQuantized(QT& result) const;

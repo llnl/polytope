@@ -14,17 +14,8 @@ template<int Dimension, typename RealType>
 class Tessellator {
 public:
 
-  using QuantizedTessellation = QuantTessellation<Dimension>;
-  using Quant = Quantizer<Dimension>;
-
   //! Default constructor.
   Tessellator() = default;
-  Tessellator(const Quant& Q) : m_Q(Q) {}
-
-  void setQuantizer(const Quant& Q) {
-    m_Q = Q;
-    m_init = true;
-  }
 
   //! Destructor.
   virtual ~Tessellator() {}
@@ -63,7 +54,6 @@ public:
                           const ReducedPLC<Dimension, RealType>& geometry,
                           Tessellation<Dimension, RealType>& mesh) const;
 
-
   //! Override this method to return true if this Tessellator supports 
   //! the description of a domain boundary using a PLC (as in the second 
   //! tessellate method, above), and false if it does not. Some algorithms 
@@ -81,7 +71,7 @@ public:
   //! in polytope build.
   virtual void
   tessellateQuantized(const QuantPLC<Dimension>& qplc,
-                      QuantizedTessellation& qmesh) const = 0;
+                      QuantTessellation<Dimension>& qmesh) const = 0;
 
   //! Required for all tessellators:
   //! A unique name string per tessellation instance.
@@ -90,14 +80,16 @@ public:
   //! Required for all tessellators:
   //! Returns the accuracy to which this tessellator can distinguish coordinates.
   //! Should be returned appropriately for normalized coordinates, i.e., if all
-  //! coordinates are in the range xi \in [0,1], what is the minimum allowed 
+  //! coordinates are in the range xi \in [0,1], what is the minimum allowed
   //! delta in x.
-  RealType degeneracy() const { return m_Q.m_dx_o / m_Q.m_lx_o; }
+  RealType degeneracy() const {
+    const auto& Q = Quantizer<Dimension>::instance();
+    return Q.m_dx_o / Q.m_lx_o;
+  }
 
 private:
 
   mutable bool m_init = false;
-  mutable Quant m_Q; // TODO: Fix this
   // Disallowed.
   Tessellator(const Tessellator&);
   Tessellator& operator=(const Tessellator&);

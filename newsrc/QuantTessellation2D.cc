@@ -22,6 +22,7 @@ using namespace boost::polygon::operators;
 template<>
 void
 QuantTessellation<2>::cullExternalPoints(const QuantPLC<2>& QPLC) {
+  const auto& Q = Quantizer<2>::instance();
   auto boundaryPoints = QPLC.getFacetPoints();
   PolygonWithHoles boundary;
   bp::set_points(boundary, boundaryPoints.begin(), boundaryPoints.end());
@@ -47,7 +48,7 @@ QuantTessellation<2>::cullExternalPoints(const QuantPLC<2>& QPLC) {
     if (!bp::contains(boundary, genPoint)) continue;
     point.index = indx++;
     newPoints.push_back(point);
-    newHashes.push_back(m_Q.hash(point));
+    newHashes.push_back(Q.hash(point));
   }
   m_points = std::move(newPoints);
   m_hashes = std::move(newHashes);
@@ -57,6 +58,7 @@ template<>
 void
 QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
                                        const Tessellator<2, double>& tessellator) {
+  const auto& Q = Quantizer<2>::instance();
   auto boundaryPoints = QPLC.getFacetPoints();
   PolygonWithHoles boundary;
   bp::set_points(boundary, boundaryPoints.begin(), boundaryPoints.end());
@@ -111,7 +113,7 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
     const auto curP = cellPolygons.size();
     // Hash and map the vertices for this polygon
     for (const auto& v : cellSet[fragIndex]) {
-      auto vertexHash = m_Q.hash(BoostToPolytope(v));
+      auto vertexHash = Q.hash(BoostToPolytope(v));
       vertexMap[vertexHash].insert(curP);
     }
     polyIndex.push_back(i);
@@ -129,7 +131,7 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
     orphanBounds += orphan;
     // Grab any neighboring cells by looping over the vertices
     for (const auto& v : orphan) {
-      auto vertexHash = m_Q.hash(BoostToPolytope(v));
+      auto vertexHash = Q.hash(BoostToPolytope(v));
       for (const auto& pi : vertexMap[vertexHash]) {
         auto [it, added] = genIndex.insert(pi);
         if (added) {
@@ -222,6 +224,7 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
 template<>
 void
 QuantTessellation<2>::fillTessellation(TessellationType& mesh) {
+  auto& Q = Quantizer<2>::instance();
   compactUnusedNodesAndFaces();
   const unsigned numNodes = m_nodes.size();
   const unsigned numFaces = m_faces.size();
@@ -237,14 +240,14 @@ QuantTessellation<2>::fillTessellation(TessellationType& mesh) {
   POLY_ASSERT2(m_cells.size() == numCells, "Differing number of cells and generator points");
 
   for (unsigned i = 0; i < numCells; ++i) {
-    RealPoint rp = m_Q.dequantize(m_points[i]);
+    RealPoint rp = Q.dequantize(m_points[i]);
     mesh.points[2*i]   = rp.x;
     mesh.points[2*i+1] = rp.y;
   }
 
   // Dequantize nodes from integer coordinates to real coordinates
   for (unsigned i = 0; i < numNodes; ++i) {
-    RealPoint rp = m_Q.dequantize(m_nodes[i]);
+    RealPoint rp = Q.dequantize(m_nodes[i]);
     mesh.nodes[2*i]     = rp.x;
     mesh.nodes[2*i + 1] = rp.y;
   }

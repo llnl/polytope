@@ -37,6 +37,7 @@ template<>
 void
 QuantTessellation<3>::clipTessellation(const QuantPLC<3>& QPLC,
                                        const Tessellator<3, double>& tessellator) {
+  auto& Q = Quantizer<3>::instance();
   // Storage for clipped cells (will replace m_cells)
   std::vector<std::vector<int>> newCells;
   std::vector<IntPoint> newNodes;
@@ -173,7 +174,7 @@ QuantTessellation<3>::clipTessellation(const QuantPLC<3>& QPLC,
     }
   } else {
     // All generators were clipped away
-    m_loBounds = m_Q.maxCoord;
+    m_loBounds = Q.maxCoord;
     m_hiBounds = -m_loBounds;
   }
 }
@@ -184,6 +185,7 @@ QuantTessellation<3>::clipTessellation(const QuantPLC<3>& QPLC,
 template<>
 void
 QuantTessellation<3>::fillTessellation(TessellationType& mesh) {
+  auto& Q = Quantizer<3>::instance();
   compactUnusedNodesAndFaces();
   const unsigned numNodes = m_nodes.size();
   const unsigned numFaces = m_faces.size();
@@ -198,26 +200,26 @@ QuantTessellation<3>::fillTessellation(TessellationType& mesh) {
   POLY_ASSERT2(m_cells.size() == numCells, "Differing number of cells and generator points");
 
   // Dequantize nodes from integer coordinates to real coordinates
-  for (unsigned i = 0; i != numNodes; ++i) {
-    RealPoint rp = m_Q.dequantize(m_nodes[i]);
+  for (unsigned i = 0; i < numNodes; ++i) {
+    RealPoint rp = Q.dequantize(m_nodes[i]);
     mesh.nodes[3*i]     = rp.x;
     mesh.nodes[3*i + 1] = rp.y;
     mesh.nodes[3*i + 2] = rp.z;
   }
 
   // Copy face topology (each face has 3+ nodes in 3D - triangular or polygonal)
-  for (unsigned i = 0; i != numFaces; ++i) {
+  for (unsigned i = 0; i < numFaces; ++i) {
     mesh.faces[i].resize(m_faces[i].size());
-    for (unsigned j = 0; j != m_faces[i].size(); ++j) {
+    for (unsigned j = 0; j < m_faces[i].size(); ++j) {
       mesh.faces[i][j] = m_faces[i][j];
     }
   }
 
   // Build faceCells connectivity: for each cell, mark which faces touch it
   // Cells store signed face indices where negative means inverted orientation.
-  for (unsigned i = 0; i != numCells; ++i) {
+  for (unsigned i = 0; i < numCells; ++i) {
     const unsigned nf = mesh.cells[i].size();
-    for (unsigned j = 0; j != nf; ++j) {
+    for (unsigned j = 0; j < nf; ++j) {
       auto k = mesh.cells[i][j];
       if (k < 0) {
         // Negative index: inverted face orientation

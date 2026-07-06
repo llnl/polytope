@@ -35,7 +35,7 @@ public:
 
   BGPolygon<RealType, 2> mBGboundary;
 
-  // Define enum to keep track fo the type of boundary called for
+  // Define enum to keep track of the type of boundary called for
   enum BoundaryType{
     square             = 0,
     circle             = 1,
@@ -54,7 +54,6 @@ public:
   mutable BoundaryType mType;
 
   double m_pad = 0.1;
-  Quantizer<2> mQ;
   QuantPLC<2> mQPLC;
 
   //------------------------------------------------------------------------
@@ -75,8 +74,9 @@ public:
   }
 
   void finalize() {
-    mQ.init(mPLCpoints, -1., m_pad);
-    mQPLC.init(mPLC, mQ, mPLCpoints);
+    auto& q = Quantizer<2>::instance();
+    q.init(mPLCpoints, -1., m_pad);
+    mQPLC.init(mPLC, mPLCpoints);
     boostMyBoundary();
     mArea = boost::geometry::area(mBGboundary);
   }
@@ -642,16 +642,17 @@ public:
   // Computes a random point
   //------------------------------------------------------------------------
   void getPointInside(RealType* point) {
+    auto& Q = Quantizer<2>::instance();
     using IntType = typename HashKey<2>::IntType;
     using IntPoint = Point<2, IntType>;
     bool inside = false;
     IntPoint p;
     while( !inside ){
-      p.x = mQ.minBound.x + static_cast<IntType>(random01())*mQ.maxBound.x;
-      p.y = mQ.minBound.y + static_cast<IntType>(random01())*mQ.maxBound.y;
+      p.x = Q.minBound.x + static_cast<IntType>(random01())*Q.maxBound.x;
+      p.y = Q.minBound.y + static_cast<IntType>(random01())*Q.maxBound.y;
       inside = mQPLC.within(p);
     }
-    Point<2, RealType> pd = mQ.dequantize(p);
+    Point<2, RealType> pd = Q.dequantize(p);
     point[0] = pd.x;
     point[1] = pd.y;
   }

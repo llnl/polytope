@@ -70,9 +70,9 @@ void test(Tessellator<2,double>& tessellator, const std::string& outname, bool h
   std::vector<double> plcPoints = flattenCoords(shapes::createSquarePoints(lo, hi));
   PLC<2> plc;
   plc.facets = shapes::createSquareFaces();
-  Quantizer<2> Q(plcPoints);
+  auto& Q = Quantizer<2>::instance();
+  Q.init(plcPoints);
   Tessellation<2, double> mesh;
-  tessellator.setQuantizer(Q);
   tessellator.tessellate(points, plcPoints, plc, mesh);
   outputMesh(mesh, outname, cycle);
   testWatertight(mesh, 0);

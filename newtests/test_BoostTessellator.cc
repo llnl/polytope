@@ -61,11 +61,11 @@ void test1(Tessellator<2, double>& tessellator) {
     boundary.facets[i][1] = (i+1)%nSides;
   }
 
+  auto& Q = Quantizer<2>::instance();
+  Q.init(PLCpoints);
   Tessellation<2,double> mesh;
 
   // Tessellate unbounded
-  Quantizer<2> Q(PLCpoints);
-  tessellator.setQuantizer(Q);
   tessellator.tessellate(points, mesh);
   outputMesh(mesh,testName,0);
   mesh.clear();
@@ -105,7 +105,9 @@ void test2(Tessellator<2,double>& tessellator) {
     boundary.facets[i][0] = i;
     boundary.facets[i][1] = (i+1)%nSides;
   }
-  
+
+  auto& Q = Quantizer<2>::instance();
+  Q.init(PLCpoints);
   Tessellation<2,double> mesh;
 
   // Tessellate unbounded
@@ -169,12 +171,12 @@ void test3(Tessellator<2,double>& tessellator) {
     plc.facets[i][1] = (i+1)%4;
   }
 
+  auto& Q = Quantizer<2>::instance();
+  Q.init(plc.points);
   // The mesh
   Tessellation<2,double> mesh;
 
   // Tessellate unbounded
-  Quantizer<2> Q(plc.points);
-  tessellator.setQuantizer(Q);
   tessellator.tessellate(points, mesh);
   outputMesh(mesh,testName,4);
   mesh.clear();
@@ -261,12 +263,12 @@ void test4(Tessellator<2,double>& tessellator) {
     plc.holes[0][i][1] = 4 + (i+1)%4;
   }
 
+  auto& Q = Quantizer<2>::instance();
+  Q.init(plc.points);
   // The mesh
   Tessellation<2,double> mesh;
 
   // Tessellate unbounded
-  Quantizer<2> Q(plc.points);
-  tessellator.setQuantizer(Q);
   tessellator.tessellate(points, mesh);
   outputMesh(mesh,testName,6);
   mesh.clear();
@@ -307,10 +309,7 @@ main(int argc, char** argv)
   {
     cout << "\nTest 4" << endl;
     test4(tessellator);
-  }
-
-
-  
+  }  
 
 #ifdef POLYTOPE_ENABLE_MPI
   MPI_Finalize();

@@ -68,7 +68,7 @@ tessellateQuantized(const QuantPLC<2>& qplc,
   using IntType = typename QuantTessellation<2>::IntType;
   using RealPoint = Point2<double>;
   using IntPoint = typename QuantTessellation<2>::IntPoint;
-  const Quantizer<2>& Q = result.m_Q;
+  const auto& Q = Quantizer<2>::instance();
   // Get the generators
   std::vector<double> generators = flattenCoords(result.getRealPoints());
   const auto N = generators.size()/2;

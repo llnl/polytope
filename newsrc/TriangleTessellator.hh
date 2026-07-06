@@ -25,8 +25,6 @@ public:
 
   // Constructor, destructor.
   TriangleTessellator() = default;
-  TriangleTessellator(const Quantizer<2>& Q) :
-    Tessellator(Q) {}
   virtual ~TriangleTessellator() = default;
 
   // Compute the nodes around a collection of generators.

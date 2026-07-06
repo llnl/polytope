@@ -39,7 +39,9 @@ void test2DQuantizer() {
   RealPoint xlo(0.0, 0.0);
   RealPoint xhi(10.0, 10.0);
 
-  Quantizer2D quantizer(xlo, xhi);
+  // Get the singleton instance and initialize it
+  auto& quantizer = Quantizer2D::instance();
+  quantizer.init(xlo, xhi);
 
   cout << "  Bounding box: (" << xlo.x << ", " << xlo.y << ") to ("
        << xhi.x << ", " << xhi.y << ")" << endl;
@@ -114,7 +116,9 @@ void test3DQuantizer() {
   RealPoint xlo(-5.0, -5.0, -5.0);
   RealPoint xhi(5.0, 5.0, 5.0);
 
-  Quantizer3D quantizer(xlo, xhi);
+  // Get the singleton instance and initialize it
+  auto& quantizer = Quantizer3D::instance();
+  quantizer.init(xlo, xhi);
 
   cout << "  Bounding box: (" << xlo.x << ", " << xlo.y << ", " << xlo.z << ") to ("
        << xhi.x << ", " << xhi.y << ", " << xhi.z << ")" << endl;
@@ -180,7 +184,8 @@ void testBoundaryAccuracy() {
   RealPoint2D xlo(0.0, 0.0);
   RealPoint2D xhi(1.0, 1.0);
 
-  Quantizer2D quantizer(xlo, xhi);
+  auto& quantizer = Quantizer2D::instance();
+  quantizer.init(xlo, xhi);
 
   // Test corners and edges
   vector<RealPoint2D> boundaryPoints = {
@@ -224,8 +229,8 @@ void testHashUniqueness() {
 
   RealPoint xlo(0.0, 0.0);
   RealPoint xhi(100.0, 100.0);
-
-  Quantizer2D quantizer(xlo, xhi);
+  auto& quantizer = Quantizer2D::instance();
+  quantizer.init(xlo, xhi);
 
   // Generate random points and verify they hash uniquely
   const unsigned nPoints = 1000;
@@ -271,8 +276,8 @@ void testGridAlignment() {
 
   RealPoint xlo(0.0, 0.0);
   RealPoint xhi(10.0, 10.0);
-
-  Quantizer2D quantizer(xlo, xhi);
+  auto& quantizer = Quantizer2D::instance();
+  quantizer.init(xlo, xhi);
 
   cout << "  Grid spacing: (" << quantizer.m_dx_o.x << ", " << quantizer.m_dx_o.y << ")" << endl;
 
@@ -314,8 +319,8 @@ void testHashConsistency() {
 
   RealPoint xlo(-10.0, -10.0);
   RealPoint xhi(10.0, 10.0);
-
-  Quantizer2D quantizer(xlo, xhi);
+  auto& quantizer = Quantizer2D::instance();
+  quantizer.init(xlo, xhi);
 
   // Test that hashing the same point multiple times gives the same result
   RealPoint testPoint(3.14159, 2.71828);
@@ -346,8 +351,8 @@ void stressTest() {
 
   RealPoint xlo(-1000.0, -1000.0);
   RealPoint xhi(1000.0, 1000.0);
-
-  Quantizer2D quantizer(xlo, xhi);
+  auto& quantizer = Quantizer2D::instance();
+  quantizer.init(xlo, xhi);
 
   const unsigned nOps = 10000;
   cout << "  Performing " << nOps << " quantize/hash/unhash operations..." << endl;
