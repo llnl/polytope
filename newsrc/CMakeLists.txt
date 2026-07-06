@@ -22,7 +22,6 @@ set(polytope_headers
   QuantTessellation.hh
   Quantizer.hh
   QuantPLC.hh
-  Segment.hh
   Shapes.hh
   Tessellation.hh
   Tessellator.hh

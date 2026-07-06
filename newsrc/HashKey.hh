@@ -40,25 +40,25 @@ template<> struct HashKey<2> {
   static constexpr IntType   coordMax()  { return (1ULL << (num1DBits() - 1ULL)) - 1ULL; }
   static constexpr CoordHash hashMax()   { return ((unsigned CoordHash)1 << (flagBit() - 1ULL)) - 1ULL; }
 
-  // Bit mask for the flag bit
-  static constexpr CoordHash FlagMask() {
-    return static_cast<CoordHash>(1) << flagBit();
-  }
+  // Bit mask for the flag bit, currently unused
+  // static constexpr CoordHash FlagMask() {
+  //   return static_cast<CoordHash>(1) << flagBit();
+  // }
 
   // Check if hash corresponds to the inner or outer box
-  static bool getOuterFlag(const CoordHash& hash) {
-    return (hash & FlagMask()) != 0;
-  }
+  // static bool getOuterFlag(const CoordHash& hash) {
+  //   return (hash & FlagMask()) != 0;
+  // }
 
-  // Set hash to correspond to outer box
-  static void enableOuterFlag(CoordHash& hash) {
-    hash |= FlagMask();
-  }
+  // // Set hash to correspond to outer box
+  // static void enableOuterFlag(CoordHash& hash) {
+  //   hash |= FlagMask();
+  // }
 
-  // Set hash to correspond to inner box
-  static void disableOuterFlag(CoordHash& hash) {
-    hash &= ~FlagMask();
-  }
+  // // Set hash to correspond to inner box
+  // static void disableOuterFlag(CoordHash& hash) {
+  //   hash &= ~FlagMask();
+  // }
 
   static CoordHash hash(const IntPoint& point) {
     CoordHash key = 0;
@@ -91,21 +91,21 @@ template<> struct HashKey<3> {
   static constexpr CoordHash hashMax()   { return ((unsigned CoordHash)1 << (flagBit() - 1ULL)) - 1ULL; }
 
   // Bit mask for the flag bit
-  static constexpr CoordHash FlagMask() {
-    return static_cast<CoordHash>(1) << flagBit();
-  }
+  // static constexpr CoordHash FlagMask() {
+  //   return static_cast<CoordHash>(1) << flagBit();
+  // }
 
-  static bool getOuterFlag(const CoordHash& hash) {
-    return (hash & FlagMask()) != 0;
-  }
+  // static bool getOuterFlag(const CoordHash& hash) {
+  //   return (hash & FlagMask()) != 0;
+  // }
 
-  static void enableOuterFlag(CoordHash& hash) {
-    hash |= FlagMask();
-  }
+  // static void enableOuterFlag(CoordHash& hash) {
+  //   hash |= FlagMask();
+  // }
 
-  static void disableOuterFlag(CoordHash& hash) {
-    hash &= ~FlagMask();
-  }
+  // static void disableOuterFlag(CoordHash& hash) {
+  //   hash &= ~FlagMask();
+  // }
 
   static CoordHash hash(const IntPoint& point) {
     CoordHash key = 0;

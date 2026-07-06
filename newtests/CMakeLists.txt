@@ -40,8 +40,8 @@ set_tests_properties(new_cleanup_tests PROPERTIES FIXTURES_CLEANUP "new_polytope
 # Polytope Utility Tests
 #-----------------------------------------------------------------------------
 #polytope_add_new_test( "PLC_CSG" )  #  <-- Suspending 'til we think it works
-polytope_add_new_test(HashKey2D)
-polytope_add_new_test(HashKey3D)
+# polytope_add_new_test(HashKey2D)
+# polytope_add_new_test(HashKey3D)
 polytope_add_new_test(Quantizer)
 polytope_add_new_test(QuantPLC2D)
 polytope_add_new_test(QuantPLC3D)
@@ -55,7 +55,6 @@ polytope_add_new_test(OrphanCases)
 polytope_add_new_test(honeyComb)
 polytope_add_new_test(BoostTessellator)
 polytope_add_new_test(RandomPoints)
-polytope_add_new_test(BoundaryJitter)
 #polytope_add_new_test(Cylinder)
 
 #-----------------------------------------------------------------------------

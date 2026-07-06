@@ -171,7 +171,7 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
   std::vector<CoordHash> newHashes;
 
   // Map from IntPoint to index in newNodes (for vertex deduplication)
-  std::map<IntPoint, int> nodeMap;
+  std::map<IntPoint, int> node2id;
 
   // Map from canonical edge to face index (for oriented edge tracking)
   edge::EdgeToFaceMap edgeToFace;
@@ -182,16 +182,16 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
     auto nv = keptVertices.size();
     std::vector<int> localCellIndex;
     localCellIndex.reserve(nv);
-    // Gather cell indices from the nodeMap and update newNodes
+    // Gather cell indices from the node2id and update newNodes
     for (const auto& p : keptVertices) {
-      auto it = nodeMap.find(p);
-      if (it != nodeMap.end()) {
+      auto it = node2id.find(p);
+      if (it != node2id.end()) {
         localCellIndex.push_back(it->second);
       } else {
-        nodeMap[p] = newNodes.size();
+        node2id[p] = newNodes.size();
         newNodes.push_back(p);
-        newNodes.back().index = nodeMap[p];
-        localCellIndex.push_back(nodeMap[p]);
+        newNodes.back().index = node2id[p];
+        localCellIndex.push_back(node2id[p]);
       }
     }
     // Build edges with oriented indexing

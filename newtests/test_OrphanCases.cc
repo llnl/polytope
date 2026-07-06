@@ -45,7 +45,7 @@ void printArea(Boundary2D<double>& boundary,
 // checkNearestNode
 // -----------------------------------------------------------------------
 bool checkNearestNode(const Tessellation<2,double>& mesh,
-		      const double tol) {
+		      const double /*tol*/) {
   set<unsigned> boundaryNodes;
   for (unsigned iface = 0; iface != mesh.faces.size(); ++iface) {
     if (mesh.faceCells[iface].size() == 1) {

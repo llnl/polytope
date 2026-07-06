@@ -4,14 +4,16 @@
 #ifndef __polytope_RegisterBoostPolygonType__
 #define __polytope_RegisterBoostPolygonType__
 
+#include <cstdint>
+
 #include <boost/polygon/polygon.hpp>
 #include <boost/polygon/point_concept.hpp>
+#include <boost/polygon/voronoi.hpp>
 
 // Include Boost multiprecision types
 #include <boost/multiprecision/cpp_int.hpp>
 
 #include "Point.hh"
-//#include "Segment.hh"
 #include "HashKey.hh"
 
 //------------------------------------------------------------------------
@@ -20,12 +22,41 @@
 namespace boost {
 namespace polygon {
 
+// Note: Clipping using boost polygon is currently not working for int64 coordinate types
+// so this is commented out
+// namespace detail {
+// template <>
+// struct voronoi_ctype_traits<std::int64_t> {
+//   typedef std::int64_t int_type;
+
+//   // For 32-bit inputs, int_x2_type is a 64-bit int.
+//   // For 64-bit inputs, we must use the library's multiprecision type scaled up.
+//   typedef extended_int<128> int_x2_type;
+//   typedef extended_int<128> uint_x2_type; // Maps signed logic to extended block
+
+//   // The core multiprecision int needs to scale to 512 bits (or 256 depending on depth,
+//   // but 512 safely covers maximum predicate multiplication chain for 64-bit inputs)
+//   typedef extended_int<512> big_int_type;
+
+//   // Output vertex type (64-bit double standard IEEE-754 floating point)
+//   typedef double fpt_type;
+
+//   // Extended exponent floating-point wrapper to handle high dynamic range calculations
+//   typedef extended_exponent_fpt<fpt_type> efpt_type;
+//   typedef ulp_comparison<fpt_type> ulp_cmp_type;
+
+//   // Required type converters for the internal predicates
+//   typedef type_converter_fpt to_fpt_converter_type;
+//   typedef type_converter_efpt to_efpt_converter_type;
+// };
+// } // namespace detail
+
 using IntType = typename polytope::HashKey<2>::IntType;
 using IntPoint = polytope::Point2<IntType>;
 
 template <>
 struct geometry_concept<IntPoint> { typedef point_concept type; };
-  
+
 template <>
 struct point_traits<IntPoint> {
   typedef IntPoint point_type;
@@ -51,20 +82,6 @@ struct point_mutable_traits<IntPoint> {
     return point_type(x,y);
   }
 };
-
-
-// template <>
-// struct geometry_concept<IntSegment> { typedef segment_concept type; };
-
-// template <>
-// struct point_traits<IntSegment> {
-//   typedef IntType coordinate_type;
-//   typedef IntPoint point_type;
-
-//   static inline point_type get(const IntSegment& segment, direction_1d dir) {
-//     return dir.to_int() ? segment.b : segment.a;
-//   }
-// };
 
 inline IntPoint BoostToPolytope(const point_data<IntType>& point, const int index = 0) {
   return IntPoint(point.x(), point.y(), index);

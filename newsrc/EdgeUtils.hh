@@ -9,6 +9,9 @@
 
 namespace polytope {
 namespace edge {
+//------------------------------------------------------------------------------
+// Utilities for edges specifically
+//------------------------------------------------------------------------------
 using Edge = std::pair<int, int>;
 //------------------------------------------------------------------------------
 // Custom hashing function for pairs
@@ -337,6 +340,21 @@ inline edge::Edge updateNodeMap(const Point<Dimension, CoordType>& p0,
   return edge::Edge(std::make_pair(n0, n1));
 }
 
+//------------------------------------------------------------------------------
+// Utilities for edge data, meaning edges paired with generator points
+// This allows us to keep track of which edges belong to which generators
+//------------------------------------------------------------------------------
+using GenPair = std::pair<int, int>;
+inline GenPair orderPair(const int a, const int b) {
+  return orderEdge(a, b);
+}
+
+struct EdgeData {
+  edge::Edge curEdge;
+  int startSide, endSide;
+};
+
+using GenPairToEdgeDataMap = std::map<GenPair, EdgeData>;
 }
 }
 #endif

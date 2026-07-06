@@ -75,6 +75,7 @@ void test(Tessellator<2,double>& tessellator, const std::string& outname, bool h
   tessellator.setQuantizer(Q);
   tessellator.tessellate(points, plcPoints, plc, mesh);
   outputMesh(mesh, outname, cycle);
+  testWatertight(mesh, 0);
 }
 // -----------------------------------------------------------------------
 // main

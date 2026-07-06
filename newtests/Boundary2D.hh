@@ -102,8 +102,7 @@ public:
   //------------------------------------------------------------------------
   // setDefaultBoundary
   //------------------------------------------------------------------------
-  void setDefaultBoundary(const int bType)
-  {
+  void setDefaultBoundary(const int bType) {
 
     switch(bType){
     case square:
@@ -621,7 +620,7 @@ public:
     radius = 0;
     for (unsigned i = 0; i < mPLCpoints.size()/2; ++i ){
       RealType distance = 0;
-      for (unsigned n = 0; n < 2; ++n ){
+      for (unsigned n = 0; n < 2; ++n ) {
 	distance += (mPLCpoints[2*i+n] - mCenter[n]) *
 	  (mPLCpoints[2*i+n] - mCenter[n]);
       }
@@ -648,8 +647,8 @@ public:
     bool inside = false;
     IntPoint p;
     while( !inside ){
-      p.x = static_cast<IntType>(random01())*mQ.maxCoord.x;
-      p.y = static_cast<IntType>(random01())*mQ.maxCoord.y;
+      p.x = mQ.minBound.x + static_cast<IntType>(random01())*mQ.maxBound.x;
+      p.y = mQ.minBound.y + static_cast<IntType>(random01())*mQ.maxBound.y;
       inside = mQPLC.within(p);
     }
     Point<2, RealType> pd = mQ.dequantize(p);

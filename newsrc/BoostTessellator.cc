@@ -40,8 +40,18 @@ tessellateQuantized(const QuantPLC<2>& qplc,
   std::vector<IntPoint> generators = result.getIntPoints();
   const size_t numGenerators = generators.size();
 
-  // Invoke the Boost.Voronoi diagram constructor
   VD voronoi;
+
+  // Invoke the Boost.Voronoi diagram constructor
+  // If we manage to fix int64 coordinates, use the following
+  // typedef boost::polygon::detail::voronoi_ctype_traits<IntType> MyTraits;
+  // boost::polygon::voronoi_builder<IntType, MyTraits> builder;
+  // for (const auto& p : generators) {
+  //   builder.insert_point(p.x, p.y);
+  // }
+  // builder.construct(&voronoi);
+
+  // For now, just this
   construct_voronoi(generators.begin(), generators.end(), &voronoi);
 
   // Build the tessellation data structures
@@ -56,15 +66,20 @@ tessellateQuantized(const QuantPLC<2>& qplc,
   // Map canonical edges to face indices for oriented edge tracking
   edge::EdgeToFaceMap edgeToFace;
 
+  // Map generator pairs to edges
+  edge::GenPairToEdgeDataMap genPairToEdge;
+
   // Add nodes for the box extent and keep track of their indices
-  std::vector<IntPoint> box = shapes::createBoxPoints(Q.minBound, Q.maxBound);
   std::map<shapes::BoxSide, unsigned> cornerIndices; // Ordered lower left and CCW
-  shapes::BoxSides sides;
-  for (unsigned i = 0; i < 4; i++) {
-    const auto n = result.m_nodes.size();
-    cornerIndices[sides.corner(i)] = n;
-    node2id[box[i]] = n;
-    result.m_nodes.push_back(box[i]);
+  {
+    std::vector<IntPoint> box = shapes::createBoxPoints(Q.minBound, Q.maxBound);
+    shapes::BoxSides sides;
+    for (unsigned i = 0; i < 4; i++) {
+      const auto n = result.m_nodes.size();
+      cornerIndices[sides.corner(i)] = n;
+      node2id[box[i]] = n;
+      result.m_nodes.push_back(box[i]);
+    }
   }
 
   // Process each Voronoi cell
@@ -93,44 +108,56 @@ tessellateQuantized(const QuantPLC<2>& qplc,
       // gen0 should always be the current cell's generator
       auto gindx1 = edge->cell()->source_index();
       auto gindx2 = edge->twin()->cell()->source_index();
-      Clip2D<IntType> clipper;
-      clipper.gen0 = result.m_points[gindx1];
-      clipper.gen1 = result.m_points[gindx2];
-      if (v0) {
-        clipper.rp0 = Point2<double>(v0->x(), v0->y());
-      } else {
-        clipper.inf0 = true;
-        clipper.normalRay = outwardRay(clipper.gen0, clipper.gen1);
-      }
-      if (v1) {
-        clipper.rp1 = Point2<double>(v1->x(), v1->y());
-      } else {
-        clipper.inf1 = true;
-        clipper.normalRay = outwardRay(clipper.gen0, clipper.gen1);
-      }
-      if (v1 && v0) {
-        clipper.normalRay = pointDirection<IntType>(clipper.rp0, clipper.rp1);
-      }
-      if (clipper.doClipping(Q)) {
-        edge = nextEdge;
-        continue;
-      }
+      edge::GenPair gp = edge::orderPair(gindx1, gindx2);
+      edge::Edge curEdge;
       int startSide = -1;
       int endSide = -1;
-      if (clipper.inf0) {
-        startSide = static_cast<int>(clipper.firstSide);
-      }
-      if (clipper.inf1) {
-        endSide = static_cast<int>(clipper.secondSide);
-      }
-      edge::Edge curEdge = edge::updateNodeMap(clipper.p0, clipper.p1, node2id, result.m_nodes);
+      auto cacheIt = genPairToEdge.find(gp);
+      // Check if we have already solved for this Voronoi edge
+      if (cacheIt != genPairToEdge.end()) {
+        const edge::EdgeData& ed = cacheIt->second;
+        curEdge = std::make_pair(ed.curEdge.second, ed.curEdge.first);
+        startSide = ed.endSide;
+        endSide = ed.startSide;
+      } else {
+        Clip2D<IntType> clipper;
+        clipper.gen0 = result.m_points[gindx1];
+        clipper.gen1 = result.m_points[gindx2];
+        if (v0) {
+          clipper.rp0 = Point2<double>(v0->x(), v0->y());
+        } else {
+          clipper.inf0 = true;
+          clipper.normalRay = outwardRay(clipper.gen0, clipper.gen1);
+        }
+        if (v1) {
+          clipper.rp1 = Point2<double>(v1->x(), v1->y());
+        } else {
+          clipper.inf1 = true;
+          clipper.normalRay = outwardRay(clipper.gen0, clipper.gen1);
+        }
+        if (v1 && v0) {
+          clipper.normalRay = pointDirection<IntType>(clipper.rp0, clipper.rp1);
+        }
+        if (clipper.doClipping(Q)) {
+          edge = nextEdge;
+          continue;
+        }
+        if (clipper.inf0) {
+          startSide = static_cast<int>(clipper.firstSide);
+        }
+        if (clipper.inf1) {
+          endSide = static_cast<int>(clipper.secondSide);
+        }
+        curEdge = edge::updateNodeMap(clipper.p0, clipper.p1, node2id, result.m_nodes);
 
-      if (curEdge.first == curEdge.second) {
-        edge = nextEdge;
-        continue;
+        if (curEdge.first == curEdge.second) {
+          edge = nextEdge;
+          continue;
+        }
+        genPairToEdge[gp] = {curEdge, startSide, endSide};
       }
-      clippedNodeSides.push_back(std::make_pair(startSide, endSide));
       localEdges.push_back(curEdge);
+      clippedNodeSides.push_back(std::make_pair(startSide, endSide));
 
       edge = nextEdge;
     } while (edge != firstEdge);

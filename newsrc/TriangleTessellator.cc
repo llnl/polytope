@@ -82,15 +82,20 @@ tessellateQuantized(const QuantPLC<2>& qplc,
   // Map canonical edges to face indices for orientation tracking
   edge::EdgeToFaceMap edgeToFace;
 
-  // Add nodes for the box extent
-  std::vector<IntPoint> box = shapes::createBoxPoints(Q.minBound, Q.maxBound);
-  std::map<shapes::BoxSide, unsigned> cornerIndices;
-  shapes::BoxSides sides;
-  for (unsigned i = 0; i < 4; i++) {
-    const auto n = result.m_nodes.size();
-    cornerIndices[sides.corner(i)] = n;
-    node2id[box[i]] = n;
-    result.m_nodes.push_back(box[i]);
+  // Map generator pairs to edges
+  edge::GenPairToEdgeDataMap genPairToEdge;
+
+  // Add nodes for the box extent and keep track of their indices
+  std::map<shapes::BoxSide, unsigned> cornerIndices; // Ordered lower left and CCW
+  {
+    std::vector<IntPoint> box = shapes::createBoxPoints(Q.minBound, Q.maxBound);
+    shapes::BoxSides sides;
+    for (unsigned i = 0; i < 4; i++) {
+      const auto n = result.m_nodes.size();
+      cornerIndices[sides.corner(i)] = n;
+      node2id[box[i]] = n;
+      result.m_nodes.push_back(box[i]);
+    }
   }
   // Prepare Triangle input structure
   triangulateio in, out;
@@ -163,7 +168,6 @@ tessellateQuantized(const QuantPLC<2>& qplc,
   }
 
   // Process each generator to build its Voronoi cell
-  // TODO: Retain edges for other generators to eliminate redundant calculations
   for (int cellIndex = 0; cellIndex < N; ++cellIndex) {
     // Walk edges around this generator point
     auto genit = gen2tri[cellIndex].begin();
@@ -209,44 +213,56 @@ tessellateQuantized(const QuantPLC<2>& qplc,
       int cwSide = (localIndex + 2)%3;
       int localSide = (ccwDir) ? ccwSide : cwSide;
       int nextTri = out.neighborlist[3*curTri+localSide];
-      Clip2D<IntType> clipper;
       int otherGen = tri[3 - localIndex - localSide];
-      // gen0 should always be the current cell's generator
-      clipper.gen0 = result.m_points[cellIndex];
-      clipper.gen1 = result.m_points[otherGen];
-      clipper.rp0 = centers[curTri];
-      if (nextTri == -1) {
-        clipper.inf1 = true;
-        auto thirdPoint = result.m_points[tri[localSide]];
-        clipper.normalRay = outwardRay(clipper.gen0, clipper.gen1, thirdPoint);
-      } else {
-        clipper.rp1 = centers[nextTri];
-        clipper.normalRay = pointDirection<IntType>(clipper.rp0, clipper.rp1);
-      }
-      if (clipper.doClipping(Q)) {
-        curTri = nextTri;
-        continue;
-      }
+      edge::GenPair gp = edge::orderPair(cellIndex, otherGen);
+      edge::Edge curEdge;
       int startSide = -1;
       int endSide = -1;
-      if (clipper.inf0) {
-        startSide = static_cast<int>(clipper.firstSide);
-      }
-      if (clipper.inf1) {
-        endSide = static_cast<int>(clipper.secondSide);
-      }
-      if (!ccwDir) {
-        std::swap(clipper.p0, clipper.p1);
-        std::swap(clipper.inf0, clipper.inf1);
-        std::swap(startSide, endSide);
-      }
-      edge::Edge curEdge = edge::updateNodeMap(clipper.p0, clipper.p1, node2id, result.m_nodes);
-      if (curEdge.first == curEdge.second) {
-        curTri = nextTri;
-        continue;
+      auto cacheIt = genPairToEdge.find(gp);
+      if (cacheIt != genPairToEdge.end()) {
+        const edge::EdgeData& ed = cacheIt->second;
+        curEdge = std::make_pair(ed.curEdge.second, ed.curEdge.first);
+        startSide = ed.endSide;
+        endSide = ed.startSide;
+      } else {
+        Clip2D<IntType> clipper;
+        // gen0 should always be the current cell's generator
+        clipper.gen0 = result.m_points[cellIndex];
+        clipper.gen1 = result.m_points[otherGen];
+        clipper.rp0 = centers[curTri];
+        if (nextTri == -1) {
+          clipper.inf1 = true;
+          auto thirdPoint = result.m_points[tri[localSide]];
+          clipper.normalRay = outwardRay(clipper.gen0, clipper.gen1, thirdPoint);
+        } else {
+          clipper.rp1 = centers[nextTri];
+          clipper.normalRay = pointDirection<IntType>(clipper.rp0, clipper.rp1);
+        }
+        if (clipper.doClipping(Q)) {
+          curTri = nextTri;
+          continue;
+        }
+        if (clipper.inf0) {
+          startSide = static_cast<int>(clipper.firstSide);
+        }
+        if (clipper.inf1) {
+          endSide = static_cast<int>(clipper.secondSide);
+        }
+        if (!ccwDir) {
+          std::swap(clipper.p0, clipper.p1);
+          std::swap(clipper.inf0, clipper.inf1);
+          std::swap(startSide, endSide);
+        }
+        curEdge = edge::updateNodeMap(clipper.p0, clipper.p1, node2id, result.m_nodes);
+        if (curEdge.first == curEdge.second) {
+          curTri = nextTri;
+          continue;
+        }
+        genPairToEdge[gp] = {curEdge, startSide, endSide};
       }
       localEdges.push_back(curEdge);
       clippedNodeSides.push_back(std::make_pair(startSide, endSide));
+
       curTri = nextTri;
     } while (curTri != startTri);
     std::vector<edge::Edge> finalEdges = shapes::closeClippedEdges(localEdges, clippedNodeSides, cornerIndices);
