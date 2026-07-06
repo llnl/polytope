@@ -160,11 +160,11 @@ int main(int argc, char** argv)
 
 
 #ifdef POLYTOPE_ENABLE_BOOST
-  {
-    cout << "\nBoost Tessellator:\n" << endl;
-    BoostTessellator tessellator;
-    test(tessellator);
-  }
+  // {
+  //   cout << "\nBoost Tessellator:\n" << endl;
+  //   BoostTessellator tessellator;
+  //   test(tessellator);
+  // }
 #endif
 
 #ifdef POLYTOPE_ENABLE_TRIANGLE

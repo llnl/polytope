@@ -83,7 +83,7 @@ macro(polytope_add_new_test newtarget)
     NUM_MPI_TASKS ${arg_NUMTASKS}
   )
   set_tests_properties(${target}_test PROPERTIES
-    FIXTURES_REQUIRED "newpolytope_fixture"
+    FIXTURES_REQUIRED "new_polytope_fixture"
     WORKING_DIRECTORY "${NEW_TEST_WORK_DIR}"
   )
 endmacro()

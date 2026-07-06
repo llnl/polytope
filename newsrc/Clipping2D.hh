@@ -25,13 +25,14 @@ struct Clip2D {
   bool inf0 = false, inf1 = false;
 
   // Returns true if edge should be skipped entirely
-  bool doClipping(const Quantizer<2>& Q) {
+  bool doClipping() {
+    auto& Q = Quantizer<2>::instance();
     bool clip1 = true;
     bool clip2 = true;
     Point2<CoordType> m = midPoint(gen1, gen0);
     if (inf0 && inf1) {
-      clip1 = clipInfiniteRay(m, -normalRay, Q, p0, firstSide);
-      clip2 = clipInfiniteRay(m, normalRay, Q, p1, secondSide);
+      clip1 = clipInfiniteRay(m, -normalRay, p0, firstSide);
+      clip2 = clipInfiniteRay(m, normalRay, p1, secondSide);
       POLY_ASSERT(clip1 == clip2);
       return !clip1;
     }
@@ -48,18 +49,18 @@ struct Clip2D {
     if (validp0 && validp1) {
       return false;
     }
-    if (!bounds0 && isRayExternal(rp0, normalRay, Q)) {
+    if (!bounds0 && isRayExternal(rp0, normalRay)) {
       return true;
-    } else if (!bounds1 && isRayExternal(rp1, -normalRay, Q)) {
+    } else if (!bounds1 && isRayExternal(rp1, -normalRay)) {
       return true;
     }
     if (!validp0) {
-      clip1 = clipInfiniteRay(m, -normalRay, Q, p0, firstSide);
+      clip1 = clipInfiniteRay(m, -normalRay, p0, firstSide);
       inf0 = true;
       if (!clip1) return true;
     }
     if (!validp1) {
-      clip2 = clipInfiniteRay(m, normalRay, Q, p1, secondSide);
+      clip2 = clipInfiniteRay(m, normalRay, p1, secondSide);
       inf1 = true;
       if (!clip2) return true;
     }

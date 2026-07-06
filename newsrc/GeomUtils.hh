@@ -218,8 +218,8 @@ Point2<CoordType> pointDirection(const Point2<double>& p1,
 //------------------------------------------------------------------------------
 template<int Dimension, typename CoordType>
 bool isRayExternal(const Point<Dimension, double>& origin,
-                   const Point<Dimension, CoordType>& dir,
-                   const Quantizer<Dimension>& Q) {
+                   const Point<Dimension, CoordType>& dir) {
+  auto& Q = Quantizer<Dimension>::instance();
   Point<Dimension, int> outdirs = Q.externalSides(origin);
   for (int d = 0; d < Dimension; ++d) {
     if (outdirs[d] < 0 && dir[d] < 0) {

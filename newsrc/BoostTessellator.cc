@@ -138,7 +138,7 @@ tessellateQuantized(const QuantPLC<2>& qplc,
         if (v1 && v0) {
           clipper.normalRay = pointDirection<IntType>(clipper.rp0, clipper.rp1);
         }
-        if (clipper.doClipping(Q)) {
+        if (clipper.doClipping()) {
           edge = nextEdge;
           continue;
         }

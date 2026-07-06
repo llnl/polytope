@@ -126,7 +126,7 @@ tessellateQuantized(const QuantPLC<2>& qplc,
       clipper.inf0 = true;
       clipper.inf1 = true;
       clipper.normalRay = outwardRay<IntType>(clipper.gen0, clipper.gen1);
-      if (clipper.doClipping(Q)){
+      if (clipper.doClipping()){
         continue;
       }
       int startSide = static_cast<int>(clipper.firstSide);
@@ -238,7 +238,7 @@ tessellateQuantized(const QuantPLC<2>& qplc,
           clipper.rp1 = centers[nextTri];
           clipper.normalRay = pointDirection<IntType>(clipper.rp0, clipper.rp1);
         }
-        if (clipper.doClipping(Q)) {
+        if (clipper.doClipping()) {
           curTri = nextTri;
           continue;
         }
