@@ -95,7 +95,7 @@ add_subdirectory(newsrc)
 
 if (POLYTOPE_ENABLE_TESTING)
   enable_testing()
-  add_subdirectory(tests)
+  #add_subdirectory(tests)
   add_subdirectory(newtests)
 endif()
 

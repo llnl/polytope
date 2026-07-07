@@ -273,6 +273,16 @@ public:
   void cullExternalPoints(const QuantPLC<Dimension>& QPLC);
 
   //------------------------------------------------------------------------------
+  // Output method
+  //------------------------------------------------------------------------------
+  friend std::ostream& operator<<(std::ostream& s, const QuantTessellation& mesh) {
+    for (int i = 0; i < mesh.m_cells.size(); ++i) {
+      s << mesh.getCell(i);
+    }
+    return s;
+  }
+
+  //------------------------------------------------------------------------------
   // Member data
   //------------------------------------------------------------------------------
   // Generator points

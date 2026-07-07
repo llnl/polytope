@@ -187,15 +187,5 @@ void testWatertight(const Tessellation<2, double>& mesh, const int refHoles) {
   //             "Resulting mesh has " << numHoles << " but should have " << refHoles << " holes");
 }
 
-void printMesh(const Tessellation<2, double>& mesh) {
-  for (int i = 0; i < mesh.cells.size(); ++i) {
-    auto cell = mesh.getCell(i);
-    std::cout << "v = [";
-    for (auto& p : cell) {
-      std::cout << p << ", ";
-    }
-    std::cout << "]\n";
-  }
-}
 }
 #endif

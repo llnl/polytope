@@ -64,6 +64,7 @@ void
 TriangleTessellator::
 tessellateQuantized(const QuantPLC<2>& qplc,
                     QuantizedTessellation& result) const {
+  POLY_CONTRACT_VAR(qplc);
   // Type aliases
   using IntType = typename QuantTessellation<2>::IntType;
   using RealPoint = Point2<double>;

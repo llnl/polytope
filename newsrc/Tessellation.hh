@@ -9,7 +9,7 @@
 #include "Cell.hh"
 namespace polytope {
 
-//! \class Mesh - A basic descriptor class for a topologically-consistent 
+//! \class Mesh - A basic descriptor class for a topologically-consistent
 //! arbitrary poly(gonal/hedral) mesh.
 template<int Dimension, typename RealType>
 class Tessellation {
@@ -49,7 +49,7 @@ class Tessellation {
     points.clear();
   }
 
-  //! Returns true if the tessellation is empty (not defined), 
+  //! Returns true if the tessellation is empty (not defined),
   //! false otherwise.
   virtual bool empty() const
   {
@@ -58,29 +58,29 @@ class Tessellation {
       convexHull.empty() and points.empty();
   }
 
-  //! An array of (Dimension*numPoints) values containing components of 
-  //! generator positions. The components are stored in node-major order and 
+  //! An array of (Dimension*numPoints) values containing components of
+  //! generator positions. The components are stored in node-major order and
   //! the 0th component of the ith node appears in nodes[Dimension*i].
   std::vector<RealType> points;
-  
-  //! An array of (Dimension*numNodes) values containing components of 
-  //! node positions. The components are stored in node-major order and 
+
+  //! An array of (Dimension*numNodes) values containing components of
+  //! node positions. The components are stored in node-major order and
   //! the 0th component of the ith node appears in nodes[Dimension*i].
   std::vector<RealType> nodes;
 
-  //! This two-dimensional array defines the cell-face topology of the 
+  //! This two-dimensional array defines the cell-face topology of the
   //! mesh. A cell has an arbitrary number of faces in 2D and 3D.
   //! cells[i][j] gives the index of the jth face of the ith cell.
-  //! A negative face index indicates the actual face index is the 1's 
+  //! A negative face index indicates the actual face index is the 1's
   //! complement of the value (~cells[i][j]) and the face is oriented
   //! with an inward pointing normal for cells[i].
   std::vector<std::vector<int> > cells;
 
-  //! This two-dimensional array defines the topology of the faces of the 
-  //! mesh. A face has an arbitrary number of nodes in 3D and 2 nodes in 2D. 
+  //! This two-dimensional array defines the topology of the faces of the
+  //! mesh. A face has an arbitrary number of nodes in 3D and 2 nodes in 2D.
   //! faces[i][j] gives the index of the jth node of the ith face.
   //! Nodes for a given face are arranged counterclockwise around the face
-  //! viewed from the "positive" (outside) direction. 
+  //! viewed from the "positive" (outside) direction.
   std::vector<std::vector<unsigned> > faces;
 
   //! Indices of all nodes that are on the boundary of the tessellation.
@@ -101,9 +101,9 @@ class Tessellation {
   //! cell indicate a face on a boundary of the tessellation.
   std::vector<std::vector<int> > faceCells;
 
-  //! A PLC connecting the generating points belonging to the convex hull 
-  //! of the point distribution. Not all Tessellators hand back the convex 
-  //! hull, so this may be empty, in which case you must compute the convex 
+  //! A PLC connecting the generating points belonging to the convex hull
+  //! of the point distribution. Not all Tessellators hand back the convex
+  //! hull, so this may be empty, in which case you must compute the convex
   //! hull yourself.
   PLC<Dimension> convexHull;
 
@@ -156,59 +156,16 @@ class Tessellation {
     }
     return result;
   }
-  
+
   RealCell getCell(const unsigned cellIndex) const {
     return Cell<Dimension, RealType>::extractCell(nodes, cells[cellIndex], faces);
   }
 
   //! output operator.
-  friend std::ostream& operator<<(std::ostream& s, const Tessellation& mesh)
-  {
-    s << "Tessellation (" << Dimension << "D):" << std::endl;
-    s << mesh.nodes.size()/Dimension << " nodes:" << std::endl;
-    for (auto n = 0u; n < mesh.nodes.size()/Dimension; ++n) {
-      s << " " << n << ": "; 
-      if (Dimension == 2) {
-        s << "(" << mesh.nodes[2*n] << ", " << mesh.nodes[2*n+1] << ")" << std::endl;
-      } else {
-        POLY_ASSERT(Dimension == 3);
-        s << "(" << mesh.nodes[3*n] << ", " << mesh.nodes[3*n+1] << ", " << mesh.nodes[3*n+2] << ")" << std::endl;
-      }
+  friend std::ostream& operator<<(std::ostream& s, const Tessellation& mesh) {
+    for (int i = 0; i < mesh.cells.size(); ++i) {
+      s << mesh.getCell(i);
     }
-    s << std::endl;
-
-    s << mesh.faces.size() << " faces:" << std::endl;
-    for (auto f = 0u; f < mesh.faces.size(); ++f)
-    {
-      s << " " << f << ": (";
-      for (auto p = 0u; p < mesh.faces[f].size(); ++p) {
-        if (p < mesh.faces[f].size()-1) {
-          s << mesh.faces[f][p] << ", ";
-        } else {
-          s << mesh.faces[f][p];
-        }
-      }
-      s << ")" << std::endl;
-    }
-    s << std::endl;
-
-    s << mesh.cells.size() << " cells:" << std::endl;
-    for (auto c = 0u; c < mesh.cells.size(); ++c) {
-      s << " " << c << ": (";
-      for (auto f = 0u; f < mesh.cells[c].size(); ++f) {
-        if (f < mesh.cells[c].size()-1) {
-          s << mesh.cells[c][f] << ", ";
-        } else {
-          s << mesh.cells[c][f];
-        }
-      }
-      s << ")" << std::endl;
-    }
-
-    s << mesh.boundaryNodes.size() << " boundary nodes:" << std::endl;
-    for (auto i = 0u; i != mesh.boundaryNodes.size(); ++i) s << " " << mesh.boundaryNodes[i];
-    s << std::endl;
-
     return s;
   }
 

@@ -141,6 +141,7 @@ inline BoxSide getBoxCorner(const BoxSide& s1, const BoxSide& s2) {
              (s1 == BoxSide::T && s2 == BoxSide::L)) {
     return BoxSide::UL;
   }
+  return BoxSide::LL; // Should never get here
 }
 
 // Walk box edges only in CCW direction

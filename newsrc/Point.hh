@@ -176,18 +176,7 @@ struct Point<2, CoordType> {
 template<typename CoordType>
 std::ostream&
 operator<<(std::ostream& os, const Point<2, CoordType>& p) {
-  os << "[" << p.x << ", " << p.y << "]";//(" << p.index << ")";
-  return os;
-}
-
-template<typename CoordType>
-std::ostream&
-operator<<(std::ostream& os, const std::vector<Point<2, CoordType>>& pv) {
-  os << "v = [";
-  for (const auto& p : pv) {
-    os << p << "," << std::endl;
-  }
-  os << "]";
+  os << "[" << p.x << ", " << p.y << "]";
   return os;
 }
 
@@ -376,11 +365,21 @@ CoordHash dot(const Point3<CoordType>& a, const Point3<CoordType>& b) {
   return (a.x*b.x) + (a.y*b.y);
 }
 
-// It's nice being able to print these things.
 template<typename CoordType>
 std::ostream&
 operator<<(std::ostream& os, const Point<3, CoordType>& p) {
-  os << "(" << p.x << " " << p.y << " " << p.z <<  ")(" << p.index << ")";
+  os << "[" << p.x << ", " << p.y << ", " << p.z << "]";
+  return os;
+}
+
+template<int Dimension, typename CoordType>
+std::ostream&
+operator<<(std::ostream& os, const std::vector<Point<Dimension, CoordType>>& pv) {
+  os << "v = [";
+  for (const auto& p : pv) {
+    os << p << ", ";
+  }
+  os << "]\n";
   return os;
 }
 
