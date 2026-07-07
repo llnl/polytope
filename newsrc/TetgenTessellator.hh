@@ -6,9 +6,6 @@
 #include "Tessellator.hh"
 #include "Shapes.hh"
 
-#define TETLIBRARY
-#include "tetgen.h"
-
 namespace polytope {
 
 class TetgenTessellator : public Tessellator<3, double> {
@@ -28,12 +25,12 @@ public:
 
   std::string name() const { return "TetgenTessellator"; }
 protected:
-  void setTetgenFacet(tetgenio::facet& f, const std::vector<int>& verts) const;
+  //void setTetgenFacet(tetgenio::facet& f, const std::vector<int>& verts) const;
 
   tetgenio createTetgenPoints(const QT& quant) const;
   tetgenio createTetgenPoints(const QPLC& qplc, const QT& quant) const;
 
-  void convertVoronoiToQuantTessellation(const tetgenio& vorout, QT& result) const;
+  //void convertVoronoiToQuantTessellation(const tetgenio& vorout, QT& result) const;
 };
 
 }

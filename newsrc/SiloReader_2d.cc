@@ -1,6 +1,7 @@
 
 #include "SiloReader.hh"
 #include "polytope.hh"
+#include "Communicator.hh"
 
 #include <fstream>
 #include <set>
@@ -80,7 +81,6 @@ SiloReader<2, RealType>::read(Tessellation<2, RealType>& mesh,
                               const string& directory,
                               int cycle,
                               RealType& time,
-                              MMPI_Comm comm,
                               int numFiles,
                               int mpiTag) {
   // Strip .silo off of the prefix if it's there.
@@ -92,8 +92,9 @@ SiloReader<2, RealType>::read(Tessellation<2, RealType>& mesh,
   // Open a file in Silo/HDF5 format for reading.
 #ifdef POLYTOPE_ENABLE_MPI
   int nproc = 1, rank = 0;
-  MMPI_Comm_size(comm, &nproc);
-  MMPI_Comm_rank(comm, &rank);
+  auto& comm = Communicator::communicator();
+  nproc = Communicator::getNProcs();
+  rank = Communicator::getRank();
   if (numFiles == -1) numFiles = nproc;
   POLY_ASSERT(numFiles <= nproc);
 
@@ -106,9 +107,7 @@ SiloReader<2, RealType>::read(Tessellation<2, RealType>& mesh,
     masterDirName = filePrefix + "-" + std::to_string(nproc);
   }
   DIR* masterDir = opendir(masterDirName.c_str());
-  if (masterDir == 0) {
-    error("Could not find the directory " + masterDirName);
-  }
+  POLY_CHECK2(masterDir, "Could not find the directory " << masterDirName);
 
   // Initialize poor man's I/O and figure out group ranks.
   PMPIO_baton_t* baton = PMPIO_Init(numFiles, PMPIO_READ, comm, mpiTag, 
@@ -122,9 +121,7 @@ SiloReader<2, RealType>::read(Tessellation<2, RealType>& mesh,
   // Figure out the subdirectory for this group.
   std::string groupdirname = masterDirName + "/" + std::to_string(groupRank);
   DIR* groupDir = opendir(groupdirname.c_str());
-  if (groupDir == 0) {
-    error("Could not find the directory " + groupdirname);
-  }
+  POLY_CHECK2(groupDir, "Could not find the directory " << groupdirname);
   std::string filename;
   // Determine the file name.
   if (cycle >= 0) {
@@ -180,32 +177,34 @@ SiloReader<2, RealType>::read(Tessellation<2, RealType>& mesh,
   // Reconstruct the cell-face connectivity.
   mesh.cells.resize(dbmesh->zones->nzones);
   DBcompoundarray* conn = DBGetCompoundarray(file, "connectivity");
-  if (conn == 0) {
-    DBClose(file);
-    error("Could not find cell-face connectivity in file " + filename);
-  }
+  POLY_ASSERT2(conn, "Could not find cell-face connectivity in file " << filename);
+  // if (conn == 0) {
+  //   DBClose(file);
+  //   error("Could not find cell-face connectivity in file " + filename);
+  // }
   // First element is the number of faces in each zone.
   // Second element is the list of face indices in each zone.
   // Third element is a pair of cells for each face.
-  if ((conn->nelems != 3) or 
-      (conn->elemlengths[0] != dbmesh->zones->nzones) or 
-      (conn->elemlengths[2] != 2*dbmesh->faces->nfaces))
-  {
-    DBClose(file);
-    error("Found invalid cell-face connectivity in file " + filename);
-  }
+  POLY_ASSERT2((conn->nelems == 3 && conn->elemlengths[0] == dbmesh->zones->nzones &&
+                conn->elemlengths[2] == 2*dbmesh->faces->nfaces),
+               "Found invalid cell-face connectivity in file " << filename);
+  // if ((conn->nelems != 3) or 
+  //     (conn->elemlengths[0] != dbmesh->zones->nzones) or 
+  //     (conn->elemlengths[2] != 2*dbmesh->faces->nfaces))
+  // {
+  //   DBClose(file);
+  //   error("Found invalid cell-face connectivity in file " + filename);
+  // }
   int* connData = (int*)conn->values;
   int foffset = dbmesh->zones->nzones;
-  for (int c = 0; c < dbmesh->zones->nzones; ++c)
-  {
+  for (int c = 0; c < dbmesh->zones->nzones; ++c) {
     int nfaces = connData[c];
     mesh.cells[c].resize(nfaces);
     copy(connData + foffset, connData + foffset + nfaces, mesh.cells[c].begin());
     foffset += nfaces;
   }
   mesh.faceCells.resize(mesh.faces.size());
-  for (size_t f = 0; f < mesh.faceCells.size(); ++f)
-  {
+  for (size_t f = 0; f < mesh.faceCells.size(); ++f) {
     mesh.faceCells[f].resize(2);
     mesh.faceCells[f][0] = connData[foffset];
     mesh.faceCells[f][1] = connData[foffset+1];
@@ -219,24 +218,22 @@ SiloReader<2, RealType>::read(Tessellation<2, RealType>& mesh,
   // Second element is the array of numbers of nodes per facet.
   // Third element is the array of node indices for the facets.
   DBcompoundarray* hull = DBGetCompoundarray(file, "convexhull");
-  if (hull != 0)
-  {
-    if ((hull->nelems != 3) or (hull->elemlengths[0] != 1))
-    {
-      DBClose(file);
-      error("Found invalid convex hull data in file " + filename);
-    }
+  if (hull != 0) {
+    POLY_ASSERT2((hull->nelems == 3 && hull->elemlengths[0] == 1),
+                 "Found invalid convex hull data in file " << filename);
+    // if ((hull->nelems != 3) or (hull->elemlengths[0] != 1)) {
+    //   DBClose(file);
+    //   error("Found invalid convex hull data in file " + filename);
+    // }
     int* hullData = (int*)conn->values;
     int nfacets = hullData[0];
     mesh.convexHull.facets.resize(nfacets);
     int foffset = 1;
-    for (int f = 0; f < nfacets; ++f, ++foffset)
-    {
+    for (int f = 0; f < nfacets; ++f, ++foffset) {
       int nnodes = hullData[foffset];
       mesh.convexHull.facets[f].resize(nnodes);
     }
-    for (int f = 0; f < nfacets; ++f, ++foffset)
-    {
+    for (int f = 0; f < nfacets; ++f, ++foffset) {
       for (size_t n = 0; n < mesh.convexHull.facets[f].size(); ++n)
         mesh.convexHull.facets[f][n] = hullData[foffset];
     }
@@ -247,10 +244,8 @@ SiloReader<2, RealType>::read(Tessellation<2, RealType>& mesh,
 
   // Read any tag data.
   DBcompoundarray* tags = DBGetCompoundarray(file, "node_tags");
-  if (tags != 0)
-  {
-    for (int i = 0; i < tags->nelems; ++i)
-    {
+  if (tags != 0) {
+    for (int i = 0; i < tags->nelems; ++i) {
       std::vector<int>& tag = nodeTags[tags->elemnames[i]];
       tag.resize(tags->elemlengths[i]);
       copy((int*)tags->values, (int*)((char*)tags->values + tags->elemlengths[i]), tag.begin());
@@ -258,10 +253,8 @@ SiloReader<2, RealType>::read(Tessellation<2, RealType>& mesh,
     DBFreeCompoundarray(tags);
   }
   tags = DBGetCompoundarray(file, "edge_tags");
-  if (tags != 0)
-  {
-    for (int i = 0; i < tags->nelems; ++i)
-    {
+  if (tags != 0) {
+    for (int i = 0; i < tags->nelems; ++i) {
       std::vector<int>& tag = edgeTags[tags->elemnames[i]];
       tag.resize(tags->elemlengths[i]);
       copy((int*)tags->values, (int*)((char*)tags->values + tags->elemlengths[i]), tag.begin());
@@ -269,10 +262,8 @@ SiloReader<2, RealType>::read(Tessellation<2, RealType>& mesh,
     DBFreeCompoundarray(tags);
   }
   tags = DBGetCompoundarray(file, "face_tags");
-  if (tags != 0)
-  {
-    for (int i = 0; i < tags->nelems; ++i)
-    {
+  if (tags != 0) {
+    for (int i = 0; i < tags->nelems; ++i) {
       std::vector<int>& tag = faceTags[tags->elemnames[i]];
       tag.resize(tags->elemlengths[i]);
       copy((int*)tags->values, (int*)((char*)tags->values + tags->elemlengths[i]), tag.begin());
@@ -304,10 +295,11 @@ SiloReader<2, RealType>::read(Tessellation<2, RealType>& mesh,
   // Retrieve the fields.
   for (size_t f = 0; f < fieldNames.size(); ++f) {
     DBucdvar* dbvar = DBGetUcdvar(file, fieldNames[f].c_str());
-    if (dbvar == 0) {
-      DBClose(file);
-      error("Could not find field " + fieldNames[f] + " in file " + filename);
-    }
+    POLY_ASSERT2(dbvar, "Could not find field " << fieldNames[f] << " in file " << filename);
+    // if (dbvar == 0) {
+    //   DBClose(file);
+    //   error("Could not find field " + fieldNames[f] + " in file " + filename);
+    // }
     fields[fieldNames[f]].resize(dbvar->nels);
     copy((RealType*)(dbvar->vals[0]), (RealType*)(dbvar->vals[0]) + dbvar->nels,
          &(fields[fieldNames[f]][0]));
@@ -330,11 +322,9 @@ namespace Silo {
 // Helper function definition
 //-------------------------------------------------------------------
 vector<int> findAvailableCycles(const string& prefix,
-                                const string& directory,
-                                MMPI_Comm comm) {
+                                const string& directory) {
 #ifdef POLYTOPE_ENABLE_MPI
-  int nproc = 1, rank = 0;
-  MMPI_Comm_size(comm, &nproc);
+  const int nproc = Communicator::getNProcs();
 #endif
 
   // If the directory is not given, infer it from the prefix.
@@ -350,9 +340,10 @@ vector<int> findAvailableCycles(const string& prefix,
   // Now find files that match the prefix in the directory.
   vector<int> cycles;
   DIR* d = opendir(dir.c_str());
-  if (d == 0) {
-    error("Could not find the directory " + dir);
-  }
+  POLY_ASSERT2(d, "Could not find the directory " << dir);
+  // if (d == 0) {
+  //   error("Could not find the directory " + dir);
+  // }
   dirent* entry;
   while ((entry = readdir(d)) != 0) {
     std::string path = dir + "/" + entry->d_name;

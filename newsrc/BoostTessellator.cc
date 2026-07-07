@@ -24,13 +24,10 @@ namespace polytope {
 
 //------------------------------------------------------------------------------
 // Compute the QuantizedTessellation
-//
 //------------------------------------------------------------------------------
 void
 BoostTessellator::
-tessellateQuantized(const QuantPLC<2>& qplc,
-                    QuantizedTessellation& result) const {
-  POLY_CONTRACT_VAR(qplc);
+tessellateQuantized(QuantizedTessellation& result) const {
   // Type aliases
   using IntType = typename QuantTessellation<2>::IntType;
   using IntPoint = typename QuantTessellation<2>::IntPoint;

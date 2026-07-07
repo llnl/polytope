@@ -124,19 +124,18 @@ endif()
 # Spack does not install Triangle in any useful way so we have to install it ourselves
 # To use it, put the source code into extern/Triangle
 if(POLYTOPE_ENABLE_TRIANGLE)
-  set(triangle_DIR ${POLYTOPE_ROOT_DIR}/extern/Triangle)
-  set(triangle_sources ${triangle_DIR}/triangle.c)
-  set(triangle_headers ${triangle_DIR}/triangle.h)
+  set(triangle_sources ${triangle_SRC_DIR}/triangle.c)
+  set(triangle_headers ${triangle_SRC_DIR}/triangle.h)
   blt_add_library(NAME triangle
     HEADERS ${triangle_headers}
     SOURCES ${triangle_sources}
     SHARED TRUE)
   target_compile_definitions(triangle PRIVATE TRILIBRARY ANSI_DECLARATORS CDT_ONLY)
-  target_compile_definitions(triangle PUBLIC REAL=double VOID=void)
+  target_compile_definitions(triangle PRIVATE REAL=double VOID=void)
   install(TARGETS triangle EXPORT polytope-targets DESTINATION lib)
   install(FILES ${triangle_headers} DESTINATION include/triangle)
   list(APPEND POLYTOPE_TPL_DEPENDS triangle)
-  include_directories(${triangle_DIR})
+  include_directories(${triangle_SRC_DIR})
 endif()
 
 # Tetgen
@@ -151,15 +150,15 @@ if(POLYTOPE_ENABLE_TETGEN)
   list(APPEND IMPORTED_LIBS tetgen)
 endif()
 
-if(POLYTOPE_ENABLE_VORO)
-  blt_import_library(NAME voro
-    LIBRARIES ${voro_DIR}/lib/libvoro++.so
-    INCLUDES ${voro_DIR}/include
-    TREAT_INCLUDES_AS_SYSTEM ON
-    EXPORTABLE ON)
-  list(APPEND POLYTOPE_TPL_DEPENDS voro)
-  list(APPEND IMPORTED_LIBS voro)
-endif()
+# if(POLYTOPE_ENABLE_VORO)
+#   blt_import_library(NAME voro
+#     LIBRARIES ${voro_DIR}/lib/libvoro++.so
+#     INCLUDES ${voro_DIR}/include
+#     TREAT_INCLUDES_AS_SYSTEM ON
+#     EXPORTABLE ON)
+#   list(APPEND POLYTOPE_TPL_DEPENDS voro)
+#   list(APPEND IMPORTED_LIBS voro)
+# endif()
 
 foreach(lib ${IMPORTED_LIBS})
   get_target_property(_is_imported ${lib} IMPORTED)

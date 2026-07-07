@@ -16,26 +16,6 @@
 #include "Shapes.hh"
 
 namespace polytope {
-namespace { // Anonymous namespace for internal helpers
-
-//------------------------------------------------------------------------------
-// sign of the Z coordinate of cross product : (p2 - p1)x(p3 - p1).
-// Works directly with quantized integer coordinates.
-//------------------------------------------------------------------------------
-template<int Dimension, typename IntType>
-int zcross_sign(const Point<Dimension, IntType>& p1,
-                const Point<Dimension, IntType>& p2,
-                const Point<Dimension, IntType>& p3) {
-  // Use double precision to avoid overflow in the cross product calculation
-  const double ztest =
-    (double(p2.x) - double(p1.x))*(double(p3.y) - double(p1.y)) -
-    (double(p2.y) - double(p1.y))*(double(p3.x) - double(p1.x));
-  return (ztest < 0.0 ? -1 :
-          ztest > 0.0 ?  1 :
-                         0);
-}
-
-} // end anonymous namespace
 
 template<int Dimension>
 QuantPLC<Dimension>::QuantPLC(const PLC<Dimension>& plc,
@@ -256,9 +236,9 @@ QuantPLC<Dimension>::makeConvex2D() {
   bool collinear = true;
   if (n > 2) {
     for (unsigned i = 2; i < n && collinear; ++i) {
-      collinear = (zcross_sign(sortedPoints[0].first,
-                               sortedPoints[1].first,
-                               sortedPoints[i].first) == 0);
+      collinear = (aboveBelow(sortedPoints[0].first,
+                              sortedPoints[1].first,
+                              sortedPoints[i].first) == 0);
     }
   }
 
@@ -277,9 +257,9 @@ QuantPLC<Dimension>::makeConvex2D() {
   // Build lower hull
   for (unsigned i = 0; i < n; ++i) {
     while (k >= 2 &&
-           zcross_sign(sortedPoints[result[k - 2]].first,
-                       sortedPoints[result[k - 1]].first,
-                       sortedPoints[i].first) <= 0) {
+           aboveBelow(sortedPoints[result[k - 2]].first,
+                      sortedPoints[result[k - 1]].first,
+                      sortedPoints[i].first) >= 0) {
       k--;
     }
     result[k++] = i;
@@ -289,9 +269,9 @@ QuantPLC<Dimension>::makeConvex2D() {
   unsigned t = k + 1;
   for (int i = n - 2; i >= 0; --i) {
     while (k >= t &&
-           zcross_sign(sortedPoints[result[k - 2]].first,
-                       sortedPoints[result[k - 1]].first,
-                       sortedPoints[i].first) <= 0) {
+           aboveBelow(sortedPoints[result[k - 2]].first,
+                      sortedPoints[result[k - 1]].first,
+                      sortedPoints[i].first) >= 0) {
       k--;
     }
     result[k++] = i;

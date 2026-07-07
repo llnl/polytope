@@ -1,20 +1,20 @@
 
 #include "polytope.hh"
 #include "SiloWriter.hh"
+#include "SiloUtils.hh"
+#include "Tessellation.hh"
+#include "Communicator.hh"
 
 #include <fstream>
 #include <set>
 #include <cstring>
 #include <sys/stat.h>
 #include <dirent.h>
-#include <cmath>
 #include "silo.h"
 
 #ifdef POLYTOPE_ENABLE_MPI
 #include "pmpio.h"
 #endif
-
-#include "SiloUtils.hh"
 
 namespace polytope {
 
@@ -29,8 +29,7 @@ namespace {
 template <typename RealType>
 void 
 traverseConvexHull(const vector<RealType>& points,
-                   vector<int>& indices)
-{
+                   vector<int>& indices) {
   // Find the "lowest" point in the set.
   RealType ymin = FLT_MAX;
   int index0 = -1;
@@ -91,8 +90,7 @@ traverseConvexHull(const vector<RealType>& points,
 void*
 PMPIO_createFile(const char* filename,
                  const char* dirname,
-                 void* userData)
-{
+                 void* userData) {
   int driver = DB_HDF5;
   DBfile* file = DBCreate(filename, 0, DB_LOCAL, 0, driver);
   DBMkDir(file, dirname);
@@ -106,8 +104,7 @@ void*
 PMPIO_openFile(const char* filename, 
                const char* dirname,
                PMPIO_iomode_t iomode, 
-               void* userData)
-{
+               void* userData) {
   int driver = DB_HDF5;
   DBfile* file;
   if (iomode == PMPIO_WRITE)
@@ -182,7 +179,6 @@ write(const Tessellation<3, RealType>& mesh,
       const string& directory,
       int cycle,
       RealType time,
-      MMPI_Comm comm,
       int numFiles,
       int mpiTag)
 {
@@ -196,8 +192,9 @@ write(const Tessellation<3, RealType>& mesh,
   char filename[1024];
 #ifdef POLYTOPE_ENABLE_MPI
   int nproc = 1, rank = 0;
-  MMPI_Comm_size(comm, &nproc);
-  MMPI_Comm_rank(comm, &rank);
+  auto& comm = Communicator::communicator();
+  nproc = Communicator::getNProcs();
+  rank = Communicator::getRank();
   if (numFiles == -1)
     numFiles = nproc;
   POLY_ASSERT(numFiles <= nproc);
@@ -220,11 +217,11 @@ write(const Tessellation<3, RealType>& mesh,
       mkdir((char*)masterDirName.c_str(), S_IRWXU | S_IRWXG);
     else
       closedir(masterDir);
-    MPI_Barrier(comm);
+    Communicator::Barrier();
   }
   else
   {
-    MPI_Barrier(comm);
+    Communicator::Barrier();
   }
 
   // Initialize poor man's I/O and figure out group ranks.
@@ -246,11 +243,11 @@ write(const Tessellation<3, RealType>& mesh,
       mkdir((char*)groupdirname, S_IRWXU | S_IRWXG);
     else
       closedir(groupDir);
-    MPI_Barrier(comm);
+    Communicator::Barrier();
   }
   else
   {
-    MPI_Barrier(comm);
+    Communicator::Barrier();
   }
 
   // Determine a file name.

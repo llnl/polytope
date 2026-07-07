@@ -1,30 +1,18 @@
 #ifndef POLYTOPE_SILO_READER_HH
 #define POLYTOPE_SILO_READER_HH
 
-#ifdef POLYTOPE_ENABLE_MPI
-#include <mpi.h>
-#define MMPI_Comm MPI_Comm
-#define MMPI_COMM_WORLD MPI_COMM_WORLD
-#else
-#define MMPI_Comm int
-#define MMPI_COMM_WORLD 0
-#endif 
-
 #include "Tessellation.hh"
 #include <string>
 #include <float.h>
 #include <map>
 
-namespace polytope
-{
+namespace polytope {
 
-namespace Silo
-{
+namespace Silo {
 
 // Helper function for finding available cycles.
 std::vector<int> findAvailableCycles(const std::string& prefix,
-                                     const std::string& directory,
-                                     MMPI_Comm comm);
+                                     const std::string& directory);
 
 }
 
@@ -32,25 +20,21 @@ std::vector<int> findAvailableCycles(const std::string& prefix,
 //! This class provides a static interface for reading Silo files 
 //! containing tessellations made by polytope.
 template <int Dimension, typename RealType>
-class SiloReader
-{
+class SiloReader {
   // No general recipe
 };
 
 //! Partial specialization for 2D tessellations.
 template <typename RealType>
-class SiloReader<2, RealType>
-{
+class SiloReader<2, RealType> {
   public:
 
   //! Returns a list of cycle numbers for Silo files dumped by a SiloWriter
   //! with the given prefix, in the given directory. If the directory is 
   //! omitted, its name is generated automatically from the prefix.
   static std::vector<int> availableCycles(const std::string& filePrefix,
-                                          const std::string& directory = "",
-                                          MMPI_Comm comm = MMPI_COMM_WORLD)
-  {
-    return Silo::findAvailableCycles(filePrefix, directory, comm);
+                                          const std::string& directory = "") {
+    return Silo::findAvailableCycles(filePrefix, directory);
   }
 
   //! Read an arbitrary polygonal mesh and an associated set of 
@@ -72,7 +56,6 @@ class SiloReader<2, RealType>
                    const std::string& directory,
                    int cycle,
                    RealType& time,
-                   MMPI_Comm comm = MMPI_COMM_WORLD,
                    int numFiles = -1,
                    int mpiTag = 0);
 
@@ -91,13 +74,11 @@ class SiloReader<2, RealType>
                    const std::string& directory,
                    int cycle,
                    RealType& time,
-                   MMPI_Comm comm = MMPI_COMM_WORLD,
                    int numFiles = -1,
-                   int mpiTag = 0)
-  {
+                   int mpiTag = 0) {
     std::map<std::string, std::vector<int> > nTags, eTags, fTags, cTags;
     read(mesh, fields, nTags, eTags, fTags, cTags, filePrefix, directory,
-         cycle, time, comm, numFiles, mpiTag);
+         cycle, time, numFiles, mpiTag);
   }
 
   //! Read an arbitrary polygonal mesh and an associated set of 
@@ -118,11 +99,9 @@ class SiloReader<2, RealType>
                    const std::string& filePrefix,
                    int cycle,
                    RealType& time,
-                   MMPI_Comm comm = MMPI_COMM_WORLD,
                    int numFiles = -1,
-                   int mpiTag = 0)
-  {
-    read(mesh, fields, filePrefix, "", cycle, time, comm, numFiles, mpiTag);
+                   int mpiTag = 0) {
+    read(mesh, fields, filePrefix, "", cycle, time, numFiles, mpiTag);
   }
 
   //! This version of read omits the cycle and time arguments.
@@ -130,13 +109,11 @@ class SiloReader<2, RealType>
                    std::map<std::string, std::vector<RealType> >& fields,
                    const std::string& filePrefix,
                    const std::string& directory,
-                   MMPI_Comm comm = MMPI_COMM_WORLD,
                    int numFiles = -1,
-                   int mpiTag = 0)
-  {
+                   int mpiTag = 0) {
     RealType time;
     read(mesh, fields, filePrefix, directory, -1, time,
-         comm, numFiles, mpiTag);
+         numFiles, mpiTag);
   }
 
   //! This version of read omits the cycle and time arguments and 
@@ -144,31 +121,26 @@ class SiloReader<2, RealType>
   static void read(Tessellation<2, RealType>& mesh, 
                    std::map<std::string, std::vector<RealType> >& fields,
                    const std::string& filePrefix,
-                   MMPI_Comm comm = MMPI_COMM_WORLD,
                    int numFiles = -1,
-                   int mpiTag = 0)
-  {
+                   int mpiTag = 0) {
     RealType time;
     read(mesh, fields, filePrefix, "", -1, time,
-         comm, numFiles, mpiTag);
+         numFiles, mpiTag);
   }
 
 };
 
 //! Partial specialization for 3D tessellations.
 template <typename RealType>
-class SiloReader<3, RealType>
-{
-  public:
+class SiloReader<3, RealType> {
+public:
 
   //! Returns a list of cycle numbers for Silo files dumped by a SiloWriter
   //! with the given prefix, in the given directory. If the directory is 
   //! omitted, its name is generated automatically from the prefix.
   static std::vector<int> availableCycles(const std::string& filePrefix,
-                                          const std::string& directory = "",
-                                          MMPI_Comm comm = MMPI_COMM_WORLD)
-  {
-    return Silo::findAvailableCycles(filePrefix, directory, comm);
+                                          const std::string& directory = "") {
+    return Silo::findAvailableCycles(filePrefix, directory);
   }
 
   //! Read an arbitrary polyhedral mesh and an associated set of 
@@ -190,7 +162,6 @@ class SiloReader<3, RealType>
                    const std::string& directory,
                    int cycle,
                    RealType& time,
-                   MMPI_Comm comm = MMPI_COMM_WORLD,
                    int numFiles = -1,
                    int mpiTag = 0);
 
@@ -209,13 +180,11 @@ class SiloReader<3, RealType>
                    const std::string& directory,
                    int cycle,
                    RealType& time,
-                   MMPI_Comm comm = MMPI_COMM_WORLD,
                    int numFiles = -1,
-                   int mpiTag = 0)
-  {
+                   int mpiTag = 0) {
     std::map<std::string, std::vector<int> > nTags, eTags, fTags, cTags;
     read(mesh, fields, nTags, eTags, fTags, cTags, filePrefix, directory,
-         cycle, time, comm, numFiles, mpiTag);
+         cycle, time, numFiles, mpiTag);
   }
 
   //! Read an arbitrary polyhedral mesh and an associated set of 
@@ -235,11 +204,9 @@ class SiloReader<3, RealType>
                    const std::string& filePrefix,
                    int cycle,
                    RealType& time,
-                   MMPI_Comm comm = MMPI_COMM_WORLD,
                    int numFiles = -1,
-                   int mpiTag = 0)
-  {
-    read(mesh, fields, filePrefix, "", cycle, time, comm, numFiles, mpiTag);
+                   int mpiTag = 0) {
+    read(mesh, fields, filePrefix, "", cycle, time, numFiles, mpiTag);
   }
 
   //! This version of read omits the cycle and time arguments.
@@ -247,13 +214,11 @@ class SiloReader<3, RealType>
                    std::map<std::string, std::vector<RealType> >& fields,
                    const std::string& filePrefix,
                    const std::string& directory,
-                   MMPI_Comm comm = MMPI_COMM_WORLD,
                    int numFiles = -1,
-                   int mpiTag = 0)
-  {
+                   int mpiTag = 0) {
     RealType time;
     read(mesh, fields, filePrefix, directory, -1, time,
-         comm, numFiles, mpiTag);
+         numFiles, mpiTag);
   }
 
   //! This version of read omits the cycle and time arguments and 
@@ -261,13 +226,11 @@ class SiloReader<3, RealType>
   static void read(Tessellation<3, RealType>& mesh, 
                    std::map<std::string, std::vector<RealType> >& fields,
                    const std::string& filePrefix,
-                   MMPI_Comm comm = MMPI_COMM_WORLD,
                    int numFiles = -1,
-                   int mpiTag = 0)
-  {
+                   int mpiTag = 0) {
     RealType time;
     read(mesh, fields, filePrefix, "", -1, time,
-         comm, numFiles, mpiTag);
+         numFiles, mpiTag);
   }
 
 };

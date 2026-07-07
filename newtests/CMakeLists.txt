@@ -61,36 +61,14 @@ polytope_add_new_test(RandomPoints)
 # Serial Tessellator Tests
 #-----------------------------------------------------------------------------
 
-# Voro++ Tessellator tests
-#
-# NOTE: Temporarily suspending their build until more work can be
-#       done making their output topologically consistent
-#
-#polytope_add_new_test( "VoroPP_2d"                                )
-#polytope_add_new_test( "VoroPP_3d"                                )
-
 # 2D Triangle and Boost Tessellator tests
 # if(POLYTOPE_ENABLE_TETGEN)
 #   # 3D Tetgen Tessellator tests
 #   polytope_add_new_test(TetgenTessellator)
 # endif()
-if(POLYTOPE_ENABLE_TRIANGLE)
-  # polytope_add_new_test(plot)
-  # polytope_add_new_test(AspectRatio)
-  if(ENABLE_MPI)
-    polytope_add_new_test(DistributedCollinear NUMTASKS 4)
-    polytope_add_new_test(SerialDistributedTriangle NUMTASKS 4)
-    polytope_add_new_test(FailedCommunication NUMTASKS 4)
-  endif()
-endif()
 
 # Distributed Tessellator Tests
 #-----------------------------------------------------------------------------
-if(POLYTOPE_ENABLE_MPI)
-  polytope_add_new_test(DistributedUnitSquare NUMTASKS 4)
-  polytope_add_new_test(DistributedRandomPoints NUMTASKS 4)
-  polytope_add_new_test(DistributedRotationTests NUMTASKS 4)
-  polytope_add_new_test(DistributedCentroidal NUMTASKS 4)
-  #polytope_add_new_test( DistributedVoroPP_2d 4)
-  #polytope_add_new_test( DistributedVoroPP_3d 4)
-endif()
+# if(POLYTOPE_ENABLE_MPI)
+#   polytope_add_new_test(DistributedVoronoi2D NUMTASKS 4)
+# endif()

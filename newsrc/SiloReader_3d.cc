@@ -7,13 +7,10 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include "silo.h"
+#include "Communicator.hh"
 
 #ifdef POLYTOPE_ENABLE_MPI
-#include "mpi.h"
 #include "pmpio.h"
-#else
-#define MPI_Comm int
-#define MPI_COMM_WORLD 0
 #endif
 
 namespace polytope {
@@ -85,7 +82,6 @@ read(Tessellation<3, RealType>& mesh,
      const string& directory,
      int cycle,
      RealType& time,
-     MPI_Comm comm,
      int numFiles,
      int mpiTag)
 {
@@ -98,8 +94,9 @@ read(Tessellation<3, RealType>& mesh,
   // Open a file in Silo/HDF5 format for reading.
 #ifdef POLYTOPE_ENABLE_MPI
   int nproc = 1, rank = 0;
-  MPI_Comm_size(comm, &nproc);
-  MPI_Comm_rank(comm, &rank);
+  auto& comm = Communicator::communicator();
+  nproc = Communicator::getNProcs();
+  rank = Communicator::getRank();
   if (numFiles == -1)
     numFiles = nproc;
   POLY_ASSERT(numFiles <= nproc);
@@ -112,10 +109,8 @@ read(Tessellation<3, RealType>& mesh,
   if (masterDirName.empty()) {
     masterDirName = filePrefix + "-" + std::to_string(nproc);
   }
-  DIR* masterDir = opendir(directory.c_str());
-  if (masterDir == 0) {
-    error("Could not find the directory " + masterDirName);
-  }
+  DIR* masterDir = opendir(masterDirName.c_str());
+  POLY_CHECK2(masterDir, "Could not find the directory " << masterDirName);
 
   // Initialize poor man's I/O and figure out group ranks.
   PMPIO_baton_t* baton = PMPIO_Init(numFiles, PMPIO_READ, comm, mpiTag, 
@@ -129,9 +124,7 @@ read(Tessellation<3, RealType>& mesh,
   // Figure out the subdirectory for this group.
   std::string groupdirname = masterDirName + "/" + std::to_string(groupRank);
   DIR* groupDir = opendir(groupdirname.c_str());
-  if (groupDir == 0) {
-    error("Could not find the directory " + groupdirname);
-  }
+  POLY_CHECK2(groupDir, "Could not find the directory " << groupdirname);
   std::string filename;
   // Determine the file name.
   if (cycle >= 0) {
@@ -188,21 +181,14 @@ read(Tessellation<3, RealType>& mesh,
   // Reconstruct the cell-face connectivity.
   mesh.cells.resize(dbmesh->zones->nzones);
   DBcompoundarray* conn = DBGetCompoundarray(file, "connectivity");
-  if (conn == 0)
-  {
-    DBClose(file);
-    error("Could not find cell-face connectivity in file " + filename);
-  }
+  POLY_ASSERT2(conn, "Could not find cell-face connectivity in file " << filename);
   // First element is the number of faces in each zone.
   // Second element is the list of face indices in each zone.
   // Third element is a pair of cells for each face.
-  if ((conn->nelems != 3) or 
-      (conn->elemlengths[0] != dbmesh->zones->nzones) or 
-      (conn->elemlengths[2] != 2*dbmesh->faces->nfaces))
-  {
-    DBClose(file);
-    error("Found invalid cell-face connectivity in file " + filename);
-  }
+  POLY_ASSERT2((conn->nelems == 3 &&
+                conn->elemlengths[0] == dbmesh->zones->nzones &&
+                conn->elemlengths[2] == 2*dbmesh->faces->nfaces),
+               "Found invalid cell-face connectivity in file " << filename);
   int* connData = (int*)conn->values;
   int foffset = dbmesh->zones->nzones;
   for (int c = 0; c < dbmesh->zones->nzones; ++c)
@@ -230,11 +216,8 @@ read(Tessellation<3, RealType>& mesh,
   DBcompoundarray* hull = DBGetCompoundarray(file, "convexhull");
   if (hull != 0)
   {
-    if ((hull->nelems != 3) or (hull->elemlengths[0] != 1))
-    {
-      DBClose(file);
-      error("Found invalid convex hull data in file " + filename);
-    }
+    POLY_ASSERT2((hull->nelems == 3 && hull->elemlengths[0] == 1),
+                 "Found invalid convex hull data in file " << filename);
     int* hullData = (int*)conn->values;
     int nfacets = hullData[0];
     mesh.convexHull.facets.resize(nfacets);
@@ -315,10 +298,7 @@ read(Tessellation<3, RealType>& mesh,
   // Retrieve the fields.
   for (size_t f = 0; f < fieldNames.size(); ++f) {
     DBucdvar* dbvar = DBGetUcdvar(file, fieldNames[f].c_str());
-    if (dbvar == 0) {
-      DBClose(file);
-      error("Could not find field " + fieldNames[f] + " in file " + filename);
-    }
+    POLY_ASSERT2(dbvar, "Could not find field " << fieldNames[f] << " in file " << filename);
     fields[fieldNames[f]].resize(dbvar->nels);
     copy((RealType*)(dbvar->vals[0]), (RealType*)(dbvar->vals[0]) + dbvar->nels,
          &(fields[fieldNames[f]][0]));

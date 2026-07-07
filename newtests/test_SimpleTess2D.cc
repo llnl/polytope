@@ -147,11 +147,11 @@ void tests(const int tnum, bool boostTess) {
   quantMesh.cullExternalPoints(QPLC);
   if (boostTess) {
     BoostTessellator boost;
-    boost.tessellateQuantized(QPLC, quantMesh);
+    boost.tessellateQuantized(quantMesh);
     quantMesh.clipTessellation(QPLC, boost);
   } else {
     TriangleTessellator tri;
-    tri.tessellateQuantized(QPLC, quantMesh);
+    tri.tessellateQuantized(quantMesh);
     quantMesh.clipTessellation(QPLC, tri);
   }
   Tessellation<2, double> mesh;

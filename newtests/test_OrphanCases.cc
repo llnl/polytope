@@ -35,10 +35,10 @@ using namespace polytope;
 void printArea(Boundary2D<double>& boundary,
 	       Tessellation<2,double>& mesh) {
    const double area = computeTessellationArea(mesh);
-   const double relErr = (boundary.mArea-area)/boundary.mArea;
+   const double relErr = std::abs(boundary.mArea-area)/boundary.mArea;
    cout << "Tessellation Area = " << area << endl;
-   cout << "Relative error    = " << std::abs(boundary.mArea-area)/boundary.mArea << endl;
-   //POLY_CHECK(relErr < 1.0E-5);
+   cout << "Relative error    = " << relErr << endl;
+   POLY_CHECK(relErr < 1.0E-8);
 }
 
 // -----------------------------------------------------------------------
@@ -51,7 +51,9 @@ bool checkNearestNode(const Tessellation<2,double>& mesh,
     if (mesh.faceCells[iface].size() == 1) {
       for (vector<unsigned>::const_iterator itr = mesh.faces[iface].begin();
 	   itr != mesh.faces[iface].end();
-	   ++itr )  boundaryNodes.insert(*itr);
+	   ++itr ) {
+        boundaryNodes.insert(*itr);
+      }
     }
   }
 
@@ -245,11 +247,11 @@ void test(Tessellator<2,double>& tessellator) {
     const double trueArea = 8.74;
     const double tessArea = computeTessellationArea(mesh);
     const double fracerr  = std::abs(trueArea - tessArea)/trueArea;
-    // POLY_CHECK2(fracerr < 1.0E-7, "Relative error in the tessellation "
-    //              << "area exceeds tolerance:" << endl
-    //              << "      Area = " << tessArea << endl
-    //              << "     Error = " << trueArea - tessArea << endl
-    //              << "Frac Error = " << fracerr);
+    POLY_CHECK2(fracerr < 1.0E-8, "Relative error in the tessellation "
+                 << "area exceeds tolerance:" << endl
+                 << "      Area = " << tessArea << endl
+                 << "     Error = " << trueArea - tessArea << endl
+                 << "Frac Error = " << fracerr);
     POLY_CHECK(checkNearestNode(mesh, dist));
     ++i;
   }

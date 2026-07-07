@@ -37,7 +37,7 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 set(POLYTOPE_TPL_DEPENDS )
 
 #option(POLYTOPE_ENABLE_HIP "Build with HIP enabled" OFF) # Currently unsupported
-set(ENABLE_MPI OFF CACHE BOOL "")
+#set(ENABLE_MPI OFF CACHE BOOL "")
 set(POLYTOPE_ENABLE_MPI ${ENABLE_MPI})
 option(POLYTOPE_ENABLE_BOOST "Enable Boost Voronoi tessellator" ON)
 option(POLYTOPE_ENABLE_SILO "Enable Silo read/write features" OFF)
@@ -50,7 +50,8 @@ option(POLYTOPE_ENABLE_UBSAN "Enable UBSAN" OFF)
 if(NOT POLYTOPE_ENABLE_BOOST AND POLYTOPE_ENABLE_TESTING)
   message(FATAL_ERROR "Testing relies on Boost. Must enable Boost to enable testing.")
 endif()
-option(POLYTOPE_ENABLE_VORO "Enable Voro Voronoi tessellator" OFF)
+# Voro is not supported
+#option(POLYTOPE_ENABLE_VORO "Enable Voro Voronoi tessellator" OFF)
 option(POLYTOPE_ENABLE_APPLE "Enable Apple installation support" OFF)
 option(ENABLE_STATIC_TPLS "Used for libraries that require older HDF5 versions" OFF)
 option(BUILD_SHARED_LIBS "Build Polytope as shared library" OFF)
@@ -90,7 +91,10 @@ endif()
 
 include(cmake/InstallTPLs.cmake)
 
-add_subdirectory(src)
+# old installs do not work with MPI enabled
+if (NOT ENABLE_MPI)
+  add_subdirectory(src)
+endif()
 add_subdirectory(newsrc)
 
 if (POLYTOPE_ENABLE_TESTING)

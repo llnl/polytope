@@ -5,6 +5,9 @@
 #include <algorithm>
 #include <cmath>
 
+#define TETLIBRARY
+#include "tetgen.h"
+
 namespace polytope {
 
 void TetgenTessellator::tessellateQuantized(const QuantPLC<3>& qplc,
@@ -14,7 +17,7 @@ void TetgenTessellator::tessellateQuantized(const QuantPLC<3>& qplc,
   tetrahedralize((char*)"pzqQv", &in, &out);
 
   // Convert vorout to QuantTessellation format
-  convertVoronoiToQuantTessellation(out, result);
+  //convertVoronoiToQuantTessellation(out, result);
 }
 
 void TetgenTessellator::tessellateQuantized(QT& result) const {
@@ -23,168 +26,168 @@ void TetgenTessellator::tessellateQuantized(QT& result) const {
   tetrahedralize((char*)"pzqQv", &in, &out);
 
   // Convert vorout to QuantTessellation format
-  convertVoronoiToQuantTessellation(out, result);
+  //convertVoronoiToQuantTessellation(out, result);
 }
 
-void TetgenTessellator::convertVoronoiToQuantTessellation(
-    const tetgenio& vorout, QT& result) const {
+// void TetgenTessellator::convertVoronoiToQuantTessellation(
+//     const tetgenio& vorout, QT& result) const {
 
-  result.clear();
+//   result.clear();
 
-  // 1. Add all Voronoi vertices (nodes) - these are already computed circumcenters
-  POLY_ASSERT2(vorout.numberofvpoints > 0, "Voronoi has no points");
-  result.m_nodes.reserve(vorout.numberofvpoints);
-  for (int i = 0; i < vorout.numberofvpoints; ++i) {
-    RealPoint p(vorout.vpointlist[3*i],
-                vorout.vpointlist[3*i+1],
-                vorout.vpointlist[3*i+2]);
-    IntPoint ip = result.m_Q.quantize(p);
-    result.m_nodes.push_back(ip);
-  }
+//   // 1. Add all Voronoi vertices (nodes) - these are already computed circumcenters
+//   POLY_ASSERT2(vorout.numberofvpoints > 0, "Voronoi has no points");
+//   result.m_nodes.reserve(vorout.numberofvpoints);
+//   for (int i = 0; i < vorout.numberofvpoints; ++i) {
+//     RealPoint p(vorout.vpointlist[3*i],
+//                 vorout.vpointlist[3*i+1],
+//                 vorout.vpointlist[3*i+2]);
+//     IntPoint ip = result.m_Q.quantize(p);
+//     result.m_nodes.push_back(ip);
+//   }
 
-  // Track infinite (boundary) nodes
-  std::set<int> infNodeSet;
+//   // Track infinite (boundary) nodes
+//   std::set<int> infNodeSet;
 
-  // 2. Process Voronoi edges and handle infinite rays
-  //    Build a map from Voronoi edge index to pair of node indices
-  std::map<int, std::pair<int, int>> vedge2nodes;
+//   // 2. Process Voronoi edges and handle infinite rays
+//   //    Build a map from Voronoi edge index to pair of node indices
+//   std::map<int, std::pair<int, int>> vedge2nodes;
 
-  for (int i = 0; i < vorout.numberofvedges; ++i) {
-    int v1 = vorout.vedgelist[i].v1;
-    int v2 = vorout.vedgelist[i].v2;
+//   for (int i = 0; i < vorout.numberofvedges; ++i) {
+//     int v1 = vorout.vedgelist[i].v1;
+//     int v2 = vorout.vedgelist[i].v2;
 
-    if (v2 == -1) {
-      // Infinite edge - create a far point along the ray direction
-      RealPoint origin(vorout.vpointlist[3*v1],
-                       vorout.vpointlist[3*v1+1],
-                       vorout.vpointlist[3*v1+2]);
-      RealPoint dir(vorout.vedgelist[i].vnormal[0],
-                    vorout.vedgelist[i].vnormal[1],
-                    vorout.vedgelist[i].vnormal[2]);
+//     if (v2 == -1) {
+//       // Infinite edge - create a far point along the ray direction
+//       RealPoint origin(vorout.vpointlist[3*v1],
+//                        vorout.vpointlist[3*v1+1],
+//                        vorout.vpointlist[3*v1+2]);
+//       RealPoint dir(vorout.vedgelist[i].vnormal[0],
+//                     vorout.vedgelist[i].vnormal[1],
+//                     vorout.vedgelist[i].vnormal[2]);
 
-      // Project to a far distance (use quantizer bounds)
-      RealPoint far_dist = result.m_Q.maxCoord.template type_cast<double>();
-      RealPoint inf_point = origin + dir * far_dist;
+//       // Project to a far distance (use quantizer bounds)
+//       RealPoint far_dist = result.m_Q.maxCoord.template type_cast<double>();
+//       RealPoint inf_point = origin + dir * far_dist;
 
-      // Quantize and add as new node
-      IntPoint iinf = result.m_Q.quantize(inf_point);
-      v2 = result.m_nodes.size();
-      result.m_nodes.push_back(iinf);
-      infNodeSet.insert(v2);
-    }
+//       // Quantize and add as new node
+//       IntPoint iinf = result.m_Q.quantize(inf_point);
+//       v2 = result.m_nodes.size();
+//       result.m_nodes.push_back(iinf);
+//       infNodeSet.insert(v2);
+//     }
 
-    vedge2nodes[i] = {v1, v2};
-  }
+//     vedge2nodes[i] = {v1, v2};
+//   }
 
-  // 3. Build faces from Voronoi facets
-  //    Each Voronoi facet corresponds to a face between two Voronoi cells
-  result.m_faces.reserve(vorout.numberofvfacets);
-  result.m_cells.resize(vorout.numberofvcells);
+//   // 3. Build faces from Voronoi facets
+//   //    Each Voronoi facet corresponds to a face between two Voronoi cells
+//   result.m_faces.reserve(vorout.numberofvfacets);
+//   result.m_cells.resize(vorout.numberofvcells);
 
-  for (int ifacet = 0; ifacet < vorout.numberofvfacets; ++ifacet) {
-    int c1 = vorout.vfacetlist[ifacet].c1;
-    int c2 = vorout.vfacetlist[ifacet].c2;
-    int nedges = vorout.vfacetlist[ifacet].elist[0];
+//   for (int ifacet = 0; ifacet < vorout.numberofvfacets; ++ifacet) {
+//     int c1 = vorout.vfacetlist[ifacet].c1;
+//     int c2 = vorout.vfacetlist[ifacet].c2;
+//     int nedges = vorout.vfacetlist[ifacet].elist[0];
 
-    // Build ordered node list by following edge connectivity
-    std::vector<int> face_nodes;
+//     // Build ordered node list by following edge connectivity
+//     std::vector<int> face_nodes;
 
-    if (nedges >= 3) {
-      // Build adjacency map for this face
-      std::map<int, std::vector<int>> node_neighbors;
-      for (int j = 1; j <= nedges; ++j) {
-        int edge_idx = vorout.vfacetlist[ifacet].elist[j];
-        auto [n1, n2] = vedge2nodes[edge_idx];
-        node_neighbors[n1].push_back(n2);
-        node_neighbors[n2].push_back(n1);
-      }
+//     if (nedges >= 3) {
+//       // Build adjacency map for this face
+//       std::map<int, std::vector<int>> node_neighbors;
+//       for (int j = 1; j <= nedges; ++j) {
+//         int edge_idx = vorout.vfacetlist[ifacet].elist[j];
+//         auto [n1, n2] = vedge2nodes[edge_idx];
+//         node_neighbors[n1].push_back(n2);
+//         node_neighbors[n2].push_back(n1);
+//       }
 
-      // Start with first edge and follow the cycle
-      if (!node_neighbors.empty()) {
-        int start_node = node_neighbors.begin()->first;
-        int current = start_node;
-        int prev = -1;
-        std::set<int> visited;
+//       // Start with first edge and follow the cycle
+//       if (!node_neighbors.empty()) {
+//         int start_node = node_neighbors.begin()->first;
+//         int current = start_node;
+//         int prev = -1;
+//         std::set<int> visited;
 
-        face_nodes.push_back(current);
-        visited.insert(current);
+//         face_nodes.push_back(current);
+//         visited.insert(current);
 
-        // Follow edges around the cycle
-        while (face_nodes.size() < nedges) {
-          bool found = false;
-          for (int next : node_neighbors[current]) {
-            if (next != prev && visited.find(next) == visited.end()) {
-              face_nodes.push_back(next);
-              visited.insert(next);
-              prev = current;
-              current = next;
-              found = true;
-              break;
-            }
-          }
-          if (!found) break;
-        }
-      }
-    }
+//         // Follow edges around the cycle
+//         while (face_nodes.size() < nedges) {
+//           bool found = false;
+//           for (int next : node_neighbors[current]) {
+//             if (next != prev && visited.find(next) == visited.end()) {
+//               face_nodes.push_back(next);
+//               visited.insert(next);
+//               prev = current;
+//               current = next;
+//               found = true;
+//               break;
+//             }
+//           }
+//           if (!found) break;
+//         }
+//       }
+//     }
 
-    // Need at least 3 nodes to form a face
-    if (face_nodes.size() < 3) continue;
+//     // Need at least 3 nodes to form a face
+//     if (face_nodes.size() < 3) continue;
 
-    int face_id = result.m_faces.size();
-    result.m_faces.push_back(face_nodes);
+//     int face_id = result.m_faces.size();
+//     result.m_faces.push_back(face_nodes);
 
-    // Assign face to cells with proper orientation
-    // c1 always gets the face, c2 gets the negated face (opposite orientation)
-    if (c1 >= 0 && c1 < result.m_cells.size()) {
-      result.m_cells[c1].push_back(face_id);
-    }
+//     // Assign face to cells with proper orientation
+//     // c1 always gets the face, c2 gets the negated face (opposite orientation)
+//     if (c1 >= 0 && c1 < result.m_cells.size()) {
+//       result.m_cells[c1].push_back(face_id);
+//     }
 
-    if (c2 >= 0 && c2 < result.m_cells.size()) {
-      // Negative index indicates opposite orientation
-      result.m_cells[c2].push_back(~face_id);
-    }
-  }
+//     if (c2 >= 0 && c2 < result.m_cells.size()) {
+//       // Negative index indicates opposite orientation
+//       result.m_cells[c2].push_back(~face_id);
+//     }
+//   }
 
-  // Alternative: use vcelllist if available
-  // The vcelllist directly gives us which facets belong to each cell
-  // if (vorout.vcelllist != nullptr) {
-  //   result.m_cells.clear();
-  //   result.m_cells.resize(vorout.numberofvcells);
+//   // Alternative: use vcelllist if available
+//   // The vcelllist directly gives us which facets belong to each cell
+//   // if (vorout.vcelllist != nullptr) {
+//   //   result.m_cells.clear();
+//   //   result.m_cells.resize(vorout.numberofvcells);
 
-  //   for (int icell = 0; icell < vorout.numberofvcells; ++icell) {
-  //     if (vorout.vcelllist[icell] == nullptr) continue;
+//   //   for (int icell = 0; icell < vorout.numberofvcells; ++icell) {
+//   //     if (vorout.vcelllist[icell] == nullptr) continue;
 
-  //     int nfacets = vorout.vcelllist[icell][0];
-  //     for (int j = 1; j <= nfacets; ++j) {
-  //       int facet_idx = vorout.vcelllist[icell][j];
+//   //     int nfacets = vorout.vcelllist[icell][0];
+//   //     for (int j = 1; j <= nfacets; ++j) {
+//   //       int facet_idx = vorout.vcelllist[icell][j];
 
-  //       // Determine orientation based on whether this cell is c1 or c2
-  //       if (vorout.vfacetlist[facet_idx].c1 == icell) {
-  //         result.m_cells[icell].push_back(facet_idx);
-  //       } else if (vorout.vfacetlist[facet_idx].c2 == icell) {
-  //         result.m_cells[icell].push_back(~facet_idx);
-  //       }
-  //     }
-  //   }
-  // }
-}
+//   //       // Determine orientation based on whether this cell is c1 or c2
+//   //       if (vorout.vfacetlist[facet_idx].c1 == icell) {
+//   //         result.m_cells[icell].push_back(facet_idx);
+//   //       } else if (vorout.vfacetlist[facet_idx].c2 == icell) {
+//   //         result.m_cells[icell].push_back(~facet_idx);
+//   //       }
+//   //     }
+//   //   }
+//   // }
+// }
 
-void TetgenTessellator::setTetgenFacet(tetgenio::facet& f,
-                                       const std::vector<int>& verts) const {
-  tetgenio::init(&(f));
-  f.numberofpolygons = 1;
-  f.polygonlist = new tetgenio::polygon[1];
-  f.numberofholes = 0;
-  f.holelist = nullptr;
+// void TetgenTessellator::setTetgenFacet(tetgenio::facet& f,
+//                                        const std::vector<int>& verts) const {
+//   tetgenio::init(&(f));
+//   f.numberofpolygons = 1;
+//   f.polygonlist = new tetgenio::polygon[1];
+//   f.numberofholes = 0;
+//   f.holelist = nullptr;
 
-  tetgenio::polygon& p = f.polygonlist[0];
-  tetgenio::init(&(p));
-  p.numberofvertices = static_cast<int>(verts.size());
-  p.vertexlist = new int[p.numberofvertices];
-  for (int i = 0; i < p.numberofvertices; ++i) {
-    p.vertexlist[i] = verts[i];
-  }
-}
+//   tetgenio::polygon& p = f.polygonlist[0];
+//   tetgenio::init(&(p));
+//   p.numberofvertices = static_cast<int>(verts.size());
+//   p.vertexlist = new int[p.numberofvertices];
+//   for (int i = 0; i < p.numberofvertices; ++i) {
+//     p.vertexlist[i] = verts[i];
+//   }
+// }
 
 // Create Tetgen class
 tetgenio TetgenTessellator::createTetgenPoints(const QT& quant) const {
@@ -243,14 +246,14 @@ tetgenio TetgenTessellator::createTetgenPoints(const QPLC& qplc,
   // Outer boundary facets
   for (size_t i = 0; i < qplc.facets.size(); ++i) {
     std::vector<int> verts = shiftedFacet(qplc.facets[i]);
-    setTetgenFacet(in.facetlist[f], verts);
+    //setTetgenFacet(in.facetlist[f], verts);
     in.facetmarkerlist[f] = 1;
     ++f;
   }
   for (size_t h = 0; h < qplc.holes.size(); ++h) {
     for (size_t j = 0; j < qplc.holes[h].size(); ++j) {
       std::vector<int> verts = shiftedFacet(qplc.holes[h][j]);
-      setTetgenFacet(in.facetlist[f], verts);
+      //setTetgenFacet(in.facetlist[f], verts);
       in.facetmarkerlist[f] = 100 + static_cast<int>(h);
       ++f;
     }

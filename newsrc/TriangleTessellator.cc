@@ -18,6 +18,9 @@
 #define ANSI_DECLARATORS
 #define CDT_ONLY
 
+#define REAL double
+#define VOID void
+
 extern "C" {
 #include "triangle.h"
 }
@@ -62,9 +65,7 @@ void initTriangleData(triangulateio& in) {
 //------------------------------------------------------------------------------
 void
 TriangleTessellator::
-tessellateQuantized(const QuantPLC<2>& qplc,
-                    QuantizedTessellation& result) const {
-  POLY_CONTRACT_VAR(qplc);
+tessellateQuantized(QuantizedTessellation& result) const {
   // Type aliases
   using IntType = typename QuantTessellation<2>::IntType;
   using RealPoint = Point2<double>;

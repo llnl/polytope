@@ -1,5 +1,11 @@
-#include "SiloWriter.hh"
 #include "polytope.hh"
+#include "SiloWriter.hh"
+#include "SiloUtils.hh"
+#include "Tessellation.hh"
+
+#ifdef POLYTOPE_ENABLE_MPI
+#include "Communicator.hh"
+#endif
 
 #include <fstream>
 #include <set>
@@ -12,9 +18,6 @@
 #include "pmpio.h"
 #endif
 
-#include "SiloUtils.hh"
-#include "Tessellation.hh"
-
 namespace polytope {
 
 using namespace std;
@@ -22,23 +25,23 @@ using namespace std;
 namespace {
 
 //-------------------------------------------------------------------
-// Traverse the nodes of cell i within the given tessellation in 
+// Traverse the nodes of cell i within the given tessellation in
 // order, writing their indices to nodes.  We rely here on two
 // assumptions:
 // 1.  cellFaces are given such that the faces are in counter-clockwise
-//     order around the cell. 
-// 2.  if cellFaces[j] > 0, the nodes of the face cellFaces[j] are 
+//     order around the cell.
+// 2.  if cellFaces[j] > 0, the nodes of the face cellFaces[j] are
 //     given in counter-clockwise orientation for cell i,
-//     otherwise the nodes of ~cellFaces[j] (the 1s complement) 
+//     otherwise the nodes of ~cellFaces[j] (the 1s complement)
 //     are in *clockwise* order and need to be reversed.
 //-------------------------------------------------------------------
 template <typename RealType>
-void 
+void
 traverseNodes(const Tessellation<2, RealType>& mesh,
               int i,
               vector<int>& nodes) {
   const vector<int>& cellFaces = mesh.cells[i];
-  for (size_t j = 0; j != cellFaces.size(); ++j) 
+  for (size_t j = 0; j != cellFaces.size(); ++j)
   {
     int k = cellFaces[j];
     nodes.push_back(k >= 0 ? mesh.faces[ k][0] :
@@ -46,14 +49,13 @@ traverseNodes(const Tessellation<2, RealType>& mesh,
   }
   nodes.push_back(nodes.front());
 
-  //#ifndef NDEBUG
+#ifdef POLYTOPE_ENABLE_DEBUG
   // Make sure we don't have any garbage in our list of nodes.
-  for (size_t n = 0; n < nodes.size(); ++n)
-  {
+  for (size_t n = 0; n < nodes.size(); ++n) {
     POLY_ASSERT(nodes[n] >= 0);
     POLY_ASSERT(nodes[n] < mesh.nodes.size()/2);
   }
-  //#endif
+#endif
 }
 //-------------------------------------------------------------------
 
@@ -67,30 +69,39 @@ PMPIO_createFile(const char* filename,
                  void* userData) {
   int driver = DB_HDF5;
   DBfile* file = DBCreate(filename, 0, DB_LOCAL, 0, driver);
-  DBMkDir(file, dirname);
-  DBSetDir(file, dirname);
+  if (dirname != nullptr && strlen(dirname) > 0 && strcmp(dirname, "/") != 0) {
+    DBMkDir(file, dirname);
+    DBSetDir(file, dirname);
+  } else {
+    DBSetDir(file, "/");
+  }
   return (void*)file;
 }
 //-------------------------------------------------------------------
 
 //-------------------------------------------------------------------
-void* 
-PMPIO_openFile(const char* filename, 
+void*
+PMPIO_openFile(const char* filename,
                const char* dirname,
-               PMPIO_iomode_t iomode, 
+               PMPIO_iomode_t iomode,
                void* userData) {
   int driver = DB_HDF5;
   DBfile* file;
-  if (iomode == PMPIO_WRITE)
-  { 
+  if (iomode == PMPIO_WRITE) {
     file = DBCreate(filename, 0, DB_LOCAL, 0, driver);
-    DBMkDir(file, dirname);
-    DBSetDir(file, dirname);
-  }
-  else
-  {
+    if (dirname != nullptr && strlen(dirname) > 0 && strcmp(dirname, "/") != 0) {
+      DBMkDir(file, dirname);
+      DBSetDir(file, dirname);
+    } else {
+      DBSetDir(file, "/");
+    }
+  } else {
     file = DBOpen(filename, driver, DB_READ);
-    DBSetDir(file, dirname);
+    if (dirname != nullptr && strlen(dirname) > 0) {
+      DBSetDir(file, dirname);
+    } else {
+      DBSetDir(file, "/");
+    }
   }
   return (void*)file;
 }
@@ -99,8 +110,7 @@ PMPIO_openFile(const char* filename,
 //-------------------------------------------------------------------
 void
 PMPIO_closeFile(void* file,
-                void* userData)
-{
+                void* userData) {
   DBClose((DBfile*)file);
 }
 //-------------------------------------------------------------------
@@ -110,8 +120,8 @@ PMPIO_closeFile(void* file,
 
 //-------------------------------------------------------------------
 template <typename RealType>
-void 
-SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh, 
+void
+SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
                                const map<string, RealType*>& nodeFields,
                                const map<string, vector<int>*>& nodeTags,
                                const map<string, RealType*>& edgeFields,
@@ -124,7 +134,6 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
                                const string& directory,
                                int cycle,
                                RealType time,
-                               MMPI_Comm comm,
                                int numFiles,
                                int mpiTag) {
   // Strip .silo off of the prefix if it's there.
@@ -135,36 +144,32 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
 
   // Open a file in Silo/HDF5 format for writing.
 #ifdef POLYTOPE_ENABLE_MPI
-  int nproc = 1, rank = 0;
-  MMPI_Comm_size(comm, &nproc);
-  MMPI_Comm_rank(comm, &rank);
+  int nproc = Communicator::getNProcs();
+  int rank = Communicator::getRank();
+  auto& comm = Communicator::communicator();
   if (numFiles == -1) numFiles = nproc;
   POLY_ASSERT(numFiles <= nproc);
 
-  // We put the entire data set into a directory named after the 
-  // prefix, and every process gets its own subdirectory therein.
-
-  // Create the master directory if we need to.
   string masterDirName = directory;
   if (masterDirName.empty()) {
     masterDirName = filePrefix + "-" + std::to_string(nproc);
   }
   if (rank == 0) {
-    DIR* masterDir = opendir(directory.c_str());
+    DIR* masterDir = opendir(masterDirName.c_str());
     if (masterDir == 0) {
       mkdir(masterDirName.c_str(), S_IRWXU | S_IRWXG);
     } else {
       closedir(masterDir);
     }
   }
-  MPI_Barrier(comm);
+  Communicator::Barrier();
 
   // Initialize poor man's I/O and figure out group ranks.
-  PMPIO_baton_t* baton = PMPIO_Init(numFiles, PMPIO_WRITE, comm, mpiTag, 
-      &PMPIO_createFile, 
-      &PMPIO_openFile, 
-      &PMPIO_closeFile,
-      0);
+  PMPIO_baton_t* baton = PMPIO_Init(numFiles, PMPIO_WRITE, comm, mpiTag,
+                                    &PMPIO_createFile,
+                                    &PMPIO_openFile,
+                                    &PMPIO_closeFile,
+                                    0);
   int groupRank = PMPIO_GroupRank(baton, rank);
   int rankInGroup = PMPIO_RankInGroup(baton, rank);
 
@@ -178,11 +183,9 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
       closedir(groupDir);
     }
   }
-  MPI_Barrier(comm);
+  Communicator::Barrier();
 
-  // Determine a file name.
   std::string filename;
-  // Determine the file name.
   if (cycle >= 0) {
     filename = groupdirname + "/" + prefix + "-" + std::to_string(cycle) + ".silo";
   } else {
@@ -234,8 +237,7 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
   // Build the list of nodes describing the boundary faces.
   int numBoundaryFaces = mesh.boundaryFaces.size();
   vector<int> boundaryNodes(2*numBoundaryFaces);
-  for (int i = 0; i < numBoundaryFaces; ++i)
-  {
+  for (int i = 0; i < numBoundaryFaces; ++i) {
     boundaryNodes[2*i] = mesh.faces[mesh.boundaryFaces[i]][0];
     boundaryNodes[2*i+1] = mesh.faces[mesh.boundaryFaces[i]][1];
   }
@@ -254,8 +256,7 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
     shapetype(numCells, DB_ZONETYPE_POLYGON),
     shapecount(numCells, 1),
     nodeList;
-  for (int i = 0; i < numCells; ++i)
-  {
+  for (int i = 0; i < numCells; ++i) {
     // Gather the nodes from this cell in traversal order.
     vector<int> cellNodes;
     traverseNodes(mesh, i, cellNodes);
@@ -301,7 +302,7 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
   elemlengths[2] = conn.size() - 2*mesh.faces.size();
   elemnames[1] = strDup("cellfaces");
   elemlengths[1] = conn.size() - elemlengths[2] - elemlengths[0];
-  DBPutCompoundarray(file, "conn", elemnames, elemlengths, 3, 
+  DBPutCompoundarray(file, "conn", elemnames, elemlengths, 3,
       (void*)&conn[0], conn.size(), DB_INT, 0);
   free(elemnames[0]);
   free(elemnames[1]);
@@ -321,7 +322,7 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
   elemlengths[1] = mesh.convexHull.facets.size();
   elemnames[2] = strDup("facetnodes");
   elemlengths[2] = hull.size() - elemlengths[0] - elemlengths[1];
-  DBPutCompoundarray(file, "convexhull", elemnames, elemlengths, 3, 
+  DBPutCompoundarray(file, "convexhull", elemnames, elemlengths, 3,
       (void*)&hull[0], hull.size(), DB_INT, 0);
   free(elemnames[0]);
   free(elemnames[1]);
@@ -417,16 +418,13 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
     buildMeshNames(pointMeshNames, "POINTS", "points", numChunks);
 
     // Build variable name arrays
-    vector<vector<char*> > nodeVarNames(nodeFields.size());
     vector<vector<char*> > cellVarNames(edgeFields.size() +
                                         faceFields.size() +
                                         cellFields.size());
     vector<int> varTypes(numChunks, DB_UCDVAR);
 
-    for (int i = 0; i < numChunks; ++i)
-    {
+    for (int i = 0; i < numChunks; ++i) {
       int cellFieldIndex = 0;
-      appendFieldNamesWithSubdir<RealType>(nodeFields, cellFieldIndex, i, "CELLS", cellVarNames);
       appendFieldNamesWithSubdir<RealType>(edgeFields, cellFieldIndex, i, "CELLS", cellVarNames);
       appendFieldNamesWithSubdir<RealType>(faceFields, cellFieldIndex, i, "CELLS", cellVarNames);
       appendFieldNamesWithSubdir<RealType>(cellFields, cellFieldIndex, i, "CELLS", cellVarNames);
@@ -449,8 +447,6 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
 
     // Write multivars
     int cellFieldIndex = 0;
-    putMultivarInFile<RealType>(nodeFields, cellFieldIndex, cellVarNames, varTypes,
-                                file, numChunks, optlist);
     putMultivarInFile<RealType>(edgeFields, cellFieldIndex, cellVarNames, varTypes,
                                 file, numChunks, optlist);
     putMultivarInFile<RealType>(faceFields, cellFieldIndex, cellVarNames, varTypes,
@@ -464,15 +460,11 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
       free(cellMeshNames[i]);
       free(pointMeshNames[i]);
     }
-    for (size_t f = 0; f < nodeVarNames.size(); ++f)
-      for (int i = 0; i < numChunks; ++i)
-        free(nodeVarNames[f][i]);
     for (size_t f = 0; f < cellVarNames.size(); ++f)
       for (int i = 0; i < numChunks; ++i)
         free(cellVarNames[f][i]);
   }
 
-  // Write the file.
   PMPIO_HandOffBaton(baton, (void*)file);
   PMPIO_Finish(baton);
 
@@ -498,8 +490,7 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
     buildMasterMeshNames(pointMeshNames, "POINTS", "points", numFiles, numChunks, cycle, prefix);
 
     // Build variable name arrays
-    vector<vector<char*> > cellVarNames(nodeFields.size() +
-                                        edgeFields.size() +
+    vector<vector<char*> > cellVarNames(edgeFields.size() +
                                         faceFields.size() +
                                         cellFields.size());
     vector<int> varTypes(numFiles*numChunks, DB_UCDVAR);
@@ -507,8 +498,6 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
     for (int i = 0; i < numFiles; ++i) {
       for (int c = 0; c < numChunks; ++c) {
         int cellFieldIndex = 0;
-        appendFieldNamesWithSubdir<RealType>(nodeFields, cellFieldIndex, i, c, cycle, prefix,
-                                             "CELLS", cellVarNames);
         appendFieldNamesWithSubdir<RealType>(edgeFields, cellFieldIndex, i, c, cycle, prefix,
                                              "CELLS", cellVarNames);
         appendFieldNamesWithSubdir<RealType>(faceFields, cellFieldIndex, i, c, cycle, prefix,
@@ -532,8 +521,6 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
                    &pointMeshTypes[0], optlist);
 
     int cellFieldIndex = 0;
-    putMultivarInFile<RealType>(nodeFields, cellFieldIndex, cellVarNames, varTypes,
-                                file, numFiles*numChunks, optlist);
     putMultivarInFile<RealType>(edgeFields, cellFieldIndex, cellVarNames, varTypes,
                                 file, numFiles*numChunks, optlist);
     putMultivarInFile<RealType>(faceFields, cellFieldIndex, cellVarNames, varTypes,
@@ -549,9 +536,6 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
       free(cellMeshNames[i]);
       free(pointMeshNames[i]);
     }
-    for (size_t f = 0; f < nodeVarNames.size(); ++f)
-      for (int i = 0; i < numFiles*numChunks; ++i)
-        free(nodeVarNames[f][i]);
     for (size_t f = 0; f < cellVarNames.size(); ++f)
       for (int i = 0; i < numFiles*numChunks; ++i)
         free(cellVarNames[f][i]);

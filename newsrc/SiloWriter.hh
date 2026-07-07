@@ -1,22 +1,14 @@
 #ifndef POLYTOPE_SILO_WRITER_HH
 #define POLYTOPE_SILO_WRITER_HH
 
-#ifdef POLYTOPE_ENABLE_MPI
-#include <mpi.h>
-#define MMPI_Comm MPI_Comm
-#define MMPI_COMM_WORLD MPI_COMM_WORLD
-#else
-#define MMPI_Comm int
-#define MMPI_COMM_WORLD 0
-#endif 
-
-#include "Tessellation.hh"
 #include <string>
 #include <float.h>
 #include <map>
+#include <vector>
 
-namespace polytope
-{
+namespace polytope {
+
+template<int Dimension, typename RealType> class Tessellation;
 
 //! \class SiloWriter
 //! This class provides a static interface for writing Silo files 
@@ -51,7 +43,6 @@ class SiloWriter<2, RealType>
                     const std::string& directory,
                     int cycle,
                     RealType time,
-                    MMPI_Comm comm = MMPI_COMM_WORLD,
                     int numFiles = -1,
                     int mpiTag = 0);
 
@@ -68,14 +59,13 @@ class SiloWriter<2, RealType>
                     const std::string& directory,
                     int cycle,
                     RealType time,
-                    MMPI_Comm comm = MMPI_COMM_WORLD,
                     int numFiles = -1,
                     int mpiTag = 0)
   {
     // Just call the general function with no tags.
     std::map<std::string, std::vector<int>*> nodeTags, edgeTags, faceTags, cellTags;
     write(mesh, nodeFields, nodeTags, edgeFields, edgeTags, faceFields, faceTags, 
-          cellFields, cellTags, filePrefix, directory, cycle, time, comm, numFiles, mpiTag);
+          cellFields, cellTags, filePrefix, directory, cycle, time, numFiles, mpiTag);
   }
 
   //! Write an arbitrary polygonal mesh and an associated set of 
@@ -93,11 +83,10 @@ class SiloWriter<2, RealType>
                     const std::string& filePrefix,
                     int cycle,
                     RealType time,
-                    MMPI_Comm comm = MMPI_COMM_WORLD,
                     int numFiles = -1,
                     int mpiTag = 0)
   {
-    write(mesh, nodeFields, edgeFields, faceFields, cellFields, filePrefix, "", cycle, time, comm, numFiles, mpiTag);
+    write(mesh, nodeFields, edgeFields, faceFields, cellFields, filePrefix, "", cycle, time, numFiles, mpiTag);
   }
 
   //! This version of write omits the cycle and time arguments.
@@ -108,12 +97,11 @@ class SiloWriter<2, RealType>
                     const std::map<std::string, RealType*>& cellFields,
                     const std::string& filePrefix,
                     const std::string& directory,
-                    MMPI_Comm comm = MMPI_COMM_WORLD,
                     int numFiles = -1,
                     int mpiTag = 0)
   {
     write(mesh, nodeFields, edgeFields, faceFields, cellFields, filePrefix, directory, -1, -FLT_MAX,
-          comm, numFiles, mpiTag);
+          numFiles, mpiTag);
   }
 
   //! This version of write omits the cycle and time arguments and 
@@ -124,12 +112,11 @@ class SiloWriter<2, RealType>
                     const std::map<std::string, RealType*>& faceFields,
                     const std::map<std::string, RealType*>& cellFields,
                     const std::string& filePrefix,
-                    MMPI_Comm comm = MMPI_COMM_WORLD,
                     int numFiles = -1,
                     int mpiTag = 0)
   {
     write(mesh, nodeFields, edgeFields, faceFields, cellFields, filePrefix, "", -1, -FLT_MAX,
-          comm, numFiles, mpiTag);
+          numFiles, mpiTag);
   }
 
   static void writePoint(const std::vector<RealType>& pointCoords,
@@ -165,7 +152,6 @@ class SiloWriter<3, RealType>
                     const std::string& directory,
                     int cycle,
                     RealType time,
-                    MMPI_Comm comm = MMPI_COMM_WORLD,
                     int numFiles = -1,
                     int mpiTag = 0);
 
@@ -182,14 +168,13 @@ class SiloWriter<3, RealType>
                     const std::string& directory,
                     int cycle,
                     RealType time,
-                    MMPI_Comm comm = MMPI_COMM_WORLD,
                     int numFiles = -1,
                     int mpiTag = 0)
   {
     // Just call the general function with no tags.
     std::map<std::string, std::vector<int>*> nodeTags, edgeTags, faceTags, cellTags;
     write(mesh, nodeFields, nodeTags, edgeFields, edgeTags, faceFields, faceTags, 
-          cellFields, cellTags, filePrefix, directory, cycle, time, comm, numFiles, mpiTag);
+          cellFields, cellTags, filePrefix, directory, cycle, time, numFiles, mpiTag);
   }
 
   //! Write an arbitrary polyhedral mesh and an associated set of 
@@ -207,11 +192,10 @@ class SiloWriter<3, RealType>
                     const std::string& filePrefix,
                     int cycle,
                     RealType time,
-                    MMPI_Comm comm = MMPI_COMM_WORLD,
                     int numFiles = -1,
                     int mpiTag = 0)
   {
-    write(mesh, nodeFields, edgeFields, faceFields, cellFields, filePrefix, "", cycle, time, comm, numFiles, mpiTag);
+    write(mesh, nodeFields, edgeFields, faceFields, cellFields, filePrefix, "", cycle, time, numFiles, mpiTag);
   }
 
   //! This version of write omits the cycle and time arguments.
@@ -222,12 +206,11 @@ class SiloWriter<3, RealType>
                     const std::map<std::string, RealType*>& cellFields,
                     const std::string& filePrefix,
                     const std::string& directory,
-                    MMPI_Comm comm = MMPI_COMM_WORLD,
                     int numFiles = -1,
                     int mpiTag = 0)
   {
     write(mesh, nodeFields, edgeFields, faceFields, cellFields, filePrefix, directory, -1, -FLT_MAX,
-          comm, numFiles, mpiTag);
+          numFiles, mpiTag);
   }
 
   //! This version of write omits the cycle and time arguments and 
@@ -238,12 +221,11 @@ class SiloWriter<3, RealType>
                     const std::map<std::string, RealType*>& faceFields,
                     const std::map<std::string, RealType*>& cellFields,
                     const std::string& filePrefix,
-                    MMPI_Comm comm = MMPI_COMM_WORLD,
                     int numFiles = -1,
                     int mpiTag = 0)
   {
     write(mesh, nodeFields, edgeFields, faceFields, cellFields, filePrefix, "", -1, -FLT_MAX,
-          comm, numFiles, mpiTag);
+          numFiles, mpiTag);
   }
 
 };

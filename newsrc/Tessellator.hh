@@ -70,8 +70,7 @@ public:
   //! Tessellator implementations must provide, on which the other tessellation methods
   //! in polytope build.
   virtual void
-  tessellateQuantized(const QuantPLC<Dimension>& qplc,
-                      QuantTessellation<Dimension>& qmesh) const = 0;
+  tessellateQuantized(QuantTessellation<Dimension>& qmesh) const = 0;
 
   //! Required for all tessellators:
   //! A unique name string per tessellation instance.

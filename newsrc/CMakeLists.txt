@@ -10,8 +10,8 @@ configure_file(
 set(polytope_headers
   Cell.hh
   Clipping2D.hh
+  Communicator.hh
   EdgeUtils.hh
-  ErrorHandler.hh
   GeomUtils.hh
   HashKey.hh
   Intersections.hh
@@ -33,11 +33,11 @@ set(polytope_headers
 )
 
 set(polytope_sources
+  Communicator.cc
   QuantTessellation2D.cc
   QuantTessellation3D.cc
   Tessellation.cc
   QuantPLC.cc
-  ErrorHandler.cc
   polytope_internal_abort.cc
 )
 
@@ -88,11 +88,10 @@ endif()
 
 # Check if we can incude the distributed tessellators:
 if (POLYTOPE_ENABLE_MPI)
-  list(APPEND polytope_headers
-    polytope_parallel_utilities.hh)
-  list(APPEND polytope_sources
-    DistributedTessellator.cc
-    SerialDistributedTessellator.cc)
+  #list(APPEND polytope_headers
+    #DistributedTessellator.hh)
+  #list(APPEND polytope_sources
+    #DistributedTessellator.cc)
 endif()
 
 get_property(POLYTOPE_TPL_DEPENDS GLOBAL PROPERTY POLYTOPE_TPL_DEPENDS)
