@@ -2,6 +2,7 @@
 #include "SiloReader.hh"
 #include "polytope.hh"
 #include "Communicator.hh"
+#include "SiloUtils.hh"
 
 #include <fstream>
 #include <set>
@@ -25,7 +26,7 @@ namespace {
 void*
 PMPIO_createFile(const char* filename,
                  const char* dirname,
-                 void* userData) {
+                 void* /*userData*/) {
   int driver = DB_HDF5;
   DBfile* file = DBCreate(filename, 0, DB_LOCAL, 0, driver);
   DBMkDir(file, dirname);
@@ -35,21 +36,18 @@ PMPIO_createFile(const char* filename,
 //-------------------------------------------------------------------
 
 //-------------------------------------------------------------------
-void* 
-PMPIO_openFile(const char* filename, 
+void*
+PMPIO_openFile(const char* filename,
                const char* dirname,
-               PMPIO_iomode_t iomode, 
-               void* userData) {
+               PMPIO_iomode_t iomode,
+               void* /*userData*/) {
   int driver = DB_HDF5;
   DBfile* file;
-  if (iomode == PMPIO_WRITE)
-  { 
+  if (iomode == PMPIO_WRITE) {
     file = DBCreate(filename, 0, DB_LOCAL, 0, driver);
     DBMkDir(file, dirname);
     DBSetDir(file, dirname);
-  }
-  else
-  {
+  } else {
     file = DBOpen(filename, driver, DB_READ);
     DBSetDir(file, dirname);
   }
@@ -60,7 +58,7 @@ PMPIO_openFile(const char* filename,
 //-------------------------------------------------------------------
 void
 PMPIO_closeFile(void* file,
-                void* userData) {
+                void* /*userData*/) {
   DBClose((DBfile*)file);
 }
 //-------------------------------------------------------------------
@@ -70,7 +68,7 @@ PMPIO_closeFile(void* file,
 
 //-------------------------------------------------------------------
 template <typename RealType>
-void 
+void
 SiloReader<2, RealType>::read(Tessellation<2, RealType>& mesh,
                               std::map<string, vector<RealType> >& fields,
                               std::map<string, vector<int> >& nodeTags,
@@ -98,41 +96,23 @@ SiloReader<2, RealType>::read(Tessellation<2, RealType>& mesh,
   if (numFiles == -1) numFiles = nproc;
   POLY_ASSERT(numFiles <= nproc);
 
-  // We put the entire data set into a directory named after the 
-  // prefix, and every process gets its own subdirectory therein.
-
-  // Check for the existence of the master directory.
-  string masterDirName = directory;
-  if (masterDirName.empty()) {
-    masterDirName = filePrefix + "-" + std::to_string(nproc);
-  }
+  string masterDirName = getMasterDirName(directory, prefix, cycle);
   DIR* masterDir = opendir(masterDirName.c_str());
   POLY_CHECK2(masterDir, "Could not find the directory " << masterDirName);
 
   // Initialize poor man's I/O and figure out group ranks.
-  PMPIO_baton_t* baton = PMPIO_Init(numFiles, PMPIO_READ, comm, mpiTag, 
-                                    &PMPIO_createFile, 
-                                    &PMPIO_openFile, 
+  PMPIO_baton_t* baton = PMPIO_Init(numFiles, PMPIO_READ, comm, mpiTag,
+                                    &PMPIO_createFile,
+                                    &PMPIO_openFile,
                                     &PMPIO_closeFile,
                                     0);
   int groupRank = PMPIO_GroupRank(baton, rank);
   int rankInGroup = PMPIO_RankInGroup(baton, rank);
 
-  // Figure out the subdirectory for this group.
-  std::string groupdirname = masterDirName + "/" + std::to_string(groupRank);
-  DIR* groupDir = opendir(groupdirname.c_str());
-  POLY_CHECK2(groupDir, "Could not find the directory " << groupdirname);
-  std::string filename;
-  // Determine the file name.
-  if (cycle >= 0) {
-    filename = groupdirname + "/" + prefix + "-" + std::to_string(cycle) + ".silo";
-  } else {
-    filename = groupdirname + "/" + prefix + ".silo";
-  }
+  std::string filename = getFileName(masterDirName, prefix, groupRank);
 
-  std::string dirname = "domain_" + std::to_string(rankInGroup);
+  std::string dirname = getRankDir(rankInGroup);
   DBfile* file = (DBfile*)PMPIO_WaitForBaton(baton, filename.c_str(), dirname.c_str());
-  DBSetDir(file, dirname.c_str());
 #else
   string dirname = directory;
   if (dirname.empty()) dirname = ".";
@@ -149,7 +129,7 @@ SiloReader<2, RealType>::read(Tessellation<2, RealType>& mesh,
   DBSetDir(file, "/");
 #endif
 
-  // Retrieve the mesh. Note that we must deallocate the storage 
+  // Retrieve the mesh. Note that we must deallocate the storage
   // for this object after we're through!
   DBucdmesh* dbmesh = DBGetUcdmesh(file, "mesh");
 
@@ -178,23 +158,12 @@ SiloReader<2, RealType>::read(Tessellation<2, RealType>& mesh,
   mesh.cells.resize(dbmesh->zones->nzones);
   DBcompoundarray* conn = DBGetCompoundarray(file, "connectivity");
   POLY_ASSERT2(conn, "Could not find cell-face connectivity in file " << filename);
-  // if (conn == 0) {
-  //   DBClose(file);
-  //   error("Could not find cell-face connectivity in file " + filename);
-  // }
   // First element is the number of faces in each zone.
   // Second element is the list of face indices in each zone.
   // Third element is a pair of cells for each face.
   POLY_ASSERT2((conn->nelems == 3 && conn->elemlengths[0] == dbmesh->zones->nzones &&
                 conn->elemlengths[2] == 2*dbmesh->faces->nfaces),
                "Found invalid cell-face connectivity in file " << filename);
-  // if ((conn->nelems != 3) or 
-  //     (conn->elemlengths[0] != dbmesh->zones->nzones) or 
-  //     (conn->elemlengths[2] != 2*dbmesh->faces->nfaces))
-  // {
-  //   DBClose(file);
-  //   error("Found invalid cell-face connectivity in file " + filename);
-  // }
   int* connData = (int*)conn->values;
   int foffset = dbmesh->zones->nzones;
   for (int c = 0; c < dbmesh->zones->nzones; ++c) {
@@ -212,7 +181,7 @@ SiloReader<2, RealType>::read(Tessellation<2, RealType>& mesh,
   }
   DBFreeUcdmesh(dbmesh);
   DBFreeCompoundarray(conn);
-  
+
   // Check for convex hull data.
   // First element is the number of facets.
   // Second element is the array of numbers of nodes per facet.
@@ -240,7 +209,7 @@ SiloReader<2, RealType>::read(Tessellation<2, RealType>& mesh,
     DBFreeCompoundarray(hull);
   }
 
-  // FIXME: Check for hole data?
+  DBSetDir(file, "CELLS");
 
   // Read any tag data.
   DBcompoundarray* tags = DBGetCompoundarray(file, "node_tags");
@@ -296,10 +265,6 @@ SiloReader<2, RealType>::read(Tessellation<2, RealType>& mesh,
   for (size_t f = 0; f < fieldNames.size(); ++f) {
     DBucdvar* dbvar = DBGetUcdvar(file, fieldNames[f].c_str());
     POLY_ASSERT2(dbvar, "Could not find field " << fieldNames[f] << " in file " << filename);
-    // if (dbvar == 0) {
-    //   DBClose(file);
-    //   error("Could not find field " + fieldNames[f] + " in file " + filename);
-    // }
     fields[fieldNames[f]].resize(dbvar->nels);
     copy((RealType*)(dbvar->vals[0]), (RealType*)(dbvar->vals[0]) + dbvar->nels,
          &(fields[fieldNames[f]][0]));

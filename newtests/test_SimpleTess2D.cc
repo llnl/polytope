@@ -157,7 +157,7 @@ void tests(const int tnum, bool boostTess) {
   Tessellation<2, double> mesh;
   quantMesh.fillTessellation(mesh);
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
-  outputMesh(mesh, outname, tnum, 0.0);
+  outputMesh(mesh, outname, tnum, double(tnum));
   testWatertight(mesh, boundary.mPLC.holes.size());
   if (numNodes > 0) {
     // Ideally we would match nodes exactly but determine collinearity exactly is not really
@@ -178,12 +178,10 @@ int main(int argc, char** argv) {
 #endif
   const int numtest = 13;
   try {
-    bool boost = true;
-    for (int i = 0; i < 2; ++i) {
+    for (bool boost : {true, false}) {
       for (int test = 1; test <= numtest; ++test) {
         tests(test, boost);
       }
-      boost = !boost;
     }
 
     cout << "\n=== ALL TESTS PASSED ===" << endl;

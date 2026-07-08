@@ -66,7 +66,7 @@ traverseNodes(const Tessellation<2, RealType>& mesh,
 void*
 PMPIO_createFile(const char* filename,
                  const char* dirname,
-                 void* userData) {
+                 void* /*userData*/) {
   int driver = DB_HDF5;
   DBfile* file = DBCreate(filename, 0, DB_LOCAL, 0, driver);
   if (dirname != nullptr && strlen(dirname) > 0 && strcmp(dirname, "/") != 0) {
@@ -84,7 +84,7 @@ void*
 PMPIO_openFile(const char* filename,
                const char* dirname,
                PMPIO_iomode_t iomode,
-               void* userData) {
+               void* /*userData*/) {
   int driver = DB_HDF5;
   DBfile* file;
   if (iomode == PMPIO_WRITE) {
@@ -110,7 +110,7 @@ PMPIO_openFile(const char* filename,
 //-------------------------------------------------------------------
 void
 PMPIO_closeFile(void* file,
-                void* userData) {
+                void* /*userData*/) {
   DBClose((DBfile*)file);
 }
 //-------------------------------------------------------------------
@@ -141,7 +141,7 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
   int index = prefix.find(".silo");
   if (index >= 0)
     prefix.erase(index);
-
+  int coord_sys = DB_CARTESIAN;
   // Open a file in Silo/HDF5 format for writing.
 #ifdef POLYTOPE_ENABLE_MPI
   int nproc = Communicator::getNProcs();
@@ -150,10 +150,7 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
   if (numFiles == -1) numFiles = nproc;
   POLY_ASSERT(numFiles <= nproc);
 
-  string masterDirName = directory;
-  if (masterDirName.empty()) {
-    masterDirName = filePrefix + "-" + std::to_string(nproc);
-  }
+  std::string masterDirName = getMasterDirName(directory, prefix, cycle);
   if (rank == 0) {
     DIR* masterDir = opendir(masterDirName.c_str());
     if (masterDir == 0) {
@@ -170,46 +167,35 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
                                     &PMPIO_openFile,
                                     &PMPIO_closeFile,
                                     0);
-  int groupRank = PMPIO_GroupRank(baton, rank);
-  int rankInGroup = PMPIO_RankInGroup(baton, rank);
-
-  // Create a subdirectory for each group.
-  std::string groupdirname = masterDirName + "/" + std::to_string(groupRank);
-  if (rankInGroup == 0) {
-    DIR* groupDir = opendir(groupdirname.c_str());
-    if (groupDir == 0) {
-      mkdir(groupdirname.c_str(), S_IRWXU | S_IRWXG);
-    } else {
-      closedir(groupDir);
-    }
+  std::vector<std::pair<int, int>> procGroupRank;
+  for (int p = 0; p < nproc; ++p) {
+    int gr = PMPIO_GroupRank(baton, p);
+    int rg = PMPIO_RankInGroup(baton, p);
+    procGroupRank.push_back(std::make_pair(gr, rg));
   }
+  int groupRank = procGroupRank[rank].first;
+  int rankInGroup = procGroupRank[rank].second;
   Communicator::Barrier();
 
-  std::string filename;
-  if (cycle >= 0) {
-    filename = groupdirname + "/" + prefix + "-" + std::to_string(cycle) + ".silo";
-  } else {
-    filename = groupdirname + "/" + prefix + ".silo";
-  }
-
-  std::string dirname = "domain_" + std::to_string(rankInGroup);
-  DBfile* file = (DBfile*)PMPIO_WaitForBaton(baton, filename.c_str(), dirname.c_str());
+  std::string filename = getFileName(masterDirName, prefix, groupRank);
+  std::string rankdir = getRankDir(rankInGroup);
+  DBfile* file = (DBfile*)PMPIO_WaitForBaton(baton, filename.c_str(), rankdir.c_str());
+  std::string meshname = "MESH";
 #else
   string dirname = directory;
   if (dirname.empty()) dirname = ".";
   std::string filename;
   // Determine the file name.
   if (cycle >= 0) {
-    filename = dirname + "/" + prefix + "-" + std::to_string(cycle) + ".silo";
+    filename = dirname + "/" + prefix + "_" + std::to_string(cycle) + ".silo";
   } else {
     filename = dirname + "/" + prefix + ".silo";
   }
 
   int driver = DB_HDF5;
   DBfile* file = DBCreate(filename.c_str(), 0, DB_LOCAL, 0, driver);
-  DBSetDir(file, "/");
+  std::string meshname = "MMESH";
 #endif
-
   // Add cycle/time metadata if needed.
   DBoptlist* optlist = DBMakeOptlist(10);
   double dtime = static_cast<double>(time);
@@ -217,7 +203,8 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
     DBAddOption(optlist, DBOPT_CYCLE, &cycle);
   if (dtime != -FLT_MAX)
     DBAddOption(optlist, DBOPT_DTIME, &dtime);
-
+  
+  DBAddOption(optlist, DBOPT_COORDSYS, &coord_sys);
   // This is optional for now, but we'll give it anyway.
   char *coordnames[2];
   coordnames[0] = (char*)"xcoords";
@@ -265,17 +252,11 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
     nodeList.insert(nodeList.end(), cellNodes.begin(), cellNodes.end());
   }
 
-  // Create CELLS directory and write the cell mesh there
-  DBSetDir(file, "/");
-  DBMkDir(file, "CELLS");
-  DBSetDir(file, "CELLS");
-
   // Write out the 2D polygonal mesh.
-  DBPutUcdmesh(file, (char*)"mesh", 2, coordnames, coords,
+  DBPutUcdmesh(file, meshname.c_str(), 2, coordnames, coords,
                numNodes, numCells,
-               (char *)"mesh_zonelist", NULL, DB_DOUBLE, optlist);
-               // (char *)"mesh_zonelist", (char*)"boundary_faces", DB_DOUBLE, optlist);
-  DBPutZonelist2(file, (char*)"mesh_zonelist", numCells,
+               "mesh_zonelist", NULL, DB_DOUBLE, optlist);
+  DBPutZonelist2(file, "mesh_zonelist", numCells,
       2, &nodeList[0], nodeList.size(), 0, 0, 0,
       &shapetype[0], &shapesize[0], &shapecount[0],
       numCells, optlist);
@@ -327,26 +308,22 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
   free(elemnames[0]);
   free(elemnames[1]);
   free(elemnames[2]);
-
   // Write out tag information.
-  writeTagsToFile(nodeTags, file, DB_NODECENT);
+  //writeTagsToFile(nodeTags, file, DB_NODECENT);
   writeTagsToFile(edgeTags, file, DB_EDGECENT);
   writeTagsToFile(faceTags, file, DB_FACECENT);
   writeTagsToFile(cellTags, file, DB_ZONECENT);
 
   // FIXME: We really should try to use the number of edges for edge fields.
   const int numFaces = mesh.faces.size();
-  writeFieldsToFile<RealType>(nodeFields, file, numNodes, DB_NODECENT, optlist);
+  //writeFieldsToFile<RealType>(nodeFields, varmeshname, file, numNodes, DB_NODECENT, optlist);
 
   // Write cell-centered fields to CELLS directory
-  writeFieldsToFile<RealType>(edgeFields, file, numFaces, DB_EDGECENT, optlist);
-  writeFieldsToFile<RealType>(faceFields, file, numFaces, DB_FACECENT, optlist);
-  writeFieldsToFile<RealType>(cellFields, file, numCells, DB_ZONECENT, optlist);
+  writeFieldsToFile<RealType>(edgeFields, meshname, file, numFaces, DB_EDGECENT, optlist);
+  writeFieldsToFile<RealType>(faceFields, meshname, file, numFaces, DB_FACECENT, optlist);
+  writeFieldsToFile<RealType>(cellFields, meshname, file, numCells, DB_ZONECENT, optlist);
 
   // Create POINTS directory and write point mesh and node fields there
-  DBSetDir(file, "/");
-  DBMkDir(file, "POINTS");
-  DBSetDir(file, "POINTS");
   // Generator coordinates
   int numPoints = mesh.points.size() / 2;
   vector<double> xp(numPoints), yp(numPoints);
@@ -358,187 +335,74 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
   pcoords[0] = &(xp[0]);
   pcoords[1] = &(yp[0]);
   // Write point mesh
-  DBPutPointmesh(file, (char*)"points", 2, pcoords,
-                 numPoints, DB_DOUBLE, optlist);
+  DBPutPointmesh(file, (char*)"points", 2, pcoords, numPoints, DB_DOUBLE, optlist);
 #ifdef POLYTOPE_ENABLE_DEBUG
   // Create NODES directory and write the nodes as points
-  DBSetDir(file, "/");
-  DBMkDir(file, "NODES");
-  DBSetDir(file, "NODES");
   // Node coordinates
   // Write point mesh of nodes
-  DBPutPointmesh(file, (char*)"nodes", 2, coords,
-                 numNodes, DB_DOUBLE, optlist);
-#endif
-#if 0
-  // Vector fields.
-  {
-    vector<RealType> xdata(mesh.numCells()), ydata(mesh.numCells());
-    char* compNames[2];
-    compNames[0] = new char[1024];
-    compNames[1] = new char[1024];
-    for (typename map<string, vector<2>*>::const_iterator iter = vectorFields.begin();
-        iter != vectorFields.end(); ++iter)
-    {
-      snprintf(compNames[0], 1024, "%s_x" , iter->first.c_str());
-      snprintf(compNames[1], 1024, "%s_y" , iter->first.c_str());
-      vector<2>* data = iter->second;
-      for (int i = 0; i < mesh.numCells(); ++i)
-      {
-        xdata[i] = data[i][0];
-        ydata[i] = data[i][1];
-      }
-      void* vardata[2];
-      vardata[0] = (void*)&xdata[0];
-      vardata[1] = (void*)&ydata[0];
-      DBPutUcdvar(file, (char*)iter->first.c_str(), (char*)"mesh",
-          2, compNames, vardata, mesh.numCells(), 0, 0,
-          DB_DOUBLE, DB_ZONECENT, optlist);
-    }
-    delete [] compNames[0];
-    delete [] compNames[1];
-  }
+  DBPutPointmesh(file, (char*)"nodes", 2, coords, numNodes, DB_DOUBLE, optlist);
 #endif
 
   // Clean up.
   DBFreeOptlist(optlist);
 
 #ifdef POLYTOPE_ENABLE_MPI
-  // Write the multi-block objects to the file if needed.
-  int numChunks = nproc / numFiles;
-  if (rankInGroup == 0)
-  {
-    // Build mesh names
-    vector<char*> cellMeshNames(numChunks);
-    vector<int> cellMeshTypes(numChunks, DB_UCDMESH);
-    vector<char*> pointMeshNames(numChunks);
-    vector<int> pointMeshTypes(numChunks, DB_POINTMESH);
-
-    buildMeshNames(cellMeshNames, "CELLS", "mesh", numChunks);
-    buildMeshNames(pointMeshNames, "POINTS", "points", numChunks);
-
-    // Build variable name arrays
-    vector<vector<char*> > cellVarNames(edgeFields.size() +
-                                        faceFields.size() +
-                                        cellFields.size());
-    vector<int> varTypes(numChunks, DB_UCDVAR);
-
-    for (int i = 0; i < numChunks; ++i) {
-      int cellFieldIndex = 0;
-      appendFieldNamesWithSubdir<RealType>(edgeFields, cellFieldIndex, i, "CELLS", cellVarNames);
-      appendFieldNamesWithSubdir<RealType>(faceFields, cellFieldIndex, i, "CELLS", cellVarNames);
-      appendFieldNamesWithSubdir<RealType>(cellFields, cellFieldIndex, i, "CELLS", cellVarNames);
-    }
-
-    // Stick cycle and time in there if needed.
-    DBoptlist* optlist = DBMakeOptlist(10);
-    double dtime = static_cast<double>(time);
-    if (cycle >= 0)
-      DBAddOption(optlist, DBOPT_CYCLE, &cycle);
-    if (dtime != -FLT_MAX)
-      DBAddOption(optlist, DBOPT_DTIME, &dtime);
-
-    // Write multimesh objects
-    DBSetDir(file, "/");
-    DBPutMultimesh(file, "cellmesh", numChunks, &cellMeshNames[0],
-                   &cellMeshTypes[0], optlist);
-    DBPutMultimesh(file, "pointmesh", numChunks, &pointMeshNames[0],
-                   &pointMeshTypes[0], optlist);
-
-    // Write multivars
-    int cellFieldIndex = 0;
-    putMultivarInFile<RealType>(edgeFields, cellFieldIndex, cellVarNames, varTypes,
-                                file, numChunks, optlist);
-    putMultivarInFile<RealType>(faceFields, cellFieldIndex, cellVarNames, varTypes,
-                                file, numChunks, optlist);
-    putMultivarInFile<RealType>(cellFields, cellFieldIndex, cellVarNames, varTypes,
-                                file, numChunks, optlist);
-
-    // Clean up
-    DBFreeOptlist(optlist);
-    for (int i = 0; i < numChunks; ++i) {
-      free(cellMeshNames[i]);
-      free(pointMeshNames[i]);
-    }
-    for (size_t f = 0; f < cellVarNames.size(); ++f)
-      for (int i = 0; i < numChunks; ++i)
-        free(cellVarNames[f][i]);
-  }
 
   PMPIO_HandOffBaton(baton, (void*)file);
   PMPIO_Finish(baton);
 
   // Finally, write the uber-master file.
   if (rank == 0) {
-    std::string masterFileName;
-    if (cycle >= 0) {
-      masterFileName = masterDirName + "/" + prefix + "-" + std::to_string(cycle) + ".silo";
-    } else {
-      masterFileName = masterDirName + "/" + prefix + ".silo";
-    }
-
+    std::string masterFileName = getMasterFileName(prefix, cycle);
     int driver = DB_HDF5;
     DBfile* file = DBCreate(masterFileName.c_str(), DB_CLOBBER, DB_LOCAL, "Master file", driver);
 
     // Build mesh names
-    vector<char*> cellMeshNames(numFiles*numChunks);
-    vector<int> cellMeshTypes(numFiles*numChunks, DB_UCDMESH);
-    vector<char*> pointMeshNames(numFiles*numChunks);
-    vector<int> pointMeshTypes(numFiles*numChunks, DB_POINTMESH);
-
-    buildMasterMeshNames(cellMeshNames, "CELLS", "mesh", numFiles, numChunks, cycle, prefix);
-    buildMasterMeshNames(pointMeshNames, "POINTS", "points", numFiles, numChunks, cycle, prefix);
-
-    // Build variable name arrays
-    vector<vector<char*> > cellVarNames(edgeFields.size() +
-                                        faceFields.size() +
-                                        cellFields.size());
-    vector<int> varTypes(numFiles*numChunks, DB_UCDVAR);
-
-    for (int i = 0; i < numFiles; ++i) {
-      for (int c = 0; c < numChunks; ++c) {
-        int cellFieldIndex = 0;
-        appendFieldNamesWithSubdir<RealType>(edgeFields, cellFieldIndex, i, c, cycle, prefix,
-                                             "CELLS", cellVarNames);
-        appendFieldNamesWithSubdir<RealType>(faceFields, cellFieldIndex, i, c, cycle, prefix,
-                                             "CELLS", cellVarNames);
-        appendFieldNamesWithSubdir<RealType>(cellFields, cellFieldIndex, i, c, cycle, prefix,
-                                             "CELLS", cellVarNames);
-      }
+    std::vector<std::string> procPaths = getProcPaths(masterDirName, prefix, nproc, procGroupRank);
+    std::vector<char*> cellMeshNames;
+    std::vector<char*> pointMeshNames;
+    std::vector<int> varTypes(nproc, DB_UCDVAR);
+    std::vector<int> cellMeshTypes(nproc, DB_UCDMESH);
+    std::vector<int> pointMeshTypes(nproc, DB_POINTMESH);
+    for (const auto& p : procPaths) {
+      cellMeshNames.push_back(strDup((p + meshname).c_str()));
+      pointMeshNames.push_back(strDup((p + "points").c_str()));
     }
-
-    DBoptlist* optlist = DBMakeOptlist(10);
+    DBoptlist* masteroptlist = DBMakeOptlist(10);
     double dtime = static_cast<double>(time);
     if (cycle >= 0)
-      DBAddOption(optlist, DBOPT_CYCLE, &cycle);
+      DBAddOption(masteroptlist, DBOPT_CYCLE, &cycle);
     if (dtime != -FLT_MAX)
-      DBAddOption(optlist, DBOPT_DTIME, &dtime);
+      DBAddOption(masteroptlist, DBOPT_DTIME, &dtime);
+    const char* global_mesh_name = "MMESH";
+    DBAddOption(masteroptlist, DBOPT_MMESH_NAME, (void*)global_mesh_name);
+    DBAddOption(masteroptlist, DBOPT_COORDSYS, &coord_sys);
 
-    // Write multimesh and multivar objects
-    DBPutMultimesh(file, "cellmesh", numFiles*numChunks, &cellMeshNames[0],
-                   &cellMeshTypes[0], optlist);
-    DBPutMultimesh(file, "pointmesh", numFiles*numChunks, &pointMeshNames[0],
-                   &pointMeshTypes[0], optlist);
+    DBPutMultimesh(file, global_mesh_name, nproc, cellMeshNames.data(), cellMeshTypes.data(), masteroptlist);
+    DBPutMultimesh(file, "PPOINTS", nproc, pointMeshNames.data(), pointMeshTypes.data(), masteroptlist);
 
-    int cellFieldIndex = 0;
-    putMultivarInFile<RealType>(edgeFields, cellFieldIndex, cellVarNames, varTypes,
-                                file, numFiles*numChunks, optlist);
-    putMultivarInFile<RealType>(faceFields, cellFieldIndex, cellVarNames, varTypes,
-                                file, numFiles*numChunks, optlist);
-    putMultivarInFile<RealType>(cellFields, cellFieldIndex, cellVarNames, varTypes,
-                                file, numFiles*numChunks, optlist);
+    putCellVars<RealType>(file, edgeFields, procPaths, nproc, varTypes, masteroptlist);
+    putCellVars<RealType>(file, faceFields, procPaths, nproc, varTypes, masteroptlist);
+    putCellVars<RealType>(file, cellFields, procPaths, nproc, varTypes, masteroptlist);
+#ifdef POLYTOPE_ENABLE_DEBUG
+    std::vector<char*> nodeMeshNames;
+    for (const auto& p : procPaths) {
+      nodeMeshNames.push_back(strDup((p + "nodes").c_str()));
+    }
+    DBPutMultimesh(file, "NNODES", nproc, nodeMeshNames.data(), pointMeshTypes.data(), masteroptlist);
+    for (auto f = 0; f < nodeMeshNames.size(); ++f) {
+      free(nodeMeshNames[f]);
+    }
+#endif
 
     DBClose(file);
 
     // Clean up
-    DBFreeOptlist(optlist);
-    for (int i = 0; i < numFiles*numChunks; ++i) {
+    DBFreeOptlist(masteroptlist);
+    for (int i = 0; i < nproc; ++i) {
       free(cellMeshNames[i]);
       free(pointMeshNames[i]);
     }
-    for (size_t f = 0; f < cellVarNames.size(); ++f)
-      for (int i = 0; i < numFiles*numChunks; ++i)
-        free(cellVarNames[f][i]);
   }
 #else
   // Write the file.
