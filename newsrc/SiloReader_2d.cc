@@ -109,7 +109,7 @@ SiloReader<2, RealType>::read(Tessellation<2, RealType>& mesh,
   int groupRank = PMPIO_GroupRank(baton, rank);
   int rankInGroup = PMPIO_RankInGroup(baton, rank);
 
-  std::string filename = getFileName(masterDirName, prefix, groupRank);
+  std::string filename = getFileName(masterDirName, groupRank);//prefix, groupRank);
 
   std::string dirname = getRankDir(rankInGroup);
   DBfile* file = (DBfile*)PMPIO_WaitForBaton(baton, filename.c_str(), dirname.c_str());

@@ -20,8 +20,8 @@ public:
   // Number of generators
   unsigned nPoints;
   vector<RealType> mPoints;
-  Boundary2D<RealType>& mBoundary;   
-   
+  Boundary2D<RealType>& mBoundary;
+
   //------------------------------------------------------------------------
   // Constructor, destructor
   //------------------------------------------------------------------------
@@ -61,7 +61,7 @@ public:
     }
     POLY_CHECK( mPoints.size()/Dimension == nGenerators );
   }
-   
+
   //------------------------------------------------------------------------
   // Place Cartesian points of constant mesh spacing
   //------------------------------------------------------------------------
@@ -91,7 +91,7 @@ public:
     for( unsigned i = 0; i != nr; ++i ) {
       RealType rad = (i+0.5)*dRadius;
 
-      // This is supposed to befloor(2*pi*i), however 2*floor(pi)*i=6*i 
+      // This is supposed to befloor(2*pi*i), however 2*floor(pi)*i=6*i
       // is found to work better
       unsigned nArcs = 6*i;
       std::vector<RealType> pos(2,0);
@@ -106,8 +106,8 @@ public:
       }
     }
     nPoints = mPoints.size()/Dimension;
-  }   
-   
+  }
+
   //------------------------------------------------------------------------
   // add a point to the generator set
   //------------------------------------------------------------------------

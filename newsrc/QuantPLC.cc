@@ -74,6 +74,15 @@ QuantPLC<Dimension>::init(const std::vector<RealType>& allpoints) {
 
 template<int Dimension>
 void
+QuantPLC<Dimension>::init(const PLC<Dimension>& plc,
+                          const std::vector<IntPoint>& ipoints) {
+  facets = plc.facets;
+  holes = plc.holes;
+  init(ipoints);
+}
+
+template<int Dimension>
+void
 QuantPLC<Dimension>::init(const std::vector<IntPoint>& ipoints) {
   const auto& Q = Quant::instance();
   m_loBounds = Q.maxCoord;

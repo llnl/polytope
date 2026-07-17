@@ -69,6 +69,7 @@ polytope_add_new_test(RandomPoints)
 
 # Distributed Tessellator Tests
 #-----------------------------------------------------------------------------
-# if(POLYTOPE_ENABLE_MPI)
-#   polytope_add_new_test(DistributedVoronoi2D NUMTASKS 4)
-# endif()
+if(POLYTOPE_ENABLE_MPI)
+  polytope_add_new_test(DistributedVoronoi2D NUMTASKS 4)
+  polytope_add_new_test(DistributedIO2D NUMTASKS 4)
+endif()

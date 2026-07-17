@@ -38,8 +38,21 @@ void Communicator::init() {
   int isInit;
   MPI_Initialized(&isInit);
   if (!isInit) {
-    MPI_Init(NULL, NULL);
+    MPI_Init(nullptr, nullptr);
   }
+#endif
+}
+
+void Communicator::init(int argc, char** argv) {
+#ifdef POLYTOPE_ENABLE_MPI
+  int isInit;
+  MPI_Initialized(&isInit);
+  if (!isInit) {
+    MPI_Init(&argc, &argv);
+  }
+#else
+  POLY_CONTRACT_VAR(argc);
+  POLY_CONTRACT_VAR(argv);
 #endif
 }
 
@@ -109,6 +122,14 @@ void Communicator::haltAll() {
     MPI_Abort(communicator(), 1);
   }
 #endif
+}
+
+int Communicator::getRoot() {
+  return instance().m_root;
+}
+
+void Communicator::setRoot(const int root) {
+  instance().m_root = root;
 }
 
 }

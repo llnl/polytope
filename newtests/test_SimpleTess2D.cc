@@ -13,7 +13,9 @@
 #include "Boundary2D.hh"
 #include "QuantTessellation.hh"
 #include "BoostTessellator.hh"
+#ifdef POLYTOPE_ENABLE_TRIANGLE
 #include "TriangleTessellator.hh"
+#endif
 
 #ifdef POLYTOPE_ENABLE_MPI
 #include "mpi.h"
@@ -149,10 +151,12 @@ void tests(const int tnum, bool boostTess) {
     BoostTessellator boost;
     boost.tessellateQuantized(quantMesh);
     quantMesh.clipTessellation(QPLC, boost);
+#ifdef POLYTOPE_ENABLE_TRIANGLE
   } else {
     TriangleTessellator tri;
     tri.tessellateQuantized(quantMesh);
     quantMesh.clipTessellation(QPLC, tri);
+#endif
   }
   Tessellation<2, double> mesh;
   quantMesh.fillTessellation(mesh);
@@ -178,11 +182,17 @@ int main(int argc, char** argv) {
 #endif
   const int numtest = 13;
   try {
+#ifdef POLYTOPE_ENABLE_TRIANGLE
     for (bool boost : {true, false}) {
       for (int test = 1; test <= numtest; ++test) {
         tests(test, boost);
       }
     }
+#else
+    for (int test = 1; test <= numtest; ++test) {
+      tests(test, true);
+    }
+#endif
 
     cout << "\n=== ALL TESTS PASSED ===" << endl;
   } catch (const exception& e) {

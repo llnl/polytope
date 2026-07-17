@@ -22,20 +22,25 @@ public:
   static Communicator& instance();
   // Run MPI_Init
   static void init();
+  static void init(int argc, char** argv);
+  // Run MPI_Finalize
+  static void finalize();
 
   // Access the communicator.
   static MPI_Comm& communicator() { return instance().mCommunicator; }
   static void communicator(MPI_Comm& comm) { instance().mCommunicator = comm; }
   static MPI_Comm* comm_ptr();
-  static void finalize();
   static int getRank();
   static int getNProcs();
   static void Barrier();
   static void haltAll();
+  static int getRoot();
+  static void setRoot(const int root);
 
 private:
   //------------------------===== Private Interface =====----------------------//
   MPI_Comm mCommunicator;
+  int m_root = 0;
 
   // No public constructors, destructor, or assignment.
   Communicator();

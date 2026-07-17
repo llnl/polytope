@@ -88,10 +88,10 @@ endif()
 
 # Check if we can incude the distributed tessellators:
 if (POLYTOPE_ENABLE_MPI)
-  #list(APPEND polytope_headers
-    #DistributedTessellator.hh)
-  #list(APPEND polytope_sources
-    #DistributedTessellator.cc)
+  list(APPEND polytope_headers
+    DistributedTessellator.hh)
+  list(APPEND polytope_sources
+    DistributedTessellator.cc)
 endif()
 
 get_property(POLYTOPE_TPL_DEPENDS GLOBAL PROPERTY POLYTOPE_TPL_DEPENDS)

@@ -8,6 +8,7 @@
 #include <map>
 #include <cstdio>
 #include "silo.h"
+#include "Communicator.hh"
 
 namespace polytope {
 
@@ -146,18 +147,8 @@ std::string getMasterDirName(const std::string& directory,
 
 inline
 std::string getFileName(const std::string& directory,
-                        const std::string& prefix,
-                        const int groupRank) {
-  char groupchar[256];
-  sprintf(groupchar, "_%04d", groupRank);
-  return directory + "/" + prefix + std::string(groupchar) + ".silo";
-}
-
-inline
-std::string getRankDir(const int rankInGroup) {
-  char rgchar[256];
-  sprintf(rgchar, "_%04d", rankInGroup);
-  return "domain" + std::string(rgchar);
+                        const int rank) {
+  return directory + "/domain_" + std::to_string(rank) + ".silo";
 }
 
 inline
@@ -171,19 +162,41 @@ std::string getMasterFileName(const std::string& prefix,
     return prefix + ".silo";
   }
 }
-
+#ifdef POLYTOPE_ENABLE_MPI
+// Gather all ranks that have valid tessellation data on them
+inline
+std::vector<int> gatherValidRanks(int hasData) {
+  int nproc = Communicator::getNProcs();
+  int rank = Communicator::getRank();
+  int root = Communicator::getRoot();
+  auto& comm = Communicator::communicator();
+  std::vector<int> flags;
+  if (rank == root) {
+    flags.resize(nproc);
+  }
+  MPI_Gather(&hasData, 1, MPI_INT,
+             rank == root ? flags.data() : nullptr,
+             1, MPI_INT, root, comm);
+  std::vector<int> ranksWithData;
+  if (rank == root) {
+    int k = 0;
+    for (const auto& f : flags) {
+      if (f) {
+        ranksWithData.push_back(k);
+      }
+      k++;
+    }
+  }
+  return ranksWithData;
+}
+#endif
 inline
 std::vector<std::string> getProcPaths(const std::string& directory,
-                                      const std::string& prefix,
-                                      const size_t nproc,
-                                      const std::vector<std::pair<int, int>>& pgr) {
+                                      const std::vector<int> ranksWithData) {
   std::vector<std::string> out;
-  for (int p = 0; p < nproc; ++p) {
-    int groupRank = pgr[p].first;
-    int rankInGroup = pgr[p].second;
-    auto filename = getFileName(directory, prefix, groupRank);
-    auto rankdir = getRankDir(rankInGroup);
-    out.push_back(filename + ":" + rankdir + "/");
+  for (const auto& p : ranksWithData) {
+    auto filename = getFileName(directory, p) + ":";
+    out.push_back(filename);
   }
   return out;
 }
@@ -192,7 +205,7 @@ template<typename RealType>
 void putCellVars(DBfile* file,
                  const std::map<std::string, RealType*>& fields,
                  const std::vector<std::string>& procPaths,
-                 const size_t nproc,
+                 const size_t nblocks,
                  const std::vector<int>& varTypes,
                  DBoptlist* optlist) {
   for (auto iter = fields.begin(); iter != fields.end(); ++iter) {
@@ -202,7 +215,7 @@ void putCellVars(DBfile* file,
       varNames.push_back(strDup(varName.c_str()));
     }
     auto gvarName = iter->first;
-    DBPutMultivar(file, gvarName.c_str(), nproc, varNames.data(), varTypes.data(), optlist);
+    DBPutMultivar(file, gvarName.c_str(), nblocks, varNames.data(), varTypes.data(), optlist);
     for (auto f = 0; f < varNames.size(); ++f) {
       free(varNames[f]);
     }

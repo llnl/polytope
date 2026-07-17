@@ -57,6 +57,9 @@ public:
 
   void init(const std::vector<RealType>& allpoints);
 
+  void init(const PLC<Dimension>& plc,
+            const std::vector<IntPoint>& ipoints);
+
   void init(const std::vector<IntPoint>& ipoints);
 
   // Remove any degenerate points

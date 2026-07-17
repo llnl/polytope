@@ -11,7 +11,7 @@
 #include "Tessellation.hh"
 #include "Boundary2D.hh"
 #include "Generators.hh"
-#include "Tessellator.hh"
+#include "Communicator.hh"
 #include "polytope_boost_utilities.hh"
 
 namespace polytope {
@@ -26,18 +26,26 @@ void outputMesh(const Tessellation<2,RealType>& mesh,
 		const unsigned testCycle = 1,
 		const RealType time = 0.0) {
 #ifdef POLYTOPE_ENABLE_SILO
-  std::vector<double> index(mesh.cells.size());
-  std::vector<double> genx (mesh.cells.size());
-  std::vector<double> geny (mesh.cells.size());
-  for (int i = 0; i < mesh.cells.size(); ++i) {
-    index[i] = double(i);
-    genx[i] = mesh.points[2*i];
-    geny[i] = mesh.points[2*i+1];
-  }
   std::map<std::string,double*> nodeFields, edgeFields, faceFields, cellFields;
-  cellFields["cell_index"] = &index[0];
-  cellFields["gen_x"     ] = &genx[0];
-  cellFields["gen_y"     ] = &geny[0];
+  size_t meshSize = mesh.cells.size();
+  if (meshSize > 0) {
+    std::vector<double> index(meshSize);
+    std::vector<double> genx (meshSize);
+    std::vector<double> geny (meshSize);
+    for (int i = 0; i < meshSize; ++i) {
+      index[i] = double(i);
+      genx[i] = mesh.points[2*i];
+      geny[i] = mesh.points[2*i+1];
+    }
+    cellFields["cell_index"] = &index[0];
+    cellFields["gen_x"     ] = &genx[0];
+    cellFields["gen_y"     ] = &geny[0];
+#ifdef POLYTOPE_ENABLE_MPI
+    int rank = Communicator::getRank();
+    std::vector<double> rankField(meshSize, rank);
+    cellFields["rank"      ] = &rankField[0];
+#endif
+  }
   std::ostringstream os;
   os << prefix;
   SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
@@ -75,6 +83,11 @@ void outputMesh(const Tessellation<3,RealType>& mesh,
   cellFields["gen_y"     ] = &geny[0];
   cellFields["gen_z"     ] = &genz[0];
   //cellFields["volume"    ] = &vol[0];
+#ifdef POLYTOPE_ENABLE_MPI
+  int rank = Communicator::getRank();
+  std::vector<double> rankField(mesh.cells.size(), rank);
+  cellFields["rank"      ] = &rankField[0];
+#endif
   std::ostringstream os;
   os << prefix;
   SiloWriter<3, double>::write(mesh, nodeFields, edgeFields, 

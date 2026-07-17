@@ -26,7 +26,7 @@ if (POLYTOPE_ENABLE_ASAN)
 endif()
 
 if (POLYTOPE_ENABLE_UBSAN)
-  list(APPEND POLYTOPE_CXX_COMPILE_FLAGS -fsanitize=undefined)
+  list(APPEND POLYTOPE_CXX_COMPILE_FLAGS -fsanitize=undefined -fsanitize-undefined-trap-on-error)
   list(APPEND POLYTOPE_CXX_LINK_FLAGS -fsanitize=undefined)
 endif()
 
