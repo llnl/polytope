@@ -22,9 +22,7 @@
 #endif
 #include "BoostTessellator.hh"
 
-#ifdef POLYTOPE_ENABLE_MPI
-#include "mpi.h"
-#endif
+#include "Communicator.hh" 
 
 using namespace std;
 using namespace polytope;
@@ -285,7 +283,7 @@ void test(Tessellator<2,double>& tessellator) {
 int main(int argc, char** argv)
 {
 #ifdef POLYTOPE_ENABLE_MPI
-   MPI_Init(&argc, &argv);
+  MPI_Init(&argc, &argv);
 #endif
 
 #ifdef POLYTOPE_ENABLE_TRIANGLE
@@ -305,7 +303,7 @@ int main(int argc, char** argv)
 #endif   
 
 #ifdef POLYTOPE_ENABLE_MPI
-   MPI_Finalize();
+  MPI_Finalize();
 #endif
    return 0;
 }

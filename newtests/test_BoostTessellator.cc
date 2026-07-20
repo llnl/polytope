@@ -9,9 +9,7 @@
 #include "polytope_test_utilities.hh"
 #include "BoostTessellator.hh"
 
-#ifdef POLYTOPE_ENABLE_MPI
-#include "mpi.h"
-#endif
+#include "Communicator.hh" 
 
 using namespace std;
 using namespace polytope;
@@ -285,9 +283,8 @@ void test4(Tessellator<2,double>& tessellator) {
 int 
 main(int argc, char** argv) 
 {
-#ifdef POLYTOPE_ENABLE_MPI
-  MPI_Init(&argc, &argv);
-#endif
+  auto& comm = Communicator::instance();
+  comm.init(argc, argv);
 
   BoostTessellator tessellator;
   
@@ -311,9 +308,7 @@ main(int argc, char** argv)
     test4(tessellator);
   }  
 
-#ifdef POLYTOPE_ENABLE_MPI
-  MPI_Finalize();
-#endif
+  comm.finalize();
   return 0;
 }
 //------------------------------------------------------------------------

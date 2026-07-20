@@ -4,12 +4,11 @@
 #include "polytope_test_utilities.hh"
 #include "BoostTessellator.hh"
 #include "Generators.hh"
+#include "SiloReader.hh"
+#include "SiloUtils.hh"
+#include "Communicator.hh"
 
 #include <vector>
-
-#ifdef POLYTOPE_ENABLE_MPI
-#include "mpi.h"
-#endif
 
 #ifdef POLYTOPE_ENABLE_TRIANGLE
 #include "TriangleTessellator.hh"
@@ -76,18 +75,18 @@ void test(Tessellator<2,double>& tessellator, const std::string& outname, bool h
   tessellator.tessellate(points, plcPoints, plc, mesh);
   outputMesh(mesh, outname, cycle);
   testWatertight(mesh, 0);
+  // Read the mesh we just wrote back in
+  Tessellation<2, double> readMesh;
+  std::string masterFilename = getMasterFilename(outname, cycle);
+  std::map<std::string, std::vector<double>> cellFields;
+  SiloReader<2, double>::read(readMesh, cellFields, masterFilename);
 }
 // -----------------------------------------------------------------------
 // main
 // -----------------------------------------------------------------------
 int main(int argc, char** argv) {
-#ifdef POLYTOPE_ENABLE_MPI
-  MPI_Init(&argc, &argv);
-#else
-  POLY_CONTRACT_VAR(argc);
-  POLY_CONTRACT_VAR(argv);
-#endif
-
+  auto& comm = Communicator::instance();
+  comm.init(argc, argv);
 
 #ifdef POLYTOPE_ENABLE_BOOST
   {
@@ -107,9 +106,6 @@ int main(int argc, char** argv) {
   }
 #endif
 
-
-#ifdef POLYTOPE_ENABLE_MPI
-  MPI_Finalize();
-#endif
+  comm.finalize();
   return 0;
 }

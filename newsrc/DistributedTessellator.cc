@@ -14,7 +14,7 @@
 #include "Intersections.hh"
 #include "QuantPLC.hh"
 #include "findBoundaryElements.hh"
-#include "polytope_serialize.hh"
+#include "Serializer.hh"
 
 namespace polytope {
 

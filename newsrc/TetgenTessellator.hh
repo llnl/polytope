@@ -1,5 +1,5 @@
-#ifndef POLYTOPE_TETGENTESSELLATOR_HH
-#define POLYTOPE_TETGENTESSELLATOR_HH
+#ifndef __Polytope_TetgenTessellator__
+#define __Polytope_TetgenTessellator__
 
 #include "QuantPLC.hh"
 #include "QuantTessellation.hh"

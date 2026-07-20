@@ -2,8 +2,8 @@
 //
 // Put common includes for polytope here that you don't necessarily 
 // want exposed in the public interface.
-#ifndef POLYTOPE_INTERNAL_HH
-#define POLYTOPE_INTERNAL_HH
+#ifndef __Polytope_Internal__
+#define __Polytope_Internal__
 
 #include <vector>
 #include <map>

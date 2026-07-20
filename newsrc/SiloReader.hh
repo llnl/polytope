@@ -1,5 +1,5 @@
-#ifndef POLYTOPE_SILO_READER_HH
-#define POLYTOPE_SILO_READER_HH
+#ifndef __Polytope_SiloReader__
+#define __Polytope_SiloReader__
 
 #include "Tessellation.hh"
 #include <string>
@@ -37,6 +37,10 @@ class SiloReader<2, RealType> {
     return Silo::findAvailableCycles(filePrefix, directory);
   }
 
+  static void read(Tessellation<2, RealType>& mesh,
+                   std::map<std::string, std::vector<RealType> >& fields,
+                   const std::string& masterFilename);
+
   //! Read an arbitrary polygonal mesh and an associated set of 
   //! fields and tags from a SILO file in the given directory.
   //! \param fields A map that will store arrays of field data read in from 
@@ -46,87 +50,87 @@ class SiloReader<2, RealType> {
   //!               is empty, all data will be read in from the file.
   //! \param numFiles The number of files that will be written. If this 
   //!                 is set to -1, one file will be written for each process.
-  static void read(Tessellation<2, RealType>& mesh, 
-                   std::map<std::string, std::vector<RealType> >& fields,
-                   std::map<std::string, std::vector<int> >& nodeTags,
-                   std::map<std::string, std::vector<int> >& edgeTags,
-                   std::map<std::string, std::vector<int> >& faceTags,
-                   std::map<std::string, std::vector<int> >& cellTags,
-                   const std::string& filePrefix,
-                   const std::string& directory,
-                   int cycle,
-                   RealType& time,
-                   int numFiles = -1,
-                   int mpiTag = 0);
+  // static void read(Tessellation<2, RealType>& mesh, 
+  //                  std::map<std::string, std::vector<RealType> >& fields,
+  //                  std::map<std::string, std::vector<int> >& nodeTags,
+  //                  std::map<std::string, std::vector<int> >& edgeTags,
+  //                  std::map<std::string, std::vector<int> >& faceTags,
+  //                  std::map<std::string, std::vector<int> >& cellTags,
+  //                  const std::string& filePrefix,
+  //                  const std::string& directory,
+  //                  int cycle,
+  //                  RealType& time,
+  //                  int numFiles = -1,
+  //                  int mpiTag = 0);
 
-  //! Read an arbitrary polygonal mesh and an associated set of 
-  //! fields from a SILO file in the given directory.
-  //! \param fields A map that will store arrays of field data read in from 
-  //!               the file. If \a fields contains keys, only those fields
-  //!               with those keys will be read from the file, and an error 
-  //!               will occur if any of the keys are not found. If \a fields 
-  //!               is empty, all data will be read in from the file.
-  //! \param numFiles The number of files that will be written. If this 
-  //!                 is set to -1, one file will be written for each process.
-  static void read(Tessellation<2, RealType>& mesh, 
-                   std::map<std::string, std::vector<RealType> >& fields,
-                   const std::string& filePrefix,
-                   const std::string& directory,
-                   int cycle,
-                   RealType& time,
-                   int numFiles = -1,
-                   int mpiTag = 0) {
-    std::map<std::string, std::vector<int> > nTags, eTags, fTags, cTags;
-    read(mesh, fields, nTags, eTags, fTags, cTags, filePrefix, directory,
-         cycle, time, numFiles, mpiTag);
-  }
+  // //! Read an arbitrary polygonal mesh and an associated set of 
+  // //! fields from a SILO file in the given directory.
+  // //! \param fields A map that will store arrays of field data read in from 
+  // //!               the file. If \a fields contains keys, only those fields
+  // //!               with those keys will be read from the file, and an error 
+  // //!               will occur if any of the keys are not found. If \a fields 
+  // //!               is empty, all data will be read in from the file.
+  // //! \param numFiles The number of files that will be written. If this 
+  // //!                 is set to -1, one file will be written for each process.
+  // static void read(Tessellation<2, RealType>& mesh, 
+  //                  std::map<std::string, std::vector<RealType> >& fields,
+  //                  const std::string& filePrefix,
+  //                  const std::string& directory,
+  //                  int cycle,
+  //                  RealType& time,
+  //                  int numFiles = -1,
+  //                  int mpiTag = 0) {
+  //   std::map<std::string, std::vector<int> > nTags, eTags, fTags, cTags;
+  //   read(mesh, fields, nTags, eTags, fTags, cTags, filePrefix, directory,
+  //        cycle, time, numFiles, mpiTag);
+  // }
 
-  //! Read an arbitrary polygonal mesh and an associated set of 
-  //! fields from a SILO file. This version generates a 
-  //! directory name automatically. For parallel runs, the directory 
-  //! name is filePrefix-nproc. For serial runs, the directory is 
-  //! the current working directory.
-  //! \param fields A map that will store arrays of field data read in from 
-  //!               the file. If \a fields contains keys, only those fields
-  //!               with those keys will be read from the file, and an error 
-  //!               will occur if any of the keys are not found. If \a fields 
-  //!               is empty, all data will be read in from the file.
-  //!                 is set to -1, one file will be written for each process.
-  //! \param numFiles The number of files that will be written. If this 
-  //!                 is set to -1, one file will be written for each process.
-  static void read(Tessellation<2, RealType>& mesh, 
-                   std::map<std::string, std::vector<RealType> >& fields,
-                   const std::string& filePrefix,
-                   int cycle,
-                   RealType& time,
-                   int numFiles = -1,
-                   int mpiTag = 0) {
-    read(mesh, fields, filePrefix, "", cycle, time, numFiles, mpiTag);
-  }
+  // //! Read an arbitrary polygonal mesh and an associated set of 
+  // //! fields from a SILO file. This version generates a 
+  // //! directory name automatically. For parallel runs, the directory 
+  // //! name is filePrefix-nproc. For serial runs, the directory is 
+  // //! the current working directory.
+  // //! \param fields A map that will store arrays of field data read in from 
+  // //!               the file. If \a fields contains keys, only those fields
+  // //!               with those keys will be read from the file, and an error 
+  // //!               will occur if any of the keys are not found. If \a fields 
+  // //!               is empty, all data will be read in from the file.
+  // //!                 is set to -1, one file will be written for each process.
+  // //! \param numFiles The number of files that will be written. If this 
+  // //!                 is set to -1, one file will be written for each process.
+  // static void read(Tessellation<2, RealType>& mesh, 
+  //                  std::map<std::string, std::vector<RealType> >& fields,
+  //                  const std::string& filePrefix,
+  //                  int cycle,
+  //                  RealType& time,
+  //                  int numFiles = -1,
+  //                  int mpiTag = 0) {
+  //   read(mesh, fields, filePrefix, "", cycle, time, numFiles, mpiTag);
+  // }
 
-  //! This version of read omits the cycle and time arguments.
-  static void read(Tessellation<2, RealType>& mesh, 
-                   std::map<std::string, std::vector<RealType> >& fields,
-                   const std::string& filePrefix,
-                   const std::string& directory,
-                   int numFiles = -1,
-                   int mpiTag = 0) {
-    RealType time;
-    read(mesh, fields, filePrefix, directory, -1, time,
-         numFiles, mpiTag);
-  }
+  // //! This version of read omits the cycle and time arguments.
+  // static void read(Tessellation<2, RealType>& mesh, 
+  //                  std::map<std::string, std::vector<RealType> >& fields,
+  //                  const std::string& filePrefix,
+  //                  const std::string& directory,
+  //                  int numFiles = -1,
+  //                  int mpiTag = 0) {
+  //   RealType time;
+  //   read(mesh, fields, filePrefix, directory, -1, time,
+  //        numFiles, mpiTag);
+  // }
 
-  //! This version of read omits the cycle and time arguments and 
-  //! automatically generates the directory name from the file prefix.
-  static void read(Tessellation<2, RealType>& mesh, 
-                   std::map<std::string, std::vector<RealType> >& fields,
-                   const std::string& filePrefix,
-                   int numFiles = -1,
-                   int mpiTag = 0) {
-    RealType time;
-    read(mesh, fields, filePrefix, "", -1, time,
-         numFiles, mpiTag);
-  }
+  // //! This version of read omits the cycle and time arguments and 
+  // //! automatically generates the directory name from the file prefix.
+  // static void read(Tessellation<2, RealType>& mesh, 
+  //                  std::map<std::string, std::vector<RealType> >& fields,
+  //                  const std::string& filePrefix,
+  //                  int numFiles = -1,
+  //                  int mpiTag = 0) {
+  //   RealType time;
+  //   read(mesh, fields, filePrefix, "", -1, time,
+  //        numFiles, mpiTag);
+  // }
 
 };
 

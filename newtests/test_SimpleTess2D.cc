@@ -16,10 +16,7 @@
 #ifdef POLYTOPE_ENABLE_TRIANGLE
 #include "TriangleTessellator.hh"
 #endif
-
-#ifdef POLYTOPE_ENABLE_MPI
-#include "mpi.h"
-#endif
+#include "Communicator.hh"
 
 using namespace polytope;
 using namespace std;
@@ -177,9 +174,9 @@ void tests(const int tnum, bool boostTess) {
 // Main
 //------------------------------------------------------------------------------
 int main(int argc, char** argv) {
-#ifdef POLYTOPE_ENABLE_MPI
-  MPI_Init(&argc, &argv);
-#endif
+  auto& comm = Communicator::instance();
+  comm.init(argc, argv);
+
   const int numtest = 13;
   try {
 #ifdef POLYTOPE_ENABLE_TRIANGLE
@@ -198,14 +195,10 @@ int main(int argc, char** argv) {
   } catch (const exception& e) {
     cout << "\n=== TEST FAILED WITH EXCEPTION ===" << endl;
     cout << e.what() << endl;
-#ifdef POLYTOPE_ENABLE_MPI
-    MPI_Finalize();
-#endif
+    comm.finalize();
     return 1;
   }
 
-#ifdef POLYTOPE_ENABLE_MPI
-  MPI_Finalize();
-#endif
+  comm.finalize();
   return 0;
 }

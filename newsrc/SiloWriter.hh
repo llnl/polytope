@@ -1,5 +1,5 @@
-#ifndef POLYTOPE_SILO_WRITER_HH
-#define POLYTOPE_SILO_WRITER_HH
+#ifndef __Polytope_SiloWriter__
+#define __Polytope_SiloWriter__
 
 #include <string>
 #include <float.h>

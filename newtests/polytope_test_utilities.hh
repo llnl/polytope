@@ -28,24 +28,22 @@ void outputMesh(const Tessellation<2,RealType>& mesh,
 #ifdef POLYTOPE_ENABLE_SILO
   std::map<std::string,double*> nodeFields, edgeFields, faceFields, cellFields;
   size_t meshSize = mesh.cells.size();
-  if (meshSize > 0) {
-    std::vector<double> index(meshSize);
-    std::vector<double> genx (meshSize);
-    std::vector<double> geny (meshSize);
-    for (int i = 0; i < meshSize; ++i) {
-      index[i] = double(i);
-      genx[i] = mesh.points[2*i];
-      geny[i] = mesh.points[2*i+1];
-    }
-    cellFields["cell_index"] = &index[0];
-    cellFields["gen_x"     ] = &genx[0];
-    cellFields["gen_y"     ] = &geny[0];
-#ifdef POLYTOPE_ENABLE_MPI
-    int rank = Communicator::getRank();
-    std::vector<double> rankField(meshSize, rank);
-    cellFields["rank"      ] = &rankField[0];
-#endif
+  std::vector<double> index(meshSize);
+  std::vector<double> genx (meshSize);
+  std::vector<double> geny (meshSize);
+  for (int i = 0; i < meshSize; ++i) {
+    index[i] = double(i);
+    genx[i] = mesh.points[2*i];
+    geny[i] = mesh.points[2*i+1];
   }
+  cellFields["cell_index"] = &index[0];
+  cellFields["gen_x"     ] = &genx[0];
+  cellFields["gen_y"     ] = &geny[0];
+#ifdef POLYTOPE_ENABLE_MPI
+  int rank = Communicator::getRank();
+  std::vector<double> rankField(meshSize, rank);
+  cellFields["rank"      ] = &rankField[0];
+#endif
   std::ostringstream os;
   os << prefix;
   SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 

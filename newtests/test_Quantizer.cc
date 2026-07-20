@@ -15,9 +15,7 @@
 #include "Point.hh"
 #include "polytope_test_utilities.hh"
 
-#ifdef POLYTOPE_ENABLE_MPI
-#include "mpi.h"
-#endif
+#include "Communicator.hh" 
 
 using namespace std;
 using namespace polytope;
@@ -396,9 +394,8 @@ void stressTest() {
 //------------------------------------------------------------------------------
 int main(int argc, char** argv) {
 
-#ifdef POLYTOPE_ENABLE_MPI
-  MPI_Init(&argc, &argv);
-#endif
+  auto& comm = Communicator::instance();
+  comm.init(argc, argv);
 
   // Seed random number generator
   srand(42);
@@ -421,14 +418,9 @@ int main(int argc, char** argv) {
 
   } catch (const exception& e) {
     cerr << "\nTest failed with exception: " << e.what() << endl;
-#ifdef POLYTOPE_ENABLE_MPI
-    MPI_Finalize();
-#endif
+    comm.finalize();
     return 1;
   }
-
-#ifdef POLYTOPE_ENABLE_MPI
-  MPI_Finalize();
-#endif
+  comm.finalize();
   return 0;
 }

@@ -27,7 +27,7 @@ set(polytope_headers
   Tessellator.hh
   TessellatorInline.hh
   TetgenTessellator.hh
-  polytope_serialize.hh
+  Serializer.hh
   polytope_internal.hh
   findBoundaryElements.hh
 )

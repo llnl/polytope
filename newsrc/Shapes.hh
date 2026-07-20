@@ -1,5 +1,5 @@
-#ifndef POLYTOPE_SHAPES_HH
-#define POLYTOPE_SHAPES_HH
+#ifndef __Polytope_Shapes__
+#define __Polytope_Shapes__
 
 //------------------------------------------------------------------------------
 // Simple shape routines for 2D and 3D.

@@ -1,5 +1,5 @@
-#ifndef POLYTOPE_REDUCEDPLC_HH
-#define POLYTOPE_REDUCEDPLC_HH
+#ifndef __Polytope_ReducedPLC__
+#define __Polytope_ReducedPLC__
 
 #include <vector>
 #include <set>

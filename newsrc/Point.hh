@@ -2,10 +2,10 @@
 // 2D and 3D integral Point types used internally in polytope.  Not really
 // for external consumption!.
 //----------------------------------------------------------------------------//
-#ifndef __polytope_Point__
-#define __polytope_Point__
+#ifndef __Polytope_Point__
+#define __Polytope_Point__
 
-#include "polytope_serialize.hh"
+#include "Serializer.hh"
 #include "polytope_internal.hh"
 
 #include <iostream>

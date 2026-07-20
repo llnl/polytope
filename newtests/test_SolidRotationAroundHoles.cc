@@ -17,9 +17,7 @@
 #include "polytope_test_utilities.hh"
 #include "BoostTessellator.hh"
 
-#ifdef POLYTOPE_ENABLE_MPI
-#include "mpi.h"
-#endif
+#include "Communicator.hh" 
 
 #ifdef POLYTOPE_ENABLE_TRIANGLE
 #include "TriangleTessellator.hh"
@@ -151,12 +149,8 @@ void test(Tessellator<2,double>& tessellator) {
 // -----------------------------------------------------------------------
 int main(int argc, char** argv)
 {
-#ifdef POLYTOPE_ENABLE_MPI
-   MPI_Init(&argc, &argv);
-#else
-  POLY_CONTRACT_VAR(argc);
-  POLY_CONTRACT_VAR(argv);
-#endif
+  auto& comm = Communicator::instance();
+  comm.init(argc, argv);
 
 
 #ifdef POLYTOPE_ENABLE_BOOST
@@ -177,7 +171,7 @@ int main(int argc, char** argv)
 
 
 #ifdef POLYTOPE_ENABLE_MPI
-   MPI_Finalize();
+  MPI_Finalize();
 #endif
    return 0;
 }

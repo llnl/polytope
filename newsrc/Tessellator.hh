@@ -1,5 +1,5 @@
-#ifndef POLYTOPE_TESSELLATOR_HH
-#define POLYTOPE_TESSELLATOR_HH
+#ifndef __Polytope_Tessellator__
+#define __Polytope_Tessellator__
 
 #include "QuantTessellation.hh"
 #include "polytope_internal.hh"

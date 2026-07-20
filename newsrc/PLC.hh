@@ -1,5 +1,5 @@
-#ifndef POLYTOPE_PLC_HH
-#define POLYTOPE_PLC_HH
+#ifndef __Polytope_PLC__
+#define __Polytope_PLC__
 
 #include <cstddef>
 #include <vector>

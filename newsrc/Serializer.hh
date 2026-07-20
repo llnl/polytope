@@ -2,13 +2,14 @@
 // A bunch of utility methods to help with serializing/unserializing objects
 // in polytope.
 //----------------------------------------------------------------------------//
-#ifndef __polytope_serialize__
-#define __polytope_serialize__
+#ifndef __Polytope_Serializer__
+#define __Polytope_Serializer__
 
 #include <iostream>
 #include <vector>
 #include <iterator>
 #include <algorithm>
+#include <string>
 #include <stdint.h>
 
 #include "polytope_internal.hh"
@@ -39,6 +40,28 @@ struct Serializer {
     char* data = reinterpret_cast<char*>(&val);
     POLY_ASSERT(bufItr + n <= endItr);
     std::copy(bufItr, bufItr + n, data);
+    bufItr += n;
+  }
+};
+
+// std::string.
+template<>
+struct Serializer<std::string> {
+
+  static void serializeImpl(const std::string& val,
+                            std::vector<char>& buffer) {
+    const unsigned n = val.size();
+    Serializer<unsigned>::serializeImpl(n, buffer);
+    std::copy(val.begin(), val.end(), std::back_inserter(buffer));
+  }
+
+  static void deserializeImpl(std::string& val,
+                              std::vector<char>::const_iterator& bufItr,
+                              const std::vector<char>::const_iterator& endItr) {
+    unsigned n;
+    Serializer<unsigned>::deserializeImpl(n, bufItr, endItr);
+    POLY_ASSERT(bufItr + n <= endItr);
+    val.assign(bufItr, bufItr + n);
     bufItr += n;
   }
 };

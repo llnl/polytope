@@ -22,9 +22,7 @@
 #include "TriangleTessellator.hh"
 #endif
 
-#ifdef POLYTOPE_ENABLE_MPI
-#include "mpi.h"
-#endif
+#include "Communicator.hh" 
 
 using namespace std;
 using namespace polytope;
@@ -76,32 +74,32 @@ void testAllBoundaries(Tessellator<2, double>& tessellator, int numSweeps) {
 int main(int argc, char** argv)
 {
 #ifdef POLYTOPE_ENABLE_MPI
-   MPI_Init(&argc, &argv);
+  MPI_Init(&argc, &argv);
 #endif
 
-   int numSweeps = 2;
-   if (argc >= 2) {
-     numSweeps = std::stoi(argv[1]);
-   }
+  int numSweeps = 2;
+  if (argc >= 2) {
+    numSweeps = std::stoi(argv[1]);
+  }
 
 #ifdef POLYTOPE_ENABLE_TRIANGLE
-   {
-     cout << "\nTriangle Tessellator:\n" << endl;
-     TriangleTessellator tessellator;
-     testAllBoundaries(tessellator, numSweeps);
-   }
+  {
+    cout << "\nTriangle Tessellator:\n" << endl;
+    TriangleTessellator tessellator;
+    testAllBoundaries(tessellator, numSweeps);
+  }
 #endif
 
 #ifdef POLYTOPE_ENABLE_BOOST
-   {
-     cout << "\nBoost Tessellator:\n" << endl;
-     BoostTessellator tessellator;
-     testAllBoundaries(tessellator, numSweeps);
-   }
+  {
+    cout << "\nBoost Tessellator:\n" << endl;
+    BoostTessellator tessellator;
+    testAllBoundaries(tessellator, numSweeps);
+  }
 #endif
 
 #ifdef POLYTOPE_ENABLE_MPI
-   MPI_Finalize();
+  MPI_Finalize();
 #endif
-   return 0;
+  return 0;
 }

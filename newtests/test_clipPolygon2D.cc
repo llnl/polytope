@@ -20,9 +20,7 @@
 #include "BoostTessellator.hh"
 #include "TriangleTessellator.hh"
 
-#ifdef POLYTOPE_ENABLE_MPI
-#include "mpi.h"
-#endif
+#include "Communicator.hh" 
 
 using namespace polytope;
 using namespace std;
@@ -381,9 +379,8 @@ void testSequentialClipping(const int tnum) {
 // Main
 //------------------------------------------------------------------------------
 int main(int argc, char** argv) {
-#ifdef POLYTOPE_ENABLE_MPI
-  MPI_Init(&argc, &argv);
-#endif
+  auto& comm = Communicator::instance();
+  comm.init(argc, argv);
 
 //   try {
 //     int test = 1;
@@ -408,8 +405,6 @@ int main(int argc, char** argv) {
 //     return 1;
 //   }
 
-#ifdef POLYTOPE_ENABLE_MPI
-  MPI_Finalize();
-#endif
+  comm.finalize();
   return 0;
 }

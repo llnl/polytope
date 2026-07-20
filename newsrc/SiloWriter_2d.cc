@@ -106,8 +106,8 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
   Communicator::Barrier();
   bool hasPoints = bool(localRankHasPoints);
 
-  std::string filename = getFileName(masterDirName, rank);
-  std::string meshname = "MESH";
+  std::string filename = getFilename(masterDirName, rank);
+  std::string meshname = getLocalMeshName();
 
 #else
   string dirname = directory;
@@ -120,8 +120,7 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
     filename = dirname + "/" + prefix + ".silo";
   }
 
-  //int driver = DB_HDF5;
-  std::string meshname = "MMESH";
+  std::string meshname = getGlobalMeshName();
   bool hasPoints = true;
 #endif
   if (hasPoints) {
@@ -205,12 +204,12 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
     }
     for (size_t f = 0; f < mesh.faceCells.size(); ++f) {
       conn.push_back(mesh.faceCells[f][0]);
-      conn.push_back(mesh.faceCells[f][0]);
+      conn.push_back(mesh.faceCells[f][1]);
     }
     elemnames[0] = strDup("ncellfaces");
     elemlengths[0] = numCells;
     elemnames[2] = strDup("facecells");
-    elemlengths[2] = conn.size() - 2*mesh.faces.size();
+    elemlengths[2] = 2*mesh.faceCells.size();
     elemnames[1] = strDup("cellfaces");
     elemlengths[1] = conn.size() - elemlengths[2] - elemlengths[0];
     DBPutCompoundarray(file, "conn", elemnames, elemlengths, 3,
@@ -253,8 +252,6 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
     writeFieldsToFile<RealType>(faceFields, meshname, file, numFaces, DB_FACECENT, optlist);
     writeFieldsToFile<RealType>(cellFields, meshname, file, numCells, DB_ZONECENT, optlist);
 
-    // Create POINTS directory and write point mesh and node fields there
-    // Generator coordinates
     int numPoints = mesh.points.size() / 2;
     vector<double> xp(numPoints), yp(numPoints);
     for (int i = 0; i < numPoints; ++i) {
@@ -282,9 +279,9 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
 
   // Finally, write the uber-master file.
   if (rank == root) {
-    std::string masterFileName = getMasterFileName(prefix, cycle);
+    std::string masterFilename = getMasterFilename(prefix, cycle);
     int driver = DB_HDF5;
-    DBfile* file = DBCreate(masterFileName.c_str(), DB_CLOBBER, DB_LOCAL, "Master file", driver);
+    DBfile* file = DBCreate(masterFilename.c_str(), DB_CLOBBER, DB_LOCAL, "Master file", driver);
 
     // Build mesh names
     std::vector<std::string> procPaths = getProcPaths(masterDirName, ranksWithData);
@@ -304,11 +301,11 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
       DBAddOption(masteroptlist, DBOPT_CYCLE, &cycle);
     if (dtime != -FLT_MAX)
       DBAddOption(masteroptlist, DBOPT_DTIME, &dtime);
-    const char* global_mesh_name = "MMESH";
-    DBAddOption(masteroptlist, DBOPT_MMESH_NAME, (void*)global_mesh_name);
+    std::string global_mesh_name = getGlobalMeshName();
+    DBAddOption(masteroptlist, DBOPT_MMESH_NAME, global_mesh_name.data());
     DBAddOption(masteroptlist, DBOPT_COORDSYS, &coord_sys);
 
-    DBPutMultimesh(file, global_mesh_name, nblocks, cellMeshNames.data(), cellMeshTypes.data(), masteroptlist);
+    DBPutMultimesh(file, global_mesh_name.c_str(), nblocks, cellMeshNames.data(), cellMeshTypes.data(), masteroptlist);
     DBPutMultimesh(file, "PPOINTS", nblocks, pointMeshNames.data(), pointMeshTypes.data(), masteroptlist);
 
     putCellVars<RealType>(file, edgeFields, procPaths, nblocks, varTypes, masteroptlist);
@@ -334,6 +331,7 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
       free(pointMeshNames[i]);
     }
   }
+  Communicator::Barrier();
 #endif
 }
 //-------------------------------------------------------------------

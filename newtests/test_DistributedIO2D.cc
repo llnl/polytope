@@ -4,16 +4,15 @@
 #include <vector>
 
 #include "polytope.hh"
-
-#ifdef POLYTOPE_ENABLE_MPI
 #include "mpi.h"
-#endif
 
 #include "BoostTessellator.hh"
 #include "DistributedTessellator.hh"
 #include "PLC.hh"
 #include "Tessellation.hh"
 #include "polytope_test_utilities.hh"
+#include "SiloUtils.hh"
+#include "SiloReader.hh"
 
 #ifdef POLYTOPE_ENABLE_TRIANGLE
 #include "TriangleTessellator.hh"
@@ -84,7 +83,7 @@ void test(Tessellator<2, double>& tessellator) {
     Tessellation<2, double> localMesh;
     distributed.tessellate(localPoints, boundaryPoints, boundary, localMesh);
 
-    const auto localCells = static_cast<int>(localMesh.cells.size());
+    auto localCells = static_cast<int>(localMesh.cells.size());
     int totalCells = 0;
     MPI_Allreduce(&localCells, &totalCells, 1, MPI_INT, MPI_SUM, Communicator::communicator());
 
@@ -115,6 +114,17 @@ void test(Tessellator<2, double>& tessellator) {
     std::string outname = "parallelIO_" + tessellator.name();
     outputMesh(localMesh, outname, 0, 0.);
 
+    // Now try to open the file we just created
+    Tessellation<2, double> readMesh;
+    std::string masterFilename = getMasterFilename(outname, 0);
+    std::map<std::string, std::vector<double>> cellFields;
+    SiloReader<2, double>::read(readMesh, cellFields, masterFilename);
+    localCells = static_cast<int>(readMesh.cells.size());
+    totalCells = 0;
+    MPI_Allreduce(&localCells, &totalCells, 1, MPI_INT, MPI_SUM, Communicator::communicator());
+    POLY_CHECK2(totalCells == expectedCells,
+                "Read in mesh has " << totalCells
+                << " cells but expected " << expectedCells);
   } catch (const std::exception& e) {
     std::cout << "=== DistributedVoronoi2D failed on rank " << rank << " ===" << std::endl;
     std::cout << e.what() << std::endl;
@@ -124,7 +134,6 @@ void test(Tessellator<2, double>& tessellator) {
 } // anonymous namespace
 
 int main(int argc, char** argv) {
-#ifdef POLYTOPE_ENABLE_MPI
   auto& comm = Communicator::instance();
   comm.init(argc, argv);
 
@@ -150,7 +159,4 @@ int main(int argc, char** argv) {
    }
   comm.finalize();
   return 0;
-#else
-  return 0;
-#endif
 }

@@ -3,8 +3,8 @@
 //
 //-----------------------------------------------------------------------------//
 
-#ifndef POLYTOPE_QUANTTESSELLATION_HH
-#define POLYTOPE_QUANTTESSELLATION_HH
+#ifndef __Polytope_QuantTessellation__
+#define __Polytope_QuantTessellation__
 
 #include <vector>
 #include <algorithm>

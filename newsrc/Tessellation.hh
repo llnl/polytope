@@ -1,5 +1,5 @@
-#ifndef POLYTOPE_TESSELLATION_HH
-#define POLYTOPE_TESSELLATION_HH
+#ifndef __Polytope_Tessellation__
+#define __Polytope_Tessellation__
 
 #include <vector>
 #include <set>

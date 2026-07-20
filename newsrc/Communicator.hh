@@ -1,8 +1,8 @@
 // Communicator
 // A singleton object which holds the MPI communicator. Taken from Spheral.
 //
-#ifndef __POLYTOPE_COMMUNICATOR__
-#define __POLYTOPE_COMMUNICATOR__
+#ifndef __Polytope_Communicator__
+#define __Polytope_Communicator__
 
 #include "polytope.hh"
 

@@ -16,9 +16,7 @@
 #include "HashKey.hh"
 #include "Point.hh"
 
-#ifdef POLYTOPE_ENABLE_MPI
-#include "mpi.h"
-#endif
+#include "Communicator.hh" 
 
 using namespace std;
 using namespace polytope;
@@ -262,9 +260,8 @@ void test128BitStructure() {
 //------------------------------------------------------------------------------
 int main(int argc, char** argv) {
 
-#ifdef POLYTOPE_ENABLE_MPI
-  MPI_Init(&argc, &argv);
-#endif
+  auto& comm = Communicator::instance();
+  comm.init(argc, argv);
 
   //----------------------------------------------------------------------------
   // Test 128-bit structure
@@ -480,8 +477,6 @@ int main(int argc, char** argv) {
 
   cout << "\n=== All HashKey3D tests passed! ===" << endl;
 
-#ifdef POLYTOPE_ENABLE_MPI
-  MPI_Finalize();
-#endif
+  comm.finalize();
   return 0;
 }

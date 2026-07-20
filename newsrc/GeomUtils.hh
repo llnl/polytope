@@ -1,5 +1,5 @@
-#ifndef POLYTOPE_GEOMUTILS_HH
-#define POLYTOPE_GEOMUTILS_HH
+#ifndef __Polytope_GeomUtils__
+#define __Polytope_GeomUtils__
 
 #include "polytope.hh"
 #include "Point.hh"

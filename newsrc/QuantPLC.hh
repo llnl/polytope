@@ -14,8 +14,8 @@
 //   3. Unified interface for both hull construction and PLC reduction
 //-----------------------------------------------------------------------------//
 
-#ifndef POLYTOPE_QUANTPLC_HH
-#define POLYTOPE_QUANTPLC_HH
+#ifndef __Polytope_QuantPLC__
+#define __Polytope_QuantPLC__
 
 #include <type_traits>
 

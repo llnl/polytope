@@ -4,8 +4,8 @@
 // cells in a tessellation, you'll hit the boundary faces once and the interior
 // faces twice.
 //------------------------------------------------------------------------------
-#ifndef __polytope_findBoundaryElements__
-#define __polytope_findBoundaryElements__
+#ifndef __Polytope_findBoundaryElements__
+#define __Polytope_findBoundaryElements__
 
 #include <vector>
 #include <algorithm>

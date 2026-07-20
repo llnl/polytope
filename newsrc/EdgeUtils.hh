@@ -1,5 +1,5 @@
-#ifndef POLYTOPE_EDGEUTILS_HH
-#define POLYTOPE_EDGEUTILS_HH
+#ifndef __Polytope_EdgeUtils__
+#define __Polytope_EdgeUtils__
 
 // Set of logic for handling indices to edge vertices
 // Useful for face merging

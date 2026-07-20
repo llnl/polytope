@@ -1,5 +1,5 @@
-#ifndef POLYTOPE_INTERSECTIONS_HH
-#define POLYTOPE_INTERSECTIONS_HH
+#ifndef __Polytope_Intersections__
+#define __Polytope_Intersections__
 
 //------------------------------------------------------------------------------
 // Intersection routines with integer overflow protection

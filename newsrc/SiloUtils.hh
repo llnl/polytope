@@ -1,7 +1,7 @@
 // A collection of low-level utilities to help with silo file input/output.
 
-#ifndef POLYTOPE_SILOUTILS_HH
-#define POLYTOPE_SILOUTILS_HH
+#ifndef __Polytope_SiloUtils__
+#define __Polytope_SiloUtils__
 
 #include <string>
 #include <vector>
@@ -15,6 +15,15 @@ namespace polytope {
 // strdup isn't part of the C standard, so we can't rely on its existence.
 // We keep our own handy.
 char* strDup(const char* s);
+
+// Certain names
+inline std::string getLocalMeshName() {
+  return "MESH";
+}
+
+inline std::string getGlobalMeshName() {
+  return "MMESH";
+}
 
 void
 writeTagsToFile(const std::map<std::string, std::vector<int>*>& tags,
@@ -146,13 +155,13 @@ std::string getMasterDirName(const std::string& directory,
 }
 
 inline
-std::string getFileName(const std::string& directory,
+std::string getFilename(const std::string& directory,
                         const int rank) {
   return directory + "/domain_" + std::to_string(rank) + ".silo";
 }
 
 inline
-std::string getMasterFileName(const std::string& prefix,
+std::string getMasterFilename(const std::string& prefix,
                               const int& cycle = -1) {
   if (cycle >= 0) {
     char cyclechar[256];
@@ -195,7 +204,7 @@ std::vector<std::string> getProcPaths(const std::string& directory,
                                       const std::vector<int> ranksWithData) {
   std::vector<std::string> out;
   for (const auto& p : ranksWithData) {
-    auto filename = getFileName(directory, p) + ":";
+    auto filename = getFilename(directory, p) + ":";
     out.push_back(filename);
   }
   return out;

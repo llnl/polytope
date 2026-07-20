@@ -25,9 +25,7 @@
 #include "Point.hh"
 #include "polytope_test_utilities.hh"
 
-#ifdef POLYTOPE_ENABLE_MPI
-#include "mpi.h"
-#endif
+#include "Communicator.hh" 
 
 using namespace polytope;
 
@@ -521,12 +519,8 @@ void testStress(const int tnum) {
 //------------------------------------------------------------------------------
 int main(int argc, char** argv) {
 
-#ifdef POLYTOPE_ENABLE_MPI
-  MPI_Init(&argc, &argv);
-#else
-  POLY_CONTRACT_VAR(argc);
-  POLY_CONTRACT_VAR(argv);
-#endif
+  auto& comm = Communicator::instance();
+  comm.init(argc, argv);
 
   srand(42);  // Deterministic randomness for reproducibility
   int tnum = 1;
@@ -559,14 +553,10 @@ int main(int argc, char** argv) {
 
   } catch (const exception& e) {
     cerr << "\nTest failed with exception: " << e.what() << endl;
-#ifdef POLYTOPE_ENABLE_MPI
-    MPI_Finalize();
-#endif
+    comm.finalize();
     return 1;
   }
 
-#ifdef POLYTOPE_ENABLE_MPI
-  MPI_Finalize();
-#endif
+  comm.finalize();
   return 0;
 }

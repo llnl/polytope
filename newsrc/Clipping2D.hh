@@ -2,8 +2,8 @@
 // 2D clipping logic
 //
 //------------------------------------------------------------------------
-#ifndef POLYTOPE_CLIPPING2D_HH
-#define POLYTOPE_CLIPPING2D_HH
+#ifndef __Polytope_Clipping2D__
+#define __Polytope_Clipping2D__
 
 #include "Intersections.hh"
 

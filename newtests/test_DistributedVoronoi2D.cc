@@ -5,9 +5,7 @@
 
 #include "polytope.hh"
 
-#ifdef POLYTOPE_ENABLE_MPI
-#include "mpi.h"
-#endif
+#include "Communicator.hh" 
 
 #include "BoostTessellator.hh"
 #include "DistributedTessellator.hh"
@@ -84,7 +82,6 @@ void test(Tessellator<2, double>& tessellator) {
 } // anonymous namespace
 
 int main(int argc, char** argv) {
-#ifdef POLYTOPE_ENABLE_MPI
   auto& comm = Communicator::instance();
   comm.init(argc, argv);
 
@@ -110,7 +107,4 @@ int main(int argc, char** argv) {
    }
   comm.finalize();
   return 0;
-#else
-  return 0;
-#endif
 }
