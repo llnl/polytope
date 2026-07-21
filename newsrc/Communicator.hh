@@ -33,7 +33,7 @@ public:
   static int getRank();
   static int getNProcs();
   static void Barrier();
-  static void haltAll();
+  static void abort();
   static int getRoot();
   static void setRoot(const int root);
 

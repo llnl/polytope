@@ -13,6 +13,7 @@
 #include "Intersections.hh"
 #include "Cell.hh"
 #include "Clipping2D.hh"
+#include "Communicator.hh"
 
 #define TRILIBRARY
 #define ANSI_DECLARATORS
@@ -65,7 +66,7 @@ void initTriangleData(triangulateio& in) {
 //------------------------------------------------------------------------------
 void
 TriangleTessellator::
-tessellateQuantized(QuantizedTessellation& result) const {
+tessellateQuantizedImpl(QuantizedTessellation& result) const {
   // Type aliases
   using IntType = typename QuantTessellation<2>::IntType;
   using RealPoint = Point2<double>;
@@ -88,17 +89,8 @@ tessellateQuantized(QuantizedTessellation& result) const {
   edge::GenPairToEdgeDataMap genPairToEdge;
 
   // Add nodes for the box extent and keep track of their indices
-  std::map<shapes::BoxSide, unsigned> cornerIndices; // Ordered lower left and CCW
-  {
-    std::vector<IntPoint> box = shapes::createBoxPoints(Q.minBound, Q.maxBound);
-    shapes::BoxSides sides;
-    for (unsigned i = 0; i < 4; i++) {
-      const auto n = result.m_nodes.size();
-      cornerIndices[sides.corner(i)] = n;
-      node2id[box[i]] = n;
-      result.m_nodes.push_back(box[i]);
-    }
-  }
+  auto cornerIndices = shapes::addBoxPoints(Q, node2id, result.m_nodes);
+
   // Prepare Triangle input structure
   triangulateio in, out;
   initTriangleData(in);

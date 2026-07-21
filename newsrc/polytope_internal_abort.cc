@@ -10,12 +10,11 @@ void internal_abort() {
 
 #ifdef POLYTOPE_ENABLE_MPI
   const int rank = Communicator::getRank();
-  if (rank == 0) {
+  if (rank == Communicator::getRoot()) {
     std::cout.flush();
     std::cerr.flush();
   }
-  Communicator::haltAll();
-  abort();
+  Communicator::abort();
 #else
   std::cout.flush();
   std::cerr.flush();

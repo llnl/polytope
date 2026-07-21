@@ -27,7 +27,7 @@ namespace polytope {
 //------------------------------------------------------------------------------
 void
 BoostTessellator::
-tessellateQuantized(QuantizedTessellation& result) const {
+tessellateQuantizedImpl(QuantizedTessellation& result) const {
   // Type aliases
   using IntType = typename QuantTessellation<2>::IntType;
   using IntPoint = typename QuantTessellation<2>::IntPoint;
@@ -67,17 +67,7 @@ tessellateQuantized(QuantizedTessellation& result) const {
   edge::GenPairToEdgeDataMap genPairToEdge;
 
   // Add nodes for the box extent and keep track of their indices
-  std::map<shapes::BoxSide, unsigned> cornerIndices; // Ordered lower left and CCW
-  {
-    std::vector<IntPoint> box = shapes::createBoxPoints(Q.minBound, Q.maxBound);
-    shapes::BoxSides sides;
-    for (unsigned i = 0; i < 4; i++) {
-      const auto n = result.m_nodes.size();
-      cornerIndices[sides.corner(i)] = n;
-      node2id[box[i]] = n;
-      result.m_nodes.push_back(box[i]);
-    }
-  }
+  auto cornerIndices = shapes::addBoxPoints(Q, node2id, result.m_nodes);
 
   // Process each Voronoi cell
   for (typename VD::const_cell_iterator cellItr = voronoi.cells().begin();

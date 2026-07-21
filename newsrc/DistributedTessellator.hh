@@ -56,7 +56,11 @@ public:
                           const PLC<Dimension>& geometry,
                           TessellationType& mesh) const override;
 
-  virtual void tessellateQuantized(QuantizedTessellation& result) const override;
+  //! Simply becomes a wrapper for the Impl
+  virtual void tessellateQuantized(QuantizedTessellation& result) const override {
+    this->tessellateQuantizedImpl(result);
+  }
+  virtual void tessellateQuantizedImpl(QuantizedTessellation& result) const override;
 
   virtual std::string name() const override;
 #endif

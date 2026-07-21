@@ -114,7 +114,7 @@ void Communicator::Barrier() {
 #endif
 }
 
-void Communicator::haltAll() {
+void Communicator::abort() {
 #ifdef POLYTOPE_ENABLE_MPI
   int isInit;
   MPI_Initialized(&isInit);

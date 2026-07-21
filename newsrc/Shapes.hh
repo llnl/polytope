@@ -144,6 +144,23 @@ inline BoxSide getBoxCorner(const BoxSide& s1, const BoxSide& s2) {
   return BoxSide::LL; // Should never get here
 }
 
+template<typename CoordType>
+inline std::map<BoxSide, unsigned>
+addBoxPoints(const Quantizer<2>& Q,
+             std::map<Point<2, CoordType>, int>& node2id,
+             std::vector<Point<2, CoordType>>& nodes) {
+  std::map<BoxSide, unsigned> cornerIndices; // Ordered lower left and CCW
+  std::vector<Point<2, CoordType>> box = createBoxPoints(Q.minBound, Q.maxBound);
+  BoxSides sides;
+  for (unsigned i = 0; i < 4; i++) {
+    const auto n = nodes.size();
+    cornerIndices[sides.corner(i)] = n;
+    node2id[box[i]] = n;
+    nodes.push_back(box[i]);
+  }
+  return cornerIndices;
+}
+
 // Walk box edges only in CCW direction
 inline void walkBoxEdges(const BoxSide& startSide,
                          const BoxSide& endSide,

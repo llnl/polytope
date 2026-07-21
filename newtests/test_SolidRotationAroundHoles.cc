@@ -152,7 +152,6 @@ int main(int argc, char** argv)
   auto& comm = Communicator::instance();
   comm.init(argc, argv);
 
-
 #ifdef POLYTOPE_ENABLE_BOOST
   {
     cout << "\nBoost Tessellator:\n" << endl;
@@ -169,9 +168,6 @@ int main(int argc, char** argv)
   }
 #endif
 
-
-#ifdef POLYTOPE_ENABLE_MPI
-  MPI_Finalize();
-#endif
-   return 0;
+  comm.finalize();
+  return 0;
 }

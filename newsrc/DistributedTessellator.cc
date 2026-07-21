@@ -1,7 +1,5 @@
 #include "DistributedTessellator.hh"
 
-#ifdef POLYTOPE_ENABLE_MPI
-
 #include <algorithm>
 #include <array>
 #include <limits>
@@ -482,7 +480,7 @@ tessellate(const std::vector<RealType>& points,
 template<int Dimension>
 void
 DistributedTessellator<Dimension>::
-tessellateQuantized(QuantizedTessellation& qmesh) const {
+tessellateQuantizedImpl(QuantizedTessellation& qmesh) const {
   auto rank = Communicator::getRank();
   auto size = Communicator::getNProcs();
   auto localRecords = recordsFromQuantTessellation(qmesh);
@@ -548,4 +546,3 @@ template class DistributedTessellator<3>;
 
 } // namespace polytope
 
-#endif

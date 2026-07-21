@@ -1,21 +1,21 @@
-// #include "makeBoxPLC.hh"
 #include "findBoundaryElements.hh"
 #include "SiloWriter.hh"
-// #include "snapToBoundary.hh"
-// #include "polytope_geometric_utilities.hh"
 
 namespace polytope {
 
 //----------------------------------------------------------------------------
 // Tessellate (unbounded)
 //------------------------------------------------------------------------------
-template<int nDim, typename RealType>
+template<int Dimension, typename RealType>
 inline
 void
-Tessellator<nDim, RealType>::
+Tessellator<Dimension, RealType>::
 tessellate(const std::vector<RealType>& points,
-           Tessellation<nDim, RealType>& mesh) const {
-  auto& Q = Quantizer<nDim>::instance();
+           Tessellation<Dimension, RealType>& mesh) const {
+  if (points.size() == 0) {
+    return;
+  }
+  auto& Q = Quantizer<Dimension>::instance();
   if (!Q.m_init) {
     Q.init(points);
     m_init = true;
@@ -23,10 +23,10 @@ tessellate(const std::vector<RealType>& points,
   // Pre-conditions
   POLY_ASSERT(mesh.empty());
   POLY_ASSERT(points.size() > 0);
-  POLY_ASSERT(points.size() % nDim == 0);
+  POLY_ASSERT(points.size() % Dimension == 0);
 
   // Invoke the descendant method to fill the quant mesh.
-  QuantTessellation<nDim> quantmesh(points);
+  QuantTessellation<Dimension> quantmesh(points);
   this->tessellateQuantized(quantmesh);
 
   // Copy the QuantTessellation to the output.
@@ -39,15 +39,18 @@ tessellate(const std::vector<RealType>& points,
 //----------------------------------------------------------------------------
 // Tessellate in a PLC.
 //------------------------------------------------------------------------------
-template<int nDim, typename RealType>
+template<int Dimension, typename RealType>
 inline
 void
-Tessellator<nDim, RealType>::
+Tessellator<Dimension, RealType>::
 tessellate(const std::vector<RealType>& points,
            const std::vector<RealType>& PLCpoints,
-           const PLC<nDim>& geometry,
-           Tessellation<nDim, RealType>& mesh) const {
-  auto& Q = Quantizer<nDim>::instance();
+           const PLC<Dimension>& geometry,
+           Tessellation<Dimension, RealType>& mesh) const {
+  if (points.size() == 0) {
+    return;
+  }
+  auto& Q = Quantizer<Dimension>::instance();
   if (!Q.m_init) {
     Q.init(PLCpoints);
     m_init = true;
@@ -55,11 +58,11 @@ tessellate(const std::vector<RealType>& points,
   // Pre-conditions
   POLY_ASSERT(mesh.empty());
   POLY_ASSERT(points.size() > 0);
-  POLY_ASSERT(points.size() % nDim == 0);
+  POLY_ASSERT(points.size() % Dimension == 0);
 
   // Invoke the descendant method to fill the quant mesh.
-  QuantTessellation<nDim> quantmesh(points);
-  QuantPLC<nDim> qplc(geometry, PLCpoints);
+  QuantTessellation<Dimension> quantmesh(points);
+  QuantPLC<Dimension> qplc(geometry, PLCpoints);
   // Remove any external points
   quantmesh.cullExternalPoints(qplc);
   this->tessellateQuantized(quantmesh);
@@ -78,14 +81,44 @@ tessellate(const std::vector<RealType>& points,
 //----------------------------------------------------------------------------
 // Tessellate in a ReducedPLC.
 //------------------------------------------------------------------------------
-template<int nDim, typename RealType>
+template<int Dimension, typename RealType>
 inline
 void
-Tessellator<nDim, RealType>::
+Tessellator<Dimension, RealType>::
 tessellate(const std::vector<RealType>& points,
-           const ReducedPLC<nDim, RealType>& geometry,
-           Tessellation<nDim, RealType>& mesh) const {
+           const ReducedPLC<Dimension, RealType>& geometry,
+           Tessellation<Dimension, RealType>& mesh) const {
   this->tessellate(points, geometry.points, geometry, mesh);
+}
+
+template<int Dimension, typename RealType>
+inline void
+Tessellator<Dimension, RealType>::
+singleNodeTessellate(QuantTessellation<Dimension>& result) const {
+  if constexpr (Dimension == 2) {
+    using IntType = typename QuantTessellation<2>::IntType;
+    using RealPoint = Point2<double>;
+    using IntPoint = typename QuantTessellation<2>::IntPoint;
+    const auto& Q = Quantizer<2>::instance();
+    result.m_cells.resize(1);
+
+    // Map canonical edges to face indices for orientation tracking
+    edge::EdgeToFaceMap edgeToFace;
+
+    // Map IntPoint coordinates to node indices for deduplication
+    std::map<IntPoint, int> node2id;
+
+    // Add nodes for the box extent and keep track of their indices
+    auto cornerIndices = shapes::addBoxPoints(Q, node2id, result.m_nodes);
+    const int N = 4;
+    shapes::BoxSides side;
+    for (int i = 0; i < N; ++i) {
+      auto point0 = cornerIndices[side.corner(i)];
+      auto point1 = cornerIndices[side.corner((i+1)%N)];
+      int signedFaceIndex = edge::addOrientedEdge(point0, point1, result.m_faces, edgeToFace);
+      result.m_cells[0].push_back(signedFaceIndex);
+    }
+  }
 }
 
 }

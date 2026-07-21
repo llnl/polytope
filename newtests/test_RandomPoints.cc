@@ -41,7 +41,7 @@ void testBoundary(Boundary2D<double>& boundary,
   Generators<2,double> generators(boundary);
   unsigned nPoints = 10;
   Tessellation<2,double> mesh;
-  for( unsigned n = 0; n < numSweeps; ++n ){
+  for (unsigned n = 0; n < numSweeps; ++n) {
     POLY_CHECK(mesh.empty());
     nPoints = nPoints * 10;
     int plotIndex = 3*boundaryID + n;
@@ -59,7 +59,7 @@ void testBoundary(Boundary2D<double>& boundary,
 // testAllBoundaries
 // -----------------------------------------------------------------------
 void testAllBoundaries(Tessellator<2, double>& tessellator, int numSweeps) {
-  for (int bid = 0; bid < 10; ++bid){
+  for (int bid = 0; bid < 10; ++bid) {
     cout << "Testing boundary type " << bid << endl;
     Boundary2D<double> boundary;
     boundary.mDiff = 0.5;
@@ -71,11 +71,9 @@ void testAllBoundaries(Tessellator<2, double>& tessellator, int numSweeps) {
 // -----------------------------------------------------------------------
 // main
 // -----------------------------------------------------------------------
-int main(int argc, char** argv)
-{
-#ifdef POLYTOPE_ENABLE_MPI
-  MPI_Init(&argc, &argv);
-#endif
+int main(int argc, char** argv) {
+  auto& comm = Communicator::instance();
+  comm.init(argc, argv);
 
   int numSweeps = 2;
   if (argc >= 2) {
@@ -97,9 +95,6 @@ int main(int argc, char** argv)
     testAllBoundaries(tessellator, numSweeps);
   }
 #endif
-
-#ifdef POLYTOPE_ENABLE_MPI
-  MPI_Finalize();
-#endif
+  comm.finalize();
   return 0;
 }

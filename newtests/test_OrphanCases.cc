@@ -3,7 +3,7 @@
 // A collection of difficult test cases for the orphaned cell algorithm.
 // All tests involve meshing a circular region with a star-shaped hole
 // in the middle with only 20 points. Seeding the random number generator
-// provides the input generator locations. Test cases were found through 
+// provides the input generator locations. Test cases were found through
 // trial-and-error (though with obnoxious frequency!).
 // -----------------------------------------------------------------------
 
@@ -22,7 +22,7 @@
 #endif
 #include "BoostTessellator.hh"
 
-#include "Communicator.hh" 
+#include "Communicator.hh"
 
 using namespace std;
 using namespace polytope;
@@ -89,18 +89,18 @@ void test(Tessellator<2,double>& tessellator) {
 
   // Test name for output
   string testName = "OrphanCases_" + tessellator.name();
-  
+
   // Initialize boundary and tessellator
   Boundary2D<double> boundary;
-  
+
   // Circular region with star-shaped hole
   int bType = 5;
   boundary.setDefaultBoundary(bType);
-  
+
   int i = 1;
   const double dist = 1.0e-6;
   auto& Q = Quantizer<2>::instance();
-  
+
   // Test 1: Cell parents multiple orphans
   int seed = 10489593;
   {
@@ -114,7 +114,7 @@ void test(Tessellator<2,double>& tessellator) {
     POLY_CHECK(checkNearestNode(mesh, dist));
     ++i;
   }
-  
+
   // Test 2: Orphan neighbors are also parents of orphans
   {
     seed++;
@@ -128,7 +128,7 @@ void test(Tessellator<2,double>& tessellator) {
     POLY_CHECK(checkNearestNode(mesh,dist));
     ++i;
   }
-  
+
   // Test 3: Overlapping orphans
   {
     seed = 10489609;
@@ -142,7 +142,7 @@ void test(Tessellator<2,double>& tessellator) {
     POLY_CHECK(checkNearestNode(mesh, dist));
     ++i;
   }
-  
+
   // Test 4: Empty orphan neighbor set
   {
     seed = 10489611;
@@ -156,7 +156,7 @@ void test(Tessellator<2,double>& tessellator) {
     POLY_CHECK(checkNearestNode(mesh, dist));
     ++i;
   }
-  
+
   // Test 5: Boost.Geometry calls invalid overlay exception
   {
     seed = 10489612;
@@ -170,7 +170,7 @@ void test(Tessellator<2,double>& tessellator) {
     POLY_CHECK(checkNearestNode(mesh, dist));
     ++i;
   }
-  
+
   // Test 6: Nonconvex boundary with three internal generators
   {
     cout << "\nTest 6: Nonconvex boundary with three internal generators" << endl;
@@ -202,7 +202,7 @@ void test(Tessellator<2,double>& tessellator) {
     outputMesh(mesh, testName, i);
     ++i;
   }
-  
+
   // Test 7: Original 3x3 Test Case
   {
     cout << "\nTest 7: 3x3 Unit Test with 2 Orphans" << endl;
@@ -222,7 +222,7 @@ void test(Tessellator<2,double>& tessellator) {
     PLCpoints.push_back(1.2);  PLCpoints.push_back(1.7);
     PLCpoints.push_back(1.2);  PLCpoints.push_back(3.0);
     PLCpoints.push_back(0.0);  PLCpoints.push_back(3.0);
-    
+
     int ix, iy, nx = 3;
     double xi, yi;
     for (iy = 0; iy != nx; ++iy) {
@@ -232,7 +232,7 @@ void test(Tessellator<2,double>& tessellator) {
 	points.push_back(xi);  points.push_back(yi);
       }
     }
-    
+
     int nSides = PLCpoints.size()/2;
     boundary.facets.resize( nSides, std::vector<int>(2) );
     for (unsigned j = 0; j != nSides; ++j){
@@ -280,11 +280,9 @@ void test(Tessellator<2,double>& tessellator) {
 // -----------------------------------------------------------------------
 // main
 // -----------------------------------------------------------------------
-int main(int argc, char** argv)
-{
-#ifdef POLYTOPE_ENABLE_MPI
-  MPI_Init(&argc, &argv);
-#endif
+int main(int argc, char** argv) {
+  auto& comm = Communicator::instance();
+  comm.init(argc, argv);
 
 #ifdef POLYTOPE_ENABLE_TRIANGLE
   {
@@ -292,18 +290,14 @@ int main(int argc, char** argv)
     TriangleTessellator tessellator;
     test(tessellator);
   }
-#endif   
+#endif
 
-#ifdef POLYTOPE_ENABLE_BOOST
   {
     cout << "\nBoost Tessellator:\n" << endl;
     BoostTessellator tessellator;
     test(tessellator);
   }
-#endif   
 
-#ifdef POLYTOPE_ENABLE_MPI
-  MPI_Finalize();
-#endif
-   return 0;
+  comm.finalize();
+  return 0;
 }

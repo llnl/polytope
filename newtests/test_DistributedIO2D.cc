@@ -72,64 +72,58 @@ void test(Tessellator<2, double>& tessellator) {
   int rank = Communicator::getRank();
   int size = Communicator::getNProcs();
 
-  try {
-    const auto allPoints = generatorPoints();
-    const auto localPoints = rankLocalPoints(allPoints, rank, size);
-    const auto boundaryPoints = unitSquarePoints();
-    const auto boundary = unitSquarePLC();
+  const auto allPoints = generatorPoints();
+  const auto localPoints = rankLocalPoints(allPoints, rank, size);
+  const auto boundaryPoints = unitSquarePoints();
+  const auto boundary = unitSquarePLC();
 
-    DistributedTessellator<2> distributed(tessellator);
+  DistributedTessellator<2> distributed(tessellator);
 
-    Tessellation<2, double> localMesh;
-    distributed.tessellate(localPoints, boundaryPoints, boundary, localMesh);
+  Tessellation<2, double> localMesh;
+  distributed.tessellate(localPoints, boundaryPoints, boundary, localMesh);
 
-    auto localCells = static_cast<int>(localMesh.cells.size());
-    int totalCells = 0;
-    MPI_Allreduce(&localCells, &totalCells, 1, MPI_INT, MPI_SUM, Communicator::communicator());
+  auto localCells = static_cast<int>(localMesh.cells.size());
+  int totalCells = 0;
+  MPI_Allreduce(&localCells, &totalCells, 1, MPI_INT, MPI_SUM, Communicator::communicator());
 
-    const auto expectedCells = static_cast<int>(allPoints.size()/2);
-    POLY_CHECK2(totalCells == expectedCells,
-                "Distributed output has " << totalCells
-                << " total cells but expected " << expectedCells);
-    POLY_CHECK2(localCells == static_cast<int>(localPoints.size()/2),
-                "Rank " << rank << " output " << localCells
-                << " cells for " << localPoints.size()/2 << " owned generators");
+  const auto expectedCells = static_cast<int>(allPoints.size()/2);
+  POLY_CHECK2(totalCells == expectedCells,
+              "Distributed output has " << totalCells
+              << " total cells but expected " << expectedCells);
+  POLY_CHECK2(localCells == static_cast<int>(localPoints.size()/2),
+              "Rank " << rank << " output " << localCells
+              << " cells for " << localPoints.size()/2 << " owned generators");
 
-    double localArea = computeTessellationArea(localMesh);
-    double distributedArea = 0.0;
-    MPI_Allreduce(&localArea, &distributedArea, 1, MPI_DOUBLE, MPI_SUM, Communicator::communicator());
+  double localArea = computeTessellationArea(localMesh);
+  double distributedArea = 0.0;
+  MPI_Allreduce(&localArea, &distributedArea, 1, MPI_DOUBLE, MPI_SUM, Communicator::communicator());
 
-    double serialArea = 0.0;
-    if (rank == 0) {
-      Tessellation<2, double> serialMesh;
-      tessellator.tessellate(allPoints, boundaryPoints, boundary, serialMesh);
-      serialArea = computeTessellationArea(serialMesh);
-    }
-    MPI_Bcast(&serialArea, 1, MPI_DOUBLE, 0, Communicator::communicator());
-
-    POLY_CHECK2(std::abs(distributedArea - serialArea) < 1.0e-8,
-                "Distributed area " << distributedArea
-                << " differs from serial area " << serialArea);
-
-    std::string outname = "parallelIO_" + tessellator.name();
-    outputMesh(localMesh, outname, 0, 0.);
-
-    // Now try to open the file we just created
-    Tessellation<2, double> readMesh;
-    std::string masterFilename = getMasterFilename(outname, 0);
-    std::map<std::string, std::vector<double>> cellFields;
-    SiloReader<2, double>::read(readMesh, cellFields, masterFilename);
-    localCells = static_cast<int>(readMesh.cells.size());
-    totalCells = 0;
-    MPI_Allreduce(&localCells, &totalCells, 1, MPI_INT, MPI_SUM, Communicator::communicator());
-    POLY_CHECK2(totalCells == expectedCells,
-                "Read in mesh has " << totalCells
-                << " cells but expected " << expectedCells);
-  } catch (const std::exception& e) {
-    std::cout << "=== DistributedVoronoi2D failed on rank " << rank << " ===" << std::endl;
-    std::cout << e.what() << std::endl;
-    Communicator::haltAll();
+  double serialArea = 0.0;
+  if (rank == 0) {
+    Tessellation<2, double> serialMesh;
+    tessellator.tessellate(allPoints, boundaryPoints, boundary, serialMesh);
+    serialArea = computeTessellationArea(serialMesh);
   }
+  MPI_Bcast(&serialArea, 1, MPI_DOUBLE, 0, Communicator::communicator());
+
+  POLY_CHECK2(std::abs(distributedArea - serialArea) < 1.0e-8,
+              "Distributed area " << distributedArea
+              << " differs from serial area " << serialArea);
+
+  std::string outname = "parallelIO_" + tessellator.name();
+  outputMesh(localMesh, outname, 0, 0.);
+
+  // Now try to open the file we just created
+  Tessellation<2, double> readMesh;
+  std::string masterFilename = getMasterFilename(outname, 0);
+  std::map<std::string, std::vector<double>> cellFields;
+  SiloReader<2, double>::read(readMesh, cellFields, masterFilename);
+  localCells = static_cast<int>(readMesh.cells.size());
+  totalCells = 0;
+  MPI_Allreduce(&localCells, &totalCells, 1, MPI_INT, MPI_SUM, Communicator::communicator());
+  POLY_CHECK2(totalCells == expectedCells,
+              "Read in mesh has " << totalCells
+              << " cells but expected " << expectedCells);
 }
 } // anonymous namespace
 

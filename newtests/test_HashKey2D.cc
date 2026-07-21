@@ -16,7 +16,7 @@
 #include "HashKey.hh"
 #include "Point.hh"
 
-#include "Communicator.hh" 
+#include "Communicator.hh"
 
 using namespace std;
 using namespace polytope;

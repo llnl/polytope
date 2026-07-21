@@ -70,7 +70,18 @@ public:
   //! Tessellator implementations must provide, on which the other tessellation methods
   //! in polytope build.
   virtual void
-  tessellateQuantized(QuantTessellation<Dimension>& qmesh) const = 0;
+  tessellateQuantizedImpl(QuantTessellation<Dimension>& result) const = 0;
+
+  //! Wrapper for tessellateQuantizedImpl that tests if only 1 generator point is given.
+  //! DistributedTessellator will override this.
+  virtual void
+  tessellateQuantized(QuantTessellation<Dimension>& result) const {
+    if (result.m_points.size() == 1) {
+      singleNodeTessellate(result);
+    } else {
+      this->tessellateQuantizedImpl(result);
+    }
+  }
 
   //! Required for all tessellators:
   //! A unique name string per tessellation instance.
@@ -85,6 +96,8 @@ public:
     const auto& Q = Quantizer<Dimension>::instance();
     return Q.m_dx_o / Q.m_lx_o;
   }
+
+  void singleNodeTessellate(QuantTessellation<Dimension>& quantmesh) const;
 
 private:
 
