@@ -36,20 +36,6 @@ struct Clip2D {
       POLY_ASSERT(clip1 == clip2);
       return !clip1;
     }
-    // if (!inf0 && !inf1) {
-    //   Point2<double> a, b;
-    //   bool clippedFirst = false;
-    //   bool clippedSecond = false;
-    //   if (!clipFiniteSegmentToBox<CoordType>(rp0, rp1, a, b, firstSide, secondSide,
-    //                                          clippedFirst, clippedSecond)) {
-    //     return true;
-    //   }
-    //   p0 = round<2, CoordType>(a+0.5);
-    //   p1 = round<2, CoordType>(b+0.5);
-    //   inf0 = clippedFirst;
-    //   inf1 = clippedSecond;
-    //   return false;
-    // }
     bool bounds0 = (!inf0) ? Q.inQBounds(rp0) : true;
     bool validp0 = (!inf0 && bounds0);
     if (validp0) {

@@ -119,9 +119,13 @@ void Communicator::abort() {
   int isInit;
   MPI_Initialized(&isInit);
   if (isInit) {
+    // Uncomment this to catch an error and print out culprit generators
+    // MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
+    // throw std::runtime_error("failed");
     MPI_Abort(communicator(), 1);
   }
 #endif
+  abort();
 }
 
 int Communicator::getRoot() {

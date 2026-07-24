@@ -265,6 +265,10 @@ tessellateQuantizedImpl(QuantizedTessellation& result) const {
 
       curTri = nextTri;
     } while (curTri != startTri);
+    if (localEdges.size() > 2) {
+      // Order the edges to have a consistent sequence of clipped node sides
+      edge::orderClippedNodes(clippedNodeSides, localEdges);
+    }
     std::vector<edge::Edge> finalEdges = shapes::closeClippedEdges(localEdges, clippedNodeSides, cornerIndices);
     // Remove collinear points from the edge loop
     removeCollinear(finalEdges, result.m_nodes);

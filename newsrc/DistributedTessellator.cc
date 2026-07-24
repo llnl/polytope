@@ -512,7 +512,7 @@ tessellateQuantizedImpl(QuantizedTessellation& qmesh) const {
 
   if (allVisibleRecords.size() > 1) {
     auto visiblePoints = pointsFromRecords(allVisibleRecords);
-    QuantizedTessellation visibleMesh(visiblePoints, qmesh);
+    QuantizedTessellation visibleMesh(visiblePoints);
     m_serialTessellator.tessellateQuantized(visibleMesh);
     auto visibleNeighbors =
       neighborRanksFromVisibleVoronoi(visibleMesh, allVisibleRecords);
@@ -535,7 +535,7 @@ tessellateQuantizedImpl(QuantizedTessellation& qmesh) const {
   }
 
   auto finalPoints = pointsFromRecords(finalRecords);
-  QuantizedTessellation finalMesh(finalPoints, qmesh);
+  QuantizedTessellation finalMesh(finalPoints);
   m_serialTessellator.tessellateQuantized(finalMesh);
   filterToLocalGenerators(finalMesh, finalRecords);
   qmesh = std::move(finalMesh);

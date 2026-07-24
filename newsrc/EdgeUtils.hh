@@ -45,15 +45,87 @@ inline Edge orderEdge(const Edge edge) {
 
 //------------------------------------------------------------------------------
 // Order a loop of edges to form a connected chain
-// Ensures edges[i][1] connects to edges[i+1][0]
+// Ensures edges[i][1] connects to edges[i+1][0] when possible and relies
+// on clippedNodeSides when not possible.
 //------------------------------------------------------------------------------
-inline void orderEdgeLoop(std::vector<edge::Edge>& edges,
-                          std::map<int, int>& oldToNew) {
+inline void orderClippedNodes(std::vector<std::pair<int, int>>& clippedNodeSides,
+                              std::vector<edge::Edge>& edges) {
   if (edges.empty()) return;
+  POLY_ASSERT2(edges.size() == clippedNodeSides.size(),
+               "Vectors must be the same size");
+  const auto N = edges.size();
+  auto sideDistance = [](int fromSide, int toSide) {
+                        constexpr int numBoxSides = 8;
+                        return (toSide - fromSide + numBoxSides) % numBoxSides;
+                      };
+  std::vector<edge::Edge> orderedEdges;
+  std::vector<std::pair<int, int>> orderedSides;
+  orderedEdges.reserve(N);
+  orderedSides.reserve(N);
+  std::vector<bool> used(N, false);
+  size_t current = 0;
+
+  for (size_t count = 0; count < N; ++count) {
+    orderedEdges.push_back(edges[current]);
+    orderedSides.push_back(clippedNodeSides[current]);
+    used[current] = true;
+    if (count + 1 == N) break;
+    int next = -1;
+    // Prefer exact Voronoi-edge adjacency.
+    for (size_t candidate = 0; candidate < N; ++candidate) {
+      if (!used[candidate] &&
+          edges[current].second == edges[candidate].first) {
+        next = static_cast<int>(candidate);
+        break;
+      }
+    }
+    // If the current edge ends on the clipping box, connect to the next
+    // edge that starts on the box by walking the box in CCW side order.
+    if (next == -1 && clippedNodeSides[current].second >= 0) {
+      int bestDistance = 8;
+      for (size_t candidate = 0; candidate < N; ++candidate) {
+        if (!used[candidate] && clippedNodeSides[candidate].first >= 0) {
+          const int distance = sideDistance(clippedNodeSides[current].second,
+                                            clippedNodeSides[candidate].first);
+          if (distance < bestDistance) {
+            bestDistance = distance;
+            next = static_cast<int>(candidate);
+          }
+        }
+      }
+    }
+    // Last-resort fallback: preserve all entries, but this means the loop
+    // was not fully recoverable from endpoint/box-side adjacency.
+    if (next == -1) {
+      for (size_t candidate = 0; candidate < N; ++candidate) {
+        if (!used[candidate]) {
+          next = static_cast<int>(candidate);
+          break;
+        }
+      }
+    }
+    POLY_ASSERT(next != -1);
+    current = static_cast<size_t>(next);
+  }
+  edges = std::move(orderedEdges);
+  clippedNodeSides = std::move(orderedSides);
+}
+
+//------------------------------------------------------------------------------
+// Order a loop of edges to form a connected chain
+// Ensures edges[i][1] connects to edges[i+1][0]
+// Also reorders otherVec accordingly
+//------------------------------------------------------------------------------
+template<typename OtherType>
+inline void orderEdgeLoop(std::vector<edge::Edge>& edges,
+                          std::vector<OtherType>& otherVec) {
+  if (edges.empty()) return;
+  POLY_ASSERT2(edges.size() == otherVec.size(), "Vectors must be the same size");
 
   std::vector<edge::Edge> ordered;
   ordered.reserve(edges.size());
-  oldToNew.clear();
+  std::vector<OtherType> orderedVec;
+  orderedVec.reserve(otherVec.size());
 
   // Build map: start vertex -> list of edge indices starting at that vertex
   std::map<int, std::vector<int>> startMap;
@@ -67,8 +139,8 @@ inline void orderEdgeLoop(std::vector<edge::Edge>& edges,
 
   while (used.size() < edges.size()) {
     // Add current edge to ordered list
-    oldToNew[current] = ordered.size();
     ordered.push_back(edges[current]);
+    orderedVec.push_back(otherVec[current]);
     used.insert(current);
 
     // Find next edge: one that starts where this one ends
@@ -101,16 +173,14 @@ inline void orderEdgeLoop(std::vector<edge::Edge>& edges,
   }
 
   edges = ordered;
+  otherVec = orderedVec;
 }
 
-inline void orderEdgeLoop(std::vector<std::vector<int>>& edges,
-                          std::map<int, int>& oldToNew) {
+inline void orderEdgeLoop(std::vector<std::vector<int>>& edges) {
   if (edges.empty()) return;
 
   std::vector<std::vector<int>> ordered;
   ordered.reserve(edges.size());
-  oldToNew.clear();
-  
 
   // Build map: start vertex -> edge index
   std::map<int, int> startMap;
@@ -122,7 +192,6 @@ inline void orderEdgeLoop(std::vector<std::vector<int>>& edges,
   std::set<int> used;
   int current = 0;
   while (used.size() < edges.size()) {
-    oldToNew[current] = ordered.size();
     ordered.push_back(edges[current]);
     used.insert(current);
 
@@ -135,11 +204,6 @@ inline void orderEdgeLoop(std::vector<std::vector<int>>& edges,
   }
 
   edges = ordered;
-}
-
-inline void orderEdgeLoop(std::vector<std::vector<int>>& edges) {
-  std::map<int, int> dummy;
-  orderEdgeLoop(edges, dummy);
 }
 
 //------------------------------------------------------------------------------

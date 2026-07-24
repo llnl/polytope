@@ -31,6 +31,7 @@ void tests(const int tnum, bool boostTess) {
   Boundary2D<double> boundary;
   boundary.mDiff = 1.;
   std::vector<double> points;
+  std::vector<IntPoint> qpoints;
   std::string testname;
   // Number of nodes expected from test if not -1
   int numNodes = -1;
@@ -139,9 +140,39 @@ void tests(const int tnum, bool boostTess) {
       }
       break;
     }
+  case 14: // Difficult set of quantized points discovered during rotation test
+    {
+      testname = "Difficult quantized points";
+      boundary.setDefaultBoundary(0);
+      std::vector<int> rqp = {547445970, 380834812,
+                              545899097, 374153061,
+                              544323133, 368524286,
+                              542713618, 709756041,
+                              547445970, 692907011,
+                              630394586, 932588752};
+      qpoints = extractCoords<2, CoordType>(rqp);
+      break;
+    }
+  case 15: // Difficult set of quantized points discovered during rotation test
+    {
+      testname = "Difficult quantized points 2";
+      boundary.setDefaultBoundary(0);
+      std::vector<int> rqp = {958459259, 368147224,
+                              947586761, 544198943,
+                              772074713, 824295508,
+                              950857238, 541497367,
+                              960886415, 365110638};
+      qpoints = extractCoords<2, CoordType>(rqp);
+      break;
+    }
   }
   cout << "\n=== " << outname << " Test " << tnum << ":  " << testname << " ===" << endl;
-  QuantTessellation<2> quantMesh(points);
+  QuantTessellation<2> quantMesh;
+  if (qpoints.size() > 0) {
+    quantMesh.init(qpoints);
+  } else {
+    quantMesh.init(points);
+  }
   QuantPLC<2> QPLC(boundary.mPLC, boundary.mPLCpoints);
   quantMesh.cullExternalPoints(QPLC);
   if (boostTess) {
@@ -177,7 +208,7 @@ int main(int argc, char** argv) {
   auto& comm = Communicator::instance();
   comm.init(argc, argv);
 
-  const int numtest = 13;
+  const int numtest = 15;
   try {
 #ifdef POLYTOPE_ENABLE_TRIANGLE
     for (bool boost : {true, false}) {

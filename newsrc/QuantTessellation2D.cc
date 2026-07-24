@@ -153,7 +153,7 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
       cellPolygons[smallToLarge[0]] = orphanBound[0];
     } else {
       // Retessellate with these select generators, convert final product into boost polygons for simplicity
-      QuantTessellation<2> newQT(genPoints, *this);
+      QuantTessellation<2> newQT(genPoints);
       tessellator.tessellateQuantized(newQT);
       POLY_ASSERT2(newQT.m_cells.size() == genIndex.size(), "Number of gen points should not change");
       for (auto i = 0; i < newQT.m_cells.size(); ++i) {

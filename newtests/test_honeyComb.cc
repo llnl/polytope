@@ -28,6 +28,7 @@ void test(Tessellator<2,double>& tessellator, const std::string& outname, bool h
   unsigned ny = 8;
   std::vector<double> points;
   int cycle = 0;
+  int numNodes = 0;
   if (honeyComb) {
     double dx = (xmax - xmin)/(nx + 1.);
     double dy = (ymax - ymin)/(ny + 1.);
@@ -49,7 +50,9 @@ void test(Tessellator<2,double>& tessellator, const std::string& outname, bool h
         points.push_back(y);
       }
     }
+    numNodes = 4 + 2*(nx + ny + nx*ny) + nx;
   } else {
+    numNodes = (nx+1)*(ny+1);
     double dx = (xmax - xmin)/double(nx);
     double dy = (ymax - ymin)/double(ny);
     // Cartesian case: Just put the generators at the proposed zone centers.
@@ -72,7 +75,7 @@ void test(Tessellator<2,double>& tessellator, const std::string& outname, bool h
   auto& Q = Quantizer<2>::instance();
   Q.init(plcPoints);
   Tessellation<2, double> mesh;
-  tessellator.tessellate(points, plcPoints, plc, mesh);
+  tessellator.tessellate(points, mesh);// plcPoints, plc, mesh);
   outputMesh(mesh, outname, cycle);
   testWatertight(mesh, 0);
   // Read the mesh we just wrote back in
@@ -82,6 +85,9 @@ void test(Tessellator<2,double>& tessellator, const std::string& outname, bool h
   SiloReader<2, double>::read(readMesh, cellFields, masterFilename);
   // Try writing the mesh back out
   outputMesh(readMesh, "re"+outname, cycle);
+  int meshnodes = readMesh.nodes.size()/2;
+  POLY_CHECK2(meshnodes == numNodes, "Number of nodes in mesh: " << meshnodes
+              << " does not match expected number of nodes: " << numNodes);
 }
 // -----------------------------------------------------------------------
 // main

@@ -44,6 +44,15 @@ public:
   // Constructor - common for all dimensions
   //------------------------------------------------------------------------------
   QuantTessellation(const std::vector<RealType>& genpoints) {
+    init(genpoints);
+  }
+
+  // Construct a smaller instance, useful during clipping
+  QuantTessellation(const std::vector<IntPoint>& qgenpoints) {
+    init(qgenpoints);
+  }
+
+  void init(const std::vector<RealType>& genpoints) {
     const auto& Q = QuantizerType::instance();
     m_loBounds = Q.maxCoord;
     m_hiBounds = -m_loBounds;
@@ -66,18 +75,18 @@ public:
     sortByHash();
   }
 
-  // Construct a smaller instance, useful during clipping
-  QuantTessellation(const std::vector<IntPoint>& qgenpoints,
-                    const QuantTessellation& QT) :
-    m_points(qgenpoints),
-    m_loBounds(QT.m_loBounds),
-    m_hiBounds(QT.m_hiBounds) {
+  void init(const std::vector<IntPoint>& qgenpoints) {
+    m_points = qgenpoints;
     const auto& Q = QuantizerType::instance();
-    auto N = qgenpoints.size();
+    m_loBounds = Q.maxCoord;
+    m_hiBounds = -m_loBounds;
+    auto N = m_points.size();
     m_hashes.reserve(N);
     unsigned i = 0;
     for (auto& ip : m_points) {
       ip.index = i++;
+      m_loBounds = m_loBounds.minElements(ip);
+      m_hiBounds = m_hiBounds.maxElements(ip);
       m_hashes.push_back(Q.hash(ip));
     }
   }

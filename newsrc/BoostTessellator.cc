@@ -78,11 +78,6 @@ tessellateQuantizedImpl(QuantizedTessellation& result) const {
 
     const int cellIndex = cellItr->source_index();
     if (cellIndex >= numGenerators) continue;
-    bool do_debug = false;
-    if (cellIndex == 296) {
-      std::cout << "at point " << std::endl;
-      do_debug = true;
-    }
 
     // Walk edges CCW around this cell
     const typename VD::edge_type* firstEdge = cellItr->incident_edge();
@@ -111,9 +106,6 @@ tessellateQuantizedImpl(QuantizedTessellation& result) const {
         curEdge = std::make_pair(ed.curEdge.second, ed.curEdge.first);
         startSide = ed.endSide;
         endSide = ed.startSide;
-        if (do_debug) {
-          std::cout << "edge " << result.m_nodes[curEdge.first] << " " << result.m_nodes[curEdge.second] << " sides " << startSide << " " << endSide << std::endl;
-        }
       } else {
         Clip2D<IntType> clipper;
         clipper.gen0 = result.m_points[gindx1];
@@ -144,9 +136,6 @@ tessellateQuantizedImpl(QuantizedTessellation& result) const {
           endSide = static_cast<int>(clipper.secondSide);
         }
         curEdge = edge::updateNodeMap(clipper.p0, clipper.p1, node2id, result.m_nodes);
-        if (do_debug) {
-          std::cout << "ray " << clipper.normalRay << " edge " << result.m_nodes[curEdge.first] << " " << result.m_nodes[curEdge.second] << " sides " << startSide << " " << endSide << std::endl;
-        }
         if (curEdge.first == curEdge.second) {
           edge = nextEdge;
           continue;
