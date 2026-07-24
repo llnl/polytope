@@ -112,19 +112,13 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
 #else
   string dirname = directory;
   if (dirname.empty()) dirname = ".";
-  std::string filename;
-  // Determine the file name.
-  if (cycle >= 0) {
-    filename = dirname + "/" + prefix + "_" + std::to_string(cycle) + ".silo";
-  } else {
-    filename = dirname + "/" + prefix + ".silo";
-  }
+  std::string filename = getMasterFilename(prefix, cycle);
 
   std::string meshname = getGlobalMeshName();
   bool hasPoints = true;
 #endif
   if (hasPoints) {
-    DBfile* file = DBCreate(filename.c_str(), 0, DB_LOCAL, 0, DB_HDF5);
+    DBfile* file = DBCreate(filename.c_str(), DB_CLOBBER, DB_LOCAL, 0, DB_HDF5);
     // Add cycle/time metadata if needed.
     DBoptlist* optlist = DBMakeOptlist(10);
     double dtime = static_cast<double>(time);
@@ -151,20 +145,20 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
     coords[1] = &(y[0]);
 
     // Build the list of nodes describing the boundary faces.
-    int numBoundaryFaces = mesh.boundaryFaces.size();
-    vector<int> boundaryNodes(2*numBoundaryFaces);
-    for (int i = 0; i < numBoundaryFaces; ++i) {
-      boundaryNodes[2*i] = mesh.faces[mesh.boundaryFaces[i]][0];
-      boundaryNodes[2*i+1] = mesh.faces[mesh.boundaryFaces[i]][1];
-    }
+    // int numBoundaryFaces = mesh.boundaryFaces.size();
+    // vector<int> boundaryNodes(2*numBoundaryFaces);
+    // for (int i = 0; i < numBoundaryFaces; ++i) {
+    //   boundaryNodes[2*i] = mesh.faces[mesh.boundaryFaces[i]][0];
+    //   boundaryNodes[2*i+1] = mesh.faces[mesh.boundaryFaces[i]][1];
+    // }
 
     // Write the boundary face list.
-    {
-      vector<int> shapesize(size_t(1), 2), shapecnt(size_t(1), numBoundaryFaces);
-      DBPutFacelist(file, (char*)"boundary_faces", numBoundaryFaces,
-                    2, &boundaryNodes[0], boundaryNodes.size(), 0,
-                    0, &shapesize[0], &shapecnt[0], 1, 0, 0, 0);
-    }
+    // {
+    //   vector<int> shapesize(size_t(1), 2), shapecnt(size_t(1), numBoundaryFaces);
+    //   DBPutFacelist(file, (char*)"boundary_faces", numBoundaryFaces,
+    //                 2, &boundaryNodes[0], boundaryNodes.size(), 0,
+    //                 0, &shapesize[0], &shapecnt[0], 1, 0, 0, 0);
+    // }
 
     // All zones are polygonal.
     int numCells = mesh.cells.size();
@@ -192,8 +186,10 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
 
     // Write out the cell-face connectivity data.
     vector<int> conn(numCells);
-    int elemlengths[3];
-    char* elemnames[3];
+    int elemlengths[2];
+    char* elemnames[2];
+    elemnames[0] = strDup("ncellfaces");
+    elemlengths[0] = numCells;    
     for (int c = 0; c < numCells; ++c) {
       conn[c] = mesh.cells[c].size();
     }
@@ -202,21 +198,14 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
         conn.push_back(mesh.cells[c][f]);
       }
     }
-    for (size_t f = 0; f < mesh.faceCells.size(); ++f) {
-      conn.push_back(mesh.faceCells[f][0]);
-      conn.push_back(mesh.faceCells[f][1]);
-    }
-    elemnames[0] = strDup("ncellfaces");
-    elemlengths[0] = numCells;
-    elemnames[2] = strDup("facecells");
-    elemlengths[2] = 2*mesh.faceCells.size();
+    // Size of conn that is the cells
+    int connCellSize = static_cast<int>(conn.size()) - numCells;
     elemnames[1] = strDup("cellfaces");
-    elemlengths[1] = conn.size() - elemlengths[2] - elemlengths[0];
-    DBPutCompoundarray(file, "conn", elemnames, elemlengths, 3,
+    elemlengths[1] = connCellSize;
+    DBPutCompoundarray(file, "conn", elemnames, elemlengths, 2,
                        (void*)&conn[0], conn.size(), DB_INT, 0);
     free(elemnames[0]);
     free(elemnames[1]);
-    free(elemnames[2]);
 
     // Write out convex hull data.
     vector<int> hull(1+mesh.convexHull.facets.size());

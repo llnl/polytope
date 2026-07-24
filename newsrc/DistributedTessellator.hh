@@ -44,7 +44,6 @@ public:
   using QuantizedTessellation = QuantTessellation<Dimension>;
   using TessellationType = Tessellation<Dimension, RealType>;
 
-#ifdef POLYTOPE_ENABLE_MPI
   DistributedTessellator(const Base& serialTessellator);
   virtual ~DistributedTessellator() = default;
 
@@ -63,7 +62,6 @@ public:
   virtual void tessellateQuantizedImpl(QuantizedTessellation& result) const override;
 
   virtual std::string name() const override;
-#endif
 
 private:
   const Base& m_serialTessellator;

@@ -372,12 +372,12 @@ write(const Tessellation<3, RealType>& mesh,
   for (size_t f = 0; f < mesh.faceCells.size(); ++f)
   {
     conn.push_back(mesh.faceCells[f][0]);
-    conn.push_back(mesh.faceCells[f][0]);
+    conn.push_back(mesh.faceCells[f][1]);
   }
   elemnames[0] = strDup("ncellfaces");
   elemlengths[0] = numCells;
   elemnames[2] = strDup("facecells");
-  elemlengths[2] = conn.size() - 2*mesh.faces.size();
+  elemlengths[2] = 2*mesh.faceCells.size();
   elemnames[1] = strDup("cellfaces");
   elemlengths[1] = conn.size() - elemlengths[2] - elemlengths[0];
   DBPutCompoundarray(file, "conn", elemnames, elemlengths, 3, 

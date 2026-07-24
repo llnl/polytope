@@ -122,7 +122,7 @@ endif()
 # Triangle
 #-----------------------------------------------------------------------------------
 # Spack does not install Triangle in any useful way so we have to install it ourselves
-# To use it, put the source code into extern/Triangle
+# To use it, make sure the triangle source code is in ${triangle_SRC_DIR}.
 if(POLYTOPE_ENABLE_TRIANGLE)
   set(triangle_sources ${triangle_SRC_DIR}/triangle.c)
   set(triangle_headers ${triangle_SRC_DIR}/triangle.h)

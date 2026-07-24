@@ -419,30 +419,64 @@ bool SAT(const std::vector<Point3<CoordType>>& pointsA,
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 #ifdef POLYTOPE_ENABLE_TRIANGLE
+// // Returns a point that is the circumcenter
+// inline
+// Point2<double> circumcenter(const Point2<double>& a,
+//                             const Point2<double>& b,
+//                             const Point2<double>& c) {
+//   // auto ba = b - a;
+//   // auto ca = c - a;
+//   // auto bc = b - c;
+//   // double d = 2*(a.x*bc.y + b.x*ca.y - c.x*ba.y);
+//   double a2 = a.x*a.x + a.y*a.y;
+//   double b2 = b.x*b.x + b.y*b.y;
+//   double c2 = c.x*c.x + c.y*c.y;
+//   // Point2<double> out;
+//   // out.x = (a2*bc.y + b2*ca.y - c2*ba.y)/d;
+//   // out.y = (-a2*bc.x - b2*ca.x + c2*ba.x)/d;
+//   // return out;
+//   double ap[2] = {a[0], a[1]};
+//   double bp[2] = {b[0], b[1]};
+//   double cp[2] = {c[0], c[1]};
+//   double d = 2*orient2d(ap, bp, cp);
+//   double a0[2] = {a2, a[1]}, a1[2] = {a[0], a2};
+//   double b0[2] = {b2, b[1]}, b1[2] = {b[0], b2};
+//   double c0[2] = {c2, c[1]}, c1[2] = {c[0], c2};
+//   return Point2<double>(orient2d(a0,b0,c0)/d, orient2d(a1,b1,c1)/d);
+// }
+
 // Returns a point that is the circumcenter
 inline
 Point2<double> circumcenter(const Point2<double>& a,
                             const Point2<double>& b,
                             const Point2<double>& c) {
-  // auto ba = b - a;
-  // auto ca = c - a;
-  // auto bc = b - c;
-  // double d = 2*(a.x*bc.y + b.x*ca.y - c.x*ba.y);
-  double a2 = a.x*a.x + a.y*a.y;
-  double b2 = b.x*b.x + b.y*b.y;
-  double c2 = c.x*c.x + c.y*c.y;
-  // Point2<double> out;
-  // out.x = (a2*bc.y + b2*ca.y - c2*ba.y)/d;
-  // out.y = (-a2*bc.x - b2*ca.x + c2*ba.x)/d;
-  // return out;
-  double ap[2] = {a[0], a[1]};
-  double bp[2] = {b[0], b[1]};
-  double cp[2] = {c[0], c[1]};
-  double d = 2*orient2d(ap, bp, cp);
-  double a0[2] = {a2, a[1]}, a1[2] = {a[0], a2};
-  double b0[2] = {b2, b[1]}, b1[2] = {b[0], b2};
-  double c0[2] = {c2, c[1]}, c1[2] = {c[0], c2};
-  return Point2<double>(orient2d(a0,b0,c0)/d, orient2d(a1,b1,c1)/d);
+  // Differences are formed in long double before subtraction overflow
+  const long double ax = static_cast<long double>(a.x);
+  const long double ay = static_cast<long double>(a.y);
+  const long double bx = static_cast<long double>(b.x);
+  const long double by = static_cast<long double>(b.y);
+  const long double cx = static_cast<long double>(c.x);
+  const long double cy = static_cast<long double>(c.y);
+
+  const long double abx = bx - ax;
+  const long double aby = by - ay;
+  const long double acx = cx - ax;
+  const long double acy = cy - ay;
+  const long double cross = abx * acy - aby * acx;
+  if (cross == 0.0L) {
+    return Point2<double>(0., 0.);
+  }
+  const long double ab2 = abx * abx + aby * aby;
+  const long double ac2 = acx * acx + acy * acy;
+  // Circumcenter relative to A:
+  //
+  // U = A + (ac2 * perp(AB) - ab2 * perp(AC)) / (2 * cross)
+  //
+  const long double ux =
+    ax + (acy * ab2 - aby * ac2) / (2.0L * cross);
+  const long double uy =
+    ay + (abx * ac2 - acx * ab2) / (2.0L * cross);
+  return Point2<double>(static_cast<double>(ux), static_cast<double>(uy));
 }
 #endif
 

@@ -80,6 +80,8 @@ void test(Tessellator<2,double>& tessellator, const std::string& outname, bool h
   std::string masterFilename = getMasterFilename(outname, cycle);
   std::map<std::string, std::vector<double>> cellFields;
   SiloReader<2, double>::read(readMesh, cellFields, masterFilename);
+  // Try writing the mesh back out
+  outputMesh(readMesh, "re"+outname, cycle);
 }
 // -----------------------------------------------------------------------
 // main

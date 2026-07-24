@@ -141,7 +141,7 @@ class Tessellation {
   //! Collect the nodes around each cell
   std::vector<std::set<unsigned> > computeCellToNodes()
   {
-    std::vector<std::set<unsigned> > result(cells.size());//(nodes.size()/Dimension);
+    std::vector<std::set<unsigned> > result(cells.size());
     for (unsigned i = 0; i != cells.size(); ++i){
       for (std::vector<int>::const_iterator faceItr = cells[i].begin();
            faceItr != cells[i].end(); ++faceItr){
@@ -191,6 +191,29 @@ class Tessellation {
   computeCellCentroidAndSignedVolume(const unsigned ci,
                                      RealType* ccent,
                                      RealType& cvol) const;
+  void computeFaceCells() {
+    faceCells.clear();
+    auto numFaces = faces.size();
+    auto numCells = cells.size();
+    faceCells.resize(numFaces);
+    // Build faceCells connectivity: for each cell, mark which faces touch it
+    // Cells store signed face indices where negative means inverted orientation.
+    for (unsigned i = 0; i < numCells; ++i) {
+      const unsigned nf = cells[i].size();
+      for (unsigned j = 0; j < nf; ++j) {
+        auto k = cells[i][j];
+        if (k < 0) {
+          // Negative index: inverted face orientation
+          POLY_ASSERT2(~k < numFaces, k << " " << ~k << " " << numFaces);
+          faceCells[~k].push_back(~i);
+        } else {
+          // Positive index: normal face orientation
+          POLY_ASSERT2(k < numFaces, k << " " << numFaces);
+          faceCells[k].push_back(i);
+        }
+      }
+    }
+  }
 
 private:
 

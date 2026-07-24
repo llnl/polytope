@@ -234,7 +234,6 @@ QuantTessellation<2>::fillTessellation(TessellationType& mesh) {
   // In 2D: nodes are stored as [x0, y0, x1, y1, ...]
   mesh.nodes.resize(2 * numNodes);
   mesh.faces.resize(numFaces, std::vector<unsigned>(2));
-  mesh.faceCells.resize(numFaces);
   mesh.points.resize(2 * numCells);
   mesh.cells = m_cells;
   POLY_ASSERT2(m_cells.size() == numCells, "Differing number of cells and generator points");
@@ -258,24 +257,7 @@ QuantTessellation<2>::fillTessellation(TessellationType& mesh) {
     mesh.faces[i][0] = m_faces[i][0];
     mesh.faces[i][1] = m_faces[i][1];
   }
-
-  // Build faceCells connectivity: for each cell, mark which faces touch it
-  // Cells stored signed face indices where negative means inverted orientation.
-  for (unsigned i = 0; i < numCells; ++i) {
-    const unsigned nf = mesh.cells[i].size();
-    for (unsigned j = 0; j != nf; ++j) {
-      auto k = mesh.cells[i][j];
-      if (k < 0) {
-        // Negative index: inverted face orientation
-        POLY_ASSERT2(~k < numFaces, k << " " << ~k << " " << numFaces);
-        mesh.faceCells[~k].push_back(~i);
-      } else {
-        // Positive index: normal face orientation
-        POLY_ASSERT2(k < numFaces, k << " " << numFaces);
-        mesh.faceCells[k].push_back(i);
-      }
-    }
-  }
+  mesh.computeFaceCells();
 }
 
 //------------------------------------------------------------------------------

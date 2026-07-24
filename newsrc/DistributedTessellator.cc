@@ -420,8 +420,8 @@ std::string
 DistributedTessellator<Dimension>::
 name() const {
   std::ostringstream os;
-  os << "DistributedTessellator<" << Dimension << ">("
-     << m_serialTessellator.name() << ")";
+  os << "DistributedTessellator_"
+     << m_serialTessellator.name();
   return os.str();
 }
 

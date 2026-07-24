@@ -151,6 +151,11 @@ tessellateQuantizedImpl(QuantizedTessellation& result) const {
     int ia = out.trianglelist[3*i];
     int ib = out.trianglelist[3*i+1];
     int ic = out.trianglelist[3*i+2];
+    // std::array<int, 3> indexarr = {ia, ib, ic};
+    // std::sort(indexarr.begin(), indexarr.end());
+    // ia = indexarr[0];
+    // ib = indexarr[1];
+    // ic = indexarr[2];
     auto a = result.m_points[ia].template type_cast<double>();
     auto b = result.m_points[ib].template type_cast<double>();
     auto c = result.m_points[ic].template type_cast<double>();
@@ -212,6 +217,7 @@ tessellateQuantizedImpl(QuantizedTessellation& result) const {
       edge::Edge curEdge;
       int startSide = -1;
       int endSide = -1;
+      // Check if this pair of generators has already been computed
       auto cacheIt = genPairToEdge.find(gp);
       if (cacheIt != genPairToEdge.end()) {
         const edge::EdgeData& ed = cacheIt->second;

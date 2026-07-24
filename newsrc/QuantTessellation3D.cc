@@ -195,7 +195,6 @@ QuantTessellation<3>::fillTessellation(TessellationType& mesh) {
   // In 3D: nodes are stored as [x0, y0, z0, x1, y1, z1, ...]
   mesh.nodes.resize(3 * numNodes);
   mesh.faces.resize(numFaces);
-  mesh.faceCells.resize(numFaces);
   mesh.cells = m_cells;
   POLY_ASSERT2(m_cells.size() == numCells, "Differing number of cells and generator points");
 
@@ -214,24 +213,7 @@ QuantTessellation<3>::fillTessellation(TessellationType& mesh) {
       mesh.faces[i][j] = m_faces[i][j];
     }
   }
-
-  // Build faceCells connectivity: for each cell, mark which faces touch it
-  // Cells store signed face indices where negative means inverted orientation.
-  for (unsigned i = 0; i < numCells; ++i) {
-    const unsigned nf = mesh.cells[i].size();
-    for (unsigned j = 0; j < nf; ++j) {
-      auto k = mesh.cells[i][j];
-      if (k < 0) {
-        // Negative index: inverted face orientation
-        POLY_ASSERT2(~k < numFaces, k << " " << ~k << " " << numFaces);
-        mesh.faceCells[~k].push_back(~i);
-      } else {
-        // Positive index: normal face orientation
-        POLY_ASSERT2(k < numFaces, k << " " << numFaces);
-        mesh.faceCells[k].push_back(i);
-      }
-    }
-  }
+  mesh.computeFaceCells();
 }
 
 //------------------------------------------------------------------------------

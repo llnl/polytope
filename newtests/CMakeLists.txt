@@ -55,6 +55,7 @@ polytope_add_new_test(OrphanCases)
 polytope_add_new_test(honeyComb)
 polytope_add_new_test(BoostTessellator)
 polytope_add_new_test(RandomPoints)
+polytope_add_new_test(RotationTests)
 #polytope_add_new_test(Cylinder)
 
 #-----------------------------------------------------------------------------
@@ -72,4 +73,5 @@ polytope_add_new_test(RandomPoints)
 if(POLYTOPE_ENABLE_MPI)
   polytope_add_new_test(DistributedVoronoi2D NUMTASKS 4)
   polytope_add_new_test(DistributedIO2D NUMTASKS 4)
+  polytope_add_new_test(DistributedRotationTests NUMTASKS 4)
 endif()

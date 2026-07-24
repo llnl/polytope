@@ -112,7 +112,7 @@ SiloReader<2, RealType>::read(Tessellation<2, RealType>& mesh,
     // First element is the number of faces in each zone.
     // Second element is the list of face indices in each zone.
     // Third element is a pair of cells for each face.
-    POLY_ASSERT2((conn->nelems == 3 && conn->elemlengths[0] == ncells),
+    POLY_ASSERT2((conn->nelems == 2 && conn->elemlengths[0] == ncells),
                  "Found invalid cell-face connectivity in file " << filename);
     int* connData = (int*)conn->values;
 
@@ -132,19 +132,8 @@ SiloReader<2, RealType>::read(Tessellation<2, RealType>& mesh,
 
     POLY_ASSERT2((conn->nvalues - foffset) % 2 == 0,
                  "Found invalid face-cell connectivity in file " << filename);
-    const int nfaces = (conn->nvalues - foffset)/2;
-    POLY_ASSERT2(maxFace < nfaces, "Found invalid face index in file " << filename);
-    POLY_ASSERT2(conn->elemlengths[2] == 2*nfaces,
-                 "Found invalid face-cell connectivity in file " << filename);
-
+    const int nfaces = maxFace+1;
     mesh.faces.resize(nfaces);
-    mesh.faceCells.resize(nfaces);
-    for (size_t f = 0; f < mesh.faceCells.size(); ++f) {
-      mesh.faceCells[f].resize(2);
-      mesh.faceCells[f][0] = connData[foffset];
-      mesh.faceCells[f][1] = connData[foffset+1];
-      foffset += 2;
-    }
 
     int zoffset = 0;
     int shape = 0;
@@ -192,7 +181,7 @@ SiloReader<2, RealType>::read(Tessellation<2, RealType>& mesh,
 
       --remainingInShape;
     }
-
+    mesh.computeFaceCells();
     DBFreeUcdmesh(dbmesh);
     DBFreeCompoundarray(conn);
     // Get the generator points
