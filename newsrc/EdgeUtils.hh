@@ -176,10 +176,10 @@ inline void orderEdgeLoop(std::vector<edge::Edge>& edges,
   otherVec = orderedVec;
 }
 
-inline void orderEdgeLoop(std::vector<std::vector<int>>& edges) {
+inline void orderEdgeLoop(std::vector<std::vector<unsigned>>& edges) {
   if (edges.empty()) return;
 
-  std::vector<std::vector<int>> ordered;
+  std::vector<std::vector<unsigned>> ordered;
   ordered.reserve(edges.size());
 
   // Build map: start vertex -> edge index
@@ -210,7 +210,7 @@ inline void orderEdgeLoop(std::vector<std::vector<int>>& edges) {
 // Convert an EdgeToFaceMap into an ordered facet.
 // Uses deterministic starting point and sorted neighbors for consistent ordering
 //------------------------------------------------------------------------------
-inline std::vector<int> traceBoundary(const EdgeToFaceMap& uniqueEdges) {
+inline std::vector<unsigned> traceBoundary(const EdgeToFaceMap& uniqueEdges) {
   // Determine boundary faces since they only appear once
   std::unordered_map<int, std::vector<int>> adjacency;
   for (const auto& [edge, count] : uniqueEdges) {
@@ -219,7 +219,7 @@ inline std::vector<int> traceBoundary(const EdgeToFaceMap& uniqueEdges) {
       adjacency[edge.second].push_back(edge.first);
     }
   }
-  std::vector<int> boundary;
+  std::vector<unsigned> boundary;
   if (adjacency.empty()) return boundary;
 
   // Sort neighbors for deterministic traversal
@@ -253,7 +253,7 @@ inline std::vector<int> traceBoundary(const EdgeToFaceMap& uniqueEdges) {
 //------------------------------------------------------------------------------
 // Adds any unique edges to a set.
 //------------------------------------------------------------------------------
-inline void addUniqueEdges(const std::vector<int>& facet,
+inline void addUniqueEdges(const std::vector<unsigned>& facet,
                            EdgeToFaceMap& uniqueEdges) {
   const auto N = facet.size();
   for (size_t i = 0; i < N; ++i) {
@@ -267,7 +267,7 @@ inline void addUniqueEdges(const std::vector<int>& facet,
 //------------------------------------------------------------------------------
 // Check if facet shares edges with a unique set.
 //------------------------------------------------------------------------------
-inline bool sharedEdges(const std::vector<int>& facet,
+inline bool sharedEdges(const std::vector<unsigned>& facet,
                         EdgeToFaceMap& uniqueEdges) {
   const auto N = facet.size();
   bool shared = false;
@@ -299,7 +299,7 @@ using EdgeToFaceMap = std::unordered_map<Edge, int, EdgeHash>;
 //   - Negative (bitwise NOT) if edge orientation is reversed
 //------------------------------------------------------------------------------
 inline int addOrientedEdge(int n0, int n1,
-                           std::vector<std::vector<int>>& faces,
+                           std::vector<std::vector<unsigned>>& faces,
                            EdgeToFaceMap& edgeToFace) {
   Edge canonical = orderEdge(n0, n1);
 
@@ -310,7 +310,8 @@ inline int addOrientedEdge(int n0, int n1,
     // New edge - add to faces in canonical form
     faceIndex = faces.size();
     edgeToFace[canonical] = faceIndex;
-    faces.push_back({canonical.first, canonical.second});
+    faces.push_back({static_cast<unsigned>(canonical.first),
+                     static_cast<unsigned>(canonical.second)});
   } else {
     faceIndex = it->second;
   }
@@ -338,7 +339,7 @@ inline bool isReversed(int signedIndex) {
 // If signedIndex < 0, returns nodes in reverse order
 //------------------------------------------------------------------------------
 inline std::pair<int, int> getOrientedNodes(int signedIndex,
-                                            const std::vector<std::vector<int>>& faces) {
+                                            const std::vector<std::vector<unsigned>>& faces) {
   int faceIndex = unsignedIndex(signedIndex);
   const auto& face = faces[faceIndex];
 

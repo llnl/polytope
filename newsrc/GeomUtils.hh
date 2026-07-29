@@ -571,7 +571,7 @@ circumcenter(const Point3<double>& p0,
 // Version 2: Uses precomputed normal
 //------------------------------------------------------------------------------
 template<typename CoordType, typename WideType>
-void orientFacetOutward(std::vector<int>& facet,
+void orientFacetOutward(std::vector<unsigned>& facet,
                         const std::vector<Point3<CoordType>>& points,
                         const Point3<CoordType>& precomputedNormal,
                         const Point3<WideType>& centroid,
@@ -594,7 +594,7 @@ void orientFacetOutward(std::vector<int>& facet,
 // Uses precomputed normals (updates normal array as faces merge)
 //------------------------------------------------------------------------------
 template<typename CoordType>
-void mergeCoplanarFaces(std::vector<std::vector<int>>& faces,
+void mergeCoplanarFaces(std::vector<std::vector<unsigned>>& faces,
                         std::vector<Point3<CoordType>>& normals,
                         const std::vector<Point3<CoordType>>& points) {
   if (faces.size() < 2) return;
@@ -633,7 +633,7 @@ void mergeCoplanarFaces(std::vector<std::vector<int>>& faces,
 // Compute normalized normal for a single face
 //------------------------------------------------------------------------------
 template<typename CoordType>
-Point3<CoordType> computeFaceNormal(const std::vector<int>& face,
+Point3<CoordType> computeFaceNormal(const std::vector<unsigned>& face,
                                     const std::vector<Point3<CoordType>>& vertices) {
   if (face.size() < 3) return Point3<CoordType>(0, 0, 0);
 
@@ -650,7 +650,7 @@ Point3<CoordType> computeFaceNormal(const std::vector<int>& face,
 template<typename CoordType>
 std::vector<Point3<CoordType>> computeFaceNormals(
     const std::vector<Point3<CoordType>>& vertices,
-    const std::vector<std::vector<int>>& faces) {
+    const std::vector<std::vector<unsigned>>& faces) {
 
   std::vector<Point3<CoordType>> normals;
   normals.reserve(faces.size());
@@ -668,7 +668,7 @@ std::vector<Point3<CoordType>> computeFaceNormals(
 //------------------------------------------------------------------------------
 template<typename CoordType>
 std::pair<Point3<WideInt<CoordType>>, WideInt<CoordType>>
-computeFaceCentroid(const std::vector<int>& face,
+computeFaceCentroid(const std::vector<unsigned>& face,
                     const std::vector<Point3<CoordType>>& vertices) {
   using Wide = WideInt<CoordType>;
   Point3<Wide> sum(0, 0, 0);
@@ -687,7 +687,7 @@ computeFaceCentroid(const std::vector<int>& face,
 template<typename CoordType>
 std::vector<std::pair<Point3<WideInt<CoordType>>, WideInt<CoordType>>>
 computeFaceCentroids(const std::vector<Point3<CoordType>>& vertices,
-                     const std::vector<std::vector<int>>& faces) {
+                     const std::vector<std::vector<unsigned>>& faces) {
   using Wide = WideInt<CoordType>;
   std::vector<std::pair<Point3<Wide>, Wide>> centroids;
   centroids.reserve(faces.size());
@@ -707,7 +707,7 @@ computeFaceCentroids(const std::vector<Point3<CoordType>>& vertices,
 template<typename CoordType>
 std::pair<Point3<WideInt<CoordType>>, WideInt<CoordType>>
 computePolyhedronCentroid(const std::vector<Point3<CoordType>>& vertices,
-                          const std::vector<std::vector<int>>& faces) {
+                          const std::vector<std::vector<unsigned>>& faces) {
   using Wide = WideInt<CoordType>;
   Point3<Wide> weightedSum(0, 0, 0);
   Wide totalWeight = 0;

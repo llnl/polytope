@@ -60,7 +60,7 @@ void tests(const int tnum, bool boostTess) {
       auto Nf = newPoints.size()/2;
       auto N = boundary.mPLCpoints.size()/2;
       copy(newPoints.begin(), newPoints.end(), back_inserter(boundary.mPLCpoints));
-      boundary.mPLC.holes = vector<vector<vector<int>>>(1);
+      boundary.mPLC.holes = vector<vector<vector<unsigned>>>(1);
       boundary.mPLC.holes[0].resize(Nf);
       for (int i = 0; i < Nf; ++i) {
         unsigned fbegin = N + i;
@@ -194,7 +194,7 @@ void tests(const int tnum, bool boostTess) {
   if (numNodes > 0) {
     // Ideally we would match nodes exactly but determine collinearity exactly is not really
     // possible with quantized coordinates
-    POLY_CHECK2(mesh.nodes.size()/2 >= numNodes, "We must have at least " << numNodes
+    POLY_CHECK2(mesh.nodes.size() >= numNodes, "We must have at least " << numNodes
                 << " but we only have " << mesh.nodes.size()/2);
   }
 }

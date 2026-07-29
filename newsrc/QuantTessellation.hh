@@ -19,9 +19,11 @@
 
 namespace polytope {
 
+// Forward declaration
 template<int Dimension, typename RealType>
 class Tessellator;
 
+// TODO: Make this inherit from Tessellation class
 template<int Dimension>
 class QuantTessellation {
 public:
@@ -60,8 +62,8 @@ public:
     auto rpoints = extractCoords<Dimension, RealType>(genpoints);
 
     auto N = rpoints.size();
-    m_hashes.reserve(N);
-    m_points.reserve(N);
+    hashes.reserve(N);
+    points.reserve(N);
     size_t i = 0;
     for (const auto& rp : rpoints) {
       auto ip = Q.quantize(rp);
@@ -69,34 +71,34 @@ public:
       ip.index = i++;
       m_loBounds = m_loBounds.minElements(ip);
       m_hiBounds = m_hiBounds.maxElements(ip);
-      m_hashes.push_back(Q.hash(ip));
-      m_points.push_back(ip);
+      hashes.push_back(Q.hash(ip));
+      points.push_back(ip);
     }
     sortByHash();
   }
 
   void init(const std::vector<IntPoint>& qgenpoints) {
-    m_points = qgenpoints;
+    points = qgenpoints;
     const auto& Q = QuantizerType::instance();
     m_loBounds = Q.maxCoord;
     m_hiBounds = -m_loBounds;
-    auto N = m_points.size();
-    m_hashes.reserve(N);
+    auto N = points.size();
+    hashes.reserve(N);
     unsigned i = 0;
-    for (auto& ip : m_points) {
+    for (auto& ip : points) {
       ip.index = i++;
       m_loBounds = m_loBounds.minElements(ip);
       m_hiBounds = m_hiBounds.maxElements(ip);
-      m_hashes.push_back(Q.hash(ip));
+      hashes.push_back(Q.hash(ip));
     }
   }
 
   void clear() {
-    m_points.clear();
-    m_hashes.clear();
-    m_nodes.clear();
-    m_faces.clear();
-    m_cells.clear();
+    points.clear();
+    hashes.clear();
+    nodes.clear();
+    faces.clear();
+    cells.clear();
   }
 
   //------------------------------------------------------------------------------
@@ -106,8 +108,8 @@ public:
   // Returns quantized points cast as reals to give to the tessellator
   std::vector<RealPoint> getRealPoints() const {
     std::vector<RealPoint> realPoints;
-    realPoints.reserve(m_points.size());
-    for (const auto& p : m_points) {
+    realPoints.reserve(points.size());
+    for (const auto& p : points) {
       realPoints.push_back(p.template type_cast<RealType>());
     }
     return realPoints;
@@ -117,30 +119,30 @@ public:
   std::vector<RealType> getRealCoords() const {
     const auto& Q = QuantizerType::instance();
     std::vector<RealPoint> realPoints;
-    realPoints.reserve(m_points.size());
-    for (const auto& p : m_points) {
+    realPoints.reserve(points.size());
+    for (const auto& p : points) {
       realPoints.push_back(Q.dequantize(p));
     }
     return flattenCoords(realPoints);
   }
 
   // Returns quantized points
-  const std::vector<IntPoint> getIntPoints() const { return m_points; }
+  const std::vector<IntPoint> getIntPoints() const { return points; }
 
   IntCell getCell(const unsigned cellIndex) const {
-    return Cell<Dimension, IntType>::extractCell(m_nodes, m_cells[cellIndex], m_faces);
+    return Cell<Dimension, IntType>::extractCell(nodes, cells[cellIndex], faces);
   }
 
   // Reorder points and cells based on sorted hashes for deterministic output
   void sortByHash() {
-    const auto numPoints = m_points.size();
+    const auto numPoints = points.size();
     if (numPoints == 0) return;
 
     // Create index vector and sort by hash
     std::vector<unsigned> sortedIndices(numPoints);
     std::iota(sortedIndices.begin(), sortedIndices.end(), 0);
     std::sort(sortedIndices.begin(), sortedIndices.end(),
-              [this](unsigned a, unsigned b) { return m_hashes[a] < m_hashes[b]; });
+              [this](unsigned a, unsigned b) { return hashes[a] < hashes[b]; });
 
     // Create mapping from old index to new index
     std::vector<unsigned> oldToNew(numPoints);
@@ -152,20 +154,20 @@ public:
     std::vector<IntPoint> newPoints(numPoints);
     std::vector<CoordHash> newHashes(numPoints);
     for (unsigned i = 0; i < numPoints; ++i) {
-      newPoints[i] = m_points[sortedIndices[i]];
+      newPoints[i] = points[sortedIndices[i]];
       newPoints[i].index = i;
-      newHashes[i] = m_hashes[sortedIndices[i]];
+      newHashes[i] = hashes[sortedIndices[i]];
     }
-    m_points = std::move(newPoints);
-    m_hashes = std::move(newHashes);
+    points = std::move(newPoints);
+    hashes = std::move(newHashes);
 
     // Reorder cells array using the same permutation
-    if (m_cells.size() > 0) {
+    if (cells.size() > 0) {
       std::vector<std::vector<int>> newCells(numPoints);
       for (unsigned i = 0; i < numPoints; ++i) {
-        newCells[i] = std::move(m_cells[sortedIndices[i]]);
+        newCells[i] = std::move(cells[sortedIndices[i]]);
       }
-      m_cells = std::move(newCells);
+      cells = std::move(newCells);
     }
   }
 
@@ -175,12 +177,12 @@ public:
 
   // Remove unused nodes and faces (not referenced by any cells)
   void compactUnusedNodesAndFaces() {
-    const unsigned numCells = m_points.size();
+    const unsigned numCells = points.size();
 
     // Step 1: Find all faces referenced by cells
     std::set<unsigned> usedFaces;
     for (unsigned i = 0; i < numCells; ++i) {
-      for (auto faceIdx : m_cells[i]) {
+      for (auto faceIdx : cells[i]) {
         // Handle signed face indices (negative means inverted orientation)
         unsigned absFaceIdx = (faceIdx < 0) ? ~faceIdx : faceIdx;
         usedFaces.insert(absFaceIdx);
@@ -190,7 +192,7 @@ public:
     // Step 2: Find all nodes referenced by used faces
     std::set<unsigned> usedNodes;
     for (auto faceIdx : usedFaces) {
-      for (auto nodeIdx : m_faces[faceIdx]) {
+      for (auto nodeIdx : faces[faceIdx]) {
         usedNodes.insert(nodeIdx);
       }
     }
@@ -212,17 +214,17 @@ public:
     std::vector<IntPoint> newNodes;
     newNodes.reserve(usedNodes.size());
     for (auto oldIdx : usedNodes) {
-      IntPoint node = m_nodes[oldIdx];
+      IntPoint node = nodes[oldIdx];
       node.index = oldToNewNode[oldIdx];
       newNodes.push_back(node);
     }
 
-    std::vector<std::vector<int>> newFaces;
+    std::vector<std::vector<unsigned>> newFaces;
     newFaces.reserve(usedFaces.size());
     for (auto oldIdx : usedFaces) {
-      std::vector<int> face;
-      face.reserve(m_faces[oldIdx].size());
-      for (auto nodeIdx : m_faces[oldIdx]) {
+      std::vector<unsigned> face;
+      face.reserve(faces[oldIdx].size());
+      for (auto nodeIdx : faces[oldIdx]) {
         face.push_back(oldToNewNode[nodeIdx]);
       }
       newFaces.push_back(face);
@@ -230,7 +232,7 @@ public:
 
     // Step 5: Remap cell face indices
     for (unsigned i = 0; i < numCells; ++i) {
-      for (auto& faceIdx : m_cells[i]) {
+      for (auto& faceIdx : cells[i]) {
         if (faceIdx < 0) {
           // Negative index: inverted face orientation
           unsigned oldFaceIdx = ~faceIdx;
@@ -243,8 +245,8 @@ public:
     }
 
     // Step 6: Replace with compacted arrays
-    m_nodes = std::move(newNodes);
-    m_faces = std::move(newFaces);
+    nodes = std::move(newNodes);
+    faces = std::move(newFaces);
   }
 
   //------------------------------------------------------------------------------
@@ -269,7 +271,7 @@ public:
   // Output method
   //------------------------------------------------------------------------------
   friend std::ostream& operator<<(std::ostream& s, const QuantTessellation& mesh) {
-    for (int i = 0; i < mesh.m_cells.size(); ++i) {
+    for (int i = 0; i < mesh.cells.size(); ++i) {
       s << mesh.getCell(i);
     }
     return s;
@@ -279,14 +281,14 @@ public:
   // Member data
   //------------------------------------------------------------------------------
   // Generator points
-  std::vector<CoordHash> m_hashes;
-  std::vector<IntPoint> m_points;
+  std::vector<CoordHash> hashes;
+  std::vector<IntPoint> points;
   // Local lower and upper bounding box coordinates
   IntPoint m_loBounds;
   IntPoint m_hiBounds;
-  std::vector<IntPoint> m_nodes; // Nodes that make up the Voronoi
-  std::vector<std::vector<int>> m_faces; // Faces made up of indices into m_nodes
-  std::vector<std::vector<int>> m_cells; // Cells made up of indices into m_faces
+  std::vector<IntPoint> nodes; // Nodes that make up the Voronoi
+  std::vector<std::vector<unsigned>> faces; // Faces made up of indices into nodes
+  std::vector<std::vector<int>> cells; // Cells made up of indices into faces
 };
 
 } // namespace polytope

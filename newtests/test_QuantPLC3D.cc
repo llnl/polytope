@@ -91,10 +91,10 @@ void testBasicConstruction(const int tnum) {
   QuantPLC3D qplc(plc,  vertices);
 
   // Check that all 8 vertices were quantized
-  POLY_CHECK2(qplc.m_points.size() == 8,
-              "Expected 8 vertices, got " << qplc.m_points.size());
-  POLY_CHECK2(qplc.m_hashes.size() == 8,
-              "Expected 8 hashes, got " << qplc.m_hashes.size());
+  POLY_CHECK2(qplc.points.size() == 8,
+              "Expected 8 vertices, got " << qplc.points.size());
+  POLY_CHECK2(qplc.hashes.size() == 8,
+              "Expected 8 hashes, got " << qplc.hashes.size());
 
   // Check that bounding box makes sense
   POLY_CHECK2(qplc.m_loBounds < qplc.m_hiBounds,
@@ -172,8 +172,8 @@ void testDeduplication(const int tnum) {
   QuantPLC3D qplc(plc,  vertices);
 
   // After deduplication: 8 unique points (removed duplicates 8 and 9)
-  POLY_CHECK2(qplc.m_points.size() == 8,
-              "Expected 8 unique points after deduplication, got " << qplc.m_points.size());
+  POLY_CHECK2(qplc.points.size() == 8,
+              "Expected 8 unique points after deduplication, got " << qplc.points.size());
 
   // Facets should still reference 4 vertices (remapped after deduplication)
   POLY_CHECK2(qplc.facets[0].size() == 4,
@@ -212,15 +212,15 @@ void testReduction(const int tnum) {
   QuantPLC3D qplc(plc,  vertices);
 
   // Before reduction, should have 9 points
-  POLY_CHECK2(qplc.m_points.size() == 8,
+  POLY_CHECK2(qplc.points.size() == 8,
               "Expected 8 points before reduction");
 
   // Reduce: remove unused vertices AND deduplicate
   qplc.reduce();
 
   // After reduction: 3 unique points (0, 1, 2; removed unused 3-7 and merged duplicate 8 into 0)
-  POLY_CHECK2(qplc.m_points.size() == 3,
-              "Expected 3 unique points after reduction, got " << qplc.m_points.size());
+  POLY_CHECK2(qplc.points.size() == 3,
+              "Expected 3 unique points after reduction, got " << qplc.points.size());
   POLY_CHECK2(qplc.m_reduced, "Should be marked as reduced");
 
   cout << "  Reduction passed!" << endl;
@@ -262,8 +262,8 @@ void testConvexHull(const int tnum) {
   }
 
   // After reduction, should only have 4 points (the hull vertices)
-  POLY_CHECK2(qplc.m_points.size() == 4,
-              "Convex hull should have 4 vertices, got " << qplc.m_points.size());
+  POLY_CHECK2(qplc.points.size() == 4,
+              "Convex hull should have 4 vertices, got " << qplc.points.size());
 
   cout << "  Convex hull computation passed!" << endl;
 }
@@ -287,11 +287,11 @@ void testFacetOrientation(const int tnum) {
 
   // Compute centroid in floating-point (no need for exact integer math here)
   RealPoint centroid(0.0, 0.0, 0.0);
-  for (const auto& p : qplc.m_points) {
+  for (const auto& p : qplc.points) {
     auto pf = p.template type_cast<double>();
     centroid = centroid + pf;
   }
-  centroid = centroid / static_cast<double>(qplc.m_points.size());
+  centroid = centroid / static_cast<double>(qplc.points.size());
 
   // Check that all facet normals point away from centroid
   for (size_t i = 0; i < qplc.facets.size(); ++i) {
@@ -299,9 +299,9 @@ void testFacetOrientation(const int tnum) {
     POLY_CHECK2(facet.size() >= 3, "Facet " << i << " has fewer than 3 vertices");
 
     // Use floating-point for geometric validation (no need for exact integer math)
-    const auto v0 = qplc.m_points[facet[0]].template type_cast<double>();
-    const auto v1 = qplc.m_points[facet[1]].template type_cast<double>();
-    const auto v2 = qplc.m_points[facet[2]].template type_cast<double>();
+    const auto v0 = qplc.points[facet[0]].template type_cast<double>();
+    const auto v1 = qplc.points[facet[1]].template type_cast<double>();
+    const auto v2 = qplc.points[facet[2]].template type_cast<double>();
 
     // Compute normal: (v1 - v0) × (v2 - v0)
     auto edge1 = v1 - v0;
@@ -675,7 +675,7 @@ void testStress(const int tnum) {
   // Just verify the test doesn't crash
 
   cout << "  Stress test passed! Hull has " << qplc.facets.size()
-       << " facets from " << qplc.m_points.size() << " vertices" << endl;
+       << " facets from " << qplc.points.size() << " vertices" << endl;
 }
 
 } // anonymous namespace

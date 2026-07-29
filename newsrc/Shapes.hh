@@ -78,8 +78,8 @@ createSquarePoints(const Point2<CoordType>& min,
   return createBoxPoints<CoordType>(min, max);
 }
 
-inline std::vector<std::vector<int>> createSquareFaces() {
-  std::vector<std::vector<int>> coords(4);
+inline std::vector<std::vector<unsigned>> createSquareFaces() {
+  std::vector<std::vector<unsigned>> coords(4);
   for (auto f = 0; f < 4; ++f) {
     coords[f].resize(2);
     coords[f][0] = f;

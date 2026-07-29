@@ -726,9 +726,9 @@ void testComplexHulls(const int tnum) {
 
   // Just verify it doesn't crash - result depends on random points
   std::cout << "  Complex hulls test completed (intersects = " << intersects << ")" << std::endl;
-  std::cout << "  Hull A: " << qplcA.m_points.size() << " vertices, "
+  std::cout << "  Hull A: " << qplcA.points.size() << " vertices, "
             << qplcA.facets.size() << " facets" << std::endl;
-  std::cout << "  Hull B: " << qplcB.m_points.size() << " vertices, "
+  std::cout << "  Hull B: " << qplcB.points.size() << " vertices, "
             << qplcB.facets.size() << " facets" << std::endl;
 }
 

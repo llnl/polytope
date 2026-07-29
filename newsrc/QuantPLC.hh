@@ -80,8 +80,8 @@ public:
   // Returns quantized points cast as reals to give to the tessellator
   std::vector<RealPoint> getRealPoints() const {
     std::vector<RealPoint> realPoints;
-    realPoints.reserve(m_points.size());
-    for (const auto& p : m_points) {
+    realPoints.reserve(points.size());
+    for (const auto& p : points) {
       realPoints.push_back(p.template type_cast<RealType>());
     }
     return realPoints;
@@ -91,22 +91,22 @@ public:
   std::vector<RealType> getRealCoords() const {
     const auto& Q = Quant::instance();
     std::vector<RealPoint> realPoints;
-    realPoints.reserve(m_points.size());
-    for (const auto& p : m_points) {
+    realPoints.reserve(points.size());
+    for (const auto& p : points) {
       realPoints.push_back(Q.dequantize(p));
     }
     return flattenCoords(realPoints);
   }
 
   IntCell getFacetPoints() const {
-    return Cell<Dimension, IntType>::extractCell(m_points, facets);
+    return Cell<Dimension, IntType>::extractCell(points, facets);
   }
 
   std::vector<IntCell> getHolePoints() const {
     std::vector<IntCell> holePoints;
     holePoints.reserve(holes.size());
     for (const auto& hole : holes) {
-      holePoints.push_back(Cell<Dimension, IntType>::extractCell(m_points, hole));
+      holePoints.push_back(Cell<Dimension, IntType>::extractCell(points, hole));
     }
     return holePoints;
   }
@@ -115,11 +115,11 @@ public:
                                     const QuantPLC<Dimension>& b) {
     POLY_ASSERT2((a.m_convex && b.m_convex), "Must call makeConvex() on both inputs");
     if constexpr (Dimension == 2) {
-      return convexIntersection(a.m_points, a.facets,
-                                b.m_points, b.facets);
+      return convexIntersection(a.points, a.facets,
+                                b.points, b.facets);
     } else if constexpr (Dimension == 3) {
-      return convexIntersection(a.m_points, a.facets, a.m_normals,
-                                b.m_points, b.facets, b.m_normals);
+      return convexIntersection(a.points, a.facets, a.m_normals,
+                                b.points, b.facets, b.m_normals);
     }
   }
 
@@ -127,7 +127,7 @@ public:
   //! Functions used for testing
   //------------------------------------------------------------------------
   std::vector<CoordHash> sortedHashes() const {
-    std::vector<CoordHash> sorted(m_hashes);
+    std::vector<CoordHash> sorted(hashes);
     std::sort(sorted.begin(), sorted.end());
     return sorted;
   }
@@ -142,7 +142,7 @@ public:
     for (const auto& f : facets) {
       facetSet.push_back(std::set<CoordHash>());
       for (const auto& idx : f) {
-        facetSet.back().insert(m_hashes[idx]);
+        facetSet.back().insert(hashes[idx]);
       }
     }
     return facetSet;
@@ -179,8 +179,8 @@ public:
   //------------------------------------------------------------------------------
   using PLC<Dimension>::facets;  // Facets as vertex index lists
   using PLC<Dimension>::holes;  // Holes (each hole is a list of facets)
-  std::vector<CoordHash> m_hashes;
-  std::vector<IntPoint> m_points;
+  std::vector<CoordHash> hashes;
+  std::vector<IntPoint> points;
 
   // Precomputed geometric properties (3D only)
   std::vector<IntPoint> m_normals;           // Normalized normals for each facet

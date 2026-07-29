@@ -162,13 +162,13 @@ std::vector<GeneratorRecord<Dimension>>
 recordsFromQuantTessellation(const QuantTessellation<Dimension>& qmesh) {
   auto rank = Communicator::getRank();
   std::vector<GeneratorRecord<Dimension>> result;
-  result.reserve(qmesh.m_points.size());
-  for (unsigned i = 0; i < qmesh.m_points.size(); ++i) {
+  result.reserve(qmesh.points.size());
+  for (unsigned i = 0; i < qmesh.points.size(); ++i) {
     GeneratorRecord<Dimension> record;
     record.rank = rank;
     record.ordinal = i;
-    record.point = qmesh.m_points[i];
-    record.hash = qmesh.m_hashes[i];
+    record.point = qmesh.points[i];
+    record.hash = qmesh.hashes[i];
     result.push_back(record);
   }
   return result;
@@ -211,10 +211,10 @@ template<int Dimension>
 bool
 makeConvexHull(const QuantTessellation<Dimension>& qmesh,
                QuantPLC<Dimension>& hull) {
-  if (qmesh.m_points.size() < Dimension + 1) return false;
+  if (qmesh.points.size() < Dimension + 1) return false;
 
   PLC<Dimension> emptyPLC;
-  hull.init(emptyPLC, qmesh.m_points);
+  hull.init(emptyPLC, qmesh.points);
   hull.makeConvex();
   return hull.m_convex && hull.facets.size() >= Dimension + 1;
 }
@@ -230,8 +230,8 @@ packHull(const bool valid,
 
   serialize(hull.facets, buffer);
   serialize(hull.holes, buffer);
-  serialize(hull.m_points, buffer);
-  serialize(hull.m_hashes, buffer);
+  serialize(hull.points, buffer);
+  serialize(hull.hashes, buffer);
   serialize(hull.m_normals, buffer);
 }
 
@@ -246,8 +246,8 @@ unpackHull(const std::vector<char>& buffer,
 
   deserialize(hull.facets, itr, buffer.end());
   deserialize(hull.holes, itr, buffer.end());
-  deserialize(hull.m_points, itr, buffer.end());
-  deserialize(hull.m_hashes, itr, buffer.end());
+  deserialize(hull.points, itr, buffer.end());
+  deserialize(hull.hashes, itr, buffer.end());
   deserialize(hull.m_normals, itr, buffer.end());
   hull.m_convex = true;
   hull.m_reduced = true;
@@ -305,9 +305,9 @@ findGlobalBounds(const std::vector<double>& coords,
 template<int Dimension>
 std::vector<std::vector<unsigned>>
 computeFaceCells(const QuantTessellation<Dimension>& qmesh) {
-  std::vector<std::vector<unsigned>> faceCells(qmesh.m_faces.size());
-  for (unsigned cellID = 0; cellID < qmesh.m_cells.size(); ++cellID) {
-    for (auto faceID : qmesh.m_cells[cellID]) {
+  std::vector<std::vector<unsigned>> faceCells(qmesh.faces.size());
+  for (unsigned cellID = 0; cellID < qmesh.cells.size(); ++cellID) {
+    for (auto faceID : qmesh.cells[cellID]) {
       const auto absFaceID = faceID < 0 ? ~faceID : faceID;
       POLY_ASSERT(absFaceID < faceCells.size());
       faceCells[absFaceID].push_back(cellID);
@@ -342,29 +342,29 @@ void
 filterToLocalGenerators(QuantTessellation<Dimension>& qmesh,
                         const std::vector<GeneratorRecord<Dimension>>& records) {
   auto rank = Communicator::getRank();
-  POLY_ASSERT(records.size() == qmesh.m_points.size());
-  POLY_ASSERT(qmesh.m_cells.size() == qmesh.m_points.size());
+  POLY_ASSERT(records.size() == qmesh.points.size());
+  POLY_ASSERT(qmesh.cells.size() == qmesh.points.size());
 
   std::vector<typename QuantTessellation<Dimension>::IntPoint> newPoints;
   std::vector<typename QuantTessellation<Dimension>::CoordHash> newHashes;
   std::vector<std::vector<int>> newCells;
-  newPoints.reserve(qmesh.m_points.size());
-  newHashes.reserve(qmesh.m_hashes.size());
-  newCells.reserve(qmesh.m_cells.size());
+  newPoints.reserve(qmesh.points.size());
+  newHashes.reserve(qmesh.hashes.size());
+  newCells.reserve(qmesh.cells.size());
 
   for (unsigned i = 0; i < records.size(); ++i) {
     if (records[i].rank == rank) {
-      auto point = qmesh.m_points[i];
+      auto point = qmesh.points[i];
       point.index = newPoints.size();
       newPoints.push_back(point);
-      newHashes.push_back(qmesh.m_hashes[i]);
-      newCells.push_back(qmesh.m_cells[i]);
+      newHashes.push_back(qmesh.hashes[i]);
+      newCells.push_back(qmesh.cells[i]);
     }
   }
 
-  qmesh.m_points = std::move(newPoints);
-  qmesh.m_hashes = std::move(newHashes);
-  qmesh.m_cells = std::move(newCells);
+  qmesh.points = std::move(newPoints);
+  qmesh.hashes = std::move(newHashes);
+  qmesh.cells = std::move(newCells);
 }
 
 template<int Dimension>

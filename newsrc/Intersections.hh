@@ -42,7 +42,7 @@ namespace polytope {
 // Test if points intersect with a convex hull using half-space intersection, 2D
 //------------------------------------------------------------------------------
 template<typename CoordType>
-bool pointInPolygon_convex(const std::vector<std::vector<int>>& facets,
+bool pointInPolygon_convex(const std::vector<std::vector<unsigned>>& facets,
                            const std::vector<Point2<CoordType>>& vertices,
                            const std::vector<Point2<CoordType>>& points) {
   for (const auto& f : facets) {
@@ -71,9 +71,9 @@ bool pointInPolygon_convex(const typename Cell<2, CoordType>::CellType& vertices
 
 template<typename CoordType>
 bool convexIntersection(const std::vector<Point2<CoordType>>& pointsA,
-                        const std::vector<std::vector<int>>& facetsA,
+                        const std::vector<std::vector<unsigned>>& facetsA,
                         const std::vector<Point2<CoordType>>& pointsB,
-                        const std::vector<std::vector<int>>& facetsB) {
+                        const std::vector<std::vector<unsigned>>& facetsB) {
   if (pointInPolygon_convex(facetsA, pointsA, pointsB) ||
       pointInPolygon_convex(facetsB, pointsB, pointsA)) {
     return true;
@@ -100,7 +100,7 @@ bool convexIntersection(const typename Cell<2, CoordType>::CellType& pointsA,
 // Uses precomputed normals for efficiency.
 //------------------------------------------------------------------------------
 template<typename CoordType>
-bool pointInPolyhedron_convex(const std::vector<std::vector<int>>& facets,
+bool pointInPolyhedron_convex(const std::vector<std::vector<unsigned>>& facets,
                               const std::vector<Point3<CoordType>>& vertices,
                               const std::vector<Point3<CoordType>>& normals,
                               const std::vector<Point3<CoordType>>& points) {
@@ -120,10 +120,10 @@ bool pointInPolyhedron_convex(const std::vector<std::vector<int>>& facets,
 
 template<typename CoordType>
 bool convexIntersection(const std::vector<Point3<CoordType>>& pointsA,
-                        const std::vector<std::vector<int>>& facetsA,
+                        const std::vector<std::vector<unsigned>>& facetsA,
                         const std::vector<Point3<CoordType>>& normalsA,
                         const std::vector<Point3<CoordType>>& pointsB,
-                        const std::vector<std::vector<int>>& facetsB,
+                        const std::vector<std::vector<unsigned>>& facetsB,
                         const std::vector<Point3<CoordType>>& normalsB) {
   // Separating Axis Theorem: Test face normals of A as potential separating axes
   // For each face of A, check if all vertices of B are on the positive (outside) side
@@ -463,7 +463,7 @@ bool pointOnPolygon(const Point2<CoordType>& point,
 //------------------------------------------------------------------------------
 template<typename CoordType>
 bool pointInPolygon(const Point2<CoordType>& point,
-                    const std::vector<int>& faceIndices,
+                    const std::vector<unsigned>& faceIndices,
                     const std::vector<Point2<CoordType>>& vertices) {
   const size_t N = faceIndices.size();
   std::vector<Point2<CoordType>> faceVerts;
@@ -480,7 +480,7 @@ bool pointInPolygon(const Point2<CoordType>& point,
 //------------------------------------------------------------------------------
 template<typename CoordType>
 bool pointOnPolygon(const Point2<CoordType>& point,
-                    const std::vector<int>& faceIndices,
+                    const std::vector<unsigned>& faceIndices,
                     const std::vector<Point2<CoordType>>& vertices) {
   const size_t N = faceIndices.size();
   std::vector<Point2<CoordType>> faceVerts;
@@ -723,7 +723,7 @@ int segmentPlaneIntersection3D(const Point3<CoordType>& segStart,
 template<typename CoordType>
 int segmentFaceIntersection3D(const Point3<CoordType>& segStart,
                               const Point3<CoordType>& segEnd,
-                              const std::vector<int>& faceIndices,
+                              const std::vector<unsigned>& faceIndices,
                               const std::vector<Point3<CoordType>>& vertices,
                               const Point3<CoordType>& plane_normal,
                               Point3<CoordType>& result) {
@@ -974,7 +974,7 @@ FaceClipResult<CoordType> clipFaceByPlane(
 template<typename CoordType>
 struct PolyhedronClipResult {
   std::vector<Point3<CoordType>> vertices;  // All unique vertices
-  std::vector<std::vector<int>> faces;      // Faces as vertex indices
+  std::vector<std::vector<unsigned>> faces; // Faces as vertex indices
   bool fullyClipped;   // True if entire polyhedron was removed
   bool fullyRetained;  // True if no clipping occurred
 
@@ -1010,7 +1010,7 @@ struct PolyhedronClipResult {
 template<typename CoordType>
 PolyhedronClipResult<CoordType> clipPolyhedronByPlane(
     const std::vector<Point3<CoordType>>& vertices,
-    const std::vector<std::vector<int>>& faces,
+    const std::vector<std::vector<unsigned>>& faces,
     const Point3<CoordType>& planePoint,
     const Point3<CoordType>& planeNormal)
 {
@@ -1081,7 +1081,7 @@ PolyhedronClipResult<CoordType> clipPolyhedronByPlane(
     }
 
     // Build new face with updated indices
-    std::vector<int> newFace;
+    std::vector<unsigned> newFace;
     newFace.reserve(clipResult.vertices.size());
 
     for (const auto& v : clipResult.vertices) {
@@ -1150,7 +1150,7 @@ PolyhedronClipResult<CoordType> clipPolyhedronByPlane(
     std::sort(indexedAngles.begin(), indexedAngles.end(), angleCompare);
 
     // Build ordered cap face (reverse if normal points down)
-    std::vector<int> capFace;
+    std::vector<unsigned> capFace;
     for (const auto& pair : indexedAngles) {
       capFace.push_back(pair.first);
     }
@@ -1186,7 +1186,7 @@ PolyhedronClipResult<CoordType> clipPolyhedronByPlane(
 template<typename CoordType>
 void clipPolyhedronByPlane(
     std::vector<Point3<CoordType>>& vertices,
-    std::vector<std::vector<int>>& faces,
+    std::vector<std::vector<unsigned>>& faces,
     const Point3<CoordType>& planePoint,
     const Point3<CoordType>& planeNormal,
     bool& fullyClipped,

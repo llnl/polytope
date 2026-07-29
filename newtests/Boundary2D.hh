@@ -87,7 +87,7 @@ public:
                          const double* vertices) {
     this->clear();
     mPLCpoints.resize(2*numVertices);
-    mPLC.facets.resize(numVertices, vector<int>(2));
+    mPLC.facets.resize(numVertices, vector<unsigned>(2));
     for (unsigned i = 0; i != numVertices; ++i) {
       mPLCpoints[2*i  ] = vertices[2*i  ];
       mPLCpoints[2*i+1] = vertices[2*i+1];
@@ -211,7 +211,7 @@ public:
     }
 
     // Facets on the inner circle
-    mPLC.holes = vector< vector< vector<int> > >(1);
+    mPLC.holes = vector< vector< vector<unsigned> > >(1);
     mPLC.holes[0].resize(Nh);
     for (unsigned f = 0; f < Nh; ++f) {
       unsigned fBegin = mPLCpoints.size()/2 - Nh + f;
@@ -238,7 +238,7 @@ public:
     mPLCpoints.push_back(0.0); mPLCpoints.push_back(2.0);
 
     int nSides = mPLCpoints.size()/2;
-    mPLC.facets.resize( nSides, vector<int>(2) );
+    mPLC.facets.resize( nSides, vector<unsigned>(2) );
     for (unsigned i = 0; i != nSides; ++i ) {
       mPLC.facets[i][0] = i;
       mPLC.facets[i][1] = (i+1) % nSides;
@@ -258,7 +258,7 @@ public:
     mPLCpoints.push_back(1.75); mPLCpoints.push_back(0.75);
     mPLCpoints.push_back(1.75); mPLCpoints.push_back(0.25);
 
-    mPLC.holes.resize(nHoles, vector<vector<int> >(4, vector<int>(nHoles)));
+    mPLC.holes.resize(nHoles, vector<vector<unsigned> >(4, vector<unsigned>(nHoles)));
     for (unsigned i = 0; i != 4; ++i) {
       mPLC.holes[0][i][0] = nSides + i;
       mPLC.holes[0][i][1] = nSides + ((i+1) % 4);
@@ -323,7 +323,7 @@ public:
     }
 
     // Facets on the inner circle
-    mPLC.holes = vector< vector< vector<int> > >(1);
+    mPLC.holes = vector< vector< vector<unsigned> > >(1);
     mPLC.holes[0].resize(2*nPoints);
     for (unsigned f = 0; f < 2*nPoints; ++f) {
       unsigned fBegin = mPLCpoints.size()/2 - 2*nPoints + f;
@@ -391,7 +391,7 @@ public:
 				 3.5, 7.5, 2.0, 7.0, 2.0, 7.4, 3.3, 8.0,
 				 1.75, 8.0, 1.75, 9.2};
 
-    mPLC.facets.resize( nSides, vector<int>(2) );
+    mPLC.facets.resize( nSides, vector<unsigned>(2) );
     for (unsigned i = 0; i != nSides; ++i){
       unsigned j = nSides - i - 1;
       mPLCpoints.push_back(points[2*j  ]);
@@ -429,7 +429,7 @@ public:
     }
 
     // Facets on the inner circle
-    mPLC.facets.resize( 2*nPoints, vector<int>(2) );
+    mPLC.facets.resize(2*nPoints, vector<unsigned>(2));
     for (unsigned f = 0; f < 2*nPoints; ++f) {
       unsigned fBegin = mPLCpoints.size()/2 - 2*nPoints + f;
       unsigned fEnd   = mPLCpoints.size()/2 - 2*nPoints + ((f + 1) % (2*nPoints));
@@ -449,7 +449,7 @@ public:
     }
 
     // Facets on the inner circle
-    mPLC.holes = vector< vector< vector<int> > >(1);
+    mPLC.holes = vector< vector< vector<unsigned> > >(1);
     mPLC.holes[0].resize(nHolePoints);
     for (unsigned f = 0; f < nHolePoints; ++f) {
       unsigned fBegin = mPLCpoints.size()/2 - nHolePoints + f;
@@ -492,7 +492,7 @@ public:
 				 14.8, 5.0, 14.0, 3.0, 12.0, 1.1, 10.2, 0.5,
 				 8.7, 0.4, 7.2, 0.8};
 
-    mPLC.facets.resize( nSides, vector<int>(2) );
+    mPLC.facets.resize( nSides, vector<unsigned>(2) );
     for (unsigned i = 0; i != nSides; ++i) {
       unsigned j = nSides - i - 1;
       mPLCpoints.push_back(points[2*j  ]);
@@ -545,7 +545,7 @@ public:
     }
 
     // Facets on the inner circle
-    mPLC.holes = vector< vector< vector<int> > >(1);
+    mPLC.holes = vector< vector< vector<unsigned> > >(1);
     mPLC.holes[0].resize(2*nPoints);
     for (unsigned f = 0; f < 2*nPoints; ++f) {
       unsigned fBegin = mPLCpoints.size()/2 - 2*nPoints + f;

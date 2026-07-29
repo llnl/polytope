@@ -192,7 +192,7 @@ void test(Tessellator<2,double>& tessellator) {
     }
 
     PLC<2> boundary;
-    boundary.facets.resize(7, std::vector<int>(2));
+    boundary.facets.resize(7, std::vector<unsigned>(2));
     for (int j = 0; j < 7; ++j){
       boundary.facets[j][0] = j;
       boundary.facets[j][1] = (j+1) % 7;
@@ -234,7 +234,7 @@ void test(Tessellator<2,double>& tessellator) {
     }
 
     int nSides = PLCpoints.size()/2;
-    boundary.facets.resize( nSides, std::vector<int>(2) );
+    boundary.facets.resize( nSides, std::vector<unsigned>(2) );
     for (unsigned j = 0; j != nSides; ++j){
       boundary.facets[j][0] = j;
       boundary.facets[j][1] = (j+1) % nSides;

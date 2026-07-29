@@ -30,21 +30,21 @@ template<>
 void
 QuantTessellation<2>::cullExternalPoints(const QuantPLC<2>& QPLC) {
   const auto& Q = Quantizer<2>::instance();
-  auto N = m_points.size();
+  auto N = points.size();
   std::vector<IntPoint> newPoints;
   newPoints.reserve(N);
   std::vector<CoordHash> newHashes;
   newHashes.reserve(N);
   unsigned indx = 0;
   for (int i = 0; i < N; ++i) {
-    auto point = m_points[i];
+    auto point = points[i];
     if (!QPLC.within(point)) continue;
     point.index = indx++;
     newPoints.push_back(point);
     newHashes.push_back(Q.hash(point));
   }
-  m_points = std::move(newPoints);
-  m_hashes = std::move(newHashes);
+  points = std::move(newPoints);
+  hashes = std::move(newHashes);
 }
 
 // All clipping functionality relies on Boost
@@ -71,22 +71,22 @@ using namespace boost::polygon::operators;
 //   if (holePoints.size() > 0) {
 //     bp::set_holes(boundary, holes_vector.begin(), holes_vector.end());
 //   }
-//   auto N = m_points.size();
+//   auto N = points.size();
 //   std::vector<IntPoint> newPoints;
 //   newPoints.reserve(N);
 //   std::vector<CoordHash> newHashes;
 //   newHashes.reserve(N);
 //   unsigned indx = 0;
 //   for (int i = 0; i < N; ++i) {
-//     auto point = m_points[i];
+//     auto point = points[i];
 //     bp::point_data<IntType> genPoint = bp::construct<IntPoint>(point.x, point.y);
 //     if (!bp::contains(boundary, genPoint)) continue;
 //     point.index = indx++;
 //     newPoints.push_back(point);
 //     newHashes.push_back(Q.hash(point));
 //   }
-//   m_points = std::move(newPoints);
-//   m_hashes = std::move(newHashes);
+//   points = std::move(newPoints);
+//   hashes = std::move(newHashes);
 // }
 
 template<>
@@ -117,8 +117,8 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
   std::unordered_map<CoordHash, std::set<unsigned>, HashType> vertexMap;
 
   // Loop over cells and intersect them with the boundary
-  for (auto i = 0; i < m_cells.size(); ++i) {
-    bp::point_data<IntType> genPoint = bp::construct<IntPoint>(m_points[i].x, m_points[i].y);
+  for (auto i = 0; i < cells.size(); ++i) {
+    bp::point_data<IntType> genPoint = bp::construct<IntPoint>(points[i].x, points[i].y);
     std::vector<PolygonWithHoles> cellSet = boostIntersect(getCell(i), boundary);
     auto NFrag = cellSet.size();
     if (NFrag == 0) continue; // Cell was completely outside the boundary
@@ -152,7 +152,7 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
       vertexMap[vertexHash].insert(curP);
     }
     polyIndex.push_back(i);
-    localGenPoints.push_back(m_points[i]);
+    localGenPoints.push_back(points[i]);
     cellPolygons.push_back(cellSet[fragIndex]);
   }
 
@@ -190,8 +190,8 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
       // Retessellate with these select generators, convert final product into boost polygons for simplicity
       QuantTessellation<2> newQT(genPoints);
       tessellator.tessellateQuantized(newQT);
-      POLY_ASSERT2(newQT.m_cells.size() == genIndex.size(), "Number of gen points should not change");
-      for (auto i = 0; i < newQT.m_cells.size(); ++i) {
+      POLY_ASSERT2(newQT.cells.size() == genIndex.size(), "Number of gen points should not change");
+      for (auto i = 0; i < newQT.cells.size(); ++i) {
         std::vector<PolygonWithHoles> newPolygon = boostIntersect(newQT.getCell(i), orphanBound[0]);
         POLY_ASSERT2(newPolygon.size() > 0, "Final clipped polygon must exist");
         POLY_ASSERT2(newPolygon.size() == 1, "Only one polygon per generator after merging and clipping");
@@ -201,7 +201,7 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
   }
   std::vector<std::vector<int>> newCells;
   std::vector<IntPoint> newNodes;
-  std::vector<std::vector<int>> newFaces;
+  std::vector<std::vector<unsigned>> newFaces;
 
   // Storage for generator points corresponding to surviving cells
   std::vector<IntPoint> newPoints;
@@ -243,14 +243,14 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
     }
     int curIndex = polyIndex[i++];
     newCells.push_back(cellEdgeIndices);
-    newPoints.push_back(m_points[curIndex]);
-    newHashes.push_back(m_hashes[curIndex]);
+    newPoints.push_back(points[curIndex]);
+    newHashes.push_back(hashes[curIndex]);
   }
-  m_nodes = std::move(newNodes);
-  m_faces = std::move(newFaces);
-  m_cells = std::move(newCells);
-  m_points = std::move(newPoints);
-  m_hashes = std::move(newHashes);
+  nodes = std::move(newNodes);
+  faces = std::move(newFaces);
+  cells = std::move(newCells);
+  points = std::move(newPoints);
+  hashes = std::move(newHashes);
 }
 #else
 // Must enable Boost to use clipping methods
@@ -272,37 +272,37 @@ void
 QuantTessellation<2>::fillTessellation(TessellationType& mesh) {
   auto& Q = Quantizer<2>::instance();
   compactUnusedNodesAndFaces();
-  const unsigned numNodes = m_nodes.size();
-  const unsigned numFaces = m_faces.size();
-  const unsigned numCells = m_points.size();  // Number of generators
+  const unsigned numNodes = nodes.size();
+  const unsigned numFaces = faces.size();
+  const unsigned numCells = points.size();  // Number of generators
 
   // Allocate space for mesh data
   // In 2D: nodes are stored as [x0, y0, x1, y1, ...]
   mesh.nodes.resize(numNodes);
   mesh.faces.resize(numFaces, std::vector<unsigned>(2));
   mesh.points.resize(numCells);
-  mesh.cells = m_cells;
-  POLY_ASSERT2(m_cells.size() == numCells, "Differing number of cells and generator points");
+  mesh.cells = cells;
+  POLY_ASSERT2(cells.size() == numCells, "Differing number of cells and generator points");
 
   for (unsigned i = 0; i < numCells; ++i) {
-    RealPoint rp = Q.dequantize(m_points[i]);
+    RealPoint rp = Q.dequantize(points[i]);
     mesh.points[i].x = rp.x;
     mesh.points[i].y = rp.y;
   }
 
   // Dequantize nodes from integer coordinates to real coordinates
   for (unsigned i = 0; i < numNodes; ++i) {
-    RealPoint rp = Q.dequantize(m_nodes[i]);
+    RealPoint rp = Q.dequantize(nodes[i]);
     mesh.nodes[i].x = rp.x;
     mesh.nodes[i].y = rp.y;
   }
 
   // Copy face topology (each face has 2 nodes in 2D)
   for (unsigned i = 0; i < numFaces; ++i) {
-    POLY_ASSERT(m_faces[i].size() == 2);
+    POLY_ASSERT(faces[i].size() == 2);
     POLY_ASSERT(mesh.faces[i].size() == 2);
-    mesh.faces[i][0] = m_faces[i][0];
-    mesh.faces[i][1] = m_faces[i][1];
+    mesh.faces[i][0] = faces[i][0];
+    mesh.faces[i][1] = faces[i][1];
   }
   mesh.computeFaceCells();
 }

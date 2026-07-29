@@ -53,9 +53,9 @@ tessellateQuantizedImpl(QuantizedTessellation& result) const {
 
   // Build the tessellation data structures
   // In 2D: nodes are Voronoi vertices, faces are edges, cells are Voronoi cells
-  result.m_nodes.reserve(voronoi.num_vertices()+4);
-  result.m_faces.reserve(voronoi.num_edges());
-  result.m_cells.resize(numGenerators);
+  result.nodes.reserve(voronoi.num_vertices()+4);
+  result.faces.reserve(voronoi.num_edges());
+  result.cells.resize(numGenerators);
 
   // Map IntPoint coordinates to our node indices (for deduplication)
   std::map<IntPoint, int> node2id;
@@ -67,7 +67,7 @@ tessellateQuantizedImpl(QuantizedTessellation& result) const {
   edge::GenPairToEdgeDataMap genPairToEdge;
 
   // Add nodes for the box extent and keep track of their indices
-  auto cornerIndices = shapes::addBoxPoints(Q, node2id, result.m_nodes);
+  auto cornerIndices = shapes::addBoxPoints(Q, node2id, result.nodes);
 
   // Process each Voronoi cell
   for (typename VD::const_cell_iterator cellItr = voronoi.cells().begin();
@@ -108,8 +108,8 @@ tessellateQuantizedImpl(QuantizedTessellation& result) const {
         endSide = ed.startSide;
       } else {
         Clip2D<IntType> clipper;
-        clipper.gen0 = result.m_points[gindx1];
-        clipper.gen1 = result.m_points[gindx2];
+        clipper.gen0 = result.points[gindx1];
+        clipper.gen1 = result.points[gindx2];
         if (v0) {
           clipper.rp0 = Point2<double>(v0->x(), v0->y());
         } else {
@@ -135,7 +135,7 @@ tessellateQuantizedImpl(QuantizedTessellation& result) const {
         if (clipper.inf1) {
           endSide = static_cast<int>(clipper.secondSide);
         }
-        curEdge = edge::updateNodeMap(clipper.p0, clipper.p1, node2id, result.m_nodes);
+        curEdge = edge::updateNodeMap(clipper.p0, clipper.p1, node2id, result.nodes);
         if (curEdge.first == curEdge.second) {
           edge = nextEdge;
           continue;
@@ -150,13 +150,13 @@ tessellateQuantizedImpl(QuantizedTessellation& result) const {
     // Walk edges and clipped nodes to connect them
     std::vector<edge::Edge> finalEdges = shapes::closeClippedEdges(localEdges, clippedNodeSides, cornerIndices);
     // Create faces and cells from local edges
-    removeCollinear(finalEdges, result.m_nodes);
+    removeCollinear(finalEdges, result.nodes);
     for (const auto& cedge : finalEdges) {
-      int signedFaceIndex = edge::addOrientedEdge(cedge.first, cedge.second, result.m_faces, edgeToFace);
-      result.m_cells[cellIndex].push_back(signedFaceIndex);
+      int signedFaceIndex = edge::addOrientedEdge(cedge.first, cedge.second, result.faces, edgeToFace);
+      result.cells[cellIndex].push_back(signedFaceIndex);
     }
     // Check for nearly duplicate nodes
-    POLY_ASSERT2(!edge::hasNearDuplicates(result.m_points[cellIndex], node2id),
+    POLY_ASSERT2(!edge::hasNearDuplicates(result.points[cellIndex], node2id),
                  "Found nearly duplicate nodes.");
   }
 }

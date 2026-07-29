@@ -100,7 +100,7 @@ singleNodeTessellate(QuantTessellation<Dimension>& result) const {
     using RealPoint = Point2<double>;
     using IntPoint = typename QuantTessellation<2>::IntPoint;
     const auto& Q = Quantizer<2>::instance();
-    result.m_cells.resize(1);
+    result.cells.resize(1);
 
     // Map canonical edges to face indices for orientation tracking
     edge::EdgeToFaceMap edgeToFace;
@@ -109,14 +109,14 @@ singleNodeTessellate(QuantTessellation<Dimension>& result) const {
     std::map<IntPoint, int> node2id;
 
     // Add nodes for the box extent and keep track of their indices
-    auto cornerIndices = shapes::addBoxPoints(Q, node2id, result.m_nodes);
+    auto cornerIndices = shapes::addBoxPoints(Q, node2id, result.nodes);
     const int N = 4;
     shapes::BoxSides side;
     for (int i = 0; i < N; ++i) {
       auto point0 = cornerIndices[side.corner(i)];
       auto point1 = cornerIndices[side.corner((i+1)%N)];
-      int signedFaceIndex = edge::addOrientedEdge(point0, point1, result.m_faces, edgeToFace);
-      result.m_cells[0].push_back(signedFaceIndex);
+      int signedFaceIndex = edge::addOrientedEdge(point0, point1, result.faces, edgeToFace);
+      result.cells[0].push_back(signedFaceIndex);
     }
   }
 }

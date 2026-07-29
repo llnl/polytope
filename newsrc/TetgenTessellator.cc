@@ -32,7 +32,7 @@ void TetgenTessellator::tessellateQuantizedImpl(QT& result) const {
 tetgenio TetgenTessellator::createTetgenPoints(const QT& result) const {
   tetgenio in;
   auto generators = flattenCoords(result.getRealPoints());
-  const auto N = result.m_points.size();
+  const auto N = result.points.size();
   in.pointlist = new REAL[N*3];
   in.numberofpoints = N;
   std::copy(generators.begin(), generators.end(), in.pointlist);

@@ -53,7 +53,7 @@ void test1(Tessellator<2, double>& tessellator) {
 
   PLC<2> boundary;
   int nSides = 4;
-  boundary.facets.resize(nSides, vector<int>(2));
+  boundary.facets.resize(nSides, vector<unsigned>(2));
   for (int i = 0; i != nSides; ++i) {
     boundary.facets[i][0] = i;
     boundary.facets[i][1] = (i+1)%nSides;
@@ -98,7 +98,7 @@ void test2(Tessellator<2,double>& tessellator) {
   // Facets
   PLC<2> boundary;
   int nSides = 4;
-  boundary.facets.resize(nSides, vector<int>(2));
+  boundary.facets.resize(nSides, vector<unsigned>(2));
   for (int i = 0; i != nSides; ++i) {
     boundary.facets[i][0] = i;
     boundary.facets[i][1] = (i+1)%nSides;
@@ -163,7 +163,7 @@ void test3(Tessellator<2,double>& tessellator) {
   plc.points.push_back(x2 + 4.0*dx);  plc.points.push_back(y2 + 4.0*dy);
   plc.points.push_back(x1 - 4.0*dx);  plc.points.push_back(y2 + 4.0*dy);
 
-  plc.facets.resize(4, vector<int>(2));
+  plc.facets.resize(4, vector<unsigned>(2));
   for (int i = 0; i != 4; ++i) {
     plc.facets[i][0] = i;
     plc.facets[i][1] = (i+1)%4;
@@ -248,14 +248,14 @@ void test4(Tessellator<2,double>& tessellator) {
   plc.points.push_back(xhole2);  plc.points.push_back(yhole2);
   plc.points.push_back(xhole2);  plc.points.push_back(yhole1);
 
-  plc.facets.resize(4, vector<int>(2));
+  plc.facets.resize(4, vector<unsigned>(2));
   for (int i = 0; i != 4; ++i) {
     plc.facets[i][0] = i;
     plc.facets[i][1] = (i+1)%4;
   }
 
   plc.holes.resize(1);
-  plc.holes[0].resize(4, vector<int>(2));
+  plc.holes[0].resize(4, vector<unsigned>(2));
   for (int i = 0; i != 4; ++i) {
     plc.holes[0][i][0] = 4 + i;
     plc.holes[0][i][1] = 4 + (i+1)%4;

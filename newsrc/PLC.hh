@@ -21,14 +21,14 @@ public:
   //! A facet has an arbitrary number of points in 3D and 2 points in 2D. 
   //! facets[i][j] gives the index of the jth generating point of the ith 
   //! facet.
-  std::vector<std::vector<int>> facets;
+  std::vector<std::vector<unsigned>> facets;
 
   //! This three dimensional array defines the topology of the inner facets
   //! or holes in the geometry.  The outer-most dimension is the number of 
   //! holes, and the remaining are facets using the same convention as the
   //! the "facets" member.  In other words, holes[k][i][j] is the jth
   //! generating point of the ith facet of the kth hole.
-  std::vector<std::vector<std::vector<int> > > holes;
+  std::vector<std::vector<std::vector<unsigned> > > holes;
   
   //! Clears facets and holes to empty the PLC
   void clear() {

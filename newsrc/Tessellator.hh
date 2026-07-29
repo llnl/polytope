@@ -76,7 +76,7 @@ public:
   //! DistributedTessellator will override this.
   virtual void
   tessellateQuantized(QuantTessellation<Dimension>& result) const {
-    if (result.m_points.size() == 1) {
+    if (result.points.size() == 1) {
       singleNodeTessellate(result);
     } else {
       this->tessellateQuantizedImpl(result);

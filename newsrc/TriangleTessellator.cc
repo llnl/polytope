@@ -77,7 +77,7 @@ tessellateQuantizedImpl(QuantizedTessellation& result) const {
   const auto N = generators.size()/2;
 
   // Build tessellation data structures (common for both cases)
-  result.m_cells.resize(N);
+  result.cells.resize(N);
 
   // Map IntPoint coordinates to node indices for deduplication
   std::map<IntPoint, int> node2id;
@@ -89,7 +89,7 @@ tessellateQuantizedImpl(QuantizedTessellation& result) const {
   edge::GenPairToEdgeDataMap genPairToEdge;
 
   // Add nodes for the box extent and keep track of their indices
-  auto cornerIndices = shapes::addBoxPoints(Q, node2id, result.m_nodes);
+  auto cornerIndices = shapes::addBoxPoints(Q, node2id, result.nodes);
 
   // Prepare Triangle input structure
   triangulateio in, out;
@@ -115,8 +115,8 @@ tessellateQuantizedImpl(QuantizedTessellation& result) const {
     for (int cellIndex = 0; cellIndex < N-1; ++cellIndex) {
       int nextPoint = cellIndex + 1;
       Clip2D<IntType> clipper;
-      clipper.gen0 = result.m_points[cellIndex];
-      clipper.gen1 = result.m_points[nextPoint];
+      clipper.gen0 = result.points[cellIndex];
+      clipper.gen1 = result.points[nextPoint];
       clipper.inf0 = true;
       clipper.inf1 = true;
       clipper.normalRay = outwardRay<IntType>(clipper.gen0, clipper.gen1);
@@ -125,19 +125,19 @@ tessellateQuantizedImpl(QuantizedTessellation& result) const {
       }
       int startSide = static_cast<int>(clipper.firstSide);
       int endSide = static_cast<int>(clipper.secondSide);
-      edge::Edge curEdge = edge::updateNodeMap(clipper.p0, clipper.p1, node2id, result.m_nodes);
+      edge::Edge curEdge = edge::updateNodeMap(clipper.p0, clipper.p1, node2id, result.nodes);
       localEdges[cellIndex].push_back(curEdge);
       clippedNodeSides[cellIndex].push_back(std::make_pair(startSide, endSide));
-      curEdge = edge::updateNodeMap(clipper.p1, clipper.p0, node2id, result.m_nodes);
+      curEdge = edge::updateNodeMap(clipper.p1, clipper.p0, node2id, result.nodes);
       localEdges[nextPoint].push_back(curEdge);
       clippedNodeSides[nextPoint].push_back(std::make_pair(endSide, startSide));
     }
     for (int cellIndex = 0; cellIndex < N; ++cellIndex) {
       std::vector<edge::Edge> finalEdges = shapes::closeClippedEdges(localEdges[cellIndex], clippedNodeSides[cellIndex], cornerIndices);
-      removeCollinear(finalEdges, result.m_nodes);
+      removeCollinear(finalEdges, result.nodes);
       for (const auto& cedge : finalEdges) {
-        int signedFaceIndex = edge::addOrientedEdge(cedge.first, cedge.second, result.m_faces, edgeToFace);
-        result.m_cells[cellIndex].push_back(signedFaceIndex);
+        int signedFaceIndex = edge::addOrientedEdge(cedge.first, cedge.second, result.faces, edgeToFace);
+        result.cells[cellIndex].push_back(signedFaceIndex);
       }
     }
     return;
@@ -156,9 +156,9 @@ tessellateQuantizedImpl(QuantizedTessellation& result) const {
     // ia = indexarr[0];
     // ib = indexarr[1];
     // ic = indexarr[2];
-    auto a = result.m_points[ia].template type_cast<double>();
-    auto b = result.m_points[ib].template type_cast<double>();
-    auto c = result.m_points[ic].template type_cast<double>();
+    auto a = result.points[ia].template type_cast<double>();
+    auto b = result.points[ib].template type_cast<double>();
+    auto c = result.points[ic].template type_cast<double>();
     Point2<double> rcen = circumcenter(a, b, c);
     centers.push_back(rcen);
     gen2tri[ia].insert(i);
@@ -227,12 +227,12 @@ tessellateQuantizedImpl(QuantizedTessellation& result) const {
       } else {
         Clip2D<IntType> clipper;
         // gen0 should always be the current cell's generator
-        clipper.gen0 = result.m_points[cellIndex];
-        clipper.gen1 = result.m_points[otherGen];
+        clipper.gen0 = result.points[cellIndex];
+        clipper.gen1 = result.points[otherGen];
         clipper.rp0 = centers[curTri];
         if (nextTri == -1) {
           clipper.inf1 = true;
-          auto thirdPoint = result.m_points[tri[localSide]];
+          auto thirdPoint = result.points[tri[localSide]];
           clipper.normalRay = outwardRay(clipper.gen0, clipper.gen1, thirdPoint);
         } else {
           clipper.rp1 = centers[nextTri];
@@ -253,7 +253,7 @@ tessellateQuantizedImpl(QuantizedTessellation& result) const {
           std::swap(clipper.inf0, clipper.inf1);
           std::swap(startSide, endSide);
         }
-        curEdge = edge::updateNodeMap(clipper.p0, clipper.p1, node2id, result.m_nodes);
+        curEdge = edge::updateNodeMap(clipper.p0, clipper.p1, node2id, result.nodes);
         if (curEdge.first == curEdge.second) {
           curTri = nextTri;
           continue;
@@ -271,14 +271,14 @@ tessellateQuantizedImpl(QuantizedTessellation& result) const {
     }
     std::vector<edge::Edge> finalEdges = shapes::closeClippedEdges(localEdges, clippedNodeSides, cornerIndices);
     // Remove collinear points from the edge loop
-    removeCollinear(finalEdges, result.m_nodes);
+    removeCollinear(finalEdges, result.nodes);
     // Create faces and add to cell
     for (const auto& cedge : finalEdges) {
-      int signedFaceIndex = edge::addOrientedEdge(cedge.first, cedge.second, result.m_faces, edgeToFace);
-      result.m_cells[cellIndex].push_back(signedFaceIndex);
+      int signedFaceIndex = edge::addOrientedEdge(cedge.first, cedge.second, result.faces, edgeToFace);
+      result.cells[cellIndex].push_back(signedFaceIndex);
     }
     // Check for nearly duplicate nodes
-    POLY_ASSERT2(!edge::hasNearDuplicates(result.m_points[cellIndex], node2id),
+    POLY_ASSERT2(!edge::hasNearDuplicates(result.points[cellIndex], node2id),
                  "Found nearly duplicate nodes.");
   }
   // Clean up Triangle memory

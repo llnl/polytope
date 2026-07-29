@@ -63,19 +63,19 @@ void
 QuantTessellation<3>::fillTessellation(TessellationType& mesh) {
   auto& Q = Quantizer<3>::instance();
   compactUnusedNodesAndFaces();
-  const unsigned numNodes = m_nodes.size();
-  const unsigned numFaces = m_faces.size();
-  const unsigned numCells = m_points.size();  // Number of generators
+  const unsigned numNodes = nodes.size();
+  const unsigned numFaces = faces.size();
+  const unsigned numCells = points.size();  // Number of generators
 
   // Allocate space for mesh data
   // In 3D: nodes are stored as [x0, y0, z0, x1, y1, z1, ...]
   mesh.nodes.resize(numNodes);
   mesh.faces.resize(numFaces);
-  mesh.cells = m_cells;
-  POLY_ASSERT2(m_cells.size() == numCells, "Differing number of cells and generator points");
+  mesh.cells = cells;
+  POLY_ASSERT2(cells.size() == numCells, "Differing number of cells and generator points");
 
   for (unsigned i = 0; i < numCells; ++i) {
-    RealPoint rp = Q.dequantize(m_points[i]);
+    RealPoint rp = Q.dequantize(points[i]);
     mesh.points[i].x = rp.x;
     mesh.points[i].y = rp.y;
     mesh.points[i].z = rp.z;
@@ -83,7 +83,7 @@ QuantTessellation<3>::fillTessellation(TessellationType& mesh) {
 
   // Dequantize nodes from integer coordinates to real coordinates
   for (unsigned i = 0; i < numNodes; ++i) {
-    RealPoint rp = Q.dequantize(m_nodes[i]);
+    RealPoint rp = Q.dequantize(nodes[i]);
     mesh.nodes[i].x = rp.x;
     mesh.nodes[i].y = rp.y;
     mesh.nodes[i].z = rp.z;
@@ -91,9 +91,9 @@ QuantTessellation<3>::fillTessellation(TessellationType& mesh) {
 
   // Copy face topology (each face has 3+ nodes in 3D - triangular or polygonal)
   for (unsigned i = 0; i < numFaces; ++i) {
-    mesh.faces[i].resize(m_faces[i].size());
-    for (unsigned j = 0; j < m_faces[i].size(); ++j) {
-      mesh.faces[i][j] = m_faces[i][j];
+    mesh.faces[i].resize(faces[i].size());
+    for (unsigned j = 0; j < faces[i].size(); ++j) {
+      mesh.faces[i][j] = faces[i][j];
     }
   }
   mesh.computeFaceCells();

@@ -85,10 +85,10 @@ void testBasicConstruction(const int tnum) {
   QuantPLC2D qplc(plc, vertices);
 
   // Check that all 4 vertices were quantized
-  POLY_CHECK2(qplc.m_points.size() == 4,
-              "Expected 4 vertices, got " << qplc.m_points.size());
-  POLY_CHECK2(qplc.m_hashes.size() == 4,
-              "Expected 4 hashes, got " << qplc.m_hashes.size());
+  POLY_CHECK2(qplc.points.size() == 4,
+              "Expected 4 vertices, got " << qplc.points.size());
+  POLY_CHECK2(qplc.hashes.size() == 4,
+              "Expected 4 hashes, got " << qplc.hashes.size());
 
   // Check that bounding box makes sense
   POLY_CHECK2(qplc.m_loBounds < qplc.m_hiBounds,
@@ -161,15 +161,15 @@ void testDeduplication(const int tnum) {
   QuantPLC2D qplc(plc, vertices);
 
   // Before deduplication, should have 6 points
-  POLY_CHECK2(qplc.m_points.size() == 6,
+  POLY_CHECK2(qplc.points.size() == 6,
               "Expected 6 points before deduplication");
 
   // Remove duplicates
   qplc.removeDegeneracies();
 
   // After deduplication: 4 unique points (removed duplicates 4 and 5)
-  POLY_CHECK2(qplc.m_points.size() == 4,
-              "Expected 4 unique points after deduplication, got " << qplc.m_points.size());
+  POLY_CHECK2(qplc.points.size() == 4,
+              "Expected 4 unique points after deduplication, got " << qplc.points.size());
 
   cout << "  Deduplication passed!" << endl;
 }
@@ -201,15 +201,15 @@ void testReduction(const int tnum) {
   QuantPLC2D qplc(plc,  vertices);
 
   // Before reduction, should have 5 points
-  POLY_CHECK2(qplc.m_points.size() == 5,
+  POLY_CHECK2(qplc.points.size() == 5,
               "Expected 5 points before reduction");
 
   // Reduce: remove unused vertices
   qplc.reduce();
 
   // After reduction: 2 unique points (0, 1; removed unused 2, 3, 4)
-  POLY_CHECK2(qplc.m_points.size() == 2,
-              "Expected 2 unique points after reduction, got " << qplc.m_points.size());
+  POLY_CHECK2(qplc.points.size() == 2,
+              "Expected 2 unique points after reduction, got " << qplc.points.size());
   POLY_CHECK2(qplc.m_reduced, "Should be marked as reduced");
 
   cout << "  Reduction passed!" << endl;
@@ -252,8 +252,8 @@ void testConvexHull(const int tnum) {
   }
 
   // After reduction, should only have 4 points (the hull vertices)
-  POLY_CHECK2(qplc.m_points.size() == 4,
-              "Convex hull should have 4 vertices, got " << qplc.m_points.size());
+  POLY_CHECK2(qplc.points.size() == 4,
+              "Convex hull should have 4 vertices, got " << qplc.points.size());
 
   cout << "  Convex hull computation passed!" << endl;
 }
@@ -333,8 +333,8 @@ void testCollinearRemoval(const int tnum) {
               "After removing collinear vertices, should have 4 edges, got " << qplc.facets.size());
 
   // Should have 4 unique vertices (the corners)
-  POLY_CHECK2(qplc.m_points.size() == 4,
-              "Should have 4 unique vertices, got " << qplc.m_points.size());
+  POLY_CHECK2(qplc.points.size() == 4,
+              "Should have 4 unique vertices, got " << qplc.points.size());
 
   cout << "  Collinear removal passed!" << endl;
 }
@@ -509,7 +509,7 @@ void testStress(const int tnum) {
   }
 
   cout << "  Stress test passed! Hull has " << qplc.facets.size()
-       << " edges from " << qplc.m_points.size() << " vertices" << endl;
+       << " edges from " << qplc.points.size() << " vertices" << endl;
 }
 
 } // anonymous namespace

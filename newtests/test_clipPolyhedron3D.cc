@@ -32,7 +32,7 @@ void printPoint(const Point3<CoordType>& p, const std::string& label = "") {
 // Returns: (vertices, faces as vertex indices)
 //------------------------------------------------------------------------------
 template<typename CoordType>
-std::pair<std::vector<Point3<CoordType>>, std::vector<std::vector<int>>>
+std::pair<std::vector<Point3<CoordType>>, std::vector<std::vector<unsigned>>>
 createUnitCube() {
   std::vector<Point3<CoordType>> vertices = {
     Point3<CoordType>(-1, -1, -1),  // 0
@@ -46,7 +46,7 @@ createUnitCube() {
   };
 
   // Faces with outward-pointing normals (right-hand rule)
-  std::vector<std::vector<int>> faces = {
+  std::vector<std::vector<unsigned>> faces = {
     {0, 1, 2, 3},  // bottom (-z)
     {4, 7, 6, 5},  // top (+z)
     {0, 4, 5, 1},  // front (-y)
