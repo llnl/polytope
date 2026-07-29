@@ -46,7 +46,7 @@ inline Edge orderEdge(const Edge edge) {
 //------------------------------------------------------------------------------
 // Order a loop of edges to form a connected chain
 // Ensures edges[i][1] connects to edges[i+1][0] when possible and relies
-// on clippedNodeSides when not possible.
+// on clippedNodeSides when not possible. Assumes 2D.
 //------------------------------------------------------------------------------
 inline void orderClippedNodes(std::vector<std::pair<int, int>>& clippedNodeSides,
                               std::vector<edge::Edge>& edges) {

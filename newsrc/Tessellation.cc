@@ -58,10 +58,10 @@ computeCellCentroidAndSignedArea(const unsigned ci,
     POLY_ASSERT(faces[iface].size() == 2);
     n0 = (*itr < 0) ? faces[iface][1] : faces[iface][0];
     n1 = (*itr < 0) ? faces[iface][0] : faces[iface][1];
-    POLY_ASSERT(n0 < nodes.size()/2 and n1 < nodes.size()/2);
+    POLY_ASSERT(n0 < nodes.size() and n1 < nodes.size());
     POLY_ASSERT(n0 != n1);
-    x0 = nodes[2*n0];  y0 = nodes[2*n0+1];
-    x1 = nodes[2*n1];  y1 = nodes[2*n1+1];
+    x0 = nodes[n0].x;  y0 = nodes[n0].y;
+    x1 = nodes[n1].x;  y1 = nodes[n1].y;
     d = x0*y1 - y0*x1;
     area     += d;
     ccent[0] += d*(x0+x1);
@@ -95,14 +95,14 @@ computeFaceCentroidAndNormal(const unsigned fi,
   fcent[0] = 0.0; fcent[1] = 0.0; fcent[2] = 0.0;
   for (i = 0; i != n; ++i) {
     ni = faces[fi][i];
-    POLY_ASSERT(ni < nodes.size()/3);
-    fcent[0] += nodes[3*ni];
-    fcent[1] += nodes[3*ni+1];
-    fcent[2] += nodes[3*ni+2];
+    POLY_ASSERT(ni < nodes.size());
+    fcent[0] += nodes[ni].x;
+    fcent[1] += nodes[ni].y;
+    fcent[2] += nodes[ni].z;
     if (verts.size() < 2 or
-        (verts.size() == 2 and not collinear<3, RealType>(&nodes[3*verts[0]],
-                                                          &nodes[3*verts[1]],
-                                                          &nodes[3*ni],
+        (verts.size() == 2 and not collinear<3, RealType>(&nodes[verts[0]][0],
+                                                          &nodes[verts[1]][0],
+                                                          &nodes[ni],
                                                           degeneracy))) verts.push_back(ni);
   }
   POLY_ASSERT(n > 0);
@@ -111,12 +111,12 @@ computeFaceCentroidAndNormal(const unsigned fi,
   // Now we can compute the unit normal.
   POLY_ASSERT2(verts.size() == 3, verts.size());
   RealType ab[3], ac[3];
-  ab[0] = nodes[3*verts[1]  ] - nodes[3*verts[0]  ];
-  ab[1] = nodes[3*verts[1]+1] - nodes[3*verts[0]+1];
-  ab[2] = nodes[3*verts[1]+2] - nodes[3*verts[0]+2];
-  ac[0] = nodes[3*verts[2]  ] - nodes[3*verts[0]  ];
-  ac[1] = nodes[3*verts[2]+1] - nodes[3*verts[0]+1];
-  ac[2] = nodes[3*verts[2]+2] - nodes[3*verts[0]+2];
+  ab[0] = nodes[verts[1]].x - nodes[verts[0]].x;
+  ab[1] = nodes[verts[1]].y - nodes[verts[0]].y;
+  ab[2] = nodes[verts[1]].z - nodes[verts[0]].z;
+  ac[0] = nodes[verts[2]].x - nodes[verts[0]].x;
+  ac[1] = nodes[verts[2]].y - nodes[verts[0]].y;
+  ac[2] = nodes[verts[2]].z - nodes[verts[0]].z;
   cross<3, RealType>(ab, ac, fhat);
   UnitVector<3, RealType>(fhat);
 }

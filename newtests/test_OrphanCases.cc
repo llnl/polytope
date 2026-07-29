@@ -30,7 +30,7 @@ using namespace polytope;
 // -----------------------------------------------------------------------
 // printArea
 // -----------------------------------------------------------------------
-void printArea(Boundary2D<double>& boundary,
+void printArea(Boundary2D& boundary,
 	       Tessellation<2,double>& mesh) {
    const double area = computeTessellationArea(mesh);
    const double relErr = std::abs(boundary.mArea-area)/boundary.mArea;
@@ -55,13 +55,13 @@ bool checkNearestNode(const Tessellation<2,double>& mesh,
     }
   }
 
-  vector<double> minDistList(mesh.nodes.size()/2);
+  vector<double> minDistList(mesh.nodes.size());
   double dist, minDist, mostMin = numeric_limits<double>::max();
-  for (unsigned i = 0; i != mesh.nodes.size()/2; ++i) {
+  for (unsigned i = 0; i < mesh.nodes.size(); ++i) {
     minDist = numeric_limits<double>::max();
-    for (unsigned j = 0; j != mesh.nodes.size()/2; ++j) {
+    for (unsigned j = 0; j < mesh.nodes.size(); ++j) {
       if (i != j) {
-	dist = distance<2, double>(&mesh.nodes[2*i], &mesh.nodes[2*j]);
+	dist = distance<2>(mesh.nodes[i], mesh.nodes[j]);
 	minDist = std::min(dist, minDist);
       }
     }
@@ -91,7 +91,7 @@ void test(Tessellator<2,double>& tessellator) {
   string testName = "OrphanCases_" + tessellator.name();
 
   // Initialize boundary and tessellator
-  Boundary2D<double> boundary;
+  Boundary2D boundary;
 
   // Circular region with star-shaped hole
   int bType = 5;
@@ -105,7 +105,7 @@ void test(Tessellator<2,double>& tessellator) {
   int seed = 10489593;
   {
     cout << "\nTest 1: Cell parents multiple orphans" << endl;
-    Generators<2,double> generators(boundary);
+    Generators<2> generators(boundary);
     generators.randomPoints(20, seed);
     Tessellation<2,double> mesh;
     tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
@@ -119,7 +119,7 @@ void test(Tessellator<2,double>& tessellator) {
   {
     seed++;
     cout << "\nTest 2: Orphan neighbors are also parents of orphans" << endl;
-    Generators<2,double> generators(boundary);
+    Generators<2> generators(boundary);
     generators.randomPoints(20, seed);
     Tessellation<2,double> mesh;
     tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
@@ -133,7 +133,7 @@ void test(Tessellator<2,double>& tessellator) {
   {
     seed = 10489609;
     cout << "\nTest 3: Overlapping orphans" << endl;
-    Generators<2,double> generators(boundary);
+    Generators<2> generators(boundary);
     generators.randomPoints(20, seed);
     Tessellation<2,double> mesh;
     tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
@@ -147,7 +147,7 @@ void test(Tessellator<2,double>& tessellator) {
   {
     seed = 10489611;
     cout << "\nTest 4: Empty orphan neighbor set" << endl;
-    Generators<2,double> generators(boundary);
+    Generators<2> generators(boundary);
     generators.randomPoints(20, seed);
     Tessellation<2,double> mesh;
     tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
@@ -161,7 +161,7 @@ void test(Tessellator<2,double>& tessellator) {
   {
     seed = 10489612;
     cout << "\nTest 5: Boost.Geometry calls invalid overlay exception" << endl;
-    Generators<2,double> generators(boundary);
+    Generators<2> generators(boundary);
     generators.randomPoints(20, seed);
     Tessellation<2,double> mesh;
     tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
@@ -261,7 +261,7 @@ void test(Tessellator<2,double>& tessellator) {
     seed = 10332520;
     Q.init(boundary.mPLCpoints, -1., 0.1);
     for (unsigned iter = 0; iter < N; ++iter) {
-      Generators<2,double> generators(boundary);
+      Generators<2> generators(boundary);
       generators.randomPoints(50, seed);
       Tessellation<2,double> mesh;
       tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);

@@ -10,10 +10,23 @@
 
 namespace polytope {
 
+// Check if any cells intersect a convex hull
+template<>
+bool
+QuantTessellation<3>::cellIntersectsHull(const QuantPLC<3>& QPLC,
+                                         const unsigned cellIndex) const {
+  auto plc_cell = QPLC.getFacetPoints();
+  auto qcell = getCell(cellIndex);
+  // TODO: Implement me
+  //return convexIntersection(plc_cell, qcell);
+  return true;
+}
+
 // Remove any generator points that are outside our clipping region
 template<>
 void
 QuantTessellation<3>::cullExternalPoints(const QuantPLC<3>& QPLC) {
+  POLY_CONTRACT_VAR(QPLC);
   // TODO: Implement me
 }
 
@@ -37,146 +50,9 @@ template<>
 void
 QuantTessellation<3>::clipTessellation(const QuantPLC<3>& QPLC,
                                        const Tessellator<3, double>& tessellator) {
-  auto& Q = Quantizer<3>::instance();
-  // Storage for clipped cells (will replace m_cells)
-  std::vector<std::vector<int>> newCells;
-  std::vector<IntPoint> newNodes;
-  std::vector<std::vector<int>> newFaces;
-
-  // Storage for generator points corresponding to surviving cells
-  std::vector<IntPoint> newPoints;
-  std::vector<CoordHash> newHashes;
-
-  // Map from IntPoint to index in newNodes (for vertex deduplication)
-  std::map<IntPoint, int> nodeMap;
-
-  auto getOrCreateNode = [&](const IntPoint& p) -> int {
-    auto it = nodeMap.find(p);
-    if (it != nodeMap.end()) {
-      return it->second;
-    }
-    int newIdx = newNodes.size();
-    newNodes.push_back(p);
-    nodeMap[p] = newIdx;
-    return newIdx;
-  };
-
-  // Clip each cell against all PLC boundary planes
-  for (size_t iCell = 0; iCell < m_cells.size(); ++iCell) {
-    const auto& cellFaceIndices = m_cells[iCell];
-
-    // Extract cell geometry: collect all vertices and faces for this cell
-    std::set<int> cellNodeSet;
-    std::vector<std::vector<int>> cellFaces;
-
-    for (int faceIdx : cellFaceIndices) {
-      // Handle signed face indices (negative = inverted orientation)
-      int absFaceIdx = (faceIdx < 0) ? ~faceIdx : faceIdx;
-      POLY_ASSERT(absFaceIdx < m_faces.size());
-
-      const auto& faceNodes = m_faces[absFaceIdx];
-      cellFaces.push_back(faceNodes);
-
-      // Collect all nodes used by this cell
-      for (int nodeIdx : faceNodes) {
-        cellNodeSet.insert(nodeIdx);
-      }
-    }
-
-    // Build local vertex array and remap face indices to local
-    std::vector<int> globalToLocal(m_nodes.size(), -1);
-    std::vector<IntPoint> localVertices;
-    localVertices.reserve(cellNodeSet.size());
-
-    for (int globalIdx : cellNodeSet) {
-      int localIdx = localVertices.size();
-      globalToLocal[globalIdx] = localIdx;
-      localVertices.push_back(m_nodes[globalIdx]);
-    }
-
-    // Remap face indices to local vertex indices
-    std::vector<std::vector<int>> localFaces;
-    localFaces.reserve(cellFaces.size());
-    for (const auto& face : cellFaces) {
-      std::vector<int> localFace;
-      localFace.reserve(face.size());
-      for (int globalIdx : face) {
-        POLY_ASSERT(globalToLocal[globalIdx] >= 0);
-        localFace.push_back(globalToLocal[globalIdx]);
-      }
-      localFaces.push_back(localFace);
-    }
-
-    // Clip against each PLC boundary plane
-    bool fullyClipped = false;
-    for (size_t iFacet = 0; iFacet < QPLC.facets.size() && !fullyClipped; ++iFacet) {
-      // Get plane definition from PLC facet
-      const auto& planeNormal = QPLC.m_normals[iFacet];
-      const auto& planePoint = QPLC.m_points[QPLC.facets[iFacet][0]];
-
-      bool fullyRetained;
-      clipPolyhedronByPlane(localVertices, localFaces,
-                           planePoint, planeNormal,
-                           fullyClipped, fullyRetained);
-    }
-
-    // If cell survived clipping, add it to the new tessellation
-    if (!fullyClipped && !localVertices.empty() && !localFaces.empty()) {
-      // Map clipped vertices to global node indices
-      std::vector<int> localToNewGlobal(localVertices.size());
-      for (size_t i = 0; i < localVertices.size(); ++i) {
-        localToNewGlobal[i] = getOrCreateNode(localVertices[i]);
-      }
-
-      // Create new faces with global indices
-      std::vector<int> newCellFaceIndices;
-      for (const auto& localFace : localFaces) {
-        std::vector<int> globalFace;
-        globalFace.reserve(localFace.size());
-        for (int localIdx : localFace) {
-          POLY_ASSERT(localIdx < localToNewGlobal.size());
-          globalFace.push_back(localToNewGlobal[localIdx]);
-        }
-
-        // Add face to global face list
-        int newFaceIdx = newFaces.size();
-        newFaces.push_back(globalFace);
-        newCellFaceIndices.push_back(newFaceIdx);
-      }
-
-      // Add clipped cell
-      newCells.push_back(newCellFaceIndices);
-
-      // Keep the generator point for this surviving cell
-      // This maintains the invariant: newCells[i] corresponds to newPoints[i]
-      newPoints.push_back(m_points[iCell]);
-      newHashes.push_back(m_hashes[iCell]);
-    }
-    // If fullyClipped: generator is discarded (not added to newPoints)
-  }
-
-  // Replace tessellation data with clipped version
-  m_nodes = std::move(newNodes);
-  m_faces = std::move(newFaces);
-  m_cells = std::move(newCells);
-
-  // Update generator points to match surviving cells
-  m_points = std::move(newPoints);
-  m_hashes = std::move(newHashes);
-
-  // Update bounding box to match remaining generators
-  if (!m_points.empty()) {
-    m_loBounds = m_points[0];
-    m_hiBounds = m_points[0];
-    for (const auto& p : m_points) {
-      m_loBounds = m_loBounds.minElements(p);
-      m_hiBounds = m_hiBounds.maxElements(p);
-    }
-  } else {
-    // All generators were clipped away
-    m_loBounds = Q.maxCoord;
-    m_hiBounds = -m_loBounds;
-  }
+  POLY_CONTRACT_VAR(QPLC);
+  POLY_CONTRACT_VAR(tessellator);
+  // 3D has not been implemented
 }
 
 //------------------------------------------------------------------------------
@@ -193,17 +69,24 @@ QuantTessellation<3>::fillTessellation(TessellationType& mesh) {
 
   // Allocate space for mesh data
   // In 3D: nodes are stored as [x0, y0, z0, x1, y1, z1, ...]
-  mesh.nodes.resize(3 * numNodes);
+  mesh.nodes.resize(numNodes);
   mesh.faces.resize(numFaces);
   mesh.cells = m_cells;
   POLY_ASSERT2(m_cells.size() == numCells, "Differing number of cells and generator points");
 
+  for (unsigned i = 0; i < numCells; ++i) {
+    RealPoint rp = Q.dequantize(m_points[i]);
+    mesh.points[i].x = rp.x;
+    mesh.points[i].y = rp.y;
+    mesh.points[i].z = rp.z;
+  }
+
   // Dequantize nodes from integer coordinates to real coordinates
   for (unsigned i = 0; i < numNodes; ++i) {
     RealPoint rp = Q.dequantize(m_nodes[i]);
-    mesh.nodes[3*i]     = rp.x;
-    mesh.nodes[3*i + 1] = rp.y;
-    mesh.nodes[3*i + 2] = rp.z;
+    mesh.nodes[i].x = rp.x;
+    mesh.nodes[i].y = rp.y;
+    mesh.nodes[i].z = rp.z;
   }
 
   // Copy face topology (each face has 3+ nodes in 3D - triangular or polygonal)

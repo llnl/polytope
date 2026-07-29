@@ -71,49 +71,11 @@ createBoxPoints(const Point2<CoordType>& min,
   return out;
 }
 
-// 3D version using bit pattern (no specific ordering required yet)
-template<typename CoordType>
-inline std::vector<Point3<CoordType>>
-createBoxPoints(const Point3<CoordType>& min,
-                const Point3<CoordType>& max) {
-  std::vector<Point3<CoordType>> out;
-  int count = 8;
-  unsigned kk = 0;
-  for (int i = 0; i < count; ++i) {
-    Point3<CoordType> corner;
-    for (int d = 0; d < 3; ++d) {
-      corner[d] = min[d] + max[d]*((i >> d) & 1);
-    }
-    corner.index = kk++;
-    out.push_back(corner);
-  }
-  return out;
-}
-
 template<typename CoordType>
 inline std::vector<Point2<CoordType>>
 createSquarePoints(const Point2<CoordType>& min,
                    const Point2<CoordType>& max) {
   return createBoxPoints<CoordType>(min, max);
-}
-
-template<typename CoordType>
-inline std::vector<Point3<CoordType>>
-createCubePoints(const Point3<CoordType>& min,
-                 const Point3<CoordType>& max) {
-  return createBoxPoints<CoordType>(min, max);
-}
-
-inline std::vector<std::vector<int>> createCubeFaces() {
-  // Faces with outward-pointing normals (right-hand rule)
-  return {
-          {0, 1, 2, 3},  // bottom (-z)
-          {4, 7, 6, 5},  // top (+z)
-          {0, 4, 5, 1},  // front (-y)
-          {2, 6, 7, 3},  // back (+y)
-          {0, 3, 7, 4},  // left (-x)
-          {1, 5, 6, 2}   // right (+x)
-  };
 }
 
 inline std::vector<std::vector<int>> createSquareFaces() {

@@ -48,7 +48,7 @@ traverseNodes(const Tessellation<2, RealType>& mesh,
   // Make sure we don't have any garbage in our list of nodes.
   for (size_t n = 0; n < nodes.size(); ++n) {
     POLY_ASSERT(nodes[n] >= 0);
-    POLY_ASSERT(nodes[n] < mesh.nodes.size()/2);
+    POLY_ASSERT(nodes[n] < mesh.nodes.size());
   }
 #endif
 }
@@ -134,11 +134,11 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
     coordnames[1] = (char*)"ycoords";
 
     // Node coordinates.
-    int numNodes = mesh.nodes.size() / 2;
+    int numNodes = mesh.nodes.size();
     vector<double> x(numNodes), y(numNodes);
     for (int i = 0; i < numNodes; ++i) {
-      x[i] = mesh.nodes[2*i];
-      y[i] = mesh.nodes[2*i+1];
+      x[i] = mesh.nodes[i].x;
+      y[i] = mesh.nodes[i].y;
     }
     double* coords[2];
     coords[0] = &(x[0]);
@@ -189,7 +189,7 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
     int elemlengths[2];
     char* elemnames[2];
     elemnames[0] = strDup("ncellfaces");
-    elemlengths[0] = numCells;    
+    elemlengths[0] = numCells;
     for (int c = 0; c < numCells; ++c) {
       conn[c] = mesh.cells[c].size();
     }
@@ -241,11 +241,11 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
     writeFieldsToFile<RealType>(faceFields, meshname, file, numFaces, DB_FACECENT, optlist);
     writeFieldsToFile<RealType>(cellFields, meshname, file, numCells, DB_ZONECENT, optlist);
 
-    int numPoints = mesh.points.size() / 2;
+    int numPoints = mesh.points.size();
     vector<double> xp(numPoints), yp(numPoints);
     for (int i = 0; i < numPoints; ++i) {
-      xp[i] = mesh.points[2*i];
-      yp[i] = mesh.points[2*i+1];
+      xp[i] = mesh.points[i].x;
+      yp[i] = mesh.points[i].y;
     }
     double* pcoords[2];
     pcoords[0] = &(xp[0]);

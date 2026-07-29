@@ -5,32 +5,50 @@
 
 #include "polytope_boost_utilities.hh"
 #include "Boundary2D.hh"
-
-#include <random>
+#include "Cube.hh"
+#include "Communicator.hh"
+#include "GeomUtils.hh"
 
 using namespace std;
 
 namespace polytope {
 //------------------------------------------------------------------------
-template<int Dimension, typename RealType>
+template<int Dimension>
 class Generators {
 public:
   // -------------- Public member variables and routines ---------------- //
 
   // Number of generators
   unsigned nPoints;
-  vector<RealType> mPoints;
-  Boundary2D<RealType>& mBoundary;
+  vector<double> mPoints;
+  Boundary2D mBoundary;
+  Cube<double> mCube;
 
   //------------------------------------------------------------------------
   // Constructor, destructor
   //------------------------------------------------------------------------
-  Generators(Boundary2D<RealType>& boundary):
+  Generators(const Point<3, double>& min,
+             const Point<3, double>& max) :
+    mCube(min, max) {
+    auto& q = Quantizer<3>::instance();
+    q.init(min, max);
+  }
+
+  Generators(Boundary2D& boundary) :
     nPoints(0),
     mPoints(0),
     mBoundary(boundary) {};
 
   ~Generators() {};
+
+  bool isInside(Point<Dimension, double>& pos) {
+    if constexpr (Dimension == 2) {
+      return boost::geometry::within(makeBGPoint(pos),
+                                     mBoundary.mBGboundary);
+    } else {
+      return mCube.within(pos);
+    }
+  }
 
   //------------------------------------------------------------------------
   // Place random generators into spatial domain
@@ -41,23 +59,22 @@ public:
     srand(seed);
     // std::mt19937 gen(seed);
     // std::uniform_real_distribution<double> distrib(0., 1.);
-    auto& Q = Quantizer<2>::instance();
-
+    auto& Q = Quantizer<Dimension>::instance();
     auto bHigh = Q.m_xhi;
     auto bLow = Q.m_xlo;
 
     for (unsigned iter = 0; iter < nGenerators; ++iter ){
-      std::vector<RealType> pos(Dimension,0);
+      Point<Dimension, double> pos;
       bool inside = false;
       while( !inside ) {
         for (unsigned n = 0; n < Dimension; ++n){
-          //pos[n] = (bHigh[n]-bLow[n]) * distrib(gen) + bLow[n];
-          pos[n] = (bHigh[n]-bLow[n]) * RealType(random())/RAND_MAX + bLow[n];
+          pos[n] = (bHigh[n]-bLow[n]) * random01() + bLow[n];
         }
-        inside = boost::geometry::within( makeBGPoint(pos),
-                                          mBoundary.mBGboundary );
+        inside = isInside(pos);
       }
-      mPoints.insert( mPoints.end(), pos.begin(), pos.end() );
+      for (auto n = 0; n < Dimension; ++n) {
+        mPoints.push_back(pos[n]);
+      }
     }
     POLY_CHECK( mPoints.size()/Dimension == nGenerators );
   }
@@ -83,20 +100,20 @@ public:
   void radialPoints(const unsigned nr) {
     mPoints.clear();
     POLY_CHECK( Dimension == 2 );
-    RealType maxDistance;
+    double maxDistance;
     mBoundary.getBoundingRadius( maxDistance );
     POLY_CHECK( maxDistance > 0 );
 
-    RealType dRadius = maxDistance/nr;
+    double dRadius = maxDistance/nr;
     for( unsigned i = 0; i != nr; ++i ) {
-      RealType rad = (i+0.5)*dRadius;
+      double rad = (i+0.5)*dRadius;
 
       // This is supposed to befloor(2*pi*i), however 2*floor(pi)*i=6*i
       // is found to work better
       unsigned nArcs = 6*i;
-      std::vector<RealType> pos(2,0);
+      std::vector<double> pos(2,0);
       for( unsigned j = 0; j != nArcs; ++j ){
-        RealType theta = 2*M_PI*j/nArcs;
+        double theta = 2*M_PI*j/nArcs;
         pos[0] = mBoundary.mCenter[0] + rad*cos(theta);
         pos[1] = mBoundary.mCenter[1] + rad*sin(theta);
         if( boost::geometry::within( makeBGPoint(pos), mBoundary.mBGboundary) ){
@@ -111,8 +128,8 @@ public:
   //------------------------------------------------------------------------
   // add a point to the generator set
   //------------------------------------------------------------------------
-  void addGenerator(RealType* pos) {
-    std::vector<RealType> point;
+  void addGenerator(double* pos) {
+    std::vector<double> point;
     for (unsigned n=0; n<Dimension; ++n ) point.push_back( pos[n] );
     bool inside = boost::geometry::within( makeBGPoint(point), mBoundary.mBGboundary );
     POLY_CHECK( inside );
@@ -126,10 +143,10 @@ public:
     auto& Q = Quantizer<2>::instance();
     auto bHigh = Q.m_xhi;
     auto bLow = Q.m_xlo;
-    RealType x, y;
-    RealType dx = (bHigh[0] - bLow[0]) / nx;
-    RealType dy = (bHigh[1] - bLow[1]) / ny;
-    std::vector<RealType> pos(Dimension,0);
+    double x, y;
+    double dx = (bHigh[0] - bLow[0]) / nx;
+    double dy = (bHigh[1] - bLow[1]) / ny;
+    Point2<double> pos;
     for (unsigned iy = 0; iy != ny; ++iy) {
       y = bLow[1] + (iy + 0.5)*dy;
       for (unsigned ix = 0; ix != nx; ++ix) {
@@ -142,6 +159,7 @@ public:
         }
       }
     }
+    nPoints = mPoints.size()/Dimension;
   }
 
   //------------------------------------------------------------------------
@@ -151,31 +169,32 @@ public:
     auto& Q = Quantizer<3>::instance();
     auto bHigh = Q.m_xhi;
     auto bLow = Q.m_xlo;
-    RealType x, y, z;
-    RealType dx = (mBoundary.mHigh[0] - mBoundary.mLow[0]) / nx;
-    RealType dy = (mBoundary.mHigh[1] - mBoundary.mLow[1]) / ny;
-    RealType dz = (mBoundary.mHigh[2] - mBoundary.mLow[2]) / nz;
-     for (unsigned iz = 0; iz != nz; ++iz) {
-       z = bLow[2] + (iz + 0.5)*dz;
-       for (unsigned iy = 0; iy != ny; ++iy) {
-         y = bLow[1] + (iy + 0.5)*dy;
-         for (unsigned ix = 0; ix != nx; ++ix) {
-           x = bLow[0] + (ix + 0.5)*dx;
-           mPoints.push_back( x );
-           mPoints.push_back( y );
-           mPoints.push_back( z );
-         }
-       }
-     }
+    double x, y, z;
+    double dx = (bHigh[0] - bLow[0]) / nx;
+    double dy = (bHigh[1] - bLow[1]) / ny;
+    double dz = (bHigh[2] - bLow[2]) / nz;
+    for (unsigned iz = 0; iz != nz; ++iz) {
+      z = bLow[2] + (iz + 0.5)*dz;
+      for (unsigned iy = 0; iy != ny; ++iy) {
+        y = bLow[1] + (iy + 0.5)*dy;
+        for (unsigned ix = 0; ix != nx; ++ix) {
+          x = bLow[0] + (ix + 0.5)*dx;
+          mPoints.push_back( x );
+          mPoints.push_back( y );
+          mPoints.push_back( z );
+        }
+      }
+    }
+    nPoints = mPoints.size()/Dimension;
   }
 
   //------------------------------------------------------------------------
   // perturb the locations of the generators by +/- epsilon/2 in each direction
   //------------------------------------------------------------------------
-  void perturb(RealType epsilon) {
+  void perturb(double epsilon) {
     for (unsigned i = 0; i < mPoints.size()/Dimension; ++i){
       for (unsigned n = 0; n < Dimension; ++n){
-        mPoints[Dimension*i+n] += epsilon*( RealType(::random())/RAND_MAX - 0.5 );
+        mPoints[Dimension*i+n] += epsilon*(random01() - 0.5 );
       }
     }
   }
@@ -184,12 +203,68 @@ public:
   // Create a Boost.Geometry point from a std::vector of data depending on
   // the dimension of the problem. There really should be an easier way
   //------------------------------------------------------------------------
-  BGPoint<RealType, Dimension> makeBGPoint(std::vector<RealType> pointIn) {
+  BGPoint<double, Dimension> makeBGPoint(Point<Dimension, double> pointIn) {
     if constexpr (Dimension == 2) {
-      return BGPoint<RealType, 2>(pointIn[0], pointIn[1]);
+      return BGPoint<double, 2>(pointIn[0], pointIn[1]);
     } else if constexpr (Dimension == 3) {
-      return BGPoint<RealType, 3>(pointIn[0], pointIn[1], pointIn[2]);
+      return BGPoint<double, 3>(pointIn[0], pointIn[1], pointIn[2]);
     }
+  }
+
+  //------------------------------------------------------------------------
+  // Parallel utilities
+  //------------------------------------------------------------------------
+  //------------------------------------------------------------------------
+  // Assign points based on processor by removing non-local points
+  //------------------------------------------------------------------------
+  void distributePointsAmongRanks() {
+    nPoints = mPoints.size()/Dimension;
+    // Figure out parallel configuration
+    int rank = Communicator::getRank();
+    int numProcs = Communicator::getNProcs();
+    std::vector<int> procIndex(numProcs, -1);
+    // Each proc gets assigned to a random, unique index in mPoints
+    for (int iproc = 0; iproc < numProcs; ++iproc) {
+      auto rval = random01();
+      auto r = int(rval*nPoints) - 1;
+      if (std::find(procIndex.begin(), procIndex.end(), r) == procIndex.end()) {
+        procIndex[iproc] = r;
+      }
+    }
+    std::vector<Point<Dimension, double>> procPoint(numProcs);
+    for (int iproc = 0; iproc < numProcs; ++iproc) {
+      int pin = procIndex[iproc];
+      if (pin >= 0) {
+        for (int d = 0; d < Dimension; ++d) {
+          procPoint[iproc][d] = mPoints[Dimension*pin+d];
+        }
+      }
+    }
+    std::vector<double> newPoints;
+    for (int i = 0; i < nPoints; ++i) {
+      int owner = 0;
+      Point<Dimension, double> point;
+      for (int d = 0; d < Dimension; ++d) {
+        point[d] = mPoints[Dimension*i+d];
+      }
+      auto diff = point - procPoint[0];
+      double minDist = magnitude<Dimension>(diff);
+      for (int ip = 1; ip < numProcs; ++ip) {
+        diff = point - procPoint[ip];
+        double dis = magnitude<Dimension>(diff);
+        if (dis < minDist) {
+          owner = ip;
+          minDist = dis;
+        }
+      }
+      if (owner == rank) {
+        for (int d = 0; d < Dimension; ++d) {
+          newPoints.push_back(point[d]);
+        }
+      }
+    }
+    mPoints = std::move(newPoints);
+    nPoints = mPoints.size()/Dimension;
   }
 };
 }

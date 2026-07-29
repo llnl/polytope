@@ -24,10 +24,13 @@
 #include <algorithm>
 
 #include "GeomUtils.hh"
-#include "RegisterBoostPolygonTypes.hh"
 #include "Cell.hh"
 #include "Quantizer.hh"
 #include "Shapes.hh"
+
+#ifdef POLYTOPE_ENABLE_BOOST
+#include "RegisterBoostPolygonTypes.hh"
+#endif
 
 namespace polytope {
 
@@ -53,12 +56,36 @@ bool pointInPolygon_convex(const std::vector<std::vector<int>>& facets,
 }
 
 template<typename CoordType>
+bool pointInPolygon_convex(const typename Cell<2, CoordType>::CellType& vertices,
+                           const std::vector<Point2<CoordType>>& points) {
+  auto N = vertices.size();
+  for (int i = 0; i < N; ++i) {
+    auto vi = vertices[i];
+    auto vj = vertices[(i+1)%N];
+    if (aboveBelow(vi, vj, points)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+template<typename CoordType>
 bool convexIntersection(const std::vector<Point2<CoordType>>& pointsA,
                         const std::vector<std::vector<int>>& facetsA,
                         const std::vector<Point2<CoordType>>& pointsB,
                         const std::vector<std::vector<int>>& facetsB) {
   if (pointInPolygon_convex(facetsA, pointsA, pointsB) ||
       pointInPolygon_convex(facetsB, pointsB, pointsA)) {
+    return true;
+  }
+  return false;
+}
+
+template<typename CoordType>
+bool convexIntersection(const typename Cell<2, CoordType>::CellType& pointsA,
+                        const typename Cell<2, CoordType>::CellType& pointsB) {
+  if (pointInPolygon_convex(pointsA, pointsB) ||
+      pointInPolygon_convex(pointsB, pointsA)) {
     return true;
   }
   return false;
@@ -158,6 +185,7 @@ bool convexIntersection(const std::vector<Point3<CoordType>>& pointsA,
 // General (potentially non-convex) intersection methods
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#ifdef POLYTOPE_ENABLE_BOOST
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Boost Polygon methods
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -211,6 +239,7 @@ boostIntersect(const Cell<2, IntType2D>::CellType& pcell,
   cellDSet.get(out);
   return out;
 }
+#endif // POLYTOPE_ENABLE_BOOST
 
 //------------------------------------------------------------------------------
 // Remove collinear points and combine edges where necessary

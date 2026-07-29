@@ -367,19 +367,6 @@ filterToLocalGenerators(QuantTessellation<Dimension>& qmesh,
   qmesh.m_cells = std::move(newCells);
 }
 
-bool
-cellIntersectsHull2D(const QuantTessellation<2>& qmesh,
-                     const unsigned cellID,
-                     const QuantPLC<2>& hull) {
-  if (hull.m_points.size() < 3 || hull.facets.size() < 3) return true;
-
-  auto boundaryPoints = hull.getFacetPoints();
-  PolygonWithHoles boundary;
-  bp::set_points(boundary, boundaryPoints.begin(), boundaryPoints.end());
-
-  return !boostIntersect(qmesh.getCell(cellID), boundary).empty();
-}
-
 template<int Dimension>
 std::vector<GeneratorRecord<Dimension>>
 visibleLocalGenerators(const QuantTessellation<Dimension>& localMesh,
@@ -390,7 +377,7 @@ visibleLocalGenerators(const QuantTessellation<Dimension>& localMesh,
     std::vector<GeneratorRecord<Dimension>> result;
     result.reserve(localRecords.size());
     for (unsigned i = 0; i < localRecords.size(); ++i) {
-      if (!validHull || cellIntersectsHull2D(localMesh, i, localHull)) {
+      if (!validHull || localMesh.cellIntersectsHull(localHull, i)) {
         result.push_back(localRecords[i]);
       }
     }

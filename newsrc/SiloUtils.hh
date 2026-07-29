@@ -80,47 +80,6 @@ writeFieldsToFile(const std::map<std::string, RealType*>& fields,
 //-------------------------------------------------------------------
 template <typename RealType>
 void
-appendFieldNames(const std::map<std::string, RealType*>& fields,
-                 int& fieldIndex,
-                 const int ichunk,
-                 std::vector<std::vector<char*> >& varNames) {
-  for (typename std::map<std::string, RealType*>::const_iterator iter = fields.begin();
-       iter != fields.end();
-       ++iter, ++fieldIndex)
-  {
-    char varName[1024];
-    snprintf(varName, 1024, "domain_%d/%s", ichunk, iter->first.c_str());
-    varNames[fieldIndex].push_back(strDup(varName));
-  }
-}
-//-------------------------------------------------------------------
-
-//-------------------------------------------------------------------
-template <typename RealType>
-void
-appendFieldNames(const std::map<std::string, RealType*>& fields,
-                 int& fieldIndex,
-                 const int ifile,
-                 const int ichunk,
-                 const int cycle,
-                 const std::string& prefix,
-                 std::vector<std::vector<char*> >& varNames) {
-  for (typename std::map<std::string, RealType*>::const_iterator iter = fields.begin();
-       iter != fields.end(); ++iter, ++fieldIndex)
-  {
-    char varName[1024];
-    if (cycle >= 0)
-      snprintf(varName, 1024, "%d/%s-%d.silo:/domain_%d/%s", ifile, prefix.c_str(), cycle, ichunk, iter->first.c_str());
-    else
-      snprintf(varName, 1024, "%d/%s.silo:/domain_%d/%s", ifile, prefix.c_str(), ichunk, iter->first.c_str());
-    varNames[fieldIndex].push_back(strDup(varName));
-  }
-}
-//-------------------------------------------------------------------
-
-//-------------------------------------------------------------------
-template <typename RealType>
-void
 putMultivarInFile(const std::map<std::string, RealType*>& fields,
                   int& fieldIndex,
                   std::vector<std::vector<char*> >& varNames,
@@ -136,6 +95,7 @@ putMultivarInFile(const std::map<std::string, RealType*>& fields,
                   &varNames[fieldIndex][0], &varTypes[0], optlist);
   }
 }
+
 //-------------------------------------------------------------------
 inline
 std::string getMasterDirName(const std::string& directory,
@@ -171,6 +131,7 @@ std::string getMasterFilename(const std::string& prefix,
     return prefix + ".silo";
   }
 }
+
 #ifdef POLYTOPE_ENABLE_MPI
 // Gather all ranks that have valid tessellation data on them
 inline
@@ -199,6 +160,7 @@ std::vector<int> gatherValidRanks(int hasData) {
   return ranksWithData;
 }
 #endif
+
 inline
 std::vector<std::string> getProcPaths(const std::string& directory,
                                       const std::vector<int> ranksWithData) {
@@ -231,74 +193,6 @@ void putCellVars(DBfile* file,
   }
 }
 
-//-------------------------------------------------------------------
-// Build mesh name paths for multi-block aggregation
-//-------------------------------------------------------------------
-void
-buildMeshNames(std::vector<char*>& meshNames,
-               const std::string& subdir,
-               const std::string& meshName,
-               const int numChunks,
-               const int startChunk = 0);
-
-//-------------------------------------------------------------------
-// Build mesh name paths for master file aggregation
-//-------------------------------------------------------------------
-void
-buildMasterMeshNames(std::vector<char*>& meshNames,
-                     const std::string& subdir,
-                     const std::string& meshName,
-                     const int numFiles,
-                     const int numChunks,
-                     const int cycle,
-                     const std::string& prefix);
-
-//-------------------------------------------------------------------
-// Extended version of appendFieldNames with subdirectory support
-//-------------------------------------------------------------------
-template <typename RealType>
-void
-appendFieldNamesWithSubdir(const std::map<std::string, RealType*>& fields,
-                           int& fieldIndex,
-                           const int ichunk,
-                           const std::string& subdir,
-                           std::vector<std::vector<char*> >& varNames) {
-  for (typename std::map<std::string, RealType*>::const_iterator iter = fields.begin();
-       iter != fields.end();
-       ++iter, ++fieldIndex)
-  {
-    char varName[1024];
-    snprintf(varName, 1024, "domain_%d/%s/%s", ichunk, subdir.c_str(), iter->first.c_str());
-    varNames[fieldIndex].push_back(strDup(varName));
-  }
-}
-
-//-------------------------------------------------------------------
-// Extended version for master file with subdirectory support
-//-------------------------------------------------------------------
-template <typename RealType>
-void
-appendFieldNamesWithSubdir(const std::map<std::string, RealType*>& fields,
-                           int& fieldIndex,
-                           const int ifile,
-                           const int ichunk,
-                           const int cycle,
-                           const std::string& prefix,
-                           const std::string& subdir,
-                           std::vector<std::vector<char*> >& varNames) {
-  for (typename std::map<std::string, RealType*>::const_iterator iter = fields.begin();
-       iter != fields.end(); ++iter, ++fieldIndex)
-  {
-    char varName[1024];
-    if (cycle >= 0)
-      snprintf(varName, 1024, "%d/%s-%d.silo:/domain_%d/%s/%s",
-               ifile, prefix.c_str(), cycle, ichunk, subdir.c_str(), iter->first.c_str());
-    else
-      snprintf(varName, 1024, "%d/%s.silo:/domain_%d/%s/%s",
-               ifile, prefix.c_str(), ichunk, subdir.c_str(), iter->first.c_str());
-    varNames[fieldIndex].push_back(strDup(varName));
-  }
-}
 //-------------------------------------------------------------------
 
 }

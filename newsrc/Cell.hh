@@ -25,6 +25,7 @@ template<typename CoordType> struct Cell<2, CoordType> {
     }
     return facePoints;
   }
+
   // Extract with a layer of indirection
   static CellType extractCell(const std::vector<PointType>& points,
                               const std::vector<int>& faceIndices,
@@ -40,6 +41,23 @@ template<typename CoordType> struct Cell<2, CoordType> {
     }
     return facePoints;
   }
+
+  // Extract with a layer of indirection
+  static CellType extractCell(const std::vector<PointType>& points,
+                              const std::vector<int>& faceIndices,
+                              const std::vector<std::vector<unsigned>>& facets) {
+    CellType facePoints;
+    facePoints.reserve(faceIndices.size());
+    for (const auto& f : faceIndices) {
+      if (f < 0) {
+        facePoints.push_back(points[facets[~f][1]]);
+      } else {
+        facePoints.push_back(points[facets[f][0]]);
+      }
+    }
+    return facePoints;
+  }
+
   // Extract with a layer of indirection
   static CellType extractCell(const std::vector<CoordType>& points,
                               const std::vector<int>& faceIndices,
@@ -88,6 +106,7 @@ template<typename CoordType> struct Cell<3, CoordType> {
     }
     return facePoints;
   }
+
   // Extract with a layer of indirection
   static CellType extractCell(const std::vector<PointType>& points,
                               const std::vector<int>& faceIndices,
@@ -106,6 +125,26 @@ template<typename CoordType> struct Cell<3, CoordType> {
     }
     return facePoints;
   }
+
+  // Extract with a layer of indirection
+  static CellType extractCell(const std::vector<PointType>& points,
+                              const std::vector<int>& faceIndices,
+                              const std::vector<std::vector<unsigned>>& facets) {
+    CellType facePoints;
+    facePoints.reserve(faceIndices.size());
+    for (const auto& fi : faceIndices) {
+      facePoints.push_back(std::vector<PointType>());
+      for (const auto& f : facets[fi]) {
+        if (f < 0) {
+          facePoints.back().push_back(points[~f]);
+        } else {
+          facePoints.back().push_back(points[f]);
+        }
+      }
+    }
+    return facePoints;
+  }
+
   // Extract with a layer of indirection
   static CellType extractCell(const std::vector<CoordType>& points,
                               const std::vector<int>& faceIndices,

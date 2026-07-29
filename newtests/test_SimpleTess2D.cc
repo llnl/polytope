@@ -28,7 +28,7 @@ using IntPoint = Point2<CoordType>;
 
 void tests(const int tnum, bool boostTess) {
   std::string outname = (boostTess) ? "boost" : "triangle";
-  Boundary2D<double> boundary;
+  Boundary2D boundary;
   boundary.mDiff = 1.;
   std::vector<double> points;
   std::vector<IntPoint> qpoints;

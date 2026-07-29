@@ -1,5 +1,6 @@
 # Minimum CMake version.
 cmake_minimum_required (VERSION 3.21)
+include(CMakeDependentOption)
 
 # Set Polytope's module path.
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules/")
@@ -39,12 +40,12 @@ set(POLYTOPE_TPL_DEPENDS )
 #option(POLYTOPE_ENABLE_HIP "Build with HIP enabled" OFF) # Currently unsupported
 #set(ENABLE_MPI OFF CACHE BOOL "")
 set(POLYTOPE_ENABLE_MPI ${ENABLE_MPI})
-option(POLYTOPE_ENABLE_BOOST "Enable Boost Voronoi tessellator" ON)
+option(POLYTOPE_ENABLE_BOOST "Enable Boost Voronoi tessellator" OFF)
 option(POLYTOPE_ENABLE_SILO "Enable Silo read/write features" OFF)
 option(POLYTOPE_ENABLE_PYTHON "Enable Python interface" OFF)
 option(POLYTOPE_ENABLE_TRIANGLE "Enable Triangle Voronoi tessellator" OFF)
 option(POLYTOPE_ENABLE_TETGEN "Enable TetGen Voronoi tessellator" OFF)
-option(POLYTOPE_ENABLE_TESTING "Enable testing" ON)
+cmake_dependent_option(POLYTOPE_ENABLE_TESTING "Enable testing" ON POLYTOPE_ENABLE_BOOST OFF)
 option(POLYTOPE_ENABLE_ASAN "Enable ASAN" OFF)
 option(POLYTOPE_ENABLE_UBSAN "Enable UBSAN" OFF)
 if(NOT POLYTOPE_ENABLE_BOOST AND POLYTOPE_ENABLE_TESTING)

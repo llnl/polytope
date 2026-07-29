@@ -127,26 +127,6 @@ public:
   // Returns quantized points
   const std::vector<IntPoint> getIntPoints() const { return m_points; }
 
-  // Create guard generators
-  std::vector<IntPoint> generateGuards() const {
-    const auto& Q = QuantizerType::instance();
-    std::vector<IntPoint> guards;
-    const auto len = Q.maxCoord - 1;
-    IntPoint min;
-    min.zero();
-    return shapes::createBoxPoints(min, len);
-  }
-
-  // Return the quantized points with the guard generators appended at the end
-  void guardGenerators(std::vector<IntPoint>& points) {
-    auto guards = generateGuards();
-    unsigned kk = m_points.size();
-    for (auto& guard : guards) {
-      guard.index = kk++;
-      points.push_back(guard);
-    }
-  }
-
   IntCell getCell(const unsigned cellIndex) const {
     return Cell<Dimension, IntType>::extractCell(m_nodes, m_cells[cellIndex], m_faces);
   }
@@ -280,6 +260,10 @@ public:
 
   // Remove any external generator points
   void cullExternalPoints(const QuantPLC<Dimension>& QPLC);
+
+  // Compare cells with convex hull
+  bool cellIntersectsHull(const QuantPLC<Dimension>& QPLC,
+                          const unsigned cellIndex) const;
 
   //------------------------------------------------------------------------------
   // Output method

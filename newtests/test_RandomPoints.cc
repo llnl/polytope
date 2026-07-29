@@ -30,7 +30,7 @@ using namespace polytope;
 // -----------------------------------------------------------------------
 // testBoundary
 // -----------------------------------------------------------------------
-void testBoundary(Boundary2D<double>& boundary,
+void testBoundary(Boundary2D& boundary,
                   Tessellator<2, double>& tessellator,
                   int boundaryID, int numSweeps) {
   // output name
@@ -38,7 +38,7 @@ void testBoundary(Boundary2D<double>& boundary,
   os << "RandomPoints_" << tessellator.name();
   string testName = os.str();
 
-  Generators<2,double> generators(boundary);
+  Generators<2> generators(boundary);
   unsigned nPoints = 10;
   Tessellation<2,double> mesh;
   for (unsigned n = 0; n < numSweeps; ++n) {
@@ -61,7 +61,7 @@ void testBoundary(Boundary2D<double>& boundary,
 void testAllBoundaries(Tessellator<2, double>& tessellator, int numSweeps) {
   for (int bid = 0; bid < 10; ++bid) {
     cout << "Testing boundary type " << bid << endl;
-    Boundary2D<double> boundary;
+    Boundary2D boundary;
     boundary.mDiff = 0.5;
     boundary.setDefaultBoundary(bid);
     testBoundary(boundary, tessellator, bid, numSweeps);

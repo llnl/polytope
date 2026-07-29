@@ -9,33 +9,27 @@
 #include <map>
 #include <set>
 #include <algorithm>
+#ifdef POLYTOPE_ENABLE_BOOST
 #include "RegisterBoostPolygonTypes.hh"
 #include "boost/polygon/polygon_set_data.hpp"
+#endif
 
 namespace polytope {
 
-namespace bp = boost::polygon;
-// Need this to use the -=, +=, etc operators
-using namespace boost::polygon::operators;
+// Check if any cells intersect a convex hull
+template<>
+bool
+QuantTessellation<2>::cellIntersectsHull(const QuantPLC<2>& QPLC,
+                                         const unsigned cellIndex) const {
+  auto plc_cell = QPLC.getFacetPoints();
+  auto qcell = getCell(cellIndex);
+  return convexIntersection<IntType>(plc_cell, qcell);
+}
 
-// Remove any generator points that are outside our clipping region
 template<>
 void
 QuantTessellation<2>::cullExternalPoints(const QuantPLC<2>& QPLC) {
   const auto& Q = Quantizer<2>::instance();
-  auto boundaryPoints = QPLC.getFacetPoints();
-  PolygonWithHoles boundary;
-  bp::set_points(boundary, boundaryPoints.begin(), boundaryPoints.end());
-  auto holePoints = QPLC.getHolePoints();
-  std::vector<Polygon> holes_vector;
-  for (const auto& hole : holePoints) {
-    Polygon holepoly;
-    bp::set_points(holepoly, hole.begin(), hole.end());
-    holes_vector.push_back(holepoly);
-  }
-  if (holePoints.size() > 0) {
-    bp::set_holes(boundary, holes_vector.begin(), holes_vector.end());
-  }
   auto N = m_points.size();
   std::vector<IntPoint> newPoints;
   newPoints.reserve(N);
@@ -44,8 +38,7 @@ QuantTessellation<2>::cullExternalPoints(const QuantPLC<2>& QPLC) {
   unsigned indx = 0;
   for (int i = 0; i < N; ++i) {
     auto point = m_points[i];
-    bp::point_data<IntType> genPoint = bp::construct<IntPoint>(point.x, point.y);
-    if (!bp::contains(boundary, genPoint)) continue;
+    if (!QPLC.within(point)) continue;
     point.index = indx++;
     newPoints.push_back(point);
     newHashes.push_back(Q.hash(point));
@@ -53,6 +46,48 @@ QuantTessellation<2>::cullExternalPoints(const QuantPLC<2>& QPLC) {
   m_points = std::move(newPoints);
   m_hashes = std::move(newHashes);
 }
+
+// All clipping functionality relies on Boost
+#ifdef POLYTOPE_ENABLE_BOOST
+namespace bp = boost::polygon;
+// Need this to use the -=, +=, etc operators
+using namespace boost::polygon::operators;
+
+// Remove any generator points that are outside our clipping region
+// template<>
+// void
+// QuantTessellation<2>::cullExternalPoints(const QuantPLC<2>& QPLC) {
+//   const auto& Q = Quantizer<2>::instance();
+//   auto boundaryPoints = QPLC.getFacetPoints();
+//   PolygonWithHoles boundary;
+//   bp::set_points(boundary, boundaryPoints.begin(), boundaryPoints.end());
+//   auto holePoints = QPLC.getHolePoints();
+//   std::vector<Polygon> holes_vector;
+//   for (const auto& hole : holePoints) {
+//     Polygon holepoly;
+//     bp::set_points(holepoly, hole.begin(), hole.end());
+//     holes_vector.push_back(holepoly);
+//   }
+//   if (holePoints.size() > 0) {
+//     bp::set_holes(boundary, holes_vector.begin(), holes_vector.end());
+//   }
+//   auto N = m_points.size();
+//   std::vector<IntPoint> newPoints;
+//   newPoints.reserve(N);
+//   std::vector<CoordHash> newHashes;
+//   newHashes.reserve(N);
+//   unsigned indx = 0;
+//   for (int i = 0; i < N; ++i) {
+//     auto point = m_points[i];
+//     bp::point_data<IntType> genPoint = bp::construct<IntPoint>(point.x, point.y);
+//     if (!bp::contains(boundary, genPoint)) continue;
+//     point.index = indx++;
+//     newPoints.push_back(point);
+//     newHashes.push_back(Q.hash(point));
+//   }
+//   m_points = std::move(newPoints);
+//   m_hashes = std::move(newHashes);
+// }
 
 template<>
 void
@@ -217,6 +252,17 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
   m_points = std::move(newPoints);
   m_hashes = std::move(newHashes);
 }
+#else
+// Must enable Boost to use clipping methods
+
+template<>
+void
+QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
+                                       const Tessellator<2, double>& tessellator) {
+  POLY_CONTRACT_VAR(QPLC);
+  POLY_CONTRACT_VAR(tessellator);
+}
+#endif // POLYTOPE_ENABLE_BOOST
 
 //------------------------------------------------------------------------------
 // Fill 2D tessellation mesh
@@ -232,28 +278,29 @@ QuantTessellation<2>::fillTessellation(TessellationType& mesh) {
 
   // Allocate space for mesh data
   // In 2D: nodes are stored as [x0, y0, x1, y1, ...]
-  mesh.nodes.resize(2 * numNodes);
+  mesh.nodes.resize(numNodes);
   mesh.faces.resize(numFaces, std::vector<unsigned>(2));
-  mesh.points.resize(2 * numCells);
+  mesh.points.resize(numCells);
   mesh.cells = m_cells;
   POLY_ASSERT2(m_cells.size() == numCells, "Differing number of cells and generator points");
 
   for (unsigned i = 0; i < numCells; ++i) {
     RealPoint rp = Q.dequantize(m_points[i]);
-    mesh.points[2*i]   = rp.x;
-    mesh.points[2*i+1] = rp.y;
+    mesh.points[i].x = rp.x;
+    mesh.points[i].y = rp.y;
   }
 
   // Dequantize nodes from integer coordinates to real coordinates
   for (unsigned i = 0; i < numNodes; ++i) {
     RealPoint rp = Q.dequantize(m_nodes[i]);
-    mesh.nodes[2*i]     = rp.x;
-    mesh.nodes[2*i + 1] = rp.y;
+    mesh.nodes[i].x = rp.x;
+    mesh.nodes[i].y = rp.y;
   }
 
   // Copy face topology (each face has 2 nodes in 2D)
   for (unsigned i = 0; i < numFaces; ++i) {
     POLY_ASSERT(m_faces[i].size() == 2);
+    POLY_ASSERT(mesh.faces[i].size() == 2);
     mesh.faces[i][0] = m_faces[i][0];
     mesh.faces[i][1] = m_faces[i][1];
   }

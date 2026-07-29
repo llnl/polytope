@@ -33,8 +33,8 @@ void outputMesh(const Tessellation<2,RealType>& mesh,
   std::vector<double> geny (meshSize);
   for (int i = 0; i < meshSize; ++i) {
     index[i] = double(i);
-    genx[i] = mesh.points[2*i];
-    geny[i] = mesh.points[2*i+1];
+    genx[i] = mesh.points[i].x;
+    geny[i] = mesh.points[i].y;
   }
   cellFields["cell_index"] = &index[0];
   cellFields["gen_x"     ] = &genx[0];
@@ -65,13 +65,12 @@ void outputMesh(const Tessellation<3,RealType>& mesh,
   std::vector<double> geny (mesh.cells.size());
   std::vector<double> genz (mesh.cells.size());
   //std::vector<double> vol  (mesh.cells.size());
-  double cent[3];
   for (int i = 0; i < mesh.cells.size(); ++i){
     index[i] = double(i);
     if (!mesh.points.empty()) {
-      genx[i] = mesh.points[3*i  ];
-      geny[i] = mesh.points[3*i+1];
-      genz[i] = mesh.points[3*i+2];
+      genx[i] = mesh.points[i].x;
+      geny[i] = mesh.points[i].y;
+      genz[i] = mesh.points[i].z;
     }
     //mesh.computeCellCentroidAndSignedVolume(i, cent, vol[i]);
   }
@@ -154,8 +153,8 @@ RealType computeTessellationArea(Tessellation<2,RealType>& mesh) {
       POLY_CHECK(iface < mesh.faceCells.size());
       POLY_CHECK(mesh.faces[iface].size() == 2);
       const unsigned inode = *faceItr < 0 ? mesh.faces[iface][1] : mesh.faces[iface][0];
-      nodeCell.push_back( mesh.nodes[2*inode  ] );
-      nodeCell.push_back( mesh.nodes[2*inode+1] );
+      nodeCell.push_back( mesh.nodes[inode].x );
+      nodeCell.push_back( mesh.nodes[inode].y );
     }
     BGPolygon<RealType,2> cellPolygon = makeBGPolygon<RealType>( nodeCell );
     area += boost::geometry::area( cellPolygon );

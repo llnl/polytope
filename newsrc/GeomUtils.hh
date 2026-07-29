@@ -480,28 +480,87 @@ Point2<double> circumcenter(const Point2<double>& a,
 }
 #endif
 
-//------------------------------------------------------------------------------
-// Determine which point is the obtuse generator for an obtuse triangle
-//------------------------------------------------------------------------------
-template<typename CoordType>
-int obtusePoint(const int ia,
-                const int ib,
-                const int ic,
-                const std::vector<Point2<CoordType>>& points) {
-  auto a = points[ia].template type_cast<double>();
-  auto b = points[ib].template type_cast<double>();
-  auto c = points[ic].template type_cast<double>();
-  auto ba = b - a;
-  auto ca = c - a;
-  auto bc = b - c;
-  double dotA = ba.x*ca.x + ba.y*ca.y;
-  if (dotA < 0.) return 0;
-  double dotB = ba.x*bc.x + ba.y*bc.y;
-  if (dotB < 0.) return 1;
-  double dotC = -ca.x*bc.x - ca.y*bc.y;
-  if (dotC < 0.) return 2;
-  return -1.;
+#ifdef POLYTOPE_ENABLE_TETGEN
+inline
+Point3<double>
+circumcenter(const Point3<double>& p0,
+             const Point3<double>& p1,
+             const Point3<double>& p2,
+             const Point3<double>& p3) {
+  const long double x0 = static_cast<long double>(p0.x);
+  const long double y0 = static_cast<long double>(p0.y);
+  const long double z0 = static_cast<long double>(p0.z);
+
+  const long double ax = static_cast<long double>(p1.x) - x0;
+  const long double ay = static_cast<long double>(p1.y) - y0;
+  const long double az = static_cast<long double>(p1.z) - z0;
+
+  const long double bx = static_cast<long double>(p2.x) - x0;
+  const long double by = static_cast<long double>(p2.y) - y0;
+  const long double bz = static_cast<long double>(p2.z) - z0;
+
+  const long double cx = static_cast<long double>(p3.x) - x0;
+  const long double cy = static_cast<long double>(p3.y) - y0;
+  const long double cz = static_cast<long double>(p3.z) - z0;
+
+  // Solve:
+  //
+  // 2*a dot u = |a|^2
+  // 2*b dot u = |b|^2
+  // 2*c dot u = |c|^2
+  //
+  const long double rhs0 = (ax * ax + ay * ay + az * az) / 2.0L;
+  const long double rhs1 = (bx * bx + by * by + bz * bz) / 2.0L;
+  const long double rhs2 = (cx * cx + cy * cy + cz * cz) / 2.0L;
+
+  // Matrix:
+  //
+  // [ ax ay az ]
+  // [ bx by bz ] u = rhs
+  // [ cx cy cz ]
+  //
+  const long double det =
+    ax * (by * cz - bz * cy)
+    - ay * (bx * cz - bz * cx)
+    + az * (bx * cy - by * cx);
+
+  // Scale-aware degeneracy test.
+  const long double scale =
+    std::max({
+              std::fabs(ax), std::fabs(ay), std::fabs(az),
+              std::fabs(bx), std::fabs(by), std::fabs(bz),
+              std::fabs(cx), std::fabs(cy), std::fabs(cz),
+              1.0L
+      });
+
+  constexpr long double epsilon =
+        64.0L * std::numeric_limits<long double>::epsilon();
+
+  if (std::fabs(det) <= epsilon * scale * scale * scale) {
+    return Point3<double>(0., 0., 0.); // Coplanar or numerically degenerate
+  }
+
+  // Cramer's rule.
+  const long double detX =
+    rhs0 * (by * cz - bz * cy)
+    - ay   * (rhs1 * cz - bz * rhs2)
+    + az   * (rhs1 * cy - by * rhs2);
+
+  const long double detY =
+    ax   * (rhs1 * cz - bz * rhs2)
+    - rhs0 * (bx * cz - bz * cx)
+    + az   * (bx * rhs2 - rhs1 * cx);
+
+  const long double detZ =
+    ax   * (by * rhs2 - rhs1 * cy)
+    - ay   * (bx * rhs2 - rhs1 * cx)
+    + rhs0 * (bx * cy - by * cx);
+
+  return Point3<double>(x0 + detX / det,
+                        y0 + detY / det,
+                        z0 + detZ / det);
 }
+#endif
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Topology utilities
@@ -717,14 +776,10 @@ RealType dot(const RealType* a,
   return sum;
 }
 
-template<int Dimension, typename RealType>
-RealType distance(const RealType* a,
-                  const RealType* b) {
-  RealType sum = 0.;
-  for (int i = 0; i < Dimension; ++i) {
-    sum += (a[i] - b[i])*(a[i] - b[i]);
-  }
-  return std::sqrt(sum);
+template<int Dimension>
+double distance(const Point<Dimension, double>& a,
+                const Point<Dimension, double>& b) {
+  return magnitude(a - b);
 }
 
 //------------------------------------------------------------------------------
@@ -750,6 +805,42 @@ collinear(const RealType* a, const RealType* b, const RealType* c, const RealTyp
   return std::abs(std::abs(dot<Dimension, double>(ab, ac)) - 1.0) < tol;
 }
 
+template<int Dimension>
+double magnitude(const Point<Dimension, double>& a) {
+  long double dis = 0.;
+  for (int d = 0; d < Dimension; ++d) {
+    auto dd = static_cast<long double>(a[d]);
+    dis += dd*dd;
+  }
+  dis = std::sqrt(dis);
+  return static_cast<double>(dis);
+}
+
+template<int Dimension>
+long double magnitude(const Point<Dimension, long double>& a) {
+  long double dis = 0.;
+  for (int d = 0; d < Dimension; ++d) {
+    auto dd = a[d];
+    dis += dd*dd;
+  }
+  dis = std::sqrt(dis);
+  return dis;
+}
+
+template<int Dimension>
+Point<Dimension, double> triangleCentroid(const Point<Dimension, double>& a,
+                                          const Point<Dimension, double>& b,
+                                          const Point<Dimension, double>& c) {
+  Point<Dimension, long double> out(0.);
+  for (int d = 0; d < Dimension; ++d) {
+    long double sum = static_cast<long double>(a[d]) +
+      static_cast<long double>(b[d]) +
+      static_cast<long double>(c[d]);
+    out[d] = sum/3.;
+  }
+  return out.template type_cast<double>();
+}
+
 template<int Dimension, typename RealType>
 void UnitVector(RealType* a) {
   if constexpr (Dimension == 2) {
@@ -765,6 +856,20 @@ void UnitVector(RealType* a) {
 }
 
 template<int Dimension, typename RealType>
+Point<Dimension, RealType> cross(const Point<Dimension, RealType>& a,
+                                 const Point<Dimension, RealType>& b) {
+  Point<Dimension, RealType> out;
+  if constexpr (Dimension == 2) {
+    out[0] = a[0]*b[1] - a[1]*b[0];
+  } else if constexpr (Dimension == 3) {
+    out[0] = a[1]*b[2] - a[2]*b[1];
+    out[1] = a[2]*b[0] - a[0]*b[2];
+    out[2] = a[0]*b[1] - a[1]*b[0];
+  }
+  return out;
+}
+
+template<int Dimension, typename RealType>
 void cross(const RealType* a,
            const RealType* b,
            RealType* c) {
@@ -775,6 +880,18 @@ void cross(const RealType* a,
     c[1] = a[2]*b[0] - a[0]*b[2];
     c[2] = a[0]*b[1] - a[1]*b[0];
   }
+}
+
+template<int Dimension>
+Point<Dimension, double> normal(const Point<Dimension, double>& a,
+                                const Point<Dimension, double>& b,
+                                const Point<Dimension, double>& c) {
+  auto ad = a.template type_cast<long double>();
+  auto bd = b.template type_cast<long double>();
+  auto cd = c.template type_cast<long double>();
+  auto cprod = cross(bd - ad, cd - ad);
+  long double mag = magnitude(cprod);
+  return (cprod/mag).template type_cast<double>();
 }
 
 }

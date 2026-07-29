@@ -30,7 +30,7 @@ void test(Tessellator<2,double>& tessellator) {
   string testName = "StarBoundary_" + tessellator.name();
 
   // Set the boundary and tessellator
-  Boundary2D<double> boundary;
+  Boundary2D boundary;
   boundary.setDefaultBoundary(8);
 
   // 9 input generators points
@@ -80,7 +80,7 @@ void test(Tessellator<2,double>& tessellator) {
   // Test 3: 800 random generators
   {
     cout << "\nTest 3: 800 random generators" << endl;
-    Generators<2,double> generators(boundary);
+    Generators<2> generators(boundary);
     generators.randomPoints(800, 10);
     Tessellation<2,double> mesh;
     tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
@@ -93,7 +93,7 @@ void test(Tessellator<2,double>& tessellator) {
   // Test 4: 2000 random generators
   {
     cout << "\nTest 4: 2000 random generators" << endl;
-    Generators<2,double> generators(boundary);
+    Generators<2> generators(boundary);
     generators.randomPoints(2000, 10);
     Tessellation<2,double> mesh;
     tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);

@@ -11,13 +11,13 @@ set(polytope_headers
   Cell.hh
   Clipping2D.hh
   Communicator.hh
+  Cube.hh
   EdgeUtils.hh
   GeomUtils.hh
   HashKey.hh
   Intersections.hh
   PLC.hh
   ReducedPLC.hh
-  RegisterBoostPolygonTypes.hh
   Point.hh
   QuantTessellation.hh
   Quantizer.hh
@@ -61,15 +61,16 @@ endif()
 # Boost tessellator
 if (POLYTOPE_ENABLE_BOOST)
   list(APPEND polytope_headers
+    RegisterBoostPolygonTypes.hh
     BoostTessellator.hh)
   list(APPEND polytope_sources
     BoostTessellator.cc)
 endif()
 
 # Tetgen tessellator
-# if (POLYTOPE_ENABLE_TETGEN)
-#   list(APPEND polytope_sources TetgenTessellator.cc)
-# endif ()
+if (POLYTOPE_ENABLE_TETGEN)
+  list(APPEND polytope_sources TetgenTessellator.cc)
+endif ()
 
 # Triangle tessellator
 if (POLYTOPE_ENABLE_TRIANGLE)

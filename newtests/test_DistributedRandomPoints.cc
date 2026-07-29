@@ -22,16 +22,16 @@ using namespace polytope;
 
 namespace {
 
-void test(Tessellator<2, double>& tessellator) {
+void test(const int btype, Tessellator<2, double>& tessellator) {
   int rank = Communicator::getRank();
   int nprocs = Communicator::getNProcs();
   int root = Communicator::getRoot();
 
-  const int Ngen = 100;
-  int oseed = 1049600;
+  const int Ngen = 4;
+  int oseed = 1049600 + 10*btype;
   int seed = oseed + rank;
   Boundary2D boundary;
-  boundary.setDefaultBoundary(0);
+  boundary.setDefaultBoundary(btype);
   Generators<2> generators(boundary);
   generators.randomPoints(Ngen, seed);
 
@@ -61,16 +61,15 @@ void test(Tessellator<2, double>& tessellator) {
     tessellator.tessellate(allPoints, boundary.mPLCpoints, boundary.mPLC, serialMesh);
     serialArea = computeTessellationArea(serialMesh);
   }
-  std::string outname = "parallelVoronoi_" + tessellator.name();
-  std::string serialoutname = "serialVoronoi_" + tessellator.name();
-  outputMesh(serialMesh, serialoutname, 0, 0.);
+  std::string serialoutname = "Serial_" + tessellator.name();
+  outputMesh(serialMesh, serialoutname, btype, 0.);
+  std::string outname = "DistributedRandom_" + tessellator.name();
+  outputMesh(localMesh, outname, btype, 0.);
   MPI_Bcast(&serialArea, 1, MPI_DOUBLE, 0, Communicator::communicator());
 
   POLY_CHECK2(std::abs(distributedArea - serialArea) < 1.0e-8,
               "Distributed area " << distributedArea
               << " differs from serial area " << serialArea);
-
-  outputMesh(localMesh, outname, 0, 0.);
 }
 } // anonymous namespace
 
@@ -78,6 +77,7 @@ int main(int argc, char** argv) {
   auto& comm = Communicator::instance();
   comm.init(argc, argv);
   const int root = Communicator::getRoot();
+  const int Nbtype = 11;
 
 #ifdef POLYTOPE_ENABLE_TRIANGLE
    {
@@ -85,7 +85,9 @@ int main(int argc, char** argv) {
        cout << "\nTriangle Tessellator:\n" << endl;
      }
      TriangleTessellator tessellator;
-     test(tessellator);
+     for (int btype = 0; btype < Nbtype; ++btype) {
+       test(btype, tessellator);
+     }
    }
 #endif
 
@@ -94,7 +96,9 @@ int main(int argc, char** argv) {
        cout << "\nBoost Tessellator:\n" << endl;
      }
      BoostTessellator tessellator;
-     test(tessellator);
+     for (int btype = 0; btype < Nbtype; ++btype) {
+       test(btype, tessellator);
+     }
    }
    if (Communicator::getRank() == root) {
      std::cout << "=== DistributedVoronoi2D passed ===" << std::endl;

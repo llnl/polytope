@@ -45,7 +45,7 @@ void computeConstantVorticityFlow(const vector<double>& points,
 // -----------------------------------------------------------------------
 void test(Tessellator<2,double>& tessellator) {
   // Initialize star-hole boundary, tessellator, and generator set
-  Boundary2D<double> boundary;
+  Boundary2D boundary;
   boundary.setDefaultBoundary(5);
   vector<double> points;
 

@@ -17,6 +17,7 @@
 
 #include "polytope.hh"
 #include "polytope_test_utilities.hh"
+#include "Boundary2D.hh"
 #include "BoostTessellator.hh"
 #ifdef POLYTOPE_ENABLE_TRIANGLE
 #include "TriangleTessellator.hh"
@@ -26,15 +27,6 @@
 
 using namespace std;
 using namespace polytope;
-
-
-//------------------------------------------------------------------------------
-// Compute the square of the distance.
-//------------------------------------------------------------------------------
-double distance2(const double x1, const double y1,
-                 const double x2, const double y2) {
-  return (x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1);
-}
 
 // -----------------------------------------------------------------------
 // computeConstantVorticityFlow
@@ -122,28 +114,22 @@ void runTest(Tessellator<2, double>& tessellator,
 
   // Boundary size parameters
   const unsigned nx = 50;
-  const double xmin = 0.0, xmax = 1.0;
-  const double ymin = 0.0, ymax = 1.0;
-  const double dx = (xmax-xmin)/nx,  dy = (ymax-ymin)/nx;
 
   // Figure out parallel configuration
   int rank = Communicator::getRank();
-  int numProcs = Communicator::getNProcs();
   int root = Communicator::getRoot();
 
-  // Seed the random number generator the same on all processes.
-  srand(10489592);
-
-  // Create the seed positions for each domain.  Note we rely on this sequence
-  // being the same for all processors and therefore don't need to communicate
-  // this information.
-  vector<double> xproc, yproc;
-  xproc.reserve(numProcs);
-  yproc.reserve(numProcs);
-  for (unsigned iproc = 0; iproc != numProcs; ++iproc) {
-    xproc.push_back(xmin + random01()*(xmax - xmin));
-    yproc.push_back(ymin + random01()*(ymax - ymin));
-  }
+  Boundary2D boundary;
+  boundary.mCenter[0] = 0.5;
+  boundary.mCenter[1] = 0.5;
+  boundary.setDefaultBoundary(0);
+  Generators<2> generators(boundary);
+  generators.cartesian2D(nx, nx);
+  generators.distributePointsAmongRanks();
+  auto& Q = Quantizer<2>::instance();
+  auto bHigh = Q.m_xhi;
+  auto bLow = Q.m_xlo;
+  double dx = (bHigh[0] - bLow[0]) / nx;
 
   // Test name for output
   ostringstream os;
@@ -154,6 +140,7 @@ void runTest(Tessellator<2, double>& tessellator,
 
   // Time stepping and point-resizing stuff
   double dt, Tmax, scaleFactor=1.0;
+  double dtfactor = 10.0;
   switch(flowType){
   case 1:
     dt = 2.0;
@@ -178,84 +165,41 @@ void runTest(Tessellator<2, double>& tessellator,
     if (rank == root) cout << "\nTest 4: Deformation (16-Vortex) Flow\n" << endl;
     break;
   }
-
-  // The PLC points for a unit square
-  vector<double> PLCpoints;
-  PLCpoints.push_back(xmin);  PLCpoints.push_back(ymin);
-  PLCpoints.push_back(xmax);  PLCpoints.push_back(ymin);
-  PLCpoints.push_back(xmax);  PLCpoints.push_back(ymax);
-  PLCpoints.push_back(xmin);  PLCpoints.push_back(ymax);
-
-  // The unit square PLC facets
-  PLC<2> boundary;
-  boundary.facets.resize(4, vector<int>(2));
-  for (int i = 0; i != 4; ++i) {
-    boundary.facets[i][0] = i;
-    boundary.facets[i][1] = (i+1)%4;
-  }
-
-  // The generator set
-  vector<double> points;
-  unsigned ix, iy;
-  double xi, yi;
-  for (iy = 0; iy != nx; ++iy) {
-    yi = ymin + (iy + 0.5)*dy;
-    for (ix = 0; ix != nx; ++ix) {
-      xi = xmin + (ix + 0.5)*dx;
-      unsigned owner = 0;
-      double minDist2 = distance2(xi, yi, xproc[0], yproc[0]);
-      for (unsigned iproc = 1; iproc < numProcs; ++iproc) {
-        const double d2 = distance2(xi, yi, xproc[iproc], yproc[iproc]);
-        if (d2 < minDist2) {
-          owner = iproc;
-          minDist2 = d2;
-        }
-      }
-      if (rank == owner) {
-        points.push_back(xi);
-        points.push_back(yi);
-      }
-    }
-  }
-
-  POLY_CHECK2(points.size()/2 > 1, "Processor " << rank << " only has "
-              << points.size()/2 << " generators");
-
+  dt *= dtfactor;
   // Resize the generator so we don't fling them out of the boundary
-  for (unsigned i = 0; i != points.size(); ++i) {
-    points[i] = 0.5 + (points[i]-0.5)*scaleFactor;
+  for (unsigned i = 0; i != generators.mPoints.size(); ++i) {
+    generators.mPoints[i] = 0.5 + (generators.mPoints[i]-0.5)*scaleFactor;
   }
 
   // The velocity field
-  vector<double> velocityField(points.size());
+  vector<double> velocityField(generators.mPoints.size());
 
   // The initial tessellation
   unsigned step = 0;
   double time = 0.0;
   Tessellation<2,double> mesh;
-  tessellator.tessellate(points, PLCpoints, boundary, mesh);
+  tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
   outputMesh(mesh, testName, step, time);
 
   // Update the point positions and generate the mesh
-  vector<double> halfTimePositions(points.size());
+  vector<double> halfTimePositions(generators.mPoints.size());
   while (time < Tmax) {
     if (step % 5 == 0 and rank == root) cout << (time/Tmax)*100 << "%" << endl;
     mesh.clear();
     mesh.neighborDomains.clear();
     mesh.sharedNodes.clear();
     mesh.sharedFaces.clear();
-    getVelocities(points, flowType, velocityField);
-    for (unsigned i = 0; i != points.size(); ++i) {
-      halfTimePositions[i] = points[i] + dt*velocityField[i];
+    getVelocities(generators.mPoints, flowType, velocityField);
+    for (unsigned i = 0; i != generators.mPoints.size(); ++i) {
+      halfTimePositions[i] = generators.mPoints[i] + dt*velocityField[i];
     }
     getVelocities(halfTimePositions, flowType, velocityField);
-    for (unsigned i = 0; i != points.size(); ++i) {
-      points[i] += dt*velocityField[i];
-      POLY_CHECK(xmin <= points[i] and points[i] <= xmax);
+    for (unsigned i = 0; i != generators.mPoints.size(); ++i) {
+      generators.mPoints[i] += dt*velocityField[i];
     }
     time += dt;
     ++step;
-    tessellator.tessellate(points, PLCpoints, boundary, mesh);
+    tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
     outputMesh(mesh, testName, step, time);
 
     // Check the correctness of the parallel data structures
@@ -281,6 +225,8 @@ int main(int argc, char** argv) {
 
 #ifdef POLYTOPE_ENABLE_TRIANGLE
   {
+    // Seed the random number generator the same on all processes.
+    srand(10489592);
     if (rank == root) cout << "\nTriangle Tessellator:\n" << endl;
     TriangleTessellator serialTessellator;
     DistributedTessellator<2> tessellator(serialTessellator);
@@ -289,6 +235,7 @@ int main(int argc, char** argv) {
 #endif
 
   {
+    srand(10489592);
     if (rank == root) cout << "\nBoost Tessellator:\n" << endl;
     BoostTessellator serialTessellator;
     DistributedTessellator<2> tessellator(serialTessellator);

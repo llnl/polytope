@@ -14,15 +14,13 @@ template<int Dimension, typename RealType> class Tessellation;
 //! This class provides a static interface for writing Silo files 
 //! containing tessellations made by polytope.
 template <int Dimension, typename RealType>
-class SiloWriter
-{
+class SiloWriter {
   // No general recipe
 };
 
 //! Partial specialization for 2D tessellations.
 template <typename RealType>
-class SiloWriter<2, RealType>
-{
+class SiloWriter<2, RealType> {
   public:
 
   //! Write an arbitrary polygonal mesh, an associated set of 
@@ -119,19 +117,11 @@ class SiloWriter<2, RealType>
           numFiles, mpiTag);
   }
 
-  static void writePoint(const std::vector<RealType>& pointCoords,
-                         const std::string& filename,
-                         const std::string& name,
-                         const std::string& dirname,
-                         int cycle,
-                         RealType time);
-
 };
 
 //! Partial specialization for 3D tessellations.
 template <typename RealType>
-class SiloWriter<3, RealType>
-{
+class SiloWriter<3, RealType> {
   public:
 
   //! Write an arbitrary polygonal mesh, an associated set of 

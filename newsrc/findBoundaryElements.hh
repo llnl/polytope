@@ -20,6 +20,7 @@ void
 findBoundaryElements(const Tessellation<Dimension, RealType>& mesh,
                      std::vector<unsigned>& boundaryFaces,
                      std::vector<unsigned>& boundaryNodes) {
+  if (mesh.nodes.size() == 0) return;
   boundaryFaces.clear();
   boundaryNodes.clear();
   for (unsigned iface = 0; iface < mesh.faces.size(); ++iface) {
@@ -38,7 +39,7 @@ findBoundaryElements(const Tessellation<Dimension, RealType>& mesh,
   // Note: In 2D, boundary nodes ~ O(sqrt(N)). In 3D, boundary nodes ~ O(N^(2/3)).
   // For small meshes, thin domains, or surface tessellations, boundary nodes can be
   // a large fraction of total nodes. We just verify there are some boundary nodes.
-  POLY_ASSERT(boundaryNodes.size() <= mesh.nodes.size()/Dimension);
+  POLY_ASSERT(boundaryNodes.size() <= mesh.nodes.size());
 }
 
 }

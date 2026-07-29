@@ -65,40 +65,4 @@ writeTagsToFile(const map<string, vector<int>*>& tags,
     free(elemNames[i]);
 }
 
-void
-buildMeshNames(vector<char*>& meshNames,
-               const string& subdir,
-               const string& meshName,
-               const int numChunks,
-               const int startChunk) {
-  for (int i = 0; i < numChunks; ++i) {
-    char name[1024];
-    snprintf(name, 1024, "domain_%d/%s/%s", startChunk + i, subdir.c_str(), meshName.c_str());
-    meshNames[i] = strDup(name);
-  }
-}
-
-void
-buildMasterMeshNames(vector<char*>& meshNames,
-                     const string& subdir,
-                     const string& meshName,
-                     const int numFiles,
-                     const int numChunks,
-                     const int cycle,
-                     const string& prefix) {
-  for (int i = 0; i < numFiles; ++i) {
-    for (int c = 0; c < numChunks; ++c) {
-      char name[1024];
-      if (cycle >= 0) {
-        snprintf(name, 1024, "%d/%s-%d.silo:/domain_%d/%s/%s",
-                 i, prefix.c_str(), cycle, c, subdir.c_str(), meshName.c_str());
-      } else {
-        snprintf(name, 1024, "%d/%s.silo:/domain_%d/%s/%s",
-                 i, prefix.c_str(), c, subdir.c_str(), meshName.c_str());
-      }
-      meshNames[i*numChunks + c] = strDup(name);
-    }
-  }
-}
-
 }

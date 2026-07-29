@@ -46,7 +46,6 @@ polytope_add_new_test(Quantizer)
 polytope_add_new_test(QuantPLC2D)
 polytope_add_new_test(QuantPLC3D)
 polytope_add_new_test(QuantConvexIntersect3D)
-polytope_add_new_test(clipPolygon2D)
 polytope_add_new_test(SimpleTess2D)
 polytope_add_new_test(clipPolyhedron3D)
 polytope_add_new_test(StarBoundary)
@@ -56,22 +55,24 @@ polytope_add_new_test(honeyComb)
 polytope_add_new_test(BoostTessellator)
 polytope_add_new_test(RandomPoints)
 polytope_add_new_test(RotationTests)
+polytope_add_new_test(Circumcenter)
 #polytope_add_new_test(Cylinder)
 
 #-----------------------------------------------------------------------------
-# Serial Tessellator Tests
+# Tetgen Tessellator Tests
 #-----------------------------------------------------------------------------
 
-# 2D Triangle and Boost Tessellator tests
-# if(POLYTOPE_ENABLE_TETGEN)
-#   # 3D Tetgen Tessellator tests
-#   polytope_add_new_test(TetgenTessellator)
-# endif()
+if(POLYTOPE_ENABLE_TETGEN)
+  # 3D Tetgen Tessellator tests
+  polytope_add_new_test(TetgenTessellator)
+endif()
 
+#-----------------------------------------------------------------------------
 # Distributed Tessellator Tests
 #-----------------------------------------------------------------------------
 if(POLYTOPE_ENABLE_MPI)
   polytope_add_new_test(DistributedVoronoi2D NUMTASKS 4)
   polytope_add_new_test(DistributedIO2D NUMTASKS 4)
   polytope_add_new_test(DistributedRotationTests NUMTASKS 4)
+  polytope_add_new_test(DistributedRandomPoints NUMTASKS 4)
 endif()

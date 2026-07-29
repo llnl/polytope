@@ -7,6 +7,7 @@
 #include "PLC.hh"
 #include "polytope_internal.hh"
 #include "Cell.hh"
+#include "Point.hh"
 namespace polytope {
 
 //! \class Mesh - A basic descriptor class for a topologically-consistent
@@ -58,15 +59,13 @@ class Tessellation {
       convexHull.empty() and points.empty();
   }
 
-  //! An array of (Dimension*numPoints) values containing components of
-  //! generator positions. The components are stored in node-major order and
-  //! the 0th component of the ith node appears in nodes[Dimension*i].
-  std::vector<RealType> points;
+  //! An array of (numPoints) values containing components of
+  //! generator positions.
+  std::vector<Point<Dimension, RealType>> points;
 
-  //! An array of (Dimension*numNodes) values containing components of
-  //! node positions. The components are stored in node-major order and
-  //! the 0th component of the ith node appears in nodes[Dimension*i].
-  std::vector<RealType> nodes;
+  //! An array of (numNodes) values containing components of
+  //! node positions.
+  std::vector<Point<Dimension, RealType>> nodes;
 
   //! This two-dimensional array defines the cell-face topology of the
   //! mesh. A cell has an arbitrary number of faces in 2D and 3D.
@@ -120,7 +119,7 @@ class Tessellation {
 
   //! Find the set of cells that touch each mesh node.
   std::vector<std::set<unsigned> > computeNodeCells() {
-    std::vector<std::set<unsigned> > result(nodes.size()/Dimension);
+    std::vector<std::set<unsigned> > result(nodes.size());
     for (auto i = 0u; i < cells.size(); ++i) {
       for (std::vector<int>::const_iterator faceItr = cells[i].begin();
            faceItr != cells[i].end();
@@ -139,13 +138,12 @@ class Tessellation {
 
 
   //! Collect the nodes around each cell
-  std::vector<std::set<unsigned> > computeCellToNodes()
-  {
+  std::vector<std::set<unsigned> > computeCellToNodes() {
     std::vector<std::set<unsigned> > result(cells.size());
     for (unsigned i = 0; i != cells.size(); ++i){
       for (std::vector<int>::const_iterator faceItr = cells[i].begin();
            faceItr != cells[i].end(); ++faceItr){
-        const unsigned iface = *faceItr < 0 ? ~(*faceItr) : *faceItr;
+        const auto iface = *faceItr < 0 ? ~(*faceItr) : *faceItr;
         POLY_ASSERT(iface < faceCells.size());
         for (std::vector<unsigned>::const_iterator nodeItr = faces[iface].begin();
              nodeItr != faces[iface].end(); ++nodeItr) {
