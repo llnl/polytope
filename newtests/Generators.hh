@@ -217,7 +217,8 @@ public:
   //------------------------------------------------------------------------
   // Assign points based on processor by removing non-local points
   //------------------------------------------------------------------------
-  void distributePointsAmongRanks() {
+  void distributePointsAmongRanks(unsigned seed = 0) {
+    srand(seed);
     nPoints = mPoints.size()/Dimension;
     // Figure out parallel configuration
     int rank = Communicator::getRank();

@@ -2,6 +2,7 @@
 #include "SiloWriter.hh"
 #include "SiloUtils.hh"
 #include "Tessellation.hh"
+#include "QuantTessellation.hh"
 
 #ifdef POLYTOPE_ENABLE_MPI
 #include "Communicator.hh"
@@ -19,23 +20,23 @@ namespace polytope {
 using namespace std;
 
 //-------------------------------------------------------------------
-template <typename RealType>
+template <typename RealType, typename TessType>
 void
-SiloWriter<3, RealType>::write(const Tessellation<3, RealType>& mesh,
-                               const map<string, RealType*>& nodeFields,
-                               const map<string, vector<int>*>& nodeTags,
-                               const map<string, RealType*>& edgeFields,
-                               const map<string, vector<int>*>& edgeTags,
-                               const map<string, RealType*>& faceFields,
-                               const map<string, vector<int>*>& faceTags,
-                               const map<string, RealType*>& cellFields,
-                               const map<string, vector<int>*>& cellTags,
-                               const string& filePrefix,
-                               const string& directory,
-                               int cycle,
-                               RealType time,
-                               int numFiles,
-                               int mpiTag) {
+SiloWriter<3, RealType, TessType>::write(const TessType& mesh,
+                                         const map<string, RealType*>& nodeFields,
+                                         const map<string, vector<int>*>& nodeTags,
+                                         const map<string, RealType*>& edgeFields,
+                                         const map<string, vector<int>*>& edgeTags,
+                                         const map<string, RealType*>& faceFields,
+                                         const map<string, vector<int>*>& faceTags,
+                                         const map<string, RealType*>& cellFields,
+                                         const map<string, vector<int>*>& cellTags,
+                                         const string& filePrefix,
+                                         const string& directory,
+                                         int cycle,
+                                         RealType time,
+                                         int numFiles,
+                                         int mpiTag) {
   // Strip .silo off of the prefix if it's there.
   string prefix = filePrefix;
   int index = prefix.find(".silo");
@@ -101,9 +102,9 @@ SiloWriter<3, RealType>::write(const Tessellation<3, RealType>& mesh,
     int numNodes = mesh.nodes.size();
     vector<double> x(numNodes), y(numNodes), z(numNodes);
     for (int i = 0; i < numNodes; ++i) {
-      x[i] = mesh.nodes[i].x;
-      y[i] = mesh.nodes[i].y;
-      z[i] = mesh.nodes[i].z;
+      x[i] = static_cast<double>(mesh.nodes[i].x);
+      y[i] = static_cast<double>(mesh.nodes[i].y);
+      z[i] = static_cast<double>(mesh.nodes[i].z);
     }
     double* coords[3];
     coords[0] = &(x[0]);
@@ -131,7 +132,10 @@ SiloWriter<3, RealType>::write(const Tessellation<3, RealType>& mesh,
     faceNodeCounts.reserve(numFaces);
     for (int iface = 0; iface < numFaces; ++iface) {
       faceNodeCounts.push_back(mesh.faces[iface].size());
-      std::copy(mesh.faces[iface].begin(), mesh.faces[iface].end(), std::back_inserter(allFaceNodes));
+      for (auto& face : mesh.faces[iface]) {
+        allFaceNodes.push_back(static_cast<int>(face));
+      }
+      //std::copy(mesh.faces[iface].begin(), mesh.faces[iface].end(), std::back_inserter(allFaceNodes));
     }
     POLY_ASSERT(faceNodeCounts.size() == numFaces);
 
@@ -139,22 +143,18 @@ SiloWriter<3, RealType>::write(const Tessellation<3, RealType>& mesh,
     const auto numCells = mesh.cells.size();
     vector<int> cellFaceCounts, allCellFaces;
     cellFaceCounts.reserve(numCells);
-    // vector<int> shapesize(numCells, 0),
-    //   shapetype(numCells, DB_ZONETYPE_POLYGON),
-    //   shapecount(numCells, 1),
-    //   nodeList;
     for (auto i = 0; i < numCells; ++i) {
       auto n = mesh.cells[i].size();
       cellFaceCounts.push_back(n);
       std::copy(mesh.cells[i].begin(), mesh.cells[i].end(), std::back_inserter(allCellFaces));
     }
     vector<char> boundaryFaceFlags(numFaces, 0x0);
-    for (vector<unsigned>::const_iterator itr = mesh.boundaryFaces.begin();
-         itr != mesh.boundaryFaces.end();
-         ++itr) {
-      POLY_ASSERT(*itr < numFaces);
-      boundaryFaceFlags[*itr] = 0x1;
-    }
+    // for (vector<unsigned>::const_iterator itr = mesh.boundaryFaces.begin();
+    //      itr != mesh.boundaryFaces.end();
+    //      ++itr) {
+    //   POLY_ASSERT(*itr < numFaces);
+    //   boundaryFaceFlags[*itr] = 0x1;
+    // }
 
     // The polyhedral zone list is referred to in the options list.
     DBAddOption(optlist, DBOPT_PHZONELIST, (char*)"mesh_zonelist");
@@ -164,12 +164,12 @@ SiloWriter<3, RealType>::write(const Tessellation<3, RealType>& mesh,
                  numNodes, numCells,
                  "mesh_zonelist", NULL, DB_DOUBLE, optlist);
     // Write the connectivity information.
-    DBPutPHZonelist(file, (char*)"mesh_zonelist", 
-                    faceNodeCounts.size(), &faceNodeCounts[0], 
-                    allFaceNodes.size(), &allFaceNodes[0], 
-                    &boundaryFaceFlags[0], 
+    DBPutPHZonelist(file, (char*)"mesh_zonelist",
+                    faceNodeCounts.size(), &faceNodeCounts[0],
+                    allFaceNodes.size(), &allFaceNodes[0],
+                    &boundaryFaceFlags[0],
                     cellFaceCounts.size(), &cellFaceCounts[0],
-                    allCellFaces.size(), &allCellFaces[0], 
+                    allCellFaces.size(), &allCellFaces[0],
                     0, 0, numCells-1, optlist);
     // DBPutPHZonelist(file, "mesh_zonelist", faceNodeCounts.size(),
     //                 &faceNodeCounts[0]
@@ -201,24 +201,24 @@ SiloWriter<3, RealType>::write(const Tessellation<3, RealType>& mesh,
     free(elemnames[1]);
 
     // Write out convex hull data.
-    vector<int> hull(1+mesh.convexHull.facets.size());
-    hull[0] = mesh.convexHull.facets.size();
-    for (size_t f = 0; f < mesh.convexHull.facets.size(); ++f)
-      hull[1+f] = mesh.convexHull.facets[f].size();
-    for (size_t f = 0; f < mesh.convexHull.facets.size(); ++f)
-      for (size_t n = 0; n < mesh.convexHull.facets[f].size(); ++n)
-        hull.push_back(mesh.convexHull.facets[f][n]);
-    elemnames[0] = strDup("nfacets");
-    elemlengths[0] = 1;
-    elemnames[1] = strDup("nfacetnodes");
-    elemlengths[1] = mesh.convexHull.facets.size();
-    elemnames[2] = strDup("facetnodes");
-    elemlengths[2] = hull.size() - elemlengths[0] - elemlengths[1];
-    DBPutCompoundarray(file, "convexhull", elemnames, elemlengths, 3,
-                       (void*)&hull[0], hull.size(), DB_INT, 0);
-    free(elemnames[0]);
-    free(elemnames[1]);
-    free(elemnames[2]);
+    // vector<int> hull(1+mesh.convexHull.facets.size());
+    // hull[0] = mesh.convexHull.facets.size();
+    // for (size_t f = 0; f < mesh.convexHull.facets.size(); ++f)
+    //   hull[1+f] = mesh.convexHull.facets[f].size();
+    // for (size_t f = 0; f < mesh.convexHull.facets.size(); ++f)
+    //   for (size_t n = 0; n < mesh.convexHull.facets[f].size(); ++n)
+    //     hull.push_back(mesh.convexHull.facets[f][n]);
+    // elemnames[0] = strDup("nfacets");
+    // elemlengths[0] = 1;
+    // elemnames[1] = strDup("nfacetnodes");
+    // elemlengths[1] = mesh.convexHull.facets.size();
+    // elemnames[2] = strDup("facetnodes");
+    // elemlengths[2] = hull.size() - elemlengths[0] - elemlengths[1];
+    // DBPutCompoundarray(file, "convexhull", elemnames, elemlengths, 3,
+    //                    (void*)&hull[0], hull.size(), DB_INT, 0);
+    // free(elemnames[0]);
+    // free(elemnames[1]);
+    // free(elemnames[2]);
     // Write out tag information.
     //writeTagsToFile(nodeTags, file, DB_NODECENT);
     writeTagsToFile(edgeTags, file, DB_EDGECENT);
@@ -235,13 +235,14 @@ SiloWriter<3, RealType>::write(const Tessellation<3, RealType>& mesh,
     int numPoints = mesh.points.size();
     vector<double> xp(numPoints), yp(numPoints), zp(numPoints);
     for (int i = 0; i < numPoints; ++i) {
-      xp[i] = mesh.points[i].x;
-      yp[i] = mesh.points[i].y;
-      zp[i] = mesh.points[i].z;
+      xp[i] = static_cast<double>(mesh.points[i].x);
+      yp[i] = static_cast<double>(mesh.points[i].y);
+      zp[i] = static_cast<double>(mesh.points[i].z);
     }
     double* pcoords[3];
     pcoords[0] = &(xp[0]);
     pcoords[1] = &(yp[0]);
+    pcoords[2] = &(zp[0]);
     // Write point mesh
     DBPutPointmesh(file, (char*)"points", 3, pcoords, numPoints, DB_DOUBLE, optlist);
 #ifdef POLYTOPE_ENABLE_DEBUG
@@ -318,6 +319,7 @@ SiloWriter<3, RealType>::write(const Tessellation<3, RealType>& mesh,
 //-------------------------------------------------------------------
 
 // Explicit instantiation.
-template class SiloWriter<3, double>;
+template class SiloWriter<3, double, Tessellation<3, double>>;
+template class SiloWriter<3, int64_t, QuantTessellation<3>>;
 
 } // end namespace

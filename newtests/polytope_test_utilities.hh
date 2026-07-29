@@ -20,11 +20,10 @@ namespace polytope {
 // A simple mesh output function for the SiloWriter
 //------------------------------------------------------------------------------
 // 2D
-template <typename RealType>
-void outputMesh(const Tessellation<2,RealType>& mesh,
+void outputMesh(const Tessellation<2, double>& mesh,
 		std::string prefix,
 		const unsigned testCycle = 1,
-		const RealType time = 0.0) {
+		const double time = 0.0) {
 #ifdef POLYTOPE_ENABLE_SILO
   std::map<std::string,double*> nodeFields, edgeFields, faceFields, cellFields;
   size_t meshSize = mesh.cells.size();
@@ -46,19 +45,18 @@ void outputMesh(const Tessellation<2,RealType>& mesh,
 #endif
   std::ostringstream os;
   os << prefix;
-  SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
-                               faceFields, cellFields, os.str(),
-                               testCycle, time);
+  SiloWriter<2, double, Tessellation<2, double>>::write(mesh, nodeFields, edgeFields, 
+                                                        faceFields, cellFields, os.str(),
+                                                        testCycle, time);
 #endif
 }
 
 //..............................................................................
 // 3D
-template <typename RealType>
-void outputMesh(const Tessellation<3,RealType>& mesh,
+void outputMesh(const Tessellation<3, double>& mesh,
 		std::string prefix,
 		const unsigned testCycle = 1,
-		const RealType time = 0.0) {
+		const double time = 0.0) {
 #ifdef POLYTOPE_ENABLE_SILO
   std::vector<double> index(mesh.cells.size());
   std::vector<double> genx (mesh.cells.size());
@@ -87,24 +85,24 @@ void outputMesh(const Tessellation<3,RealType>& mesh,
 #endif
   std::ostringstream os;
   os << prefix;
-  SiloWriter<3, double>::write(mesh, nodeFields, edgeFields, 
-                               faceFields, cellFields, os.str(),
-                               testCycle, time);
+  SiloWriter<3, double, Tessellation<3, double>>::write(mesh, nodeFields, edgeFields, 
+                                                        faceFields, cellFields, os.str(),
+                                                        testCycle, time);
 #endif
 }
 
 //------------------------------------------------------------------------------
 // Some specialized subsets of outputMesh
 //------------------------------------------------------------------------------
-template <int nDim, typename RealType>
-void outputMesh(const Tessellation<nDim,RealType>& mesh,
+template <int nDim>
+void outputMesh(const Tessellation<nDim, double>& mesh,
 		std::string prefix,
 		const unsigned testCycle) {
   outputMesh(mesh, prefix, testCycle, 0.0);
 }
 //------------------------------------------------------------------------------
-template <int nDim, typename RealType>
-void outputMesh(const Tessellation<nDim,RealType>& mesh,
+template <int nDim>
+void outputMesh(const Tessellation<nDim, double>& mesh,
 		std::string prefix) {
   outputMesh(mesh, prefix, 1, 0.0);
 }
@@ -142,11 +140,10 @@ void outputMesh(const Tessellation<nDim,RealType>& mesh,
 //------------------------------------------------------------------------------
 // Compute the area of a polytope tessellation cell-by-cell using Boost.Geometry
 //------------------------------------------------------------------------------
-template<typename RealType>
-RealType computeTessellationArea(Tessellation<2,RealType>& mesh) {
-  RealType area = 0;
+double computeTessellationArea(Tessellation<2, double>& mesh) {
+  double area = 0;
   for (unsigned i = 0; i != mesh.cells.size(); ++i) {
-    std::vector<RealType> nodeCell;
+    std::vector<double> nodeCell;
     for (std::vector<int>::const_iterator faceItr = mesh.cells[i].begin();
          faceItr != mesh.cells[i].end(); ++faceItr){
       const unsigned iface = *faceItr < 0 ? ~(*faceItr) : *faceItr;
@@ -156,7 +153,7 @@ RealType computeTessellationArea(Tessellation<2,RealType>& mesh) {
       nodeCell.push_back( mesh.nodes[inode].x );
       nodeCell.push_back( mesh.nodes[inode].y );
     }
-    BGPolygon<RealType,2> cellPolygon = makeBGPolygon<RealType>( nodeCell );
+    BGPolygon<double,2> cellPolygon = makeBGPolygon<double>( nodeCell );
     area += boost::geometry::area( cellPolygon );
     nodeCell.clear();
   }

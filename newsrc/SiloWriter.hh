@@ -13,14 +13,14 @@ template<int Dimension, typename RealType> class Tessellation;
 //! \class SiloWriter
 //! This class provides a static interface for writing Silo files 
 //! containing tessellations made by polytope.
-template <int Dimension, typename RealType>
+template <int Dimension, typename RealType, typename TessType>
 class SiloWriter {
   // No general recipe
 };
 
 //! Partial specialization for 2D tessellations.
-template <typename RealType>
-class SiloWriter<2, RealType> {
+template <typename RealType, typename TessType>
+class SiloWriter<2, RealType, TessType> {
   public:
 
   //! Write an arbitrary polygonal mesh, an associated set of 
@@ -28,7 +28,7 @@ class SiloWriter<2, RealType> {
   //! tags, to a SILO file in the given directory.
   //! \param numFiles The number of files that will be written. If this 
   //!                 is set to -1, one file will be written for each process.
-  static void write(const Tessellation<2, RealType>& mesh, 
+  static void write(const TessType& mesh, 
                     const std::map<std::string, RealType*>& nodeFields,
                     const std::map<std::string, std::vector<int>*>& nodeTags,
                     const std::map<std::string, RealType*>& edgeFields,
@@ -48,7 +48,7 @@ class SiloWriter<2, RealType> {
   //! (node, edge, face, cell)-centered fields to a SILO file in the given directory.
   //! \param numFiles The number of files that will be written. If this 
   //!                 is set to -1, one file will be written for each process.
-  static void write(const Tessellation<2, RealType>& mesh, 
+  static void write(const TessType& mesh, 
                     const std::map<std::string, RealType*>& nodeFields,
                     const std::map<std::string, RealType*>& edgeFields,
                     const std::map<std::string, RealType*>& faceFields,
@@ -73,7 +73,7 @@ class SiloWriter<2, RealType> {
   //! the current working directory.
   //! \param numFiles The number of files that will be written. If this 
   //!                 is set to -1, one file will be written for each process.
-  static void write(const Tessellation<2, RealType>& mesh, 
+  static void write(const TessType& mesh, 
                     const std::map<std::string, RealType*>& nodeFields,
                     const std::map<std::string, RealType*>& edgeFields,
                     const std::map<std::string, RealType*>& faceFields,
@@ -88,7 +88,7 @@ class SiloWriter<2, RealType> {
   }
 
   //! This version of write omits the cycle and time arguments.
-  static void write(const Tessellation<2, RealType>& mesh, 
+  static void write(const TessType& mesh, 
                     const std::map<std::string, RealType*>& nodeFields,
                     const std::map<std::string, RealType*>& edgeFields,
                     const std::map<std::string, RealType*>& faceFields,
@@ -98,13 +98,13 @@ class SiloWriter<2, RealType> {
                     int numFiles = -1,
                     int mpiTag = 0)
   {
-    write(mesh, nodeFields, edgeFields, faceFields, cellFields, filePrefix, directory, -1, -FLT_MAX,
+    write(mesh, nodeFields, edgeFields, faceFields, cellFields, filePrefix, directory, -1, static_cast<RealType>(0),
           numFiles, mpiTag);
   }
 
   //! This version of write omits the cycle and time arguments and 
   //! automatically generates the directory name from the file prefix.
-  static void write(const Tessellation<2, RealType>& mesh, 
+  static void write(const TessType& mesh, 
                     const std::map<std::string, RealType*>& nodeFields,
                     const std::map<std::string, RealType*>& edgeFields,
                     const std::map<std::string, RealType*>& faceFields,
@@ -113,23 +113,23 @@ class SiloWriter<2, RealType> {
                     int numFiles = -1,
                     int mpiTag = 0)
   {
-    write(mesh, nodeFields, edgeFields, faceFields, cellFields, filePrefix, "", -1, -FLT_MAX,
+    write(mesh, nodeFields, edgeFields, faceFields, cellFields, filePrefix, "", -1, static_cast<RealType>(0),
           numFiles, mpiTag);
   }
 
 };
 
 //! Partial specialization for 3D tessellations.
-template <typename RealType>
-class SiloWriter<3, RealType> {
-  public:
+template <typename RealType, typename TessType>
+class SiloWriter<3, RealType, TessType> {
+public:
 
   //! Write an arbitrary polygonal mesh, an associated set of 
   //! (node, edge, face, cell)-centered fields, and a corresponding set of 
   //! tags, to a SILO file in the given directory.
   //! \param numFiles The number of files that will be written. If this 
   //!                 is set to -1, one file will be written for each process.
-  static void write(const Tessellation<3, RealType>& mesh, 
+  static void write(const TessType& mesh, 
                     const std::map<std::string, RealType*>& nodeFields,
                     const std::map<std::string, std::vector<int>*>& nodeTags,
                     const std::map<std::string, RealType*>& edgeFields,
@@ -149,7 +149,7 @@ class SiloWriter<3, RealType> {
   //! (node, edge, face, cell)-centered fields to a SILO file in the given directory.
   //! \param numFiles The number of files that will be written. If this 
   //!                 is set to -1, one file will be written for each process.
-  static void write(const Tessellation<3, RealType>& mesh, 
+  static void write(const TessType& mesh, 
                     const std::map<std::string, RealType*>& nodeFields,
                     const std::map<std::string, RealType*>& edgeFields,
                     const std::map<std::string, RealType*>& faceFields,
@@ -174,7 +174,7 @@ class SiloWriter<3, RealType> {
   //! the current working directory.
   //! \param numFiles The number of files that will be written. If this 
   //!                 is set to -1, one file will be written for each process.
-  static void write(const Tessellation<3, RealType>& mesh, 
+  static void write(const TessType& mesh, 
                     const std::map<std::string, RealType*>& nodeFields,
                     const std::map<std::string, RealType*>& edgeFields,
                     const std::map<std::string, RealType*>& faceFields,
@@ -189,7 +189,7 @@ class SiloWriter<3, RealType> {
   }
 
   //! This version of write omits the cycle and time arguments.
-  static void write(const Tessellation<3, RealType>& mesh, 
+  static void write(const TessType& mesh, 
                     const std::map<std::string, RealType*>& nodeFields,
                     const std::map<std::string, RealType*>& edgeFields,
                     const std::map<std::string, RealType*>& faceFields,
@@ -205,7 +205,7 @@ class SiloWriter<3, RealType> {
 
   //! This version of write omits the cycle and time arguments and 
   //! automatically generates the directory name from the file prefix.
-  static void write(const Tessellation<3, RealType>& mesh, 
+  static void write(const TessType& mesh, 
                     const std::map<std::string, RealType*>& nodeFields,
                     const std::map<std::string, RealType*>& edgeFields,
                     const std::map<std::string, RealType*>& faceFields,

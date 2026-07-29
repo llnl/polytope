@@ -2,6 +2,7 @@
 #include "SiloWriter.hh"
 #include "SiloUtils.hh"
 #include "Tessellation.hh"
+#include "QuantTessellation.hh"
 
 #ifdef POLYTOPE_ENABLE_MPI
 #include "Communicator.hh"
@@ -31,9 +32,9 @@ namespace {
 //     otherwise the nodes of ~cellFaces[j] (the 1s complement)
 //     are in *clockwise* order and need to be reversed.
 //-------------------------------------------------------------------
-template <typename RealType>
+template <typename RealType, typename TessType>
 void
-traverseNodes(const Tessellation<2, RealType>& mesh,
+traverseNodes(const TessType& mesh,
               int i,
               vector<int>& nodes) {
   const vector<int>& cellFaces = mesh.cells[i];
@@ -56,23 +57,23 @@ traverseNodes(const Tessellation<2, RealType>& mesh,
 }
 
 //-------------------------------------------------------------------
-template <typename RealType>
+template <typename RealType, typename TessType>
 void
-SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
-                               const map<string, RealType*>& nodeFields,
-                               const map<string, vector<int>*>& nodeTags,
-                               const map<string, RealType*>& edgeFields,
-                               const map<string, vector<int>*>& edgeTags,
-                               const map<string, RealType*>& faceFields,
-                               const map<string, vector<int>*>& faceTags,
-                               const map<string, RealType*>& cellFields,
-                               const map<string, vector<int>*>& cellTags,
-                               const string& filePrefix,
-                               const string& directory,
-                               int cycle,
-                               RealType time,
-                               int numFiles,
-                               int mpiTag) {
+SiloWriter<2, RealType, TessType>::write(const TessType& mesh,
+                                         const map<string, RealType*>& nodeFields,
+                                         const map<string, vector<int>*>& nodeTags,
+                                         const map<string, RealType*>& edgeFields,
+                                         const map<string, vector<int>*>& edgeTags,
+                                         const map<string, RealType*>& faceFields,
+                                         const map<string, vector<int>*>& faceTags,
+                                         const map<string, RealType*>& cellFields,
+                                         const map<string, vector<int>*>& cellTags,
+                                         const string& filePrefix,
+                                         const string& directory,
+                                         int cycle,
+                                         RealType time,
+                                         int numFiles,
+                                         int mpiTag) {
   // Strip .silo off of the prefix if it's there.
   string prefix = filePrefix;
   int index = prefix.find(".silo");
@@ -137,8 +138,8 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
     int numNodes = mesh.nodes.size();
     vector<double> x(numNodes), y(numNodes);
     for (int i = 0; i < numNodes; ++i) {
-      x[i] = mesh.nodes[i].x;
-      y[i] = mesh.nodes[i].y;
+      x[i] = static_cast<double>(mesh.nodes[i].x);
+      y[i] = static_cast<double>(mesh.nodes[i].y);
     }
     double* coords[2];
     coords[0] = &(x[0]);
@@ -169,7 +170,7 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
     for (int i = 0; i < numCells; ++i) {
       // Gather the nodes from this cell in traversal order.
       vector<int> cellNodes;
-      traverseNodes(mesh, i, cellNodes);
+      traverseNodes<RealType, TessType>(mesh, i, cellNodes);
       // Insert the cell's node connectivity into the node list.
       nodeList.push_back(cellNodes.size());
       nodeList.insert(nodeList.end(), cellNodes.begin(), cellNodes.end());
@@ -208,24 +209,24 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
     free(elemnames[1]);
 
     // Write out convex hull data.
-    vector<int> hull(1+mesh.convexHull.facets.size());
-    hull[0] = mesh.convexHull.facets.size();
-    for (size_t f = 0; f < mesh.convexHull.facets.size(); ++f)
-      hull[1+f] = mesh.convexHull.facets[f].size();
-    for (size_t f = 0; f < mesh.convexHull.facets.size(); ++f)
-      for (size_t n = 0; n < mesh.convexHull.facets[f].size(); ++n)
-        hull.push_back(mesh.convexHull.facets[f][n]);
-    elemnames[0] = strDup("nfacets");
-    elemlengths[0] = 1;
-    elemnames[1] = strDup("nfacetnodes");
-    elemlengths[1] = mesh.convexHull.facets.size();
-    elemnames[2] = strDup("facetnodes");
-    elemlengths[2] = hull.size() - elemlengths[0] - elemlengths[1];
-    DBPutCompoundarray(file, "convexhull", elemnames, elemlengths, 3,
-                       (void*)&hull[0], hull.size(), DB_INT, 0);
-    free(elemnames[0]);
-    free(elemnames[1]);
-    free(elemnames[2]);
+    // vector<int> hull(1+mesh.convexHull.facets.size());
+    // hull[0] = mesh.convexHull.facets.size();
+    // for (size_t f = 0; f < mesh.convexHull.facets.size(); ++f)
+    //   hull[1+f] = mesh.convexHull.facets[f].size();
+    // for (size_t f = 0; f < mesh.convexHull.facets.size(); ++f)
+    //   for (size_t n = 0; n < mesh.convexHull.facets[f].size(); ++n)
+    //     hull.push_back(mesh.convexHull.facets[f][n]);
+    // elemnames[0] = strDup("nfacets");
+    // elemlengths[0] = 1;
+    // elemnames[1] = strDup("nfacetnodes");
+    // elemlengths[1] = mesh.convexHull.facets.size();
+    // elemnames[2] = strDup("facetnodes");
+    // elemlengths[2] = hull.size() - elemlengths[0] - elemlengths[1];
+    // DBPutCompoundarray(file, "convexhull", elemnames, elemlengths, 3,
+    //                    (void*)&hull[0], hull.size(), DB_INT, 0);
+    // free(elemnames[0]);
+    // free(elemnames[1]);
+    // free(elemnames[2]);
     // Write out tag information.
     //writeTagsToFile(nodeTags, file, DB_NODECENT);
     writeTagsToFile(edgeTags, file, DB_EDGECENT);
@@ -244,8 +245,8 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
     int numPoints = mesh.points.size();
     vector<double> xp(numPoints), yp(numPoints);
     for (int i = 0; i < numPoints; ++i) {
-      xp[i] = mesh.points[i].x;
-      yp[i] = mesh.points[i].y;
+      xp[i] = static_cast<double>(mesh.points[i].x);
+      yp[i] = static_cast<double>(mesh.points[i].y);
     }
     double* pcoords[2];
     pcoords[0] = &(xp[0]);
@@ -326,6 +327,7 @@ SiloWriter<2, RealType>::write(const Tessellation<2, RealType>& mesh,
 //-------------------------------------------------------------------
 
 // Explicit instantiation.
-template class SiloWriter<2, double>;
+template class SiloWriter<2, double, Tessellation<2, double>>;
+template class SiloWriter<2, int, QuantTessellation<2>>;
 
 } // end namespace
