@@ -107,6 +107,7 @@ public:
     switch(bType){
     case square:
       this->setUnitSquare();
+      this->finalize();
       break;
     case circle:
       this->setUnitCircle();
@@ -149,7 +150,6 @@ public:
   //------------------------------------------------------------------------
   void setUnitSquare() {
     this->clear();
-
     const double x1 = mCenter[0] - mDiff;
     const double x2 = mCenter[0] + mDiff;
     const double y1 = mCenter[1] - mDiff;
@@ -160,7 +160,6 @@ public:
     mPLCpoints = flattenCoords(points);
     mPLC.facets = shapes::createSquareFaces();
     mType = square;
-    this->finalize();
   }
 
   //------------------------------------------------------------------------
@@ -444,9 +443,9 @@ public:
     // The points that define the inner hole
     const unsigned nHolePoints = 4;
     const double holePoints[8] = {0.05, -0.05,
-				    0.10,  0.10,
-				    0.20, -0.30,
-				   -0.25, -0.15};
+                                  0.10,  0.10,
+                                  0.20, -0.30,
+                                  -0.25, -0.15};
     for (unsigned p = 0; p < nHolePoints; ++p){
       mPLCpoints.push_back( holePoints[2*p  ] );
       mPLCpoints.push_back( holePoints[2*p+1] );
@@ -572,8 +571,7 @@ public:
     // The outer boundary
     mDiff = 1.0;
     this->setUnitSquare();
-    //vector<double> newPoints = {0.6, -0.8, 0.4, 0.8, 0.4, -0.8};
-    vector<double> newPoints = {0.4, -0.8, 0.6, -0.8, 0.4, 0.8};
+    vector<double> newPoints = {0.6, -0.8, 0.4, -0.8, 0.4, 0.8};
     auto Nf = newPoints.size()/2;
     auto N = mPLCpoints.size()/2;
     copy(newPoints.begin(), newPoints.end(), back_inserter(mPLCpoints));

@@ -65,7 +65,7 @@ void testAllBoundaries(Tessellator<2, double>& tessellator, int numSweeps) {
     Boundary2D boundary;
     boundary.mDiff = 0.5;
     boundary.setDefaultBoundary(bid);
-    testBoundary(boundary, tessellator, bid, 1);//numSweeps);
+    testBoundary(boundary, tessellator, bid, numSweeps);
   }
 }
 
