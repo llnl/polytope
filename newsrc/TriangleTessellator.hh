@@ -29,7 +29,7 @@ public:
 
   // Compute the nodes around a collection of generators.
   // Required method for all Tessellators.
-  virtual void tessellateQuantizedImpl(QuantizedTessellation& result) const override;
+  virtual void tessellateQuantizedImpl(QuantizedTessellation& result) override;
 
   // The name of the tessellator
   std::string name() const { return "TriangleTessellator"; }

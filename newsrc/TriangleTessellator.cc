@@ -66,7 +66,7 @@ void initTriangleData(triangulateio& in) {
 //------------------------------------------------------------------------------
 void
 TriangleTessellator::
-tessellateQuantizedImpl(QuantizedTessellation& result) const {
+tessellateQuantizedImpl(QuantizedTessellation& result) {
   // Type aliases
   using IntType = typename QuantTessellation<2>::IntType;
   using RealPoint = Point2<double>;

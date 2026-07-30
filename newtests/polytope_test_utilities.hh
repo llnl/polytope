@@ -25,7 +25,7 @@ void outputMesh(const Tessellation<2, double>& mesh,
 		const unsigned testCycle = 1,
 		const double time = 0.0) {
 #ifdef POLYTOPE_ENABLE_SILO
-  std::map<std::string,double*> nodeFields, edgeFields, faceFields, cellFields;
+  std::map<std::string, double*> nodeFields, edgeFields, faceFields, cellFields;
   size_t meshSize = mesh.cells.size();
   std::vector<double> index(meshSize);
   std::vector<double> genx (meshSize);
@@ -45,9 +45,40 @@ void outputMesh(const Tessellation<2, double>& mesh,
 #endif
   std::ostringstream os;
   os << prefix;
-  SiloWriter<2, double, Tessellation<2, double>>::write(mesh, nodeFields, edgeFields, 
-                                                        faceFields, cellFields, os.str(),
-                                                        testCycle, time);
+  SiloWriter<2, Tessellation<2, double>>::write(mesh, nodeFields, edgeFields,
+                                                faceFields, cellFields, os.str(),
+                                                testCycle, time);
+#endif
+}
+
+void outputMesh(const Tessellation<2, double>& mesh,
+		std::string prefix,
+                std::vector<double>& cellFieldVec,
+                std::string cellFieldName,
+		const unsigned testCycle = 1,
+		const double time = 0.0,
+                const int numFiles = 1) {
+#ifdef POLYTOPE_ENABLE_SILO
+  std::map<std::string, double*> nodeFields, edgeFields, faceFields, cellFields;
+  size_t meshSize = mesh.cells.size();
+  POLY_CHECK(cellFieldVec.size() == meshSize);
+  std::vector<double> index(meshSize);
+  std::vector<double> genx (meshSize);
+  std::vector<double> geny (meshSize);
+  for (int i = 0; i < meshSize; ++i) {
+    index[i] = double(i);
+    genx[i] = mesh.points[i].x;
+    geny[i] = mesh.points[i].y;
+  }
+  cellFields["cell_index"] = &index[0];
+  cellFields["gen_x"     ] = &genx[0];
+  cellFields["gen_y"     ] = &geny[0];
+  cellFields[cellFieldName] = &cellFieldVec[0];
+  std::ostringstream os;
+  os << prefix;
+  SiloWriter<2, Tessellation<2, double>>::write(mesh, nodeFields, edgeFields,
+                                                faceFields, cellFields, os.str(),
+                                                testCycle, time, numFiles);
 #endif
 }
 
@@ -85,9 +116,9 @@ void outputMesh(const Tessellation<3, double>& mesh,
 #endif
   std::ostringstream os;
   os << prefix;
-  SiloWriter<3, double, Tessellation<3, double>>::write(mesh, nodeFields, edgeFields, 
-                                                        faceFields, cellFields, os.str(),
-                                                        testCycle, time);
+  SiloWriter<3, Tessellation<3, double>>::write(mesh, nodeFields, edgeFields,
+                                                faceFields, cellFields, os.str(),
+                                                testCycle, time);
 #endif
 }
 
@@ -131,7 +162,7 @@ void outputMesh(const Tessellation<nDim, double>& mesh,
 //   cellFields["cond"      ] = &cellField[0];
 //   std::ostringstream os;
 //   os << prefix;
-//   SiloWriter<2, double>::write(mesh, nodeFields, edgeFields, 
+//   SiloWriter<2, double>::write(mesh, nodeFields, edgeFields,
 //                                faceFields, cellFields, os.str(),
 //                                testCycle, time);
 // #endif
@@ -192,6 +223,16 @@ void testWatertight(const Tessellation<2, double>& mesh, const int refHoles) {
   // This check does not work as intended for some reason
   // POLY_CHECK2(numHoles == refHoles,
   //             "Resulting mesh has " << numHoles << " but should have " << refHoles << " holes");
+}
+
+// -----------------------------------------------------------------------
+// compareArea
+// -----------------------------------------------------------------------
+void compareArea(Boundary2D& boundary,
+                 Tessellation<2,double>& mesh) {
+   const double area = computeTessellationArea(mesh);
+   const double relErr = std::abs(boundary.mArea-area)/boundary.mArea;
+   POLY_CHECK2(relErr < 1.0E-8, "Error in area: ref " << boundary.mArea << " mesh " << area);
 }
 
 }

@@ -10,7 +10,7 @@
 
 namespace polytope {
 
-void TetgenTessellator::tessellateQuantizedImpl(QT& result) const {
+void TetgenTessellator::tessellateQuantizedImpl(QT& result) {
   tetgenio in = createTetgenPoints(result);
   tetgenio out;
   // Create the Delaunay

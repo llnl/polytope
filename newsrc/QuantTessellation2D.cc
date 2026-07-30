@@ -23,7 +23,7 @@ QuantTessellation<2>::cellIntersectsHull(const QuantPLC<2>& QPLC,
                                          const unsigned cellIndex) const {
   auto plc_cell = QPLC.getFacetPoints();
   auto qcell = getCell(cellIndex);
-  return convexIntersection<IntType>(plc_cell, qcell);
+  return convexBoundaryIntersect<IntType>(qcell, plc_cell);
 }
 
 template<>
@@ -92,7 +92,7 @@ using namespace boost::polygon::operators;
 template<>
 void
 QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
-                                       const Tessellator<2, double>& tessellator) {
+                                       Tessellator<2, double>& tessellator) {
   const auto& Q = Quantizer<2>::instance();
   auto boundaryPoints = QPLC.getFacetPoints();
   PolygonWithHoles boundary;
@@ -136,7 +136,6 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
             if (trialUnion.size() == 1) {
               orphan = trialUnion[0];
               foundUnion = true;
-              break;
             }
           }
           if (!foundUnion) {

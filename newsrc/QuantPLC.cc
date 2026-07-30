@@ -44,6 +44,7 @@ QuantPLC<Dimension>::init(const PLC<Dimension>& plc,
   holes = plc.holes;
   init(allpoints);
 }
+
 template<int Dimension>
 void
 QuantPLC<Dimension>::init(const std::vector<RealType>& allpoints) {
@@ -482,7 +483,9 @@ QuantPLC<Dimension>::within2D(const IntPoint& point) const {
     for (const auto& f : hole) {
       holePoly.push_back(points[f[0]]);
     }
-    if (holePoly.size() >= 3 && pointInPolygon(point, holePoly)) {
+    // Points on the hole boundary do not count as inside the hole
+    if (holePoly.size() >= 3 && pointInPolygon(point, holePoly)
+        && !pointOnPolygon(point, holePoly)) {
       return false;
     }
   }

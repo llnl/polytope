@@ -5,6 +5,7 @@
 #include <float.h>
 #include <map>
 #include <vector>
+#include "Communicator.hh"
 
 namespace polytope {
 
@@ -13,14 +14,14 @@ template<int Dimension, typename RealType> class Tessellation;
 //! \class SiloWriter
 //! This class provides a static interface for writing Silo files 
 //! containing tessellations made by polytope.
-template <int Dimension, typename RealType, typename TessType>
+template <int Dimension, typename TessType>
 class SiloWriter {
   // No general recipe
 };
 
 //! Partial specialization for 2D tessellations.
-template <typename RealType, typename TessType>
-class SiloWriter<2, RealType, TessType> {
+template <typename TessType>
+class SiloWriter<2, TessType> {
   public:
 
   //! Write an arbitrary polygonal mesh, an associated set of 
@@ -29,18 +30,18 @@ class SiloWriter<2, RealType, TessType> {
   //! \param numFiles The number of files that will be written. If this 
   //!                 is set to -1, one file will be written for each process.
   static void write(const TessType& mesh, 
-                    const std::map<std::string, RealType*>& nodeFields,
+                    const std::map<std::string, double*>& nodeFields,
                     const std::map<std::string, std::vector<int>*>& nodeTags,
-                    const std::map<std::string, RealType*>& edgeFields,
+                    const std::map<std::string, double*>& edgeFields,
                     const std::map<std::string, std::vector<int>*>& edgeTags,
-                    const std::map<std::string, RealType*>& faceFields,
+                    const std::map<std::string, double*>& faceFields,
                     const std::map<std::string, std::vector<int>*>& faceTags,
-                    const std::map<std::string, RealType*>& cellFields,
+                    const std::map<std::string, double*>& cellFields,
                     const std::map<std::string, std::vector<int>*>& cellTags,
                     const std::string& filePrefix,
                     const std::string& directory,
                     int cycle,
-                    RealType time,
+                    double time,
                     int numFiles = -1,
                     int mpiTag = 0);
 
@@ -49,14 +50,14 @@ class SiloWriter<2, RealType, TessType> {
   //! \param numFiles The number of files that will be written. If this 
   //!                 is set to -1, one file will be written for each process.
   static void write(const TessType& mesh, 
-                    const std::map<std::string, RealType*>& nodeFields,
-                    const std::map<std::string, RealType*>& edgeFields,
-                    const std::map<std::string, RealType*>& faceFields,
-                    const std::map<std::string, RealType*>& cellFields,
+                    const std::map<std::string, double*>& nodeFields,
+                    const std::map<std::string, double*>& edgeFields,
+                    const std::map<std::string, double*>& faceFields,
+                    const std::map<std::string, double*>& cellFields,
                     const std::string& filePrefix,
                     const std::string& directory,
                     int cycle,
-                    RealType time,
+                    double time,
                     int numFiles = -1,
                     int mpiTag = 0)
   {
@@ -74,13 +75,13 @@ class SiloWriter<2, RealType, TessType> {
   //! \param numFiles The number of files that will be written. If this 
   //!                 is set to -1, one file will be written for each process.
   static void write(const TessType& mesh, 
-                    const std::map<std::string, RealType*>& nodeFields,
-                    const std::map<std::string, RealType*>& edgeFields,
-                    const std::map<std::string, RealType*>& faceFields,
-                    const std::map<std::string, RealType*>& cellFields,
+                    const std::map<std::string, double*>& nodeFields,
+                    const std::map<std::string, double*>& edgeFields,
+                    const std::map<std::string, double*>& faceFields,
+                    const std::map<std::string, double*>& cellFields,
                     const std::string& filePrefix,
                     int cycle,
-                    RealType time,
+                    double time,
                     int numFiles = -1,
                     int mpiTag = 0)
   {
@@ -89,39 +90,65 @@ class SiloWriter<2, RealType, TessType> {
 
   //! This version of write omits the cycle and time arguments.
   static void write(const TessType& mesh, 
-                    const std::map<std::string, RealType*>& nodeFields,
-                    const std::map<std::string, RealType*>& edgeFields,
-                    const std::map<std::string, RealType*>& faceFields,
-                    const std::map<std::string, RealType*>& cellFields,
+                    const std::map<std::string, double*>& nodeFields,
+                    const std::map<std::string, double*>& edgeFields,
+                    const std::map<std::string, double*>& faceFields,
+                    const std::map<std::string, double*>& cellFields,
                     const std::string& filePrefix,
                     const std::string& directory,
                     int numFiles = -1,
                     int mpiTag = 0)
   {
-    write(mesh, nodeFields, edgeFields, faceFields, cellFields, filePrefix, directory, -1, static_cast<RealType>(0),
+    write(mesh, nodeFields, edgeFields, faceFields, cellFields, filePrefix, directory, -1, -1.,
           numFiles, mpiTag);
   }
 
   //! This version of write omits the cycle and time arguments and 
   //! automatically generates the directory name from the file prefix.
   static void write(const TessType& mesh, 
-                    const std::map<std::string, RealType*>& nodeFields,
-                    const std::map<std::string, RealType*>& edgeFields,
-                    const std::map<std::string, RealType*>& faceFields,
-                    const std::map<std::string, RealType*>& cellFields,
+                    const std::map<std::string, double*>& nodeFields,
+                    const std::map<std::string, double*>& edgeFields,
+                    const std::map<std::string, double*>& faceFields,
+                    const std::map<std::string, double*>& cellFields,
                     const std::string& filePrefix,
                     int numFiles = -1,
                     int mpiTag = 0)
   {
-    write(mesh, nodeFields, edgeFields, faceFields, cellFields, filePrefix, "", -1, static_cast<RealType>(0),
+    write(mesh, nodeFields, edgeFields, faceFields, cellFields, filePrefix, "", -1, -1.,
+          numFiles, mpiTag);
+  }
+
+  static void write(const TessType& mesh,
+                    const std::string& filePrefix,
+                    int numFiles = -1,
+                    int mpiTag = 0) {
+    std::map<std::string, double*> nodeFields, edgeFields, faceFields, cellFields;
+    size_t meshSize = mesh.cells.size();
+    std::vector<double> index(meshSize);
+    std::vector<double> genx (meshSize);
+    std::vector<double> geny (meshSize);
+    for (int i = 0; i < meshSize; ++i) {
+      index[i] = double(i);
+      genx[i] = static_cast<double>(mesh.points[i].x);
+      geny[i] = static_cast<double>(mesh.points[i].y);
+    }
+    cellFields["cell_index"] = &index[0];
+    cellFields["gen_x"     ] = &genx[0];
+    cellFields["gen_y"     ] = &geny[0];
+#ifdef POLYTOPE_ENABLE_MPI
+    int rank = Communicator::getRank();
+    std::vector<double> rankField(meshSize, static_cast<double>(rank));
+    cellFields["rank"      ] = &rankField[0];
+#endif
+    write(mesh, nodeFields, edgeFields, faceFields, cellFields, filePrefix, "", -1, -1.,
           numFiles, mpiTag);
   }
 
 };
 
 //! Partial specialization for 3D tessellations.
-template <typename RealType, typename TessType>
-class SiloWriter<3, RealType, TessType> {
+template <typename TessType>
+class SiloWriter<3, TessType> {
 public:
 
   //! Write an arbitrary polygonal mesh, an associated set of 
@@ -130,18 +157,18 @@ public:
   //! \param numFiles The number of files that will be written. If this 
   //!                 is set to -1, one file will be written for each process.
   static void write(const TessType& mesh, 
-                    const std::map<std::string, RealType*>& nodeFields,
+                    const std::map<std::string, double*>& nodeFields,
                     const std::map<std::string, std::vector<int>*>& nodeTags,
-                    const std::map<std::string, RealType*>& edgeFields,
+                    const std::map<std::string, double*>& edgeFields,
                     const std::map<std::string, std::vector<int>*>& edgeTags,
-                    const std::map<std::string, RealType*>& faceFields,
+                    const std::map<std::string, double*>& faceFields,
                     const std::map<std::string, std::vector<int>*>& faceTags,
-                    const std::map<std::string, RealType*>& cellFields,
+                    const std::map<std::string, double*>& cellFields,
                     const std::map<std::string, std::vector<int>*>& cellTags,
                     const std::string& filePrefix,
                     const std::string& directory,
                     int cycle,
-                    RealType time,
+                    double time,
                     int numFiles = -1,
                     int mpiTag = 0);
 
@@ -150,14 +177,14 @@ public:
   //! \param numFiles The number of files that will be written. If this 
   //!                 is set to -1, one file will be written for each process.
   static void write(const TessType& mesh, 
-                    const std::map<std::string, RealType*>& nodeFields,
-                    const std::map<std::string, RealType*>& edgeFields,
-                    const std::map<std::string, RealType*>& faceFields,
-                    const std::map<std::string, RealType*>& cellFields,
+                    const std::map<std::string, double*>& nodeFields,
+                    const std::map<std::string, double*>& edgeFields,
+                    const std::map<std::string, double*>& faceFields,
+                    const std::map<std::string, double*>& cellFields,
                     const std::string& filePrefix,
                     const std::string& directory,
                     int cycle,
-                    RealType time,
+                    double time,
                     int numFiles = -1,
                     int mpiTag = 0)
   {
@@ -175,13 +202,13 @@ public:
   //! \param numFiles The number of files that will be written. If this 
   //!                 is set to -1, one file will be written for each process.
   static void write(const TessType& mesh, 
-                    const std::map<std::string, RealType*>& nodeFields,
-                    const std::map<std::string, RealType*>& edgeFields,
-                    const std::map<std::string, RealType*>& faceFields,
-                    const std::map<std::string, RealType*>& cellFields,
+                    const std::map<std::string, double*>& nodeFields,
+                    const std::map<std::string, double*>& edgeFields,
+                    const std::map<std::string, double*>& faceFields,
+                    const std::map<std::string, double*>& cellFields,
                     const std::string& filePrefix,
                     int cycle,
-                    RealType time,
+                    double time,
                     int numFiles = -1,
                     int mpiTag = 0)
   {
@@ -190,31 +217,40 @@ public:
 
   //! This version of write omits the cycle and time arguments.
   static void write(const TessType& mesh, 
-                    const std::map<std::string, RealType*>& nodeFields,
-                    const std::map<std::string, RealType*>& edgeFields,
-                    const std::map<std::string, RealType*>& faceFields,
-                    const std::map<std::string, RealType*>& cellFields,
+                    const std::map<std::string, double*>& nodeFields,
+                    const std::map<std::string, double*>& edgeFields,
+                    const std::map<std::string, double*>& faceFields,
+                    const std::map<std::string, double*>& cellFields,
                     const std::string& filePrefix,
                     const std::string& directory,
                     int numFiles = -1,
                     int mpiTag = 0)
   {
-    write(mesh, nodeFields, edgeFields, faceFields, cellFields, filePrefix, directory, -1, -FLT_MAX,
+    write(mesh, nodeFields, edgeFields, faceFields, cellFields, filePrefix, directory, -1, -1.,
           numFiles, mpiTag);
   }
 
   //! This version of write omits the cycle and time arguments and 
   //! automatically generates the directory name from the file prefix.
   static void write(const TessType& mesh, 
-                    const std::map<std::string, RealType*>& nodeFields,
-                    const std::map<std::string, RealType*>& edgeFields,
-                    const std::map<std::string, RealType*>& faceFields,
-                    const std::map<std::string, RealType*>& cellFields,
+                    const std::map<std::string, double*>& nodeFields,
+                    const std::map<std::string, double*>& edgeFields,
+                    const std::map<std::string, double*>& faceFields,
+                    const std::map<std::string, double*>& cellFields,
                     const std::string& filePrefix,
                     int numFiles = -1,
                     int mpiTag = 0)
   {
-    write(mesh, nodeFields, edgeFields, faceFields, cellFields, filePrefix, "", -1, -FLT_MAX,
+    write(mesh, nodeFields, edgeFields, faceFields, cellFields, filePrefix, "", -1, -1.,
+          numFiles, mpiTag);
+  }
+
+  static void write(const TessType& mesh,
+                    const std::string& filePrefix,
+                    int numFiles = -1,
+                    int mpiTag = 0) {
+    std::map<std::string, double*> nodeFields, edgeFields, faceFields, cellFields;
+    write(mesh, nodeFields, edgeFields, faceFields, cellFields, filePrefix, "", -1, -1.,
           numFiles, mpiTag);
   }
 

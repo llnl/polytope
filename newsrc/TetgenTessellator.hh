@@ -22,7 +22,7 @@ public:
   TetgenTessellator() = default;
   virtual ~TetgenTessellator() = default;
 
-  virtual void tessellateQuantizedImpl(QT& result) const override;
+  virtual void tessellateQuantizedImpl(QT& result) override;
 
   std::string name() const { return "TetgenTessellator"; }
 protected:

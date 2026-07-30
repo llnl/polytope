@@ -27,7 +27,7 @@ namespace polytope {
 //------------------------------------------------------------------------------
 void
 BoostTessellator::
-tessellateQuantizedImpl(QuantizedTessellation& result) const {
+tessellateQuantizedImpl(QuantizedTessellation& result) {
   // Type aliases
   using IntType = typename QuantTessellation<2>::IntType;
   using IntPoint = typename QuantTessellation<2>::IntPoint;

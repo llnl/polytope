@@ -64,14 +64,6 @@ template<typename CoordType> struct Cell<2, CoordType> {
     return facePoints;
   }
 
-  friend std::ostream& operator<<(std::ostream& s, const CellType& cell) {
-    s << "v = [";
-    for (auto& p : cell) {
-      s << p << ", ";
-    }
-    s << "]\n";
-    return s;
-  }
 };
 
 template<typename CoordType> struct Cell<3, CoordType> {
@@ -136,7 +128,34 @@ template<typename CoordType> struct Cell<3, CoordType> {
     }
     return facePoints;
   }
+
 };
+
+template<typename CoordType>
+std::ostream&
+operator<<(std::ostream& s, const std::vector<std::vector<Point<2, CoordType>>>& cell) {
+  s << "v = [";
+  for (const auto& p : cell) {
+    s << p << ", ";
+  }
+  s << "]\n";
+  return s;
+}
+
+template<typename CoordType>
+std::ostream&
+operator<<(std::ostream& s, const std::vector<std::vector<Point<3, CoordType>>>& cell) {
+  s << "v = [";
+  for (const auto& face : cell) {
+    s << "[";
+    for (const auto& p : face) {
+      s << p << ", ";
+    }
+    s << "]";
+  }
+  s << "]\n";
+  return s;
+}
 }
 
 #endif

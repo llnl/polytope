@@ -11,7 +11,7 @@ inline
 void
 Tessellator<Dimension, RealType>::
 tessellate(const std::vector<RealType>& points,
-           Tessellation<Dimension, RealType>& mesh) const {
+           Tessellation<Dimension, RealType>& mesh) {
   if (points.size() == 0) {
     return;
   }
@@ -46,7 +46,7 @@ Tessellator<Dimension, RealType>::
 tessellate(const std::vector<RealType>& points,
            const std::vector<RealType>& PLCpoints,
            const PLC<Dimension>& geometry,
-           Tessellation<Dimension, RealType>& mesh) const {
+           Tessellation<Dimension, RealType>& mesh) {
   if (points.size() == 0) {
     return;
   }
@@ -87,14 +87,14 @@ void
 Tessellator<Dimension, RealType>::
 tessellate(const std::vector<RealType>& points,
            const ReducedPLC<Dimension, RealType>& geometry,
-           Tessellation<Dimension, RealType>& mesh) const {
+           Tessellation<Dimension, RealType>& mesh) {
   this->tessellate(points, geometry.points, geometry, mesh);
 }
 
 template<int Dimension, typename RealType>
 inline void
 Tessellator<Dimension, RealType>::
-singleNodeTessellate(QuantTessellation<Dimension>& result) const {
+singleNodeTessellate(QuantTessellation<Dimension>& result) {
   if constexpr (Dimension == 2) {
     using IntType = typename QuantTessellation<2>::IntType;
     using RealPoint = Point2<double>;

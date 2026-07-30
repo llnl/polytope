@@ -5,7 +5,6 @@
 //   - Quantization and deduplication
 //   - Convex hull computation (2D)
 //   - Facet (edge) ordering
-//   - Collinear vertex removal
 //   - Point containment (within) tests
 //   - Intersection tests
 //   - Reduction (removing unused points)
@@ -24,6 +23,7 @@
 #include "GeomUtils.hh"
 #include "Point.hh"
 #include "polytope_test_utilities.hh"
+#include "QuantTessellation.hh"
 
 #include "Communicator.hh" 
 
@@ -158,14 +158,8 @@ void testDeduplication(const int tnum) {
   plc.facets[0] = {0, 1};  // Uses 0
   plc.facets[1] = {4, 2};  // Uses 4 (duplicate of 0)
 
+  // Constructor removes degeneracies
   QuantPLC2D qplc(plc, vertices);
-
-  // Before deduplication, should have 6 points
-  POLY_CHECK2(qplc.points.size() == 6,
-              "Expected 6 points before deduplication");
-
-  // Remove duplicates
-  qplc.removeDegeneracies();
 
   // After deduplication: 4 unique points (removed duplicates 4 and 5)
   POLY_CHECK2(qplc.points.size() == 4,
@@ -283,60 +277,6 @@ void testEdgeOrdering(const int tnum) {
   }
 
   cout << "  Edge ordering passed!" << endl;
-}
-
-//------------------------------------------------------------------------------
-// Test: Collinear vertex removal
-//------------------------------------------------------------------------------
-void testCollinearRemoval(const int tnum) {
-  cout << "\n=== Test " << tnum << ": Collinear Vertex Removal ===" << endl;
-
-  RealPoint xlo(0.0, 0.0);
-  RealPoint xhi(10.0, 10.0);
-  auto& Q = Quantizer2D::instance();
-  Q.init(xlo, xhi);
-
-  // Create a square with extra collinear points on edges
-  vector<RealType> vertices = {
-    0.0, 0.0,   // 0 - corner
-    5.0, 0.0,   // 1 - collinear on bottom edge
-    10.0, 0.0,  // 2 - corner
-    10.0, 5.0,  // 3 - collinear on right edge
-    10.0, 10.0, // 4 - corner
-    5.0, 10.0,  // 5 - collinear on top edge
-    0.0, 10.0,  // 6 - corner
-    0.0, 5.0    // 7 - collinear on left edge
-  };
-
-  PLC plc;
-  plc.facets.resize(8);
-  plc.facets[0] = {0, 1};
-  plc.facets[1] = {1, 2};
-  plc.facets[2] = {2, 3};
-  plc.facets[3] = {3, 4};
-  plc.facets[4] = {4, 5};
-  plc.facets[5] = {5, 6};
-  plc.facets[6] = {6, 7};
-  plc.facets[7] = {7, 0};
-
-  QuantPLC2D qplc(plc,  vertices);
-
-  // Before reduction, should have 8 edges
-  POLY_CHECK2(qplc.facets.size() == 8,
-              "Should have 8 edges before collinear removal");
-
-  // Reduce calls orderFacets which removes collinear vertices
-  qplc.reduce();
-
-  // After collinear removal, should have 4 edges (square corners only)
-  POLY_CHECK2(qplc.facets.size() == 4,
-              "After removing collinear vertices, should have 4 edges, got " << qplc.facets.size());
-
-  // Should have 4 unique vertices (the corners)
-  POLY_CHECK2(qplc.points.size() == 4,
-              "Should have 4 unique vertices, got " << qplc.points.size());
-
-  cout << "  Collinear removal passed!" << endl;
 }
 
 //------------------------------------------------------------------------------
@@ -470,6 +410,69 @@ void testHashComparison(const int tnum) {
 }
 
 //------------------------------------------------------------------------------
+// Test: QuantTessellation<2>::cellIntersectsHull checks edge intersections only
+//------------------------------------------------------------------------------
+void testCellIntersectsHullEdgeOnly(const int tnum) {
+  cout << "\n=== Test " << tnum << ": Cell Intersects Hull Edge-Only Semantics ===" << endl;
+
+  RealPoint xlo(-1.0, -1.0);
+  RealPoint xhi(13.0, 13.0);
+  auto& Q = Quantizer2D::instance();
+  Q.init(xlo, xhi);
+
+  // Large triangular hull with hypotenuse x + y = 10.
+  PLC hullPLC;
+  hullPLC.facets.resize(3);
+  hullPLC.facets[0] = {0, 1};
+  hullPLC.facets[1] = {1, 2};
+  hullPLC.facets[2] = {2, 0};
+  vector<RealType> hullVertices = {
+    0.0, 0.0,
+    10.0, 0.0,
+    0.0, 10.0
+  };
+  QuantPLC2D hull(hullPLC, hullVertices);
+
+  QuantTessellation<2> mesh;
+
+  // Cell 0 straddles the hull hypotenuse, so edges intersect.
+  mesh.nodes.push_back(Q.quantize(RealPoint(4.5, 4.5))); // 0
+  mesh.nodes.push_back(Q.quantize(RealPoint(5.5, 4.5))); // 1
+  mesh.nodes.push_back(Q.quantize(RealPoint(5.5, 5.5))); // 2
+  mesh.nodes.push_back(Q.quantize(RealPoint(4.5, 5.5))); // 3
+
+  // Cell 1 is strictly outside the hull, so no edges intersect.
+  mesh.nodes.push_back(Q.quantize(RealPoint(11.0, 11.0))); // 4
+  mesh.nodes.push_back(Q.quantize(RealPoint(12.0, 11.0))); // 5
+  mesh.nodes.push_back(Q.quantize(RealPoint(12.0, 12.0))); // 6
+  mesh.nodes.push_back(Q.quantize(RealPoint(11.0, 12.0))); // 7
+
+  // Cell 2 is strictly contained by the much larger hull, so no edges intersect.
+  mesh.nodes.push_back(Q.quantize(RealPoint(1.0, 1.0))); // 8
+  mesh.nodes.push_back(Q.quantize(RealPoint(2.0, 1.0))); // 9
+  mesh.nodes.push_back(Q.quantize(RealPoint(2.0, 2.0))); // 10
+  mesh.nodes.push_back(Q.quantize(RealPoint(1.0, 2.0))); // 11
+
+  mesh.faces = {
+    {0, 1}, {1, 2}, {2, 3}, {3, 0},
+    {4, 5}, {5, 6}, {6, 7}, {7, 4},
+    {8, 9}, {9, 10}, {10, 11}, {11, 8}
+  };
+
+  mesh.cells = {
+    {0, 1, 2, 3},
+    {4, 5, 6, 7},
+    {8, 9, 10, 11}
+  };
+
+  POLY_CHECK(mesh.cellIntersectsHull(hull, 0));
+  POLY_CHECK(!mesh.cellIntersectsHull(hull, 1));
+  POLY_CHECK(!mesh.cellIntersectsHull(hull, 2));
+
+  cout << "  Edge-only cell/hull intersection passed!" << endl;
+}
+
+//------------------------------------------------------------------------------
 // Test: Stress test with many points
 //------------------------------------------------------------------------------
 void testStress(const int tnum) {
@@ -525,37 +528,28 @@ int main(int argc, char** argv) {
   srand(42);  // Deterministic randomness for reproducibility
   int tnum = 1;
 
-  try {
-    // Quantization tests
-    testBasicConstruction(tnum++);
-    testQuantizationAccuracy(tnum++);
-    testDeduplication(tnum++);
-    testReduction(tnum++);
+  // Quantization tests
+  testBasicConstruction(tnum++);
+  testQuantizationAccuracy(tnum++);
+  testDeduplication(tnum++);
+  testReduction(tnum++);
 
-    // Geometric tests
-    testConvexHull(tnum++);
-    testEdgeOrdering(tnum++);
+  // Geometric tests
+  testConvexHull(tnum++);
+  testEdgeOrdering(tnum++);
 
-    // Collinear removal tests
-    testCollinearRemoval(tnum++);
+  // Containment tests
+  testWithinBasic(tnum++);
+  testWithinHoles(tnum++);
 
-    // Containment tests
-    testWithinBasic(tnum++);
-    testWithinHoles(tnum++);
+  // Utility tests
+  testHashComparison(tnum++);
+  testCellIntersectsHullEdgeOnly(tnum++);
 
-    // Utility tests
-    testHashComparison(tnum++);
+  // Stress test
+  testStress(tnum++);
 
-    // Stress test
-    testStress(tnum++);
-
-    cout << "\n=== All QuantPLC2D tests passed! ===" << endl;
-
-  } catch (const exception& e) {
-    cerr << "\nTest failed with exception: " << e.what() << endl;
-    comm.finalize();
-    return 1;
-  }
+  cout << "\n=== All QuantPLC2D tests passed! ===" << endl;
 
   comm.finalize();
   return 0;

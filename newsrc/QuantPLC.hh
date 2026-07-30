@@ -115,11 +115,11 @@ public:
                                     const QuantPLC<Dimension>& b) {
     POLY_ASSERT2((a.m_convex && b.m_convex), "Must call makeConvex() on both inputs");
     if constexpr (Dimension == 2) {
-      return convexIntersection(a.points, a.facets,
-                                b.points, b.facets);
+      return convexIntersect(a.points, a.facets,
+                             b.points, b.facets);
     } else if constexpr (Dimension == 3) {
-      return convexIntersection(a.points, a.facets, a.m_normals,
-                                b.points, b.facets, b.m_normals);
+      return convexIntersect(a.points, a.facets, a.m_normals,
+                             b.points, b.facets, b.m_normals);
     }
   }
 

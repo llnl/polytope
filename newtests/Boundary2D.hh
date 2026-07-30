@@ -47,6 +47,7 @@ public:
     starwithhole       = 8,
     trogdor2           = 9,
     squarewithstarhole = 10,
+    squarewithtrihole  = 11,
   };
 
   // Boundary type
@@ -136,6 +137,9 @@ public:
       break;
     case squarewithstarhole:
       this->setSquareWithStarHole();
+      break;
+    case squarewithtrihole:
+      this->setSquareWithTriHole();
       break;
     }
    }
@@ -556,6 +560,33 @@ public:
     }
 
     mType = squarewithstarhole;
+    this->finalize();
+  }
+
+  //------------------------------------------------------------------------
+  // squareWithTriHole
+  // Unit square with a hole shaped like off-centered right triangle
+  //------------------------------------------------------------------------
+  void setSquareWithTriHole() {
+    this->clear();
+    // The outer boundary
+    mDiff = 1.0;
+    this->setUnitSquare();
+    //vector<double> newPoints = {0.6, -0.8, 0.4, 0.8, 0.4, -0.8};
+    vector<double> newPoints = {0.4, -0.8, 0.6, -0.8, 0.4, 0.8};
+    auto Nf = newPoints.size()/2;
+    auto N = mPLCpoints.size()/2;
+    copy(newPoints.begin(), newPoints.end(), back_inserter(mPLCpoints));
+    mPLC.holes = vector<vector<vector<unsigned>>>(1);
+    mPLC.holes[0].resize(Nf);
+    for (int i = 0; i < Nf; ++i) {
+      unsigned fbegin = N + i;
+      unsigned fend = N + (i+1)%Nf;
+      mPLC.holes[0][i].resize(2);
+      mPLC.holes[0][i][0] = fbegin;
+      mPLC.holes[0][i][1] = fend;
+    }
+    mType = squarewithtrihole;
     this->finalize();
   }
 

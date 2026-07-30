@@ -45,30 +45,18 @@ void tests(const int tnum, bool boostTess) {
     numNodes = 9;
     break;
   case 2: // Cut square
-    testname = "Cut square";
-    boundary.setDefaultBoundary(0);
-    points = {0.05, 0.025, 0.025, 0.05, 0.05, -0.05, -0.05, -0.05, -0.05, 0.05};
-    numNodes = 11;
-    break;
+    {
+      testname = "Cut square";
+      boundary.setDefaultBoundary(0);
+      points = {0.05, 0.025, 0.025, 0.05, 0.05, -0.05, -0.05, -0.05, -0.05, 0.05};
+      numNodes = 11;
+      break;
+    }
   case 3: // Cut square with hole
     {
       testname = "Cut square with hole";
-      boundary.setDefaultBoundary(0);
+      boundary.setDefaultBoundary(11);
       points = {0.05, 0.025, 0.025, 0.05, 0.05, -0.05, -0.05, -0.05, -0.05, 0.05};
-      // Add a triangle hole
-      vector<double> newPoints = {0.6, -0.8, 0.4, 0.8, 0.4, -0.8};
-      auto Nf = newPoints.size()/2;
-      auto N = boundary.mPLCpoints.size()/2;
-      copy(newPoints.begin(), newPoints.end(), back_inserter(boundary.mPLCpoints));
-      boundary.mPLC.holes = vector<vector<vector<unsigned>>>(1);
-      boundary.mPLC.holes[0].resize(Nf);
-      for (int i = 0; i < Nf; ++i) {
-        unsigned fbegin = N + i;
-        unsigned fend = N + (i+1)%Nf;
-        boundary.mPLC.holes[0][i].resize(2);
-        boundary.mPLC.holes[0][i][0] = fbegin;
-        boundary.mPLC.holes[0][i][1] = fend;
-      }
       numNodes = 17;
     }
     break;
@@ -190,6 +178,7 @@ void tests(const int tnum, bool boostTess) {
   quantMesh.fillTessellation(mesh);
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
   outputMesh(mesh, outname, tnum, double(tnum));
+  compareArea(boundary, mesh);
   testWatertight(mesh, boundary.mPLC.holes.size());
   if (numNodes > 0) {
     // Ideally we would match nodes exactly but determine collinearity exactly is not really

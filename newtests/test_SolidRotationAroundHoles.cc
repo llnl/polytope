@@ -26,7 +26,6 @@
 using namespace std;
 using namespace polytope;
 
-
 // -----------------------------------------------------------------------
 // computeConstantVorticityFlow
 // -----------------------------------------------------------------------
@@ -122,6 +121,7 @@ void test(Tessellator<2,double>& tessellator) {
   Tessellation<2,double> mesh;
   tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
   outputMesh(mesh, testName, step, time);
+  compareArea(boundary, mesh);
 
   // Update the point positions and generate the mesh
   vector<double> halfTimePositions(points.size());
@@ -140,6 +140,7 @@ void test(Tessellator<2,double>& tessellator) {
     ++step;
     tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
     outputMesh(mesh, testName, step, time);
+    compareArea(boundary, mesh);
   }
 }
 

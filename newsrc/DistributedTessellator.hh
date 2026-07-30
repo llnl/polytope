@@ -35,6 +35,17 @@
 namespace polytope {
 
 template<int Dimension>
+struct GeneratorRecord {
+  using IntPoint = typename Quantizer<Dimension>::IntPoint;
+  using CoordHash = typename Quantizer<Dimension>::CoordHash;
+
+  int rank = -1;
+  unsigned ordinal = 0;
+  IntPoint point;
+  CoordHash hash = 0;
+};
+
+template<int Dimension>
 class DistributedTessellator: public Tessellator<Dimension, double> {
 
   //--------------------------- Public Interface ---------------------------//
@@ -44,27 +55,29 @@ public:
   using QuantizedTessellation = QuantTessellation<Dimension>;
   using TessellationType = Tessellation<Dimension, RealType>;
 
-  DistributedTessellator(const Base& serialTessellator);
+  DistributedTessellator(Base& serialTessellator);
   virtual ~DistributedTessellator() = default;
 
   virtual void tessellate(const std::vector<RealType>& points,
-                          TessellationType& mesh) const override;
+                          TessellationType& mesh) override;
 
   virtual void tessellate(const std::vector<RealType>& points,
                           const std::vector<RealType>& PLCpoints,
                           const PLC<Dimension>& geometry,
-                          TessellationType& mesh) const override;
+                          TessellationType& mesh) override;
 
   //! Simply becomes a wrapper for the Impl
-  virtual void tessellateQuantized(QuantizedTessellation& result) const override {
+  virtual void tessellateQuantized(QuantizedTessellation& result) override {
     this->tessellateQuantizedImpl(result);
   }
-  virtual void tessellateQuantizedImpl(QuantizedTessellation& result) const override;
+
+  virtual void tessellateQuantizedImpl(QuantizedTessellation& result) override;
 
   virtual std::string name() const override;
 
 private:
-  const Base& m_serialTessellator;
+  Base& m_serialTessellator;
+  std::vector<GeneratorRecord<Dimension>> m_localRecords;
 
   // Forbidden methods.
   DistributedTessellator();

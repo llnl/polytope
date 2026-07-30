@@ -9,6 +9,10 @@
 #include "Communicator.hh"
 #include "GeomUtils.hh"
 
+#include <algorithm>
+#include <map>
+#include <vector>
+
 using namespace std;
 
 namespace polytope {
@@ -30,8 +34,8 @@ public:
   Generators(const Point<3, double>& min,
              const Point<3, double>& max) :
     mCube(min, max) {
-    auto& q = Quantizer<3>::instance();
-    q.init(min, max);
+    auto& Q = Quantizer<3>::instance();
+    Q.init(min, max);
   }
 
   Generators(Boundary2D& boundary) :
@@ -216,32 +220,43 @@ public:
   //------------------------------------------------------------------------
   //------------------------------------------------------------------------
   // Assign points based on processor by removing non-local points
+  // Returns a map from each original point to its assigned rank
   //------------------------------------------------------------------------
-  void distributePointsAmongRanks(unsigned seed = 0) {
+  std::map<Point<Dimension, double>, int> distributePointsAmongRanks(unsigned seed = 0) {
+    auto& Q = Quantizer<Dimension>::instance();
     srand(seed);
     nPoints = mPoints.size()/Dimension;
+    std::map<Point<Dimension, double>, int> finalRanks;
     // Figure out parallel configuration
     int rank = Communicator::getRank();
     int numProcs = Communicator::getNProcs();
-    std::vector<int> procIndex(numProcs, -1);
+    POLY_CHECK2(nPoints >= static_cast<unsigned>(numProcs),
+                "Cannot distribute " << nPoints << " points among "
+                << numProcs << " ranks with unique seed points.");
+
+    std::vector<unsigned> pointIndices(nPoints);
+    for (unsigned i = 0; i < nPoints; ++i) pointIndices[i] = i;
+
     // Each proc gets assigned to a random, unique index in mPoints
-    for (int iproc = 0; iproc < numProcs; ++iproc) {
-      auto rval = random01();
-      auto r = int(rval*nPoints) - 1;
-      if (std::find(procIndex.begin(), procIndex.end(), r) == procIndex.end()) {
-        procIndex[iproc] = r;
-      }
+    std::vector<unsigned> procIndex(numProcs);
+    for (unsigned iproc = 0; iproc < static_cast<unsigned>(numProcs); ++iproc) {
+      const auto remaining = nPoints - iproc;
+      auto offset = static_cast<unsigned>(random01()*remaining);
+      offset = std::min(offset, remaining - 1);
+      std::swap(pointIndices[iproc], pointIndices[iproc + offset]);
+      procIndex[iproc] = pointIndices[iproc];
     }
+
     std::vector<Point<Dimension, double>> procPoint(numProcs);
     for (int iproc = 0; iproc < numProcs; ++iproc) {
-      int pin = procIndex[iproc];
-      if (pin >= 0) {
-        for (int d = 0; d < Dimension; ++d) {
-          procPoint[iproc][d] = mPoints[Dimension*pin+d];
-        }
+      const auto pin = procIndex[iproc];
+      for (int d = 0; d < Dimension; ++d) {
+        procPoint[iproc][d] = mPoints[Dimension*pin+d];
       }
     }
+
     std::vector<double> newPoints;
+    newPoints.reserve(mPoints.size());
     for (int i = 0; i < nPoints; ++i) {
       int owner = 0;
       Point<Dimension, double> point;
@@ -258,6 +273,10 @@ public:
           minDist = dis;
         }
       }
+      // Do a round-trip quant/dequant on the point to ensure it matches
+      // the point in the tessellated mesh.
+      Point<Dimension, double> qpoint = Q.dequantize(Q.quantize(point));
+      finalRanks[qpoint] = owner;
       if (owner == rank) {
         for (int d = 0; d < Dimension; ++d) {
           newPoints.push_back(point[d]);
@@ -266,6 +285,7 @@ public:
     }
     mPoints = std::move(newPoints);
     nPoints = mPoints.size()/Dimension;
+    return finalRanks;
   }
 };
 }

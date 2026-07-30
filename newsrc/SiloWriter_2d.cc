@@ -3,10 +3,7 @@
 #include "SiloUtils.hh"
 #include "Tessellation.hh"
 #include "QuantTessellation.hh"
-
-#ifdef POLYTOPE_ENABLE_MPI
 #include "Communicator.hh"
-#endif
 
 #include <fstream>
 #include <set>
@@ -32,7 +29,7 @@ namespace {
 //     otherwise the nodes of ~cellFaces[j] (the 1s complement)
 //     are in *clockwise* order and need to be reversed.
 //-------------------------------------------------------------------
-template <typename RealType, typename TessType>
+template <typename TessType>
 void
 traverseNodes(const TessType& mesh,
               int i,
@@ -57,76 +54,79 @@ traverseNodes(const TessType& mesh,
 }
 
 //-------------------------------------------------------------------
-template <typename RealType, typename TessType>
+template <typename TessType>
 void
-SiloWriter<2, RealType, TessType>::write(const TessType& mesh,
-                                         const map<string, RealType*>& nodeFields,
+SiloWriter<2, TessType>::write(const TessType& mesh,
+                                         const map<string, double*>& nodeFields,
                                          const map<string, vector<int>*>& nodeTags,
-                                         const map<string, RealType*>& edgeFields,
+                                         const map<string, double*>& edgeFields,
                                          const map<string, vector<int>*>& edgeTags,
-                                         const map<string, RealType*>& faceFields,
+                                         const map<string, double*>& faceFields,
                                          const map<string, vector<int>*>& faceTags,
-                                         const map<string, RealType*>& cellFields,
+                                         const map<string, double*>& cellFields,
                                          const map<string, vector<int>*>& cellTags,
                                          const string& filePrefix,
                                          const string& directory,
                                          int cycle,
-                                         RealType time,
+                                         double time,
                                          int numFiles,
                                          int mpiTag) {
+  int nproc = Communicator::getNProcs();
+  int rank = Communicator::getRank();
+  int root = Communicator::getRoot();
+  auto& comm = Communicator::communicator();
   // Strip .silo off of the prefix if it's there.
   string prefix = filePrefix;
   int index = prefix.find(".silo");
   if (index >= 0)
     prefix.erase(index);
   int coord_sys = DB_CARTESIAN;
-  // Open a file in Silo/HDF5 format for writing.
-#ifdef POLYTOPE_ENABLE_MPI
-  int nproc = Communicator::getNProcs();
-  int rank = Communicator::getRank();
-  int root = Communicator::getRoot();
-  auto& comm = Communicator::communicator();
-  int localRankHasPoints = (mesh.points.size() > 0) ? 1 : 0;
-  std::vector<int> ranksWithData = gatherValidRanks(localRankHasPoints);
-  if (numFiles == -1) {
-    int globalWriteProcs = static_cast<int>(ranksWithData.size());
-    MPI_Bcast(&globalWriteProcs, 1, MPI_INT, root, comm);
-    numFiles = globalWriteProcs;
-  }
-  POLY_ASSERT(numFiles <= nproc);
-
-  std::string masterDirName = getMasterDirName(directory, prefix, cycle);
-  if (rank == root) {
-    DIR* masterDir = opendir(masterDirName.c_str());
-    if (masterDir == 0) {
-      mkdir(masterDirName.c_str(), S_IRWXU | S_IRWXG);
-    } else {
-      closedir(masterDir);
-    }
-  }
-  Communicator::Barrier();
-  bool hasPoints = bool(localRankHasPoints);
-
-  std::string filename = getFilename(masterDirName, rank);
-  std::string meshname = getLocalMeshName();
-
-#else
   string dirname = directory;
   if (dirname.empty()) dirname = ".";
   std::string filename = getMasterFilename(prefix, cycle);
 
   std::string meshname = getGlobalMeshName();
   bool hasPoints = true;
+  // Open a file in Silo/HDF5 format for writing.
+#ifdef POLYTOPE_ENABLE_MPI
+  bool doParallel = false;
+  std::string masterDirName = "";
+  std::vector<int> ranksWithData;  
+  if (numFiles == -1 || numFiles > 1) {
+    doParallel = true;
+    int localRankHasPoints = (mesh.points.size() > 0) ? 1 : 0;
+    ranksWithData = std::move(gatherValidRanks(localRankHasPoints));
+    if (numFiles == -1) {
+      int globalWriteProcs = static_cast<int>(ranksWithData.size());
+      MPI_Bcast(&globalWriteProcs, 1, MPI_INT, root, comm);
+      numFiles = globalWriteProcs;
+    }
+    POLY_ASSERT(numFiles <= nproc);
+
+    masterDirName = getMasterDirName(directory, prefix, cycle);
+    if (rank == root) {
+      DIR* masterDir = opendir(masterDirName.c_str());
+      if (masterDir == 0) {
+        mkdir(masterDirName.c_str(), S_IRWXU | S_IRWXG);
+      } else {
+        closedir(masterDir);
+      }
+    }
+    Communicator::Barrier();
+    hasPoints = bool(localRankHasPoints);
+
+    filename = getFilename(masterDirName, rank);
+    meshname = getLocalMeshName();
+  }
 #endif
   if (hasPoints) {
     DBfile* file = DBCreate(filename.c_str(), DB_CLOBBER, DB_LOCAL, 0, DB_HDF5);
     // Add cycle/time metadata if needed.
     DBoptlist* optlist = DBMakeOptlist(10);
-    double dtime = static_cast<double>(time);
     if (cycle >= 0)
       DBAddOption(optlist, DBOPT_CYCLE, &cycle);
-    if (dtime != -FLT_MAX)
-      DBAddOption(optlist, DBOPT_DTIME, &dtime);
+    if (time >= 0.)
+      DBAddOption(optlist, DBOPT_DTIME, &time);
 
     DBAddOption(optlist, DBOPT_COORDSYS, &coord_sys);
     // This is optional for now, but we'll give it anyway.
@@ -170,7 +170,7 @@ SiloWriter<2, RealType, TessType>::write(const TessType& mesh,
     for (int i = 0; i < numCells; ++i) {
       // Gather the nodes from this cell in traversal order.
       vector<int> cellNodes;
-      traverseNodes<RealType, TessType>(mesh, i, cellNodes);
+      traverseNodes<TessType>(mesh, i, cellNodes);
       // Insert the cell's node connectivity into the node list.
       nodeList.push_back(cellNodes.size());
       nodeList.insert(nodeList.end(), cellNodes.begin(), cellNodes.end());
@@ -235,12 +235,12 @@ SiloWriter<2, RealType, TessType>::write(const TessType& mesh,
 
     // FIXME: We really should try to use the number of edges for edge fields.
     const int numFaces = mesh.faces.size();
-    //writeFieldsToFile<RealType>(nodeFields, varmeshname, file, numNodes, DB_NODECENT, optlist);
+    //writeFieldsToFile(nodeFields, varmeshname, file, numNodes, DB_NODECENT, optlist);
 
     // Write cell-centered fields to CELLS directory
-    writeFieldsToFile<RealType>(edgeFields, meshname, file, numFaces, DB_EDGECENT, optlist);
-    writeFieldsToFile<RealType>(faceFields, meshname, file, numFaces, DB_FACECENT, optlist);
-    writeFieldsToFile<RealType>(cellFields, meshname, file, numCells, DB_ZONECENT, optlist);
+    writeFieldsToFile(edgeFields, meshname, file, numFaces, DB_EDGECENT, optlist);
+    writeFieldsToFile(faceFields, meshname, file, numFaces, DB_FACECENT, optlist);
+    writeFieldsToFile(cellFields, meshname, file, numCells, DB_ZONECENT, optlist);
 
     int numPoints = mesh.points.size();
     vector<double> xp(numPoints), yp(numPoints);
@@ -268,7 +268,7 @@ SiloWriter<2, RealType, TessType>::write(const TessType& mesh,
 #ifdef POLYTOPE_ENABLE_MPI
 
   // Finally, write the uber-master file.
-  if (rank == root) {
+  if (rank == root && doParallel) {
     std::string masterFilename = getMasterFilename(prefix, cycle);
     int driver = DB_HDF5;
     DBfile* file = DBCreate(masterFilename.c_str(), DB_CLOBBER, DB_LOCAL, "Master file", driver);
@@ -286,11 +286,10 @@ SiloWriter<2, RealType, TessType>::write(const TessType& mesh,
       pointMeshNames.push_back(strDup((p + "points").c_str()));
     }
     DBoptlist* masteroptlist = DBMakeOptlist(10);
-    double dtime = static_cast<double>(time);
     if (cycle >= 0)
       DBAddOption(masteroptlist, DBOPT_CYCLE, &cycle);
-    if (dtime != -FLT_MAX)
-      DBAddOption(masteroptlist, DBOPT_DTIME, &dtime);
+    if (time >= 0.)
+      DBAddOption(masteroptlist, DBOPT_DTIME, &time);
     std::string global_mesh_name = getGlobalMeshName();
     DBAddOption(masteroptlist, DBOPT_MMESH_NAME, global_mesh_name.data());
     DBAddOption(masteroptlist, DBOPT_COORDSYS, &coord_sys);
@@ -298,9 +297,9 @@ SiloWriter<2, RealType, TessType>::write(const TessType& mesh,
     DBPutMultimesh(file, global_mesh_name.c_str(), nblocks, cellMeshNames.data(), cellMeshTypes.data(), masteroptlist);
     DBPutMultimesh(file, "PPOINTS", nblocks, pointMeshNames.data(), pointMeshTypes.data(), masteroptlist);
 
-    putCellVars<RealType>(file, edgeFields, procPaths, nblocks, varTypes, masteroptlist);
-    putCellVars<RealType>(file, faceFields, procPaths, nblocks, varTypes, masteroptlist);
-    putCellVars<RealType>(file, cellFields, procPaths, nblocks, varTypes, masteroptlist);
+    putCellVars(file, edgeFields, procPaths, nblocks, varTypes, masteroptlist);
+    putCellVars(file, faceFields, procPaths, nblocks, varTypes, masteroptlist);
+    putCellVars(file, cellFields, procPaths, nblocks, varTypes, masteroptlist);
 #ifdef POLYTOPE_ENABLE_DEBUG
     std::vector<char*> nodeMeshNames;
     for (const auto& p : procPaths) {
@@ -321,13 +320,15 @@ SiloWriter<2, RealType, TessType>::write(const TessType& mesh,
       free(pointMeshNames[i]);
     }
   }
-  Communicator::Barrier();
+  if (doParallel) {
+    Communicator::Barrier();
+  }
 #endif
 }
 //-------------------------------------------------------------------
 
 // Explicit instantiation.
-template class SiloWriter<2, double, Tessellation<2, double>>;
-template class SiloWriter<2, int, QuantTessellation<2>>;
+template class SiloWriter<2, Tessellation<2, double>>;
+template class SiloWriter<2, QuantTessellation<2>>;
 
 } // end namespace

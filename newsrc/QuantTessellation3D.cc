@@ -49,7 +49,7 @@ QuantTessellation<3>::cullExternalPoints(const QuantPLC<3>& QPLC) {
 template<>
 void
 QuantTessellation<3>::clipTessellation(const QuantPLC<3>& QPLC,
-                                       const Tessellator<3, double>& tessellator) {
+                                       Tessellator<3, double>& tessellator) {
   POLY_CONTRACT_VAR(QPLC);
   POLY_CONTRACT_VAR(tessellator);
   // 3D has not been implemented

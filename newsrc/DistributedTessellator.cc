@@ -8,6 +8,8 @@
 #include <set>
 #include <sstream>
 #include <unordered_map>
+#include <iostream>
+#include <fstream>
 
 #include "Intersections.hh"
 #include "QuantPLC.hh"
@@ -17,17 +19,6 @@
 namespace polytope {
 
 namespace {
-
-template<int Dimension>
-struct GeneratorRecord {
-  using IntPoint = typename Quantizer<Dimension>::IntPoint;
-  using CoordHash = typename Quantizer<Dimension>::CoordHash;
-
-  int rank = -1;
-  unsigned ordinal = 0;
-  IntPoint point;
-  CoordHash hash = 0;
-};
 
 template<int Dimension>
 void
@@ -395,7 +386,7 @@ visibleLocalGenerators(const QuantTessellation<Dimension>& localMesh,
 //------------------------------------------------------------------------------
 template<int Dimension>
 DistributedTessellator<Dimension>::
-DistributedTessellator(const Base& serialTessellator):
+DistributedTessellator(Base& serialTessellator):
   m_serialTessellator(serialTessellator) {
 }
 
@@ -419,7 +410,7 @@ template<int Dimension>
 void
 DistributedTessellator<Dimension>::
 tessellate(const std::vector<RealType>& points,
-           TessellationType& mesh) const {
+           TessellationType& mesh) {
   POLY_ASSERT(mesh.empty());
   POLY_ASSERT(points.size() % Dimension == 0);
 
@@ -429,6 +420,7 @@ tessellate(const std::vector<RealType>& points,
 
   QuantizedTessellation quantmesh(points);
   this->tessellateQuantized(quantmesh);
+  filterToLocalGenerators(quantmesh, m_localRecords);
   quantmesh.fillTessellation(mesh);
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
 }
@@ -442,7 +434,7 @@ DistributedTessellator<Dimension>::
 tessellate(const std::vector<RealType>& points,
            const std::vector<RealType>& PLCpoints,
            const PLC<Dimension>& geometry,
-           TessellationType& mesh) const {
+           TessellationType& mesh) {
   POLY_ASSERT(mesh.empty());
   POLY_ASSERT(points.size() % Dimension == 0);
   POLY_ASSERT(PLCpoints.size() % Dimension == 0);
@@ -457,6 +449,7 @@ tessellate(const std::vector<RealType>& points,
   quantmesh.cullExternalPoints(qplc);
   this->tessellateQuantized(quantmesh);
   quantmesh.clipTessellation(qplc, m_serialTessellator);
+  filterToLocalGenerators(quantmesh, m_localRecords);
   quantmesh.fillTessellation(mesh);
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
 }
@@ -467,7 +460,7 @@ tessellate(const std::vector<RealType>& points,
 template<int Dimension>
 void
 DistributedTessellator<Dimension>::
-tessellateQuantizedImpl(QuantizedTessellation& qmesh) const {
+tessellateQuantizedImpl(QuantizedTessellation& qmesh) {
   auto rank = Communicator::getRank();
   auto size = Communicator::getNProcs();
   auto localRecords = recordsFromQuantTessellation(qmesh);
@@ -524,7 +517,8 @@ tessellateQuantizedImpl(QuantizedTessellation& qmesh) const {
   auto finalPoints = pointsFromRecords(finalRecords);
   QuantizedTessellation finalMesh(finalPoints);
   m_serialTessellator.tessellateQuantized(finalMesh);
-  filterToLocalGenerators(finalMesh, finalRecords);
+  // Retain the records to filter to only local generators after clipping
+  m_localRecords = std::move(finalRecords);
   qmesh = std::move(finalMesh);
 }
 

@@ -258,7 +258,7 @@ public:
 
   // Clip tessellation against PLC boundary planes
   void clipTessellation(const QuantPLC<Dimension>& QPLC,
-                        const Tessellator<Dimension, double>& tessellator);
+                        Tessellator<Dimension, double>& tessellator);
 
   // Remove any external generator points
   void cullExternalPoints(const QuantPLC<Dimension>& QPLC);

@@ -26,7 +26,7 @@ public:
   //! \param points A (Dimension*numPoints) array containing point coordinates.
   //! \param mesh This will store the resulting tessellation.
   virtual void tessellate(const std::vector<RealType>& points,
-                          Tessellation<Dimension, RealType>& mesh) const;
+                          Tessellation<Dimension, RealType>& mesh);
 
   //! Generate a Voronoi-like tessellation for the given set of generator 
   //! points and a description of the geometry in which they exist.
@@ -41,7 +41,7 @@ public:
   virtual void tessellate(const std::vector<RealType>& points,
                           const std::vector<RealType>& PLCpoints,
                           const PLC<Dimension>& geometry,
-                          Tessellation<Dimension, RealType>& mesh) const;
+                          Tessellation<Dimension, RealType>& mesh);
 
   //! Generate a Voronoi-like tessellation for the given set of generator 
   //! points and a description of the geometry in which they exist.
@@ -52,7 +52,7 @@ public:
   //! \param mesh This will store the resulting tessellation.
   virtual void tessellate(const std::vector<RealType>& points,
                           const ReducedPLC<Dimension, RealType>& geometry,
-                          Tessellation<Dimension, RealType>& mesh) const;
+                          Tessellation<Dimension, RealType>& mesh);
 
   //! Override this method to return true if this Tessellator supports 
   //! the description of a domain boundary using a PLC (as in the second 
@@ -70,12 +70,12 @@ public:
   //! Tessellator implementations must provide, on which the other tessellation methods
   //! in polytope build.
   virtual void
-  tessellateQuantizedImpl(QuantTessellation<Dimension>& result) const = 0;
+  tessellateQuantizedImpl(QuantTessellation<Dimension>& result) = 0;
 
   //! Wrapper for tessellateQuantizedImpl that tests if only 1 generator point is given.
   //! DistributedTessellator will override this.
   virtual void
-  tessellateQuantized(QuantTessellation<Dimension>& result) const {
+  tessellateQuantized(QuantTessellation<Dimension>& result) {
     if (result.points.size() == 1) {
       singleNodeTessellate(result);
     } else {
@@ -97,11 +97,11 @@ public:
     return Q.m_dx_o / Q.m_lx_o;
   }
 
-  void singleNodeTessellate(QuantTessellation<Dimension>& quantmesh) const;
+  void singleNodeTessellate(QuantTessellation<Dimension>& quantmesh);
 
 private:
 
-  mutable bool m_init = false;
+  bool m_init = false;
   // Disallowed.
   Tessellator(const Tessellator&);
   Tessellator& operator=(const Tessellator&);

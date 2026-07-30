@@ -20,23 +20,23 @@ namespace polytope {
 using namespace std;
 
 //-------------------------------------------------------------------
-template <typename RealType, typename TessType>
+template <typename TessType>
 void
-SiloWriter<3, RealType, TessType>::write(const TessType& mesh,
-                                         const map<string, RealType*>& nodeFields,
-                                         const map<string, vector<int>*>& nodeTags,
-                                         const map<string, RealType*>& edgeFields,
-                                         const map<string, vector<int>*>& edgeTags,
-                                         const map<string, RealType*>& faceFields,
-                                         const map<string, vector<int>*>& faceTags,
-                                         const map<string, RealType*>& cellFields,
-                                         const map<string, vector<int>*>& cellTags,
-                                         const string& filePrefix,
-                                         const string& directory,
-                                         int cycle,
-                                         RealType time,
-                                         int numFiles,
-                                         int mpiTag) {
+SiloWriter<3, TessType>::write(const TessType& mesh,
+                               const map<string, double*>& nodeFields,
+                               const map<string, vector<int>*>& nodeTags,
+                               const map<string, double*>& edgeFields,
+                               const map<string, vector<int>*>& edgeTags,
+                               const map<string, double*>& faceFields,
+                               const map<string, vector<int>*>& faceTags,
+                               const map<string, double*>& cellFields,
+                               const map<string, vector<int>*>& cellTags,
+                               const string& filePrefix,
+                               const string& directory,
+                               int cycle,
+                               double time,
+                               int numFiles,
+                               int mpiTag) {
   // Strip .silo off of the prefix if it's there.
   string prefix = filePrefix;
   int index = prefix.find(".silo");
@@ -85,11 +85,10 @@ SiloWriter<3, RealType, TessType>::write(const TessType& mesh,
     DBfile* file = DBCreate(filename.c_str(), DB_CLOBBER, DB_LOCAL, 0, DB_HDF5);
     // Add cycle/time metadata if needed.
     DBoptlist* optlist = DBMakeOptlist(10);
-    double dtime = static_cast<double>(time);
     if (cycle >= 0)
       DBAddOption(optlist, DBOPT_CYCLE, &cycle);
-    if (dtime != -FLT_MAX)
-      DBAddOption(optlist, DBOPT_DTIME, &dtime);
+    if (time >= 0.)
+      DBAddOption(optlist, DBOPT_DTIME, &time);
 
     DBAddOption(optlist, DBOPT_COORDSYS, &coord_sys);
     // This is optional for now, but we'll give it anyway.
@@ -228,9 +227,9 @@ SiloWriter<3, RealType, TessType>::write(const TessType& mesh,
     //writeFieldsToFile<RealType>(nodeFields, varmeshname, file, numNodes, DB_NODECENT, optlist);
 
     // Write cell-centered fields to CELLS directory
-    writeFieldsToFile<RealType>(edgeFields, meshname, file, numFaces, DB_EDGECENT, optlist);
-    writeFieldsToFile<RealType>(faceFields, meshname, file, numFaces, DB_FACECENT, optlist);
-    writeFieldsToFile<RealType>(cellFields, meshname, file, numCells, DB_ZONECENT, optlist);
+    writeFieldsToFile(edgeFields, meshname, file, numFaces, DB_EDGECENT, optlist);
+    writeFieldsToFile(faceFields, meshname, file, numFaces, DB_FACECENT, optlist);
+    writeFieldsToFile(cellFields, meshname, file, numCells, DB_ZONECENT, optlist);
 
     int numPoints = mesh.points.size();
     vector<double> xp(numPoints), yp(numPoints), zp(numPoints);
@@ -278,11 +277,10 @@ SiloWriter<3, RealType, TessType>::write(const TessType& mesh,
       pointMeshNames.push_back(strDup((p + "points").c_str()));
     }
     DBoptlist* masteroptlist = DBMakeOptlist(10);
-    double dtime = static_cast<double>(time);
     if (cycle >= 0)
       DBAddOption(masteroptlist, DBOPT_CYCLE, &cycle);
-    if (dtime != -FLT_MAX)
-      DBAddOption(masteroptlist, DBOPT_DTIME, &dtime);
+    if (time >= 0.)
+      DBAddOption(masteroptlist, DBOPT_DTIME, &time);
     std::string global_mesh_name = getGlobalMeshName();
     DBAddOption(masteroptlist, DBOPT_MMESH_NAME, global_mesh_name.data());
     DBAddOption(masteroptlist, DBOPT_COORDSYS, &coord_sys);
@@ -290,9 +288,9 @@ SiloWriter<3, RealType, TessType>::write(const TessType& mesh,
     DBPutMultimesh(file, global_mesh_name.c_str(), nblocks, cellMeshNames.data(), cellMeshTypes.data(), masteroptlist);
     DBPutMultimesh(file, "PPOINTS", nblocks, pointMeshNames.data(), pointMeshTypes.data(), masteroptlist);
 
-    putCellVars<RealType>(file, edgeFields, procPaths, nblocks, varTypes, masteroptlist);
-    putCellVars<RealType>(file, faceFields, procPaths, nblocks, varTypes, masteroptlist);
-    putCellVars<RealType>(file, cellFields, procPaths, nblocks, varTypes, masteroptlist);
+    putCellVars(file, edgeFields, procPaths, nblocks, varTypes, masteroptlist);
+    putCellVars(file, faceFields, procPaths, nblocks, varTypes, masteroptlist);
+    putCellVars(file, cellFields, procPaths, nblocks, varTypes, masteroptlist);
 #ifdef POLYTOPE_ENABLE_DEBUG
     std::vector<char*> nodeMeshNames;
     for (const auto& p : procPaths) {
@@ -319,7 +317,7 @@ SiloWriter<3, RealType, TessType>::write(const TessType& mesh,
 //-------------------------------------------------------------------
 
 // Explicit instantiation.
-template class SiloWriter<3, double, Tessellation<3, double>>;
-template class SiloWriter<3, int64_t, QuantTessellation<3>>;
+template class SiloWriter<3, Tessellation<3, double>>;
+template class SiloWriter<3, QuantTessellation<3>>;
 
 } // end namespace

@@ -55,6 +55,7 @@ void test(Tessellator<2,double>& tessellator) {
     Tessellation<2,double> mesh;
     tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
     outputMesh(mesh,testName,test);
+    compareArea(boundary, mesh);
     testWatertight(mesh, boundary.mPLC.holes.size());
     ++test;
   }
@@ -73,6 +74,7 @@ void test(Tessellator<2,double>& tessellator) {
     Tessellation<2,double> mesh;
     tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC,mesh);
     outputMesh(mesh,testName,test);
+    compareArea(boundary, mesh);
     testWatertight(mesh, boundary.mPLC.holes.size());
     ++test;
   }
@@ -85,6 +87,7 @@ void test(Tessellator<2,double>& tessellator) {
     Tessellation<2,double> mesh;
     tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
     outputMesh(mesh,testName,test);
+    compareArea(boundary, mesh);
     testWatertight(mesh, boundary.mPLC.holes.size());
     ++test;
   }
@@ -98,6 +101,7 @@ void test(Tessellator<2,double>& tessellator) {
     Tessellation<2,double> mesh;
     tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
     outputMesh(mesh,testName,test);
+    compareArea(boundary, mesh);
     testWatertight(mesh, boundary.mPLC.holes.size());
     ++test;
   }

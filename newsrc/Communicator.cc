@@ -125,7 +125,7 @@ void Communicator::abort() {
     MPI_Abort(communicator(), 1);
   }
 #endif
-  abort();
+  std::abort();
 }
 
 int Communicator::getRoot() {

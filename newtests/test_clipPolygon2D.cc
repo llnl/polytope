@@ -29,7 +29,6 @@ namespace {
 
 using CoordType = typename HashKey<2>::IntType;;
 using IntPoint = Point2<CoordType>;
-#if 0
 //------------------------------------------------------------------------------
 // Test 1: Point-line classification (Layer 1)
 //------------------------------------------------------------------------------
@@ -372,7 +371,7 @@ void testSequentialClipping(const int tnum) {
 
   cout << "PASS" << endl;
 }
-#endif
+
 } // anonymous namespace
 
 //------------------------------------------------------------------------------
@@ -382,28 +381,19 @@ int main(int argc, char** argv) {
   auto& comm = Communicator::instance();
   comm.init(argc, argv);
 
-//   try {
-//     int test = 1;
-//     testPointLineClassification(test++);
-//     testEdgeLineClipping(test++);
-//     testClipSquareHorizontal(test++);
-//     testClipSquareVertical(test++);
-//     testClipSquareDiagonal(test++);
-//     testClipTriangle(test++);
-//     testPolygonFullyInside(test++);
-//     testPolygonFullyOutside(test++);
-//     testPolygonEdgeOnLine(test++);
-//     testSequentialClipping(test++);
+  int test = 1;
+  testPointLineClassification(test++);
+  testEdgeLineClipping(test++);
+  testClipSquareHorizontal(test++);
+  testClipSquareVertical(test++);
+  testClipSquareDiagonal(test++);
+  testClipTriangle(test++);
+  testPolygonFullyInside(test++);
+  testPolygonFullyOutside(test++);
+  testPolygonEdgeOnLine(test++);
+  testSequentialClipping(test++);
 
-//     cout << "\n=== ALL TESTS PASSED ===" << endl;
-//   } catch (const exception& e) {
-//     cout << "\n=== TEST FAILED WITH EXCEPTION ===" << endl;
-//     cout << e.what() << endl;
-// #ifdef POLYTOPE_ENABLE_MPI
-//     MPI_Finalize();
-// #endif
-//     return 1;
-//   }
+  cout << "\n=== ALL TESTS PASSED ===" << endl;
 
   comm.finalize();
   return 0;

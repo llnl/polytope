@@ -39,7 +39,7 @@ namespace polytope {
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 //------------------------------------------------------------------------------
-// Test if points intersect with a convex hull using half-space intersection, 2D
+// Test if points are contained in a convex hull using half-space intersection
 //------------------------------------------------------------------------------
 template<typename CoordType>
 bool pointInPolygon_convex(const std::vector<std::vector<unsigned>>& facets,
@@ -69,11 +69,15 @@ bool pointInPolygon_convex(const typename Cell<2, CoordType>::CellType& vertices
   return false;
 }
 
+//------------------------------------------------------------------------------
+// Tests if two convex hulls overlap, returns true if one polygon completely
+// contains the other.
+//------------------------------------------------------------------------------
 template<typename CoordType>
-bool convexIntersection(const std::vector<Point2<CoordType>>& pointsA,
-                        const std::vector<std::vector<unsigned>>& facetsA,
-                        const std::vector<Point2<CoordType>>& pointsB,
-                        const std::vector<std::vector<unsigned>>& facetsB) {
+bool convexIntersect(const std::vector<Point2<CoordType>>& pointsA,
+                     const std::vector<std::vector<unsigned>>& facetsA,
+                     const std::vector<Point2<CoordType>>& pointsB,
+                     const std::vector<std::vector<unsigned>>& facetsB) {
   if (pointInPolygon_convex(facetsA, pointsA, pointsB) ||
       pointInPolygon_convex(facetsB, pointsB, pointsA)) {
     return true;
@@ -82,8 +86,8 @@ bool convexIntersection(const std::vector<Point2<CoordType>>& pointsA,
 }
 
 template<typename CoordType>
-bool convexIntersection(const typename Cell<2, CoordType>::CellType& pointsA,
-                        const typename Cell<2, CoordType>::CellType& pointsB) {
+bool convexIntersect(const typename Cell<2, CoordType>::CellType& pointsA,
+                     const typename Cell<2, CoordType>::CellType& pointsB) {
   if (pointInPolygon_convex(pointsA, pointsB) ||
       pointInPolygon_convex(pointsB, pointsA)) {
     return true;
@@ -91,40 +95,13 @@ bool convexIntersection(const typename Cell<2, CoordType>::CellType& pointsA,
   return false;
 }
 
-//------------------------------------------------------------------------------
-// Point-in-polyhedron test using half-space intersection
-//
-// Tests if ANY of the test points is inside the convex polyhedron.
-// A point is inside if it's on the negative (inside) side of ALL face planes.
-// Assumes facets are oriented with outward-pointing normals.
-// Uses precomputed normals for efficiency.
-//------------------------------------------------------------------------------
 template<typename CoordType>
-bool pointInPolyhedron_convex(const std::vector<std::vector<unsigned>>& facets,
-                              const std::vector<Point3<CoordType>>& vertices,
-                              const std::vector<Point3<CoordType>>& normals,
-                              const std::vector<Point3<CoordType>>& points) {
-  // For each facet, use precomputed normal and test all points
-  for (unsigned ifacet = 0; ifacet < facets.size(); ++ifacet) {
-    const auto& v0 = vertices[facets[ifacet][0]];
-    const auto& normal = normals[ifacet];
-
-    if (aboveBelow(v0, normal, points)) {
-      return true;
-    }
-  }
-
-  // If we get here, at least one point is inside (not marked outside)
-  return false;
-}
-
-template<typename CoordType>
-bool convexIntersection(const std::vector<Point3<CoordType>>& pointsA,
-                        const std::vector<std::vector<unsigned>>& facetsA,
-                        const std::vector<Point3<CoordType>>& normalsA,
-                        const std::vector<Point3<CoordType>>& pointsB,
-                        const std::vector<std::vector<unsigned>>& facetsB,
-                        const std::vector<Point3<CoordType>>& normalsB) {
+bool convexIntersect(const std::vector<Point3<CoordType>>& pointsA,
+                     const std::vector<std::vector<unsigned>>& facetsA,
+                     const std::vector<Point3<CoordType>>& normalsA,
+                     const std::vector<Point3<CoordType>>& pointsB,
+                     const std::vector<std::vector<unsigned>>& facetsB,
+                     const std::vector<Point3<CoordType>>& normalsB) {
   // Separating Axis Theorem: Test face normals of A as potential separating axes
   // For each face of A, check if all vertices of B are on the positive (outside) side
   for (size_t i = 0; i < facetsA.size(); ++i) {
@@ -179,6 +156,77 @@ bool convexIntersection(const std::vector<Point3<CoordType>>& pointsA,
     }
   }
   return true;
+}
+
+//------------------------------------------------------------------------------
+// Tests if the boundaries of two polygons intersect. Only returns true if any
+// edges intersect but not if one completely contains the other.
+//------------------------------------------------------------------------------
+template<typename CoordType>
+bool convexBoundaryIntersect(const std::vector<Point2<CoordType>>& pointsA,
+                             const std::vector<std::vector<unsigned>>& facetsA,
+                             const std::vector<Point2<CoordType>>& pointsB,
+                             const std::vector<std::vector<unsigned>>& facetsB) {
+  Point2<CoordType> result;
+  for (const auto& fa : facetsA) {
+    auto vai = pointsA[fa[0]];
+    auto vaj = pointsA[fa[1]];
+    for (const auto& fb : facetsB) {
+      auto vbi = pointsB[fb[0]];
+      auto vbj = pointsB[fb[1]];
+      if (segmentIntersection2D(vai, vaj, vbi, vbj, result)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+template<typename CoordType>
+bool convexBoundaryIntersect(const typename Cell<2, CoordType>::CellType& pointsA,
+                             const typename Cell<2, CoordType>::CellType& pointsB) {
+  Point2<CoordType> result;
+  auto Na = pointsA.size();
+  auto Nb = pointsB.size();
+  for (int fa = 0; fa < Na; ++fa) {
+    auto vai = pointsA[fa];
+    auto vaj = pointsA[(fa+1)%Na];
+    for (int fb = 0; fb < Nb; ++fb) {
+      auto vbi = pointsB[fb];
+      auto vbj = pointsB[(fb+1)%Nb];
+      if (segmentIntersection2D(vai, vaj, vbi, vbj, result)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+//------------------------------------------------------------------------------
+// Point-in-polyhedron test using half-space intersection
+//
+// Tests if ANY of the test points is inside the convex polyhedron.
+// A point is inside if it's on the negative (inside) side of ALL face planes.
+// Assumes facets are oriented with outward-pointing normals.
+// Uses precomputed normals for efficiency.
+//------------------------------------------------------------------------------
+template<typename CoordType>
+bool pointInPolyhedron_convex(const std::vector<std::vector<unsigned>>& facets,
+                              const std::vector<Point3<CoordType>>& vertices,
+                              const std::vector<Point3<CoordType>>& normals,
+                              const std::vector<Point3<CoordType>>& points) {
+  // For each facet, use precomputed normal and test all points
+  for (unsigned ifacet = 0; ifacet < facets.size(); ++ifacet) {
+    const auto& v0 = vertices[facets[ifacet][0]];
+    const auto& normal = normals[ifacet];
+
+    if (aboveBelow(v0, normal, points)) {
+      return true;
+    }
+  }
+
+  // If we get here, at least one point is inside (not marked outside)
+  return false;
 }
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -497,8 +545,8 @@ bool pointOnPolygon(const Point2<CoordType>& point,
 // Tests if segment [a, b] intersects segment [c, d].
 // If they intersect, returns true and fills result with intersection point.
 //
-// Uses parametric form and cross products to avoid floating-point operations.
-// Carries normalization denominator to delay division until final result.
+// Integer version: Uses parametric form and cross products to avoid overflow.
+// Floating-point version: Uses standard floating-point arithmetic.
 //
 // Returns false if:
 //   - Segments are parallel/collinear
@@ -510,51 +558,58 @@ bool segmentIntersection2D(const Point2<CoordType>& a,
                            const Point2<CoordType>& c,
                            const Point2<CoordType>& d,
                            Point2<CoordType>& result) {
-  using Wide = WideInt<CoordType>;
+  if constexpr (std::is_floating_point<CoordType>::value) {
+      const Point2<CoordType> r = b - a;
+      const Point2<CoordType> s = d - c;
+      const Point2<CoordType> ca = c - a;
 
-  // Direction vectors
-  const Point2<CoordType> r1 = b - a;  // Direction of segment [a, b]
-  const Point2<CoordType> r2 = d - c;  // Direction of segment [c, d]
-  const Point2<CoordType> ca = c - a;  // Vector from a to c
+      const CoordType denom = r.x*s.y - r.y*s.x;
+      if (std::abs(denom) < std::numeric_limits<CoordType>::epsilon()) {
+        return false;
+      }
 
-  // Compute denominator (r1 × r2)
-  Wide denom = qcross<CoordType>(r1, r2);
+      const CoordType t = (ca.x*s.y - ca.y*s.x) / denom;
+      const CoordType u = (ca.x*r.y - ca.y*r.x) / denom;
 
-  // Parallel or collinear segments
-  if (denom == 0) return false;
+      if (t < 0 || t > 1 || u < 0 || u > 1) {
+        return false;
+      }
 
-  // Compute parametric coordinates
-  // t = (ca × r2) / denom  (parameter along segment [a, b])
-  // u = (ca × r1) / denom  (parameter along segment [c, d])
-  Wide t_num = qcross<CoordType>(ca, r2);
-  Wide u_num = qcross<CoordType>(ca, r1);
+      result.x = a.x + t*r.x;
+      result.y = a.y + t*r.y;
+      return true;
 
-  // Normalize signs (make denominator positive)
-  if (denom < 0) {
-    t_num = -t_num;
-    u_num = -u_num;
-    denom = -denom;
+    } else {
+    using Wide = WideInt<CoordType>;
+
+    const Point2<CoordType> r = b - a;
+    const Point2<CoordType> s = d - c;
+    const Point2<CoordType> ca = c - a;
+
+    Wide denom = qcross<CoordType>(r, s);
+    if (denom == 0) return false;
+
+    Wide t_num = qcross<CoordType>(ca, s);
+    Wide u_num = qcross<CoordType>(ca, r);
+
+    if (denom < 0) {
+      t_num = -t_num;
+      u_num = -u_num;
+      denom = -denom;
+    }
+
+    if (t_num < 0 || t_num > denom || u_num < 0 || u_num > denom) {
+      return false;
+    }
+
+    const CoordType q = static_cast<CoordType>(t_num / denom);
+    const auto rem = static_cast<double>(t_num % denom);
+    const auto frac = (rem*r.template type_cast<double>() /
+                       static_cast<double>(denom)).template type_cast<CoordType>();
+
+    result = a + q*r + frac;
+    return true;
   }
-
-  // Check if intersection is within both segments [0, 1]
-  if (t_num < 0 || t_num > denom || u_num < 0 || u_num > denom) {
-    return false;
-  }
-
-  // Normalize denom and t_num to prevent overflow in final computation
-  // Target: 30 bits to leave room for coordinate multiplication (31 + 30 = 52 < 64)
-  auto shift = bitShiftAmount(denom, 21);
-  auto denom_norm = denom >> shift;
-  Wide t_num_norm = t_num >> shift;
-
-  // Compute intersection point: a + t * r1
-  // Keep in high-precision until final conversion
-  const auto ah = a.template type_cast<Wide>();
-  const auto r1h = r1.template type_cast<Wide>();
-  const auto intersect = (ah * denom_norm + r1h * t_num_norm) / denom_norm;
-
-  result = intersect.template type_cast<CoordType>();
-  return true;
 }
 
  //------------------------------------------------------------------------------
@@ -624,7 +679,8 @@ bool segmentRayIntersection2D(const Point2<CoordType>& a,
     if (t_num < 0 || u_num < 0 || u_num > denom) return false;
     CoordType q = t_num/denom;
     auto r = static_cast<double>(t_num%denom);
-    auto frac = (r*n.template type_cast<double>()/static_cast<double>(denom)).template type_cast<CoordType>();
+    auto frac = (r*n.template type_cast<double>()/
+                 static_cast<double>(denom)).template type_cast<CoordType>();
     result = c + q*n + frac;
     return true;
   }

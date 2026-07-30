@@ -38,6 +38,7 @@ struct Serializer {
                               const std::vector<char>::const_iterator& endItr) {
     const unsigned n = sizeof(T);
     char* data = reinterpret_cast<char*>(&val);
+    POLY_CONTRACT_VAR(endItr);
     POLY_ASSERT(bufItr + n <= endItr);
     std::copy(bufItr, bufItr + n, data);
     bufItr += n;
@@ -60,6 +61,7 @@ struct Serializer<std::string> {
                               const std::vector<char>::const_iterator& endItr) {
     unsigned n;
     Serializer<unsigned>::deserializeImpl(n, bufItr, endItr);
+    POLY_CONTRACT_VAR(endItr);
     POLY_ASSERT(bufItr + n <= endItr);
     val.assign(bufItr, bufItr + n);
     bufItr += n;
