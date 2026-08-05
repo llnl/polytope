@@ -69,7 +69,6 @@ TriangleTessellator::
 tessellateQuantizedImpl(QuantizedTessellation& result) {
   // Type aliases
   using IntType = typename QuantTessellation<2>::IntType;
-  using RealPoint = Point2<double>;
   using IntPoint = typename QuantTessellation<2>::IntPoint;
   const auto& Q = Quantizer<2>::instance();
   // Get the generators
@@ -107,12 +106,12 @@ tessellateQuantizedImpl(QuantizedTessellation& result) {
   //-------------------------------------------------------------------
   // Special collinear or 2 generators cases
   //-------------------------------------------------------------------
-  if (ntri == 0) {
+  if (ntri == 0u) {
     // Points are already ordered by hash so walk them in order and solve
     std::vector<std::vector<edge::Edge>> localEdges(N);
     // List of sides associated with clipped nodes
     std::vector<std::vector<std::pair<int, int>>> clippedNodeSides(N);
-    for (int cellIndex = 0; cellIndex < N-1; ++cellIndex) {
+    for (auto cellIndex = 0u; cellIndex < N-1; ++cellIndex) {
       int nextPoint = cellIndex + 1;
       Clip2D<IntType> clipper;
       clipper.gen0 = result.points[cellIndex];
@@ -132,7 +131,7 @@ tessellateQuantizedImpl(QuantizedTessellation& result) {
       localEdges[nextPoint].push_back(curEdge);
       clippedNodeSides[nextPoint].push_back(std::make_pair(endSide, startSide));
     }
-    for (int cellIndex = 0; cellIndex < N; ++cellIndex) {
+    for (auto cellIndex = 0u; cellIndex < N; ++cellIndex) {
       std::vector<edge::Edge> finalEdges = shapes::closeClippedEdges(localEdges[cellIndex], clippedNodeSides[cellIndex], cornerIndices);
       removeCollinear(finalEdges, result.nodes);
       for (const auto& cedge : finalEdges) {
@@ -147,7 +146,7 @@ tessellateQuantizedImpl(QuantizedTessellation& result) {
   centers.reserve(ntri);
 
   // Extract the circumcenters of triangles (these become Voronoi vertices)
-  for (auto i = 0; i < ntri; ++i) {
+  for (auto i = 0u; i < ntri; ++i) {
     int ia = out.trianglelist[3*i];
     int ib = out.trianglelist[3*i+1];
     int ic = out.trianglelist[3*i+2];
@@ -167,7 +166,7 @@ tessellateQuantizedImpl(QuantizedTessellation& result) {
   }
 
   // Process each generator to build its Voronoi cell
-  for (int cellIndex = 0; cellIndex < N; ++cellIndex) {
+  for (auto cellIndex = 0u; cellIndex < N; ++cellIndex) {
     // Walk edges around this generator point
     auto genit = gen2tri[cellIndex].begin();
     int curTri = *genit;
@@ -181,7 +180,7 @@ tessellateQuantizedImpl(QuantizedTessellation& result) {
       int v0 = out.trianglelist[3*it];
       int v1 = out.trianglelist[3*it+1];
       // Find which vertex is the generator
-      int localIndex = (v0 == cellIndex) ? 0 : (v1 == cellIndex) ? 1 : 2;
+      int localIndex = (v0 == int(cellIndex)) ? 0 : (v1 == int(cellIndex)) ? 1 : 2;
       int prevSide = (localIndex + 2)%3;
       bool curBound = Q.inQBounds(centers[it]);
       int prevTri = out.neighborlist[3*it+prevSide];
@@ -206,7 +205,7 @@ tessellateQuantizedImpl(QuantizedTessellation& result) {
       int tri[3] = {v0, v1, v2};
 
       // Find which vertex is the generator
-      int localIndex = (v0 == cellIndex) ? 0 : (v1 == cellIndex) ? 1 : 2;
+      int localIndex = (v0 == int(cellIndex)) ? 0 : (v1 == int(cellIndex)) ? 1 : 2;
 
       int ccwSide = (localIndex + 1)%3;
       int cwSide = (localIndex + 2)%3;

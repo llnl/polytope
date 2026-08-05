@@ -39,12 +39,12 @@ struct Clip2D {
     bool bounds0 = (!inf0) ? Q.inQBounds(rp0) : true;
     bool validp0 = (!inf0 && bounds0);
     if (validp0) {
-      p0 = rp0.template type_cast<CoordType>();
+      p0 = round<2, CoordType>(rp0);//rp0.template type_cast<CoordType>();
     }
     bool bounds1 = (!inf1) ? Q.inQBounds(rp1) : true;
     bool validp1 = (!inf1 && bounds1);
     if (validp1) {
-      p1 = rp1.template type_cast<CoordType>();
+      p1 = round<2, CoordType>(rp1);//rp1.template type_cast<CoordType>();
     }
     if (validp0 && validp1) {
       return false;

@@ -77,7 +77,7 @@ tessellateQuantizedImpl(QuantizedTessellation& result) {
     if (!cellItr->contains_point()) continue;
 
     const int cellIndex = cellItr->source_index();
-    if (cellIndex >= numGenerators) continue;
+    if (cellIndex >= int(numGenerators)) continue;
 
     // Walk edges CCW around this cell
     const typename VD::edge_type* firstEdge = cellItr->incident_edge();

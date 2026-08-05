@@ -12,35 +12,33 @@ namespace polytope {
 
 //! \class Mesh - A basic descriptor class for a topologically-consistent
 //! arbitrary poly(gonal/hedral) mesh.
-template<int Dimension, typename RealType>
+template<int Dimension, typename CoordType>
 class Tessellation {
-  public:
-  using RealCell = typename Cell<Dimension, RealType>::CellType;
+public:
+  using RealCell = typename Cell<Dimension, CoordType>::CellType;
   // Default constructor.
   Tessellation():
     points(),
     nodes(),
     cells(),
     faces(),
-    infNodes(),
     boundaryNodes(),
-    infFaces(),
     boundaryFaces(),
     faceCells(),
     convexHull() {}
+
+  Tessellation(const Tessellation&) = default;
+  Tessellation& operator=(const Tessellation&) = default;
 
   // Destructor.
   virtual ~Tessellation() {};
 
   //! Clears the tessellation, emptying it of all data.
-  virtual void clear()
-  {
+  void clear() {
     nodes.clear();
     cells.clear();
     faces.clear();
-    infNodes.clear();
     boundaryNodes.clear();
-    infFaces.clear();
     boundaryFaces.clear();
     faceCells.clear();
     convexHull.clear();
@@ -52,20 +50,19 @@ class Tessellation {
 
   //! Returns true if the tessellation is empty (not defined),
   //! false otherwise.
-  virtual bool empty() const
-  {
+  bool empty() const {
     return nodes.empty() and cells.empty() and faces.empty() and
-       infNodes.empty() and boundaryNodes.empty() and infFaces.empty() and boundaryFaces.empty() and faceCells.empty() and
+      boundaryNodes.empty() and boundaryFaces.empty() and faceCells.empty() and
       convexHull.empty() and points.empty();
   }
 
   //! An array of (numPoints) values containing components of
   //! generator positions.
-  std::vector<Point<Dimension, RealType>> points;
+  std::vector<Point<Dimension, CoordType>> points;
 
   //! An array of (numNodes) values containing components of
   //! node positions.
-  std::vector<Point<Dimension, RealType>> nodes;
+  std::vector<Point<Dimension, CoordType>> nodes;
 
   //! This two-dimensional array defines the cell-face topology of the
   //! mesh. A cell has an arbitrary number of faces in 2D and 3D.
@@ -83,13 +80,7 @@ class Tessellation {
   std::vector<std::vector<unsigned> > faces;
 
   //! Indices of all nodes that are on the boundary of the tessellation.
-  std::vector<unsigned> infNodes;
-
-  //! Indices of all nodes that are on the boundary of the tessellation.
   std::vector<unsigned> boundaryNodes;
-
-  //! Indices of all faces on the boundary of the tessellation.
-  std::vector<unsigned> infFaces;
 
   //! Indices of all faces on the boundary of the tessellation.
   std::vector<unsigned> boundaryFaces;
@@ -108,6 +99,7 @@ class Tessellation {
 
   //! Parallel data structure: the set of neighbor domains this portion of
   //! the tessellation is in contact with.
+  // UNUSED
   std::vector<unsigned> neighborDomains;
 
   //! Parallel data structure: the nodes and faces this domain shares with
@@ -115,7 +107,10 @@ class Tessellation {
   //! NOTE: we implicitly assume that any domains of rank less than ours we
   //!       are receiving from, while any domains of greater rank we send
   //!       to.
+  // UNUSED
   std::vector<std::vector<unsigned> > sharedNodes, sharedFaces;
+
+  bool makeConvexHull
 
   //! Find the set of cells that touch each mesh node.
   std::vector<std::set<unsigned> > computeNodeCells() {
@@ -136,7 +131,6 @@ class Tessellation {
     return result;
   }
 
-
   //! Collect the nodes around each cell
   std::vector<std::set<unsigned> > computeCellToNodes() {
     std::vector<std::set<unsigned> > result(cells.size());
@@ -155,8 +149,8 @@ class Tessellation {
     return result;
   }
 
-  RealCell getCell(const unsigned cellIndex) const {
-    return Cell<Dimension, RealType>::extractCell(nodes, cells[cellIndex], faces);
+  virtual RealCell getCell(const unsigned cellIndex) const {
+    return Cell<Dimension, CoordType>::extractCell(nodes, cells[cellIndex], faces);
   }
 
   //! output operator.
@@ -169,55 +163,45 @@ class Tessellation {
 
   // template<int D = Dimension>
   // std::enable_if_t<D == 2, void>
-  // void computeCellCentroid(const unsigned ci,
-  //                          RealType* ccent) const;
+  // computeCellCentroidAndSignedArea(const unsigned ci,
+  //                                  const CoordType& tol,
+  //                                  CoordType* ccent,
+  //                                  CoordType& area) const;
+  // template<int D = Dimension>
+  // std::enable_if_t<D == 3, void>
+  // computeFaceCentroidAndNormal(const unsigned fi,
+  //                              CoordType* fcent,
+  //                              CoordType* fhat) const;
 
-  template<int D = Dimension>
-  std::enable_if_t<D == 2, void>
-  computeCellCentroidAndSignedArea(const unsigned ci,
-                                   const RealType& tol,
-                                   RealType* ccent,
-                                   RealType& area) const;
-  template<int D = Dimension>
-  std::enable_if_t<D == 3, void>
-  computeFaceCentroidAndNormal(const unsigned fi,
-                               RealType* fcent,
-                               RealType* fhat) const;
+  // template<int D = Dimension>
+  // std::enable_if_t<D == 3, void>
+  // computeCellCentroidAndSignedVolume(const unsigned ci,
+  //                                    CoordType* ccent,
+  //                                    CoordType& cvol) const;
 
-  template<int D = Dimension>
-  std::enable_if_t<D == 3, void>
-  computeCellCentroidAndSignedVolume(const unsigned ci,
-                                     RealType* ccent,
-                                     RealType& cvol) const;
+  // Build faceCells connectivity: for each cell, mark which faces touch it
+  // Cells store signed face indices where negative means inverted orientation.
   void computeFaceCells() {
     faceCells.clear();
     auto numFaces = faces.size();
     auto numCells = cells.size();
     faceCells.resize(numFaces);
-    // Build faceCells connectivity: for each cell, mark which faces touch it
-    // Cells store signed face indices where negative means inverted orientation.
     for (unsigned i = 0; i < numCells; ++i) {
       const unsigned nf = cells[i].size();
       for (unsigned j = 0; j < nf; ++j) {
         auto k = cells[i][j];
         if (k < 0) {
           // Negative index: inverted face orientation
-          POLY_ASSERT2(~k < numFaces, k << " " << ~k << " " << numFaces);
+          POLY_ASSERT2(~k < int(numFaces), k << " " << ~k << " " << numFaces);
           faceCells[~k].push_back(~i);
         } else {
           // Positive index: normal face orientation
-          POLY_ASSERT2(k < numFaces, k << " " << numFaces);
+          POLY_ASSERT2(k < int(numFaces), k << " " << numFaces);
           faceCells[k].push_back(i);
         }
       }
     }
   }
-
-private:
-
-  // Disallowed.
-  Tessellation(const Tessellation&);
-  Tessellation& operator=(const Tessellation&);
 };
 
 }

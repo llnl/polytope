@@ -96,8 +96,6 @@ inline void
 Tessellator<Dimension, RealType>::
 singleNodeTessellate(QuantTessellation<Dimension>& result) {
   if constexpr (Dimension == 2) {
-    using IntType = typename QuantTessellation<2>::IntType;
-    using RealPoint = Point2<double>;
     using IntPoint = typename QuantTessellation<2>::IntPoint;
     const auto& Q = Quantizer<2>::instance();
     result.cells.resize(1);

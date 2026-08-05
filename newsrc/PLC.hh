@@ -41,6 +41,25 @@ public:
     return (facets.empty() and holes.empty());
   }
 
+  void write(std::ostream& s) const {
+    writeFacetList(s, facets);
+    s << holes.size() << std::endl;
+    for (const auto& hole : holes) {
+      writeFacetList(s, hole);
+    }
+  }
+
+  void read(std::istream& s) {
+    facets = readFacetList(s);
+
+    std::size_t nholes = 0;
+    s >> nholes;
+    holes.resize(nholes);
+    for (auto& hole : holes) {
+      hole = readFacetList(s);
+    }
+  }
+
   //! Returns true if this PLC is valid (at first glance), false if it 
   //! is obviously invalid. This is not a rigorous check!
   bool valid() const {
@@ -108,6 +127,32 @@ public:
       }
     }
     return s;
+  }
+
+private:
+
+  static void writeFacetList(std::ostream& s,
+                             const std::vector<std::vector<unsigned>>& facetList) {
+    s << facetList.size() << std::endl;
+    for (const auto& facet : facetList) {
+      s << facet.size();
+      for (const auto i : facet) s << " " << i;
+      s << std::endl;
+    }
+  }
+
+  static std::vector<std::vector<unsigned>> readFacetList(std::istream& s) {
+    std::size_t nfacets = 0;
+    s >> nfacets;
+
+    std::vector<std::vector<unsigned>> facetList(nfacets);
+    for (auto& facet : facetList) {
+      std::size_t nverts = 0;
+      s >> nverts;
+      facet.resize(nverts);
+      for (auto& i : facet) s >> i;
+    }
+    return facetList;
   }
 
 };

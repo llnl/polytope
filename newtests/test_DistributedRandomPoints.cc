@@ -52,20 +52,39 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
   double serialArea = 0.0;
   Tessellation<2, double> serialMesh;
   if (rank == root) {
+    auto& Q = Quantizer<2>::instance();
+    std::map<Point<2, double>, int> finalRanks;
     std::vector<double> allPoints;
-    for (int p = 0; p < nprocs; ++p) {
-      int cseed = oseed + p;
+    for (int proc = 0; proc < nprocs; ++proc) {
+      int cseed = oseed + proc;
       generators.randomPoints(Ngen, cseed);
       std::copy(generators.mPoints.begin(), generators.mPoints.end(), std::back_inserter(allPoints));
+      for (auto i = 0u; i < generators.nPoints; ++i) {
+        Point2<double> p;
+        p.x = generators.mPoints[2*i];
+        p.y = generators.mPoints[2*i+1];
+        auto newp = Q.dequantize(Q.quantize(p));
+        finalRanks[newp] = proc;
+      }
     }
     tessellator.tessellate(allPoints, boundary.mPLCpoints, boundary.mPLC, serialMesh);
     serialArea = computeTessellationArea(serialMesh);
+    std::vector<double> finalRanksD;
+    for (auto& p : serialMesh.points) {
+      auto rankItr = finalRanks.find(p);
+      POLY_CHECK2(rankItr != finalRanks.end(),
+                  "Could not find final rank for serial generator " << p);
+      finalRanksD.push_back(static_cast<double>(rankItr->second));
+    }
+    std::string serialoutname = "SerialRandom_" + tessellator.name();
+    outputMesh(serialMesh, serialoutname, finalRanksD, "rank", btype, 0., 1);
   }
-  std::string serialoutname = "Serial_" + tessellator.name();
-  outputMesh(serialMesh, serialoutname, btype, 0.);
   std::string outname = "DistributedRandom_" + tessellator.name();
   outputMesh(localMesh, outname, btype, 0.);
   MPI_Bcast(&serialArea, 1, MPI_DOUBLE, 0, Communicator::communicator());
+  POLY_CHECK2(std::abs(boundary.mArea - serialArea)/boundary.mArea < 1.0e-8,
+              "Serial area does not match reference area, ref: " << boundary.mArea
+              << " serial: " << serialArea);
 
   POLY_CHECK2(std::abs(distributedArea - serialArea) < 1.0e-8,
               "Distributed area " << distributedArea

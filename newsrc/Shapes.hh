@@ -163,7 +163,7 @@ inline std::vector<edge::Edge> closeClippedEdges(const std::vector<edge::Edge>& 
     walkBoxEdges(startSide, endSide, origEdges[0].second, origEdges[0].first, cornerIndices, out);
     return out;
   }
-  for (auto i = 0; i < N; ++i) {
+  for (auto i = 0u; i < N; ++i) {
     auto curEdge = origEdges[i];
     auto side1 = clippedNodeSides[i].second;
     out.push_back(curEdge);

@@ -375,7 +375,7 @@ bool aboveBelow(const Point<Dimension, CoordType>& v0,
   if (result == 0) {
     return true;
   }
-  for (auto i = 1; i < NP; ++i) {
+  for (auto i = 1u; i < NP; ++i) {
     if (result != aboveBelow(v0, n, points[i])) {
       return true;
     }

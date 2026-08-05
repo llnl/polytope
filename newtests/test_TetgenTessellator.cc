@@ -1,10 +1,6 @@
-// test_RandomPoints
+// test_TetgenTessellator
 //
-// Stress test for meshing complicated PLC boundaries with/without holes.
-// Iterate over each of the default boundaries defined in Boundary2D.hh
-// and tessellate using N randomly-distributed generators for N=10,100,1000.
-// Can test both Triangle and Voro++ 2D tessellators. Voro++ has been
-// commented out since it currently lacks PLC capabilities.
+// Test the Tetgen tessellator on a very basic set of generator points.
 
 #include <iostream>
 #include <vector>

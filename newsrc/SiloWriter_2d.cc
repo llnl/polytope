@@ -44,9 +44,9 @@ traverseNodes(const TessType& mesh,
 
 #ifdef POLYTOPE_ENABLE_DEBUG
   // Make sure we don't have any garbage in our list of nodes.
-  for (size_t n = 0; n < nodes.size(); ++n) {
+  for (auto n = 0u; n < nodes.size(); ++n) {
     POLY_ASSERT(nodes[n] >= 0);
-    POLY_ASSERT(nodes[n] < mesh.nodes.size());
+    POLY_ASSERT(nodes[n] < int(mesh.nodes.size()));
   }
 #endif
 }
@@ -57,20 +57,20 @@ traverseNodes(const TessType& mesh,
 template <typename TessType>
 void
 SiloWriter<2, TessType>::write(const TessType& mesh,
-                                         const map<string, double*>& nodeFields,
-                                         const map<string, vector<int>*>& nodeTags,
-                                         const map<string, double*>& edgeFields,
-                                         const map<string, vector<int>*>& edgeTags,
-                                         const map<string, double*>& faceFields,
-                                         const map<string, vector<int>*>& faceTags,
-                                         const map<string, double*>& cellFields,
-                                         const map<string, vector<int>*>& cellTags,
-                                         const string& filePrefix,
-                                         const string& directory,
-                                         int cycle,
-                                         double time,
-                                         int numFiles,
-                                         int mpiTag) {
+                               const map<string, double*>& nodeFields,
+                               const map<string, vector<int>*>& nodeTags,
+                               const map<string, double*>& edgeFields,
+                               const map<string, vector<int>*>& edgeTags,
+                               const map<string, double*>& faceFields,
+                               const map<string, vector<int>*>& faceTags,
+                               const map<string, double*>& cellFields,
+                               const map<string, vector<int>*>& cellTags,
+                               const string& filePrefix,
+                               const string& directory,
+                               int cycle,
+                               double time,
+                               int numFiles,
+                               int mpiTag) {
   int nproc = Communicator::getNProcs();
   int rank = Communicator::getRank();
   int root = Communicator::getRoot();
@@ -306,7 +306,7 @@ SiloWriter<2, TessType>::write(const TessType& mesh,
       nodeMeshNames.push_back(strDup((p + "nodes").c_str()));
     }
     DBPutMultimesh(file, "NNODES", nblocks, nodeMeshNames.data(), pointMeshTypes.data(), masteroptlist);
-    for (auto f = 0; f < nodeMeshNames.size(); ++f) {
+    for (auto f = 0u; f < nodeMeshNames.size(); ++f) {
       free(nodeMeshNames[f]);
     }
 #endif

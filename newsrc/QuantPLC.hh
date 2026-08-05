@@ -27,6 +27,8 @@
 
 namespace polytope {
 
+// TODO: Have this somehow inherit the routines in
+// QuantTessellation since there is lots of overlap
 template<int Dimension>
 class QuantPLC : public PLC<Dimension> {
 public:
@@ -98,7 +100,7 @@ public:
     return flattenCoords(realPoints);
   }
 
-  IntCell getFacetPoints() const {
+  IntCell getCell() const {
     return Cell<Dimension, IntType>::extractCell(points, facets);
   }
 
@@ -177,8 +179,8 @@ public:
   //------------------------------------------------------------------------------
   // Member data
   //------------------------------------------------------------------------------
-  using PLC<Dimension>::facets;  // Facets as vertex index lists
-  using PLC<Dimension>::holes;  // Holes (each hole is a list of facets)
+  using PLC<Dimension>::facets; // Facets as vertex index lists
+  using PLC<Dimension>::holes; // Holes (each hole is a list of facets)
   std::vector<CoordHash> hashes;
   std::vector<IntPoint> points;
 

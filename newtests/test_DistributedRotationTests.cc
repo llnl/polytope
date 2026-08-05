@@ -125,7 +125,8 @@ void runTest(Tessellator<2, double>& tessellator,
   boundary.setDefaultBoundary(0);
   Generators<2> generators(boundary);
   generators.cartesian2D(nx, nx);
-  auto finalRanks = generators.distributePointsAmongRanks();
+  auto procIndex = generators.assignRandomPointToRank();
+  auto finalRanks = generators.distributePointsAmongRanks(procIndex);
   POLY_CONTRACT_VAR(finalRanks);
   auto& Q = Quantizer<2>::instance();
   auto bHigh = Q.m_xhi;

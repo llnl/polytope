@@ -15,7 +15,7 @@ template<>
 bool
 QuantTessellation<3>::cellIntersectsHull(const QuantPLC<3>& QPLC,
                                          const unsigned cellIndex) const {
-  auto plc_cell = QPLC.getFacetPoints();
+  auto plc_cell = QPLC.getCell();
   auto qcell = getCell(cellIndex);
   // TODO: Implement me
   //return convexIntersection(plc_cell, qcell);
@@ -97,6 +97,39 @@ QuantTessellation<3>::fillTessellation(TessellationType& mesh) {
     }
   }
   mesh.computeFaceCells();
+}
+
+//------------------------------------------------------------------------------
+// Escape pod methods
+//------------------------------------------------------------------------------
+template<>
+void
+QuantTessellation<3>::ejectEscapePod(std::string filename,
+                                     const std::vector<unsigned>& genPoints,
+                                     const QuantPLC<3>& QPLC,
+                                     const std::string& tessellatorName) {
+  POLY_CONTRACT_VAR(filename);
+  POLY_CONTRACT_VAR(genPoints);
+  POLY_CONTRACT_VAR(QPLC);
+  POLY_CONTRACT_VAR(tessellatorName);
+}
+
+template<>
+void
+QuantTessellation<3>::loadEscapePod(std::string filename,
+                                    QuantPLC<3>& QPLC,
+                                    std::string& tessellatorName) {
+  POLY_CONTRACT_VAR(filename);
+  POLY_CONTRACT_VAR(QPLC);
+  POLY_CONTRACT_VAR(tessellatorName);
+}
+
+template<>
+void
+QuantTessellation<3>::loadEscapePod(std::string filename,
+                                    QuantPLC<3>& QPLC) {
+  std::string tessellatorName;
+  loadEscapePod(filename, QPLC, tessellatorName);
 }
 
 //------------------------------------------------------------------------------

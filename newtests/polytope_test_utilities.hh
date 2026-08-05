@@ -230,9 +230,9 @@ void testWatertight(const Tessellation<2, double>& mesh, const int refHoles) {
 // -----------------------------------------------------------------------
 void compareArea(Boundary2D& boundary,
                  Tessellation<2,double>& mesh) {
-   const double area = computeTessellationArea(mesh);
-   const double relErr = std::abs(boundary.mArea-area)/boundary.mArea;
-   POLY_CHECK2(relErr < 1.0E-8, "Error in area: ref " << boundary.mArea << " mesh " << area);
+  const double area = computeTessellationArea(mesh);
+  const double relErr = std::abs(boundary.mArea-area)/boundary.mArea;
+  POLY_CHECK2(relErr < 1.0E-8, "Error in area: ref " << boundary.mArea << " mesh " << area);
 }
 
 }

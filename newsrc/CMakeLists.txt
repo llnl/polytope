@@ -13,6 +13,7 @@ set(polytope_headers
   Communicator.hh
   Cube.hh
   EdgeUtils.hh
+  EscapePod.hh
   GeomUtils.hh
   HashKey.hh
   Intersections.hh
@@ -90,7 +91,9 @@ endif()
 # Check if we can incude the distributed tessellators:
 if (POLYTOPE_ENABLE_MPI)
   list(APPEND polytope_headers
-    DistributedTessellator.hh)
+    DistributedTessellator.hh
+    ParallelUtils.hh
+  )
   list(APPEND polytope_sources
     DistributedTessellator.cc)
 endif()
@@ -116,6 +119,18 @@ set_target_properties(newpolytopeC PROPERTIES EXPORT_NAME "newpolytope")
 # Library install targets
 install(TARGETS newpolytopeC EXPORT polytope-targets DESTINATION lib)
 install(FILES ${polytope_headers} DESTINATION include/polytope)
+
+blt_add_executable(NAME loadEscapePod
+  HEADERS ${polytope_headers}
+  SOURCES loadEscapePod.cc ${polytope_sources}
+  DEPENDS_ON newpolytopeC ${POLYTOPE_TPL_DEPENDS}
+  OUTPUT_DIR ${CMAKE_BINARY_DIR}/newbin
+  OUTPUT_NAME loadEscapePod
+  INCLUDES ${POLYTOPE_ROOT_DIR}/newsrc ${PROJECT_BINARY_DIR}/newsrc
+)
+
+target_compile_options(loadEscapePod PRIVATE ${POLYTOPE_CXX_COMPILE_FLAGS})
+target_link_options(loadEscapePod PUBLIC ${POLYTOPE_CXX_LINK_FLAGS})
 
 if(POLYTOPE_ENABLE_PYTHON)
   add_subdirectory(PYB11)

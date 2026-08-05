@@ -127,7 +127,7 @@ class SiloWriter<2, TessType> {
     std::vector<double> index(meshSize);
     std::vector<double> genx (meshSize);
     std::vector<double> geny (meshSize);
-    for (int i = 0; i < meshSize; ++i) {
+    for (auto i = 0u; i < meshSize; ++i) {
       index[i] = double(i);
       genx[i] = static_cast<double>(mesh.points[i].x);
       geny[i] = static_cast<double>(mesh.points[i].y);

@@ -218,26 +218,26 @@ public:
   //------------------------------------------------------------------------
   // Parallel utilities
   //------------------------------------------------------------------------
+
   //------------------------------------------------------------------------
-  // Assign points based on processor by removing non-local points
-  // Returns a map from each original point to its assigned rank
+  // Assigns a random index from 0 to nPoints for each proc between 0 and maxProc.
+  // maxProc can cap which processors are provided points. Defaults to all procs
   //------------------------------------------------------------------------
-  std::map<Point<Dimension, double>, int> distributePointsAmongRanks(unsigned seed = 0) {
-    auto& Q = Quantizer<Dimension>::instance();
+  std::vector<unsigned> assignRandomPointToRank(unsigned seed = 0, int maxProc = -1) {
     srand(seed);
     nPoints = mPoints.size()/Dimension;
-    std::map<Point<Dimension, double>, int> finalRanks;
     // Figure out parallel configuration
-    int rank = Communicator::getRank();
     int numProcs = Communicator::getNProcs();
-    POLY_CHECK2(nPoints >= static_cast<unsigned>(numProcs),
-                "Cannot distribute " << nPoints << " points among "
-                << numProcs << " ranks with unique seed points.");
 
+    if (maxProc >= 0) {
+      numProcs = maxProc;
+    }
+    numProcs = std::min(int(nPoints), numProcs);
     std::vector<unsigned> pointIndices(nPoints);
     for (unsigned i = 0; i < nPoints; ++i) pointIndices[i] = i;
 
-    // Each proc gets assigned to a random, unique index in mPoints
+    // For each proc, grab a random index from 0 to nPoints.
+    // That proc gets that point as it's centralized location.
     std::vector<unsigned> procIndex(numProcs);
     for (unsigned iproc = 0; iproc < static_cast<unsigned>(numProcs); ++iproc) {
       const auto remaining = nPoints - iproc;
@@ -246,6 +246,19 @@ public:
       std::swap(pointIndices[iproc], pointIndices[iproc + offset]);
       procIndex[iproc] = pointIndices[iproc];
     }
+    return procIndex;
+  }
+
+  //------------------------------------------------------------------------
+  // Assign points based on processor by removing non-local points
+  // Returns a map from each original point to its assigned rank
+  //------------------------------------------------------------------------
+  std::map<Point<Dimension, double>, int> distributePointsAmongRanks(const std::vector<unsigned>& procIndex) {
+    auto& Q = Quantizer<Dimension>::instance();
+    std::map<Point<Dimension, double>, int> finalRanks;
+    // Figure out parallel configuration
+    int rank = Communicator::getRank();
+    int numProcs = procIndex.size();
 
     std::vector<Point<Dimension, double>> procPoint(numProcs);
     for (int iproc = 0; iproc < numProcs; ++iproc) {

@@ -189,7 +189,7 @@ void putCellVars(DBfile* file,
     }
     auto gvarName = iter->first;
     DBPutMultivar(file, gvarName.c_str(), nblocks, varNames.data(), varTypes.data(), optlist);
-    for (auto f = 0; f < varNames.size(); ++f) {
+    for (auto f = 0u; f < varNames.size(); ++f) {
       free(varNames[f]);
     }
   }

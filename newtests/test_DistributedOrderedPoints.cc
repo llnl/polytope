@@ -2,7 +2,6 @@
 //
 // Stress test for meshing complicated PLC boundaries with/without holes.
 // Iterate over each of the default boundaries defined in Boundary2D.hh
-// and tessellate using N randomly-distributed generators for N=10,100,1000.
 // Can test both Triangle and Boost 2D tessellators.
 // This test mimics test_DistributedRandomPoints except points for each
 // rank are clumped together.
@@ -44,14 +43,15 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
   generators.randomPoints(Ngen, seed);
   std::vector<double> allPoints = generators.mPoints;
   // Distribute points to specific ranks
-  auto finalRanks = generators.distributePointsAmongRanks(seed);
+  auto procIndex = generators.assignRandomPointToRank(seed);
+  auto finalRanks = generators.distributePointsAmongRanks(procIndex);
 
   double serialArea = 0.0;
   if (rank == root) {
     Tessellation<2, double> serialMesh;    
     tessellator.tessellate(allPoints, boundary.mPLCpoints, boundary.mPLC, serialMesh);
     serialArea = computeTessellationArea(serialMesh);
-    std::string serialoutname = "Serial_" + tessellator.name();
+    std::string serialoutname = "SerialOrdered_" + tessellator.name();
     std::vector<double> finalRanksD;
     for (auto& p : serialMesh.points) {
       auto rankItr = finalRanks.find(p);
@@ -59,7 +59,7 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
                   "Could not find final rank for serial generator " << p);
       finalRanksD.push_back(static_cast<double>(rankItr->second));
     }
-    outputMesh(serialMesh, serialoutname, finalRanksD, "rank", btype, 0., 1);
+    outputMesh(serialMesh, serialoutname, finalRanksD, "rank", btype, static_cast<double>(btype), 1);
   }
 
   Communicator::Barrier();
@@ -80,8 +80,11 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
   MPI_Allreduce(&localArea, &distributedArea, 1, MPI_DOUBLE, MPI_SUM, Communicator::communicator());
 
   std::string outname = "DistributedOrdered_" + tessellator.name();
-  outputMesh(localMesh, outname, btype, 0.);
+  outputMesh(localMesh, outname, btype, static_cast<double>(btype));
   MPI_Bcast(&serialArea, 1, MPI_DOUBLE, 0, Communicator::communicator());
+  POLY_CHECK2(std::abs(boundary.mArea - serialArea)/boundary.mArea < 1.0e-8,
+              "Serial area does not match reference area, ref: " << boundary.mArea
+              << " serial: " << serialArea);
 
   POLY_CHECK2(std::abs(distributedArea - serialArea) < 1.0e-8,
               "Distributed area " << distributedArea

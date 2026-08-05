@@ -180,6 +180,16 @@ operator<<(std::ostream& os, const Point<2, CoordType>& p) {
   return os;
 }
 
+template<typename CoordType>
+std::istream&
+operator>>(std::istream& is, Point<2, CoordType>& p) {
+  char open = 0, comma = 0, close = 0;
+  is >> open >> p.x >> comma >> p.y >> close;
+  if (open != '[' or comma != ',' or close != ']') is.setstate(std::ios::failbit);
+  p.index = 0;
+  return is;
+}
+
 template<typename CoordType, typename CoordHash>
 CoordHash dot(const Point2<CoordType>& a,
               const Point2<CoordType>& b) {
@@ -372,6 +382,16 @@ operator<<(std::ostream& os, const Point<3, CoordType>& p) {
   return os;
 }
 
+template<typename CoordType>
+std::istream&
+operator>>(std::istream& is, Point<3, CoordType>& p) {
+  char open = 0, comma0 = 0, comma1 = 0, close = 0;
+  is >> open >> p.x >> comma0 >> p.y >> comma1 >> p.z >> close;
+  if (open != '[' or comma0 != ',' or comma1 != ',' or close != ']') is.setstate(std::ios::failbit);
+  p.index = 0;
+  return is;
+}
+
 template<int Dimension, typename CoordType>
 std::ostream&
 operator<<(std::ostream& os, const std::vector<Point<Dimension, CoordType>>& pv) {
@@ -439,7 +459,7 @@ std::vector<Point<Dimension, CoordType>>
 extractCoords(const std::vector<CoordType>& allpoints) {
   auto n = allpoints.size()/Dimension;
   std::vector<Point<Dimension, CoordType>> result(n);
-  for(auto i = 0; i < n; ++i) {
+  for(auto i = 0u; i < n; ++i) {
     result[i] = Point<Dimension, CoordType>(&(allpoints[Dimension*i]), i);
   }
   return result;
@@ -451,7 +471,7 @@ flattenCoords(const std::vector<Point<Dimension, CoordType>>& allpoints) {
   auto n = allpoints.size();
   auto n2 = Dimension*n;
   std::vector<CoordType> result(n2);
-  for(auto i = 0; i < n; ++i) {
+  for(auto i = 0u; i < n; ++i) {
     for(auto d = 0; d < Dimension; ++d) {
       result[Dimension*i+d] = allpoints[i][d];
     }
@@ -474,7 +494,7 @@ template<int Dimension, typename CoordType>
 Point<Dimension, CoordType> round(const Point<Dimension, double>& point) {
   Point<Dimension, CoordType> out;
   for (int d = 0; d < Dimension; ++d) {
-    out[d] = static_cast<CoordType>(std::floor(point[d]));
+    out[d] = static_cast<CoordType>(std::round(point[d]));
   }
   return out;
 }

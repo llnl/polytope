@@ -188,10 +188,10 @@ bool convexBoundaryIntersect(const typename Cell<2, CoordType>::CellType& points
   Point2<CoordType> result;
   auto Na = pointsA.size();
   auto Nb = pointsB.size();
-  for (int fa = 0; fa < Na; ++fa) {
+  for (auto fa = 0u; fa < Na; ++fa) {
     auto vai = pointsA[fa];
     auto vaj = pointsA[(fa+1)%Na];
-    for (int fb = 0; fb < Nb; ++fb) {
+    for (auto fb = 0u; fb < Nb; ++fb) {
       auto vbi = pointsB[fb];
       auto vbj = pointsB[(fb+1)%Nb];
       if (segmentIntersection2D(vai, vaj, vbi, vbj, result)) {
@@ -249,22 +249,16 @@ using PolygonSet = bp::polygon_set_data<IntType2D>;
 inline std::vector<PolygonWithHoles>
 boostUnion(const PolygonWithHoles& p1,
            const PolygonWithHoles& p2) {
-  PolygonSet intersect;
-  intersect += p1;
-  intersect |= p2;
-  std::vector<PolygonWithHoles> out;
-  intersect.get(out);
-  return out;
+  std::vector<PolygonWithHoles> intersect;
+  bp::assign(intersect, p1 | p2);
+  return intersect;
 }
 
 inline std::vector<PolygonWithHoles>
 boostIntersect(const PolygonWithHoles& p1,
                const PolygonWithHoles& p2) {
-  PolygonSet intersect;
-  intersect += p1;
-  intersect &= p2;
   std::vector<PolygonWithHoles> out;
-  intersect.get(out);
+  bp::assign(out, p1 & p2);
   return out;
 }
 
@@ -280,12 +274,22 @@ inline std::vector<PolygonWithHoles>
 boostIntersect(const Cell<2, IntType2D>::CellType& pcell,
                const PolygonWithHoles& boundary) {
   PolygonWithHoles cell = CellToBoost(pcell);
-  PolygonSet cellDSet;
-  cellDSet += cell;
-  cellDSet &= boundary;
   std::vector<PolygonWithHoles> out;
-  cellDSet.get(out);
+  bp::assign(out, cell & boundary);
   return out;
+}
+
+// Check if two polygons can be properly intersected.
+// If they can, overwrite outPoly with the intersection and return true
+inline bool
+validUnion(const PolygonWithHoles& inPoly,
+           PolygonWithHoles& outPoly) {
+  auto trialUnion = boostUnion(outPoly, inPoly);
+  if (trialUnion.size() == 1) {
+    outPoly = trialUnion[0];
+    return true;
+  }
+  return false;
 }
 #endif // POLYTOPE_ENABLE_BOOST
 

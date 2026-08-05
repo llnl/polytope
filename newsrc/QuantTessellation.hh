@@ -9,6 +9,7 @@
 #include <vector>
 #include <algorithm>
 #include <numeric>
+#include <string>
 #include "HashKey.hh"
 #include "Point.hh"
 #include "Quantizer.hh"
@@ -25,7 +26,7 @@ class Tessellator;
 
 // TODO: Make this inherit from Tessellation class
 template<int Dimension>
-class QuantTessellation {
+class QuantTessellation : public Tessellation<Dimension, typename HashKey<Dimension>::IntType> {
 public:
   using RealType = double;
   using CoordHash = typename HashKey<Dimension>::CoordHash;
@@ -41,6 +42,7 @@ public:
   QuantTessellation() = default;
   QuantTessellation& operator=(const QuantTessellation& other) = default;
   QuantTessellation(const QuantTessellation& other) = default;
+  virtual ~QuantTessellation() {};
 
   //------------------------------------------------------------------------------
   // Constructor - common for all dimensions
@@ -94,18 +96,15 @@ public:
   }
 
   void clear() {
-    points.clear();
+    Tessellation<Dimension, IntType>::clear();
     hashes.clear();
-    nodes.clear();
-    faces.clear();
-    cells.clear();
   }
 
   //------------------------------------------------------------------------------
   // Common methods
   //------------------------------------------------------------------------------
 
-  // Returns quantized points cast as reals to give to the tessellator
+  // Returns quantized points cast as doubles to give to the tessellator
   std::vector<RealPoint> getRealPoints() const {
     std::vector<RealPoint> realPoints;
     realPoints.reserve(points.size());
@@ -129,7 +128,7 @@ public:
   // Returns quantized points
   const std::vector<IntPoint> getIntPoints() const { return points; }
 
-  IntCell getCell(const unsigned cellIndex) const {
+  virtual IntCell getCell(const unsigned cellIndex) const override {
     return Cell<Dimension, IntType>::extractCell(nodes, cells[cellIndex], faces);
   }
 
@@ -249,6 +248,30 @@ public:
     faces = std::move(newFaces);
   }
 
+  // Used for debugging purposes. Creates a file of relevant generator points
+  // and boundary points.
+  // Eject only certain generators
+  void ejectEscapePod(std::string filename,
+                      const std::vector<unsigned>& genPoints,
+                      const QuantPLC<Dimension>& QPLC,
+                      const std::string& tessellatorName = "");
+  // Eject all generators
+  void ejectEscapePod(std::string filename,
+                      const QuantPLC<Dimension>& QPLC,
+                      const std::string& tessellatorName = "") {
+    std::vector<unsigned> genPoints(points.size());
+    for (auto i = 0u; i < points.size(); ++i) {
+      genPoints[i] = i;
+    }
+    ejectEscapePod(filename, genPoints, QPLC, tessellatorName);
+  }
+
+  void loadEscapePod(std::string filename,
+                     QuantPLC<Dimension>& QPLC);
+  void loadEscapePod(std::string filename,
+                     QuantPLC<Dimension>& QPLC,
+                     std::string& tessellatorName);
+
   //------------------------------------------------------------------------------
   // Dimension-specific methods (implemented in separate .cc files)
   //------------------------------------------------------------------------------
@@ -280,15 +303,18 @@ public:
   //------------------------------------------------------------------------------
   // Member data
   //------------------------------------------------------------------------------
-  // Generator points
+  bool m_isEscapePod = false;
   std::vector<CoordHash> hashes;
-  std::vector<IntPoint> points;
   // Local lower and upper bounding box coordinates
   IntPoint m_loBounds;
   IntPoint m_hiBounds;
-  std::vector<IntPoint> nodes; // Nodes that make up the Voronoi
-  std::vector<std::vector<unsigned>> faces; // Faces made up of indices into nodes
-  std::vector<std::vector<int>> cells; // Cells made up of indices into faces
+  using Tessellation<Dimension, IntType>::points; // Generator points
+  using Tessellation<Dimension, IntType>::nodes; // Nodes that make up the Voronoi
+  using Tessellation<Dimension, IntType>::faces; // Faces made up of indices into nodes
+  using Tessellation<Dimension, IntType>::cells; // Cells made up of indices into faces
+  using Tessellation<Dimension, IntType>::faceCells;
+  QuantPLC<Dimension> convexHull;
+  bool m_computedHull = false;
 };
 
 } // namespace polytope

@@ -119,7 +119,7 @@ QuantPLC<Dimension>::removeDegeneracies() {
   std::vector<int> oldToNew(N, -1);
   new_hashes.reserve(N);
   unsigned newIndx = 0;
-  for (auto i = 0; i < N; ++i) {
+  for (auto i = 0u; i < N; ++i) {
     const auto& h = hashes[i];
     auto it = seen.find(h);
     if (it != seen.end()) {
@@ -313,7 +313,7 @@ QuantPLC<Dimension>::makeConvex3D() {
 
   std::vector<double> q_points;
   q_points.reserve(n*3);
-  for (auto i = 0; i < n; ++i) {
+  for (auto i = 0u; i < n; ++i) {
     IntPoint ps = points[i];
     RealPoint rpoint = ps.template type_cast<double>();
     q_points.push_back(rpoint.x);

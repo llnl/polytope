@@ -129,7 +129,7 @@ SiloWriter<3, TessType>::write(const TessType& mesh,
     const auto numFaces = mesh.faces.size();
     vector<int> faceNodeCounts, allFaceNodes;
     faceNodeCounts.reserve(numFaces);
-    for (int iface = 0; iface < numFaces; ++iface) {
+    for (auto iface = 0u; iface < numFaces; ++iface) {
       faceNodeCounts.push_back(mesh.faces[iface].size());
       for (auto& face : mesh.faces[iface]) {
         allFaceNodes.push_back(static_cast<int>(face));
@@ -142,7 +142,7 @@ SiloWriter<3, TessType>::write(const TessType& mesh,
     const auto numCells = mesh.cells.size();
     vector<int> cellFaceCounts, allCellFaces;
     cellFaceCounts.reserve(numCells);
-    for (auto i = 0; i < numCells; ++i) {
+    for (auto i = 0u; i < numCells; ++i) {
       auto n = mesh.cells[i].size();
       cellFaceCounts.push_back(n);
       std::copy(mesh.cells[i].begin(), mesh.cells[i].end(), std::back_inserter(allCellFaces));
@@ -182,10 +182,10 @@ SiloWriter<3, TessType>::write(const TessType& mesh,
     char* elemnames[2];
     elemnames[0] = strDup("ncellfaces");
     elemlengths[0] = numCells;
-    for (int c = 0; c < numCells; ++c) {
+    for (auto c = 0u; c < numCells; ++c) {
       conn[c] = mesh.cells[c].size();
     }
-    for (int c = 0; c < numCells; ++c) {
+    for (auto c = 0u; c < numCells; ++c) {
       for (size_t f = 0; f < mesh.cells[c].size(); ++f) {
         conn.push_back(mesh.cells[c][f]);
       }
@@ -297,7 +297,7 @@ SiloWriter<3, TessType>::write(const TessType& mesh,
       nodeMeshNames.push_back(strDup((p + "nodes").c_str()));
     }
     DBPutMultimesh(file, "NNODES", nblocks, nodeMeshNames.data(), pointMeshTypes.data(), masteroptlist);
-    for (auto f = 0; f < nodeMeshNames.size(); ++f) {
+    for (auto f = 0u; f < nodeMeshNames.size(); ++f) {
       free(nodeMeshNames[f]);
     }
 #endif
