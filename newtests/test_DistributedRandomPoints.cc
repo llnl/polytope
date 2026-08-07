@@ -13,6 +13,7 @@
 #include "Tessellation.hh"
 #include "polytope_test_utilities.hh"
 #include "Generators.hh"
+#include "ParallelUtils.hh"
 
 #ifdef POLYTOPE_ENABLE_TRIANGLE
 #include "TriangleTessellator.hh"
@@ -27,6 +28,7 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
   int nprocs = Communicator::getNProcs();
   int root = Communicator::getRoot();
 
+  // Generate Ngen random nodes per rank
   const int Ngen = 4;
   int oseed = 1049600 + 10*btype;
   int seed = oseed + rank;
@@ -35,12 +37,13 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
   Generators<2> generators(boundary);
   generators.randomPoints(Ngen, seed);
 
+  // Run the distributed tessellator in parallel
   DistributedTessellator<2> distributed(tessellator);
-
   Tessellation<2, double> localMesh;
-  distributed.tessellate(generators.mPoints, boundary.mPLCpoints,
-                         boundary.mPLC, localMesh);
+  distributed.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC,
+                         localMesh);
 
+  // Reduce the number of cells and area
   const auto localCells = static_cast<int>(localMesh.cells.size());
   int totalCells = 0;
   MPI_Allreduce(&localCells, &totalCells, 1, MPI_INT, MPI_SUM, Communicator::communicator());
@@ -49,8 +52,8 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
   double distributedArea = 0.0;
   MPI_Allreduce(&localArea, &distributedArea, 1, MPI_DOUBLE, MPI_SUM, Communicator::communicator());
 
+  // Run the same tessellation but in serial
   double serialArea = 0.0;
-  Tessellation<2, double> serialMesh;
   if (rank == root) {
     auto& Q = Quantizer<2>::instance();
     std::map<Point<2, double>, int> finalRanks;
@@ -67,7 +70,9 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
         finalRanks[newp] = proc;
       }
     }
-    tessellator.tessellate(allPoints, boundary.mPLCpoints, boundary.mPLC, serialMesh);
+    Tessellation<2, double> serialMesh;
+    tessellator.tessellate(allPoints, boundary.mPLCpoints, boundary.mPLC,
+                           serialMesh);
     serialArea = computeTessellationArea(serialMesh);
     std::vector<double> finalRanksD;
     for (auto& p : serialMesh.points) {
@@ -76,9 +81,13 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
                   "Could not find final rank for serial generator " << p);
       finalRanksD.push_back(static_cast<double>(rankItr->second));
     }
+    // Output the serial mesh with a rank variable showing the ranks for the
+    // distributed test
     std::string serialoutname = "SerialRandom_" + tessellator.name();
     outputMesh(serialMesh, serialoutname, finalRanksD, "rank", btype, 0., 1);
   }
+
+  // Output the parallel mesh
   std::string outname = "DistributedRandom_" + tessellator.name();
   outputMesh(localMesh, outname, btype, 0.);
   MPI_Bcast(&serialArea, 1, MPI_DOUBLE, 0, Communicator::communicator());
@@ -96,6 +105,7 @@ int main(int argc, char** argv) {
   auto& comm = Communicator::instance();
   comm.init(argc, argv);
   const int root = Communicator::getRoot();
+  const int bstart = 0;
   const int Nbtype = 11;
 
 #ifdef POLYTOPE_ENABLE_TRIANGLE
@@ -104,7 +114,7 @@ int main(int argc, char** argv) {
        cout << "\nTriangle Tessellator:\n" << endl;
      }
      TriangleTessellator tessellator;
-     for (int btype = 0; btype < Nbtype; ++btype) {
+     for (int btype = bstart; btype < Nbtype; ++btype) {
        test(btype, tessellator);
      }
    }
@@ -115,7 +125,7 @@ int main(int argc, char** argv) {
        cout << "\nBoost Tessellator:\n" << endl;
      }
      BoostTessellator tessellator;
-     for (int btype = 0; btype < Nbtype; ++btype) {
+     for (int btype = bstart; btype < Nbtype; ++btype) {
        test(btype, tessellator);
      }
    }

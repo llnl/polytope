@@ -151,8 +151,7 @@ void deserialize(T& val,
 // Serialize a PLC.
 //------------------------------------------------------------------------------
 template<int Dimension>
-struct Serializer<PLC<Dimension>>
-{
+struct Serializer<PLC<Dimension>> {
 
   static void serializeImpl(const PLC<Dimension>& val,
                             std::vector<char>& buffer) {

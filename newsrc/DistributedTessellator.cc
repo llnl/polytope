@@ -1,15 +1,10 @@
 #include "DistributedTessellator.hh"
 
 #include <algorithm>
-#include <array>
-#include <limits>
-#include <map>
-#include <numeric>
 #include <set>
-#include <sstream>
 #include <unordered_map>
-#include <iostream>
-#include <fstream>
+
+#include "ParallelUtils.hh"
 
 namespace polytope {
 
@@ -29,10 +24,7 @@ template<int Dimension>
 std::string
 DistributedTessellator<Dimension>::
 name() const {
-  std::ostringstream os;
-  os << "DistributedTessellator_"
-     << m_serialTessellator.name();
-  return os.str();
+  return "DistributedTessellator_" + m_serialTessellator.name();
 }
 
 //------------------------------------------------------------------------------
@@ -46,13 +38,16 @@ tessellate(const std::vector<RealType>& points,
   POLY_ASSERT(mesh.empty());
   POLY_ASSERT(points.size() % Dimension == 0);
 
-  typename Quantizer<Dimension>::RealPoint globalMin, globalMax;
-  findGlobalBounds<Dimension>(points, globalMin, globalMax);
-  Quantizer<Dimension>::instance().init(globalMin, globalMax);
+  auto& Q = Quantizer<Dimension>::instance();
+  if (!Q.m_init) {
+    typename Quantizer<Dimension>::RealPoint globalMin, globalMax;
+    findGlobalBounds<Dimension>(points, globalMin, globalMax);
+    Q.init(globalMin, globalMax);
+  }
 
   QuantizedTessellation quantmesh(points);
   this->tessellateQuantized(quantmesh);
-  filterToLocalGenerators(quantmesh, m_localRecords);
+  quantmesh.filterToLocalGenerators();
   quantmesh.fillTessellation(mesh);
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
 }
@@ -71,19 +66,21 @@ tessellate(const std::vector<RealType>& points,
   POLY_ASSERT(points.size() % Dimension == 0);
   POLY_ASSERT(PLCpoints.size() % Dimension == 0);
 
-  const auto& boundsPoints = PLCpoints.empty() ? points : PLCpoints;
-  typename Quantizer<Dimension>::RealPoint globalMin, globalMax;
-  findGlobalBounds<Dimension>(boundsPoints, globalMin, globalMax);
-  Quantizer<Dimension>::instance().init(globalMin, globalMax);
+  auto& Q = Quantizer<Dimension>::instance();
+  if (!Q.m_init) {
+    const auto& boundsPoints = PLCpoints.empty() ? points : PLCpoints;
+    typename Quantizer<Dimension>::RealPoint globalMin, globalMax;
+    findGlobalBounds<Dimension>(boundsPoints, globalMin, globalMax);
+    Q.init(globalMin, globalMax);
+  }
 
-  QuantizedTessellation quantmesh(points);
+  QuantizedTessellation qmesh(points);
   QuantPLC<Dimension> qplc(geometry, PLCpoints);
-  quantmesh.cullExternalPoints(qplc);
-
-  this->tessellateQuantized(quantmesh);
-  quantmesh.clipTessellation(qplc, m_serialTessellator);
-  filterToLocalGenerators(quantmesh, m_localRecords);
-  quantmesh.fillTessellation(mesh);
+  qmesh.cullExternalPoints(qplc);
+  this->tessellateQuantized(qmesh);
+  qmesh.clipTessellation(qplc, m_serialTessellator);
+  qmesh.filterToLocalGenerators();
+  qmesh.fillTessellation(mesh);
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
 }
 
@@ -94,69 +91,72 @@ template<int Dimension>
 void
 DistributedTessellator<Dimension>::
 tessellateQuantizedImpl(QuantizedTessellation& qmesh) {
-  auto rank = Communicator::getRank();
-  auto size = Communicator::getNProcs();
-  auto localRecords = recordsFromQuantTessellation(qmesh);
-  checkUniqueGeneratorHashes(localRecords, "local generator set");
+  int rank = Communicator::getRank();
+  int nranks = Communicator::getNProcs();
 
-  if (!localRecords.empty()) {
-    m_serialTessellator.tessellateQuantized(qmesh);
+  // Get the local visible generators and gather them on all processors
+  auto visibleMesh = generateVisibleMesh(qmesh);
+  std::set<int> neighborRanks;
+  if (visibleMesh.points.size() > 1) {
+    neighborRanks = visibleMesh.neighboringRanks();
   }
 
-  QuantPLC<Dimension> localHull;
-  const bool validLocalHull = makeConvexHull(qmesh, localHull);
-
-  auto visibleRecords =
-    visibleLocalGenerators(qmesh, localRecords, validLocalHull, localHull);
-  auto allVisibleRecords =
-    allGatherGenerators(visibleRecords);
-  checkUniqueGeneratorHashes(allVisibleRecords, "visible generator set");
-
-  std::set<int> neighbors;
+  // Check if any there is any overlap with other convex hulls
+  if (!qmesh.convexHull.m_convex) {
+    qmesh.makeConvexHull();
+  }
+  const auto localHull = qmesh.convexHull;
+  const bool validLocalHull = localHull.isValid() &&
+                              localHull.m_convex &&
+                              localHull.facets.size() >= Dimension + 1;
   const auto allHulls = allGatherHulls(validLocalHull, localHull);
+  POLY_ASSERT2(int(allHulls.size()) == nranks,
+               "Incorrect number of hulls after communication");
   if (validLocalHull) {
-    for (int r = 0; r < size; ++r) {
-      if (r != rank && allHulls[r].first &&
-          QuantPLC<Dimension>::convexPLCIntersection(localHull, allHulls[r].second)) {
-        neighbors.insert(r);
+    for (int source = 0; source < nranks; ++source) {
+      if (source != rank &&
+          allHulls[source].first &&
+          QuantPLC<Dimension>::convexPLCIntersection(localHull, allHulls[source].second)) {
+        neighborRanks.insert(source);
       }
     }
   }
 
-  if (allVisibleRecords.size() > 1) {
-    auto visiblePoints = pointsFromRecords(allVisibleRecords);
-    QuantizedTessellation visibleMesh(visiblePoints);
+  auto neighborGenerators =
+    exchangeNeighborGenerators<Dimension, CoordHash>(qmesh.hashes, neighborRanks);
+
+  // Extend the QuantTessellation by it's neighbor generators and retessellate
+  if (!qmesh.points.empty()) {
+    qmesh.init(neighborGenerators);
+    m_serialTessellator.tessellateQuantized(qmesh);
+  }
+}
+
+//------------------------------------------------------------------------------
+// Generate the visible mesh
+//------------------------------------------------------------------------------
+template<int Dimension>
+QuantTessellation<Dimension>
+DistributedTessellator<Dimension>::
+generateVisibleMesh(QuantizedTessellation& qmesh) {
+  if (!qmesh.points.empty()) {
+    m_serialTessellator.tessellateQuantized(qmesh);
+  }
+  auto visibleHashes = qmesh.visibleGenerators();
+  auto allVisibleRecords = allGatherGenerators<Dimension, CoordHash>(visibleHashes);
+  size_t nvisible = 0;
+  for (const auto& rankHashes : allVisibleRecords) {
+    nvisible += rankHashes.size();
+  }
+  QuantizedTessellation visibleMesh;
+  if (nvisible > 0) {
+    visibleMesh.init(allVisibleRecords);
     m_serialTessellator.tessellateQuantized(visibleMesh);
-    auto visibleNeighbors =
-      neighborRanksFromVisibleVoronoi(visibleMesh, allVisibleRecords);
-    neighbors.insert(visibleNeighbors.begin(), visibleNeighbors.end());
   }
-
-  auto neighborRecords =
-    exchangeNeighborGenerators(localRecords, neighbors);
-
-  std::vector<GeneratorRecord<Dimension>> finalRecords(localRecords);
-  finalRecords.insert(finalRecords.end(), neighborRecords.begin(), neighborRecords.end());
-  checkUniqueGeneratorHashes(finalRecords, "final local plus neighbor generator set");
-
-  if (finalRecords.empty()) {
-    return;
-  }
-
-  if (finalRecords.size() == localRecords.size()) {
-    return;
-  }
-
-  auto finalPoints = pointsFromRecords(finalRecords);
-  QuantizedTessellation finalMesh(finalPoints);
-  m_serialTessellator.tessellateQuantized(finalMesh);
-  // Retain the records to filter to only local generators after clipping
-  m_localRecords = std::move(finalRecords);
-  qmesh = std::move(finalMesh);
+  return visibleMesh;
 }
 
 template class DistributedTessellator<2>;
 template class DistributedTessellator<3>;
 
 } // namespace polytope
-

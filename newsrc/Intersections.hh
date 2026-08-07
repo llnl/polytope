@@ -70,29 +70,42 @@ bool pointInPolygon_convex(const typename Cell<2, CoordType>::CellType& vertices
 }
 
 //------------------------------------------------------------------------------
-// Tests if two convex hulls overlap, returns true if one polygon completely
-// contains the other.
+// Tests if two convex hulls overlap.
 //------------------------------------------------------------------------------
+template<typename CoordType>
+bool convexIntersect(const typename Cell<2, CoordType>::CellType& pointsA,
+                     const typename Cell<2, CoordType>::CellType& pointsB) {
+  if (pointsA.empty() || pointsB.empty()) return false;
+
+  using Wide = WideInt<CoordType>;
+  auto separated = [&pointsA, &pointsB](const typename Cell<2, CoordType>::CellType& axesFrom) {
+    const auto N = axesFrom.size();
+    for (auto i = 0u; i < N; ++i) {
+      const auto& pi = axesFrom[i];
+      const auto& pj = axesFrom[(i + 1)%N];
+      const Wide dx = static_cast<Wide>(pj.x) - static_cast<Wide>(pi.x);
+      const Wide dy = static_cast<Wide>(pj.y) - static_cast<Wide>(pi.y);
+      if (dx == 0 && dy == 0) continue;
+      if (SAT(pointsA, pointsB, Point2<Wide>(-dy, dx))) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  if (separated(pointsA)) return false;
+  if (separated(pointsB)) return false;
+  return true;
+}
+
 template<typename CoordType>
 bool convexIntersect(const std::vector<Point2<CoordType>>& pointsA,
                      const std::vector<std::vector<unsigned>>& facetsA,
                      const std::vector<Point2<CoordType>>& pointsB,
                      const std::vector<std::vector<unsigned>>& facetsB) {
-  if (pointInPolygon_convex(facetsA, pointsA, pointsB) ||
-      pointInPolygon_convex(facetsB, pointsB, pointsA)) {
-    return true;
-  }
-  return false;
-}
-
-template<typename CoordType>
-bool convexIntersect(const typename Cell<2, CoordType>::CellType& pointsA,
-                     const typename Cell<2, CoordType>::CellType& pointsB) {
-  if (pointInPolygon_convex(pointsA, pointsB) ||
-      pointInPolygon_convex(pointsB, pointsA)) {
-    return true;
-  }
-  return false;
+  const auto cellA = Cell<2, CoordType>::extractCell(pointsA, facetsA);
+  const auto cellB = Cell<2, CoordType>::extractCell(pointsB, facetsB);
+  return convexIntersect<CoordType>(cellA, cellB);
 }
 
 template<typename CoordType>
@@ -162,25 +175,6 @@ bool convexIntersect(const std::vector<Point3<CoordType>>& pointsA,
 // Tests if the boundaries of two polygons intersect. Only returns true if any
 // edges intersect but not if one completely contains the other.
 //------------------------------------------------------------------------------
-template<typename CoordType>
-bool convexBoundaryIntersect(const std::vector<Point2<CoordType>>& pointsA,
-                             const std::vector<std::vector<unsigned>>& facetsA,
-                             const std::vector<Point2<CoordType>>& pointsB,
-                             const std::vector<std::vector<unsigned>>& facetsB) {
-  Point2<CoordType> result;
-  for (const auto& fa : facetsA) {
-    auto vai = pointsA[fa[0]];
-    auto vaj = pointsA[fa[1]];
-    for (const auto& fb : facetsB) {
-      auto vbi = pointsB[fb[0]];
-      auto vbj = pointsB[fb[1]];
-      if (segmentIntersection2D(vai, vaj, vbi, vbj, result)) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
 
 template<typename CoordType>
 bool convexBoundaryIntersect(const typename Cell<2, CoordType>::CellType& pointsA,
@@ -199,6 +193,31 @@ bool convexBoundaryIntersect(const typename Cell<2, CoordType>::CellType& points
       }
     }
   }
+  return false;
+}
+
+//------------------------------------------------------------------------------
+// Tests if the boundaries of two polyhedra intersect but not if one is contained
+// in the other.
+// TODO: Implement this
+//------------------------------------------------------------------------------
+template<typename CoordType>
+bool convexBoundaryIntersect(const typename Cell<3, CoordType>::CellType& pointsA,
+                             const typename Cell<3, CoordType>::CellType& pointsB) {
+  // Point2<CoordType> result;
+  // auto Na = pointsA.size();
+  // auto Nb = pointsB.size();
+  // for (auto fa = 0u; fa < Na; ++fa) {
+  //   auto vai = pointsA[fa];
+  //   auto vaj = pointsA[(fa+1)%Na];
+  //   for (auto fb = 0u; fb < Nb; ++fb) {
+  //     auto vbi = pointsB[fb];
+  //     auto vbj = pointsB[(fb+1)%Nb];
+  //     if (segmentIntersection2D(vai, vaj, vbi, vbj, result)) {
+  //       return true;
+  //     }
+  //   }
+  // }
   return false;
 }
 

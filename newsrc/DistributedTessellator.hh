@@ -27,6 +27,8 @@
 //     So proc A would get all generators from proc B.
 // 11. Each proc generates a Voronoi diagram using it's generators and neighbor generators,
 //     but not the visible generators.
+// 12. Clip the Voronoi generated from both local and neighbor generators.
+// 13. Filter out any points and cells that are not local to that rank.
 //----------------------------------------------------------------------------//
 #ifndef __Polytope_DistributedTessellator__
 #define __Polytope_DistributedTessellator__
@@ -35,7 +37,6 @@
 
 #include "polytope.hh"
 #include "Tessellator.hh"
-#include "ParallelUtils.hh"
 
 namespace polytope {
 
@@ -48,6 +49,8 @@ public:
   using Base = Tessellator<Dimension, RealType>;
   using QuantizedTessellation = QuantTessellation<Dimension>;
   using TessellationType = Tessellation<Dimension, RealType>;
+  using IntType = typename HashKey<Dimension>::IntType;
+  using CoordHash = typename HashKey<Dimension>::CoordHash;
 
   DistributedTessellator(Base& serialTessellator);
   virtual ~DistributedTessellator() = default;
@@ -61,17 +64,18 @@ public:
                           TessellationType& mesh) override;
 
   //! Simply becomes a wrapper for the Impl
-  virtual void tessellateQuantized(QuantizedTessellation& result) override {
-    this->tessellateQuantizedImpl(result);
+  virtual void tessellateQuantized(QuantizedTessellation& qmesh) override {
+    this->tessellateQuantizedImpl(qmesh);
   }
 
-  virtual void tessellateQuantizedImpl(QuantizedTessellation& result) override;
+  virtual void tessellateQuantizedImpl(QuantizedTessellation& qmesh) override;
 
   virtual std::string name() const override;
 
+  QuantizedTessellation generateVisibleMesh(QuantizedTessellation& qmesh);
+
 private:
   Base& m_serialTessellator;
-  std::vector<GeneratorRecord<Dimension>> m_localRecords;
 
   // Forbidden methods.
   DistributedTessellator();

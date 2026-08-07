@@ -48,7 +48,7 @@ QuantPLC<Dimension>::init(const PLC<Dimension>& plc,
 template<int Dimension>
 void
 QuantPLC<Dimension>::init(const std::vector<RealType>& allpoints) {
-  const auto& Q = Quant::instance();
+  const auto& Q = Quantizer<Dimension>::instance();
   m_loBounds = Q.maxCoord;
   m_hiBounds = -m_loBounds;
 
@@ -67,10 +67,12 @@ QuantPLC<Dimension>::init(const std::vector<RealType>& allpoints) {
     hashes.push_back(Q.hash(ip));
     points.push_back(ip);
   }
-  POLY_ASSERT2(m_loBounds < m_hiBounds,
-               "Provided coplanar or collinear or degenerate points to the QuantPLC");
-  removeDegeneracies();
-  orderFacets();
+  if (isValid()) {
+    POLY_ASSERT2(m_loBounds < m_hiBounds,
+                 "Provided coplanar or collinear or degenerate points to the QuantPLC");
+    removeDegeneracies();
+    orderFacets();
+  }
 }
 
 template<int Dimension>
@@ -85,7 +87,7 @@ QuantPLC<Dimension>::init(const PLC<Dimension>& plc,
 template<int Dimension>
 void
 QuantPLC<Dimension>::init(const std::vector<IntPoint>& ipoints) {
-  const auto& Q = Quant::instance();
+  const auto& Q = Quantizer<Dimension>::instance();
   m_loBounds = Q.maxCoord;
   m_hiBounds = -m_loBounds;
 
@@ -101,10 +103,12 @@ QuantPLC<Dimension>::init(const std::vector<IntPoint>& ipoints) {
     hashes.push_back(Q.hash(nip));
     points.push_back(nip);
   }
-  POLY_ASSERT2(m_loBounds < m_hiBounds,
-               "Provided coplanar or collinear or degenerate points to the QuantPLC");
-  removeDegeneracies();
-  orderFacets();
+  if (isValid()) {
+    POLY_ASSERT2(m_loBounds < m_hiBounds,
+                 "Provided coplanar or collinear or degenerate points to the QuantPLC");
+    removeDegeneracies();
+    orderFacets();
+  }
 }
 
 //------------------------------------------------------------------------------
@@ -132,7 +136,7 @@ QuantPLC<Dimension>::removeDegeneracies() {
     }
   }
   hashes = std::move(new_hashes);
-  const auto& Q = Quant::instance();
+  const auto& Q = Quantizer<Dimension>::instance();
   points.clear();
   points.reserve(hashes.size());
   for (auto& h : hashes) {
@@ -178,7 +182,7 @@ QuantPLC<Dimension>::reduce() {
     }
   }
 
-  const auto& Q = Quant::instance();
+  const auto& Q = Quantizer<Dimension>::instance();
   auto N = indices.size();
   hashes = newHashes;
   points.clear();
@@ -216,7 +220,6 @@ QuantPLC<Dimension>::makeConvex() {
   } else if constexpr (Dimension == 3) {
     makeConvex3D<Dimension>();
   }
-  reduce();
 }
 
 // 2D
@@ -226,6 +229,7 @@ template<int D>
 std::enable_if_t<D == 2, void>
 QuantPLC<Dimension>::makeConvex2D() {
   const unsigned n = points.size();
+  if (n == 0) return;
   m_convex = true;
 
   // Unhash all points to integer coordinates and pair with original indices
@@ -299,6 +303,10 @@ QuantPLC<Dimension>::makeConvex2D() {
     facets.back()[0] = sortedPoints[result[i]].second;
     facets.back()[1] = sortedPoints[result[i + 1]].second;
   }
+  if (isValid()) {
+    // Remove any points that are not part of the convex hull
+    reduce();
+  }
 }
 
 // 3D
@@ -309,6 +317,7 @@ std::enable_if_t<D == 3, void>
 QuantPLC<Dimension>::makeConvex3D() {
   using RealPoint = Point<Dimension, double>;
   const unsigned n = points.size();
+  if (n == 0) return;
   m_convex = true;
 
   std::vector<double> q_points;
@@ -427,7 +436,7 @@ QuantPLC<Dimension>::orderFacets3D() {
 template<int Dimension>
 bool
 QuantPLC<Dimension>::within(const RealPoint& point) const {
-  const auto& Q = Quant::instance();
+  const auto& Q = Quantizer<Dimension>::instance();
   if (!Q.inBounds(point)) {
     return false;
   }

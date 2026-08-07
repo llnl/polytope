@@ -46,6 +46,7 @@ public:
     sharedNodes.clear();
     sharedFaces.clear();
     points.clear();
+    cellRank.clear();
   }
 
   //! Returns true if the tessellation is empty (not defined),
@@ -53,7 +54,7 @@ public:
   bool empty() const {
     return nodes.empty() and cells.empty() and faces.empty() and
       boundaryNodes.empty() and boundaryFaces.empty() and faceCells.empty() and
-      convexHull.empty() and points.empty();
+      convexHull.empty() and points.empty() and cellRank.empty();
   }
 
   //! An array of (numPoints) values containing components of
@@ -87,7 +88,7 @@ public:
 
   //! An array of cell indices for each face, i.e., the cells that share
   //! the face.
-  //! For a given cell there will be either 1 or 2 cells -- the cases with 1
+  //! For a given face there will be either 1 or 2 cells -- the cases with 1
   //! cell indicate a face on a boundary of the tessellation.
   std::vector<std::vector<int> > faceCells;
 
@@ -96,6 +97,9 @@ public:
   //! hull, so this may be empty, in which case you must compute the convex
   //! hull yourself.
   PLC<Dimension> convexHull;
+
+  //! Rank associated with each cell. For distributed tessellation.
+  std::vector<int> cellRank;
 
   //! Parallel data structure: the set of neighbor domains this portion of
   //! the tessellation is in contact with.
@@ -109,8 +113,6 @@ public:
   //!       to.
   // UNUSED
   std::vector<std::vector<unsigned> > sharedNodes, sharedFaces;
-
-  bool makeConvexHull
 
   //! Find the set of cells that touch each mesh node.
   std::vector<std::set<unsigned> > computeNodeCells() {

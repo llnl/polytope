@@ -18,7 +18,6 @@ tessellate(const std::vector<RealType>& points,
   auto& Q = Quantizer<Dimension>::instance();
   if (!Q.m_init) {
     Q.init(points);
-    m_init = true;
   }
   // Pre-conditions
   POLY_ASSERT(mesh.empty());
@@ -29,7 +28,7 @@ tessellate(const std::vector<RealType>& points,
   QuantTessellation<Dimension> quantmesh(points);
   this->tessellateQuantized(quantmesh);
 
-  // Copy the QuantTessellation to the output.
+  // Convert back to physical space.
   quantmesh.fillTessellation(mesh);
 
   // Fill in the boundary elements.
@@ -53,7 +52,6 @@ tessellate(const std::vector<RealType>& points,
   auto& Q = Quantizer<Dimension>::instance();
   if (!Q.m_init) {
     Q.init(PLCpoints);
-    m_init = true;
   }
   // Pre-conditions
   POLY_ASSERT(mesh.empty());

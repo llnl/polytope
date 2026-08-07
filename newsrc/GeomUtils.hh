@@ -387,6 +387,45 @@ bool aboveBelow(const Point<Dimension, CoordType>& v0,
 // Determine if a separating axis exists
 //------------------------------------------------------------------------------
 template<typename CoordType>
+bool SAT(const std::vector<Point2<CoordType>>& pointsA,
+         const std::vector<Point2<CoordType>>& pointsB,
+         const Point2<WideInt<CoordType>>& axis) {
+  using AxisType = WideInt<CoordType>;
+  using Projection = WideInt<AxisType>;
+  POLY_ASSERT(!pointsA.empty());
+  POLY_ASSERT(!pointsB.empty());
+  if (axis.iszero()) return false;
+
+  auto project = [&axis](const Point2<CoordType>& p) {
+    return static_cast<Projection>(p.x)*static_cast<Projection>(axis.x) +
+           static_cast<Projection>(p.y)*static_cast<Projection>(axis.y);
+  };
+
+  Projection minA = project(pointsA.front()), maxA = minA;
+  for (const auto& p : pointsA) {
+    const auto ztest = project(p);
+    if (ztest < minA) {
+      minA = ztest;
+    }
+    if (ztest > maxA) {
+      maxA = ztest;
+    }
+  }
+
+  Projection minB = project(pointsB.front()), maxB = minB;
+  for (const auto& p : pointsB) {
+    const auto ztest = project(p);
+    if (ztest < minB) {
+      minB = ztest;
+    }
+    if (ztest > maxB) {
+      maxB = ztest;
+    }
+  }
+  return maxA < minB || maxB < minA;
+}
+
+template<typename CoordType>
 bool SAT(const std::vector<Point3<CoordType>>& pointsA,
          const std::vector<Point3<CoordType>>& pointsB,
          const Point3<CoordType>& axis) {

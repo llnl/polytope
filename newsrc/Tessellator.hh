@@ -100,8 +100,6 @@ public:
   void singleNodeTessellate(QuantTessellation<Dimension>& quantmesh);
 
 private:
-
-  bool m_init = false;
   // Disallowed.
   Tessellator(const Tessellator&);
   Tessellator& operator=(const Tessellator&);

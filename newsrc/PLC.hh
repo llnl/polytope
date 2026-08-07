@@ -14,6 +14,7 @@ class PLC {
 public:
 
   PLC() = default;
+
   virtual ~PLC() = default;
 
   //! This two-dimensional array defines the topology of the facets of the 

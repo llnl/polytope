@@ -24,6 +24,7 @@
 #include "Quantizer.hh"
 #include "Intersections.hh"
 #include "Cell.hh"
+#include "Serializer.hh"
 
 namespace polytope {
 
@@ -113,12 +114,19 @@ public:
     return holePoints;
   }
 
+  bool isValid() const {
+    if (points.size() < Dimension + 1) return false;
+    return true;
+  }
+
   static bool convexPLCIntersection(const QuantPLC<Dimension>& a,
                                     const QuantPLC<Dimension>& b) {
+    if (!a.isValid() || !b.isValid()) {
+      return false;
+    }
     POLY_ASSERT2((a.m_convex && b.m_convex), "Must call makeConvex() on both inputs");
     if constexpr (Dimension == 2) {
-      return convexIntersect(a.points, a.facets,
-                             b.points, b.facets);
+      return convexIntersect<IntType>(a.getCell(), b.getCell());
     } else if constexpr (Dimension == 3) {
       return convexIntersect(a.points, a.facets, a.m_normals,
                              b.points, b.facets, b.m_normals);
@@ -219,5 +227,35 @@ private:
   within3D(const IntPoint& point) const;
 };
 
+// Serialization
+// This is only used for the distributed tessellator so only some things
+// need to be serialized
+template<int Dimension>
+struct Serializer<QuantPLC<Dimension>> {
+  static void serializeImpl(const QuantPLC<Dimension>& value,
+                            std::vector<char>& buffer) {
+    serialize(value.facets, buffer);
+    serialize(value.points, buffer);
+    serialize(value.m_convex, buffer);
+    serialize(value.m_loBounds, buffer);
+    serialize(value.m_hiBounds, buffer);
+    if (Dimension == 3) {
+      serialize(value.m_normals, buffer);
+    }
+  }
+
+  static void deserializeImpl(QuantPLC<Dimension>& value,
+                              std::vector<char>::const_iterator& bufItr,
+                              const std::vector<char>::const_iterator endItr) {
+    deserialize(value.facets, bufItr, endItr);
+    deserialize(value.points, bufItr, endItr);
+    deserialize(value.m_convex, bufItr, endItr);
+    deserialize(value.m_loBounds, bufItr, endItr);
+    deserialize(value.m_hiBounds, bufItr, endItr);
+    if (Dimension == 3) {
+      deserialize(value.m_normals, bufItr, endItr);
+    }
+  }
+};
 }
 #endif

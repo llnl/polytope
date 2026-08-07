@@ -91,7 +91,10 @@ SiloWriter<2, TessType>::write(const TessType& mesh,
 #ifdef POLYTOPE_ENABLE_MPI
   bool doParallel = false;
   std::string masterDirName = "";
-  std::vector<int> ranksWithData;  
+  std::vector<int> ranksWithData;
+  if (nproc == 1) {
+    numFiles = 1;
+  }
   if (numFiles == -1 || numFiles > 1) {
     doParallel = true;
     int localRankHasPoints = (mesh.points.size() > 0) ? 1 : 0;

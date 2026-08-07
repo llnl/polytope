@@ -10,18 +10,6 @@
 
 namespace polytope {
 
-// Check if any cells intersect a convex hull
-template<>
-bool
-QuantTessellation<3>::cellIntersectsHull(const QuantPLC<3>& QPLC,
-                                         const unsigned cellIndex) const {
-  auto plc_cell = QPLC.getCell();
-  auto qcell = getCell(cellIndex);
-  // TODO: Implement me
-  //return convexIntersection(plc_cell, qcell);
-  return true;
-}
-
 // Remove any generator points that are outside our clipping region
 template<>
 void
@@ -97,6 +85,32 @@ QuantTessellation<3>::fillTessellation(TessellationType& mesh) {
     }
   }
   mesh.computeFaceCells();
+}
+
+//------------------------------------------------------------------------------
+// Extract the local visible generators
+//------------------------------------------------------------------------------
+template<>
+std::vector<HashKey<3>::CoordHash>
+QuantTessellation<3>::visibleGenerators() {
+  auto N = points.size();
+  if (!convexHull.m_convex) {
+    makeConvexHull();
+  }
+  std::vector<CoordHash> result;
+  if (convexHull.isValid()) {
+    result.reserve(N);
+    auto plc_cell = convexHull.getCell();
+    for (auto i = 0u; i < N; ++i) {
+      auto qcell = getCell(i);
+      // if (convexBoundaryIntersect<IntType>(qcell, plc_cell)) {
+      //   result.push_back(hashes[i]);
+      // }
+    }
+  } else {
+    result = hashes;
+  }
+  return result;
 }
 
 //------------------------------------------------------------------------------

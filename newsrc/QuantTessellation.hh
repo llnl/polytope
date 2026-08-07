@@ -10,13 +10,12 @@
 #include <algorithm>
 #include <numeric>
 #include <string>
-#include "HashKey.hh"
-#include "Point.hh"
 #include "Quantizer.hh"
 #include "Tessellation.hh"
 #include "QuantPLC.hh"
-#include "Cell.hh"
 #include "Shapes.hh"
+#include "Communicator.hh"
+#include "Intersections.hh"
 
 namespace polytope {
 
@@ -56,6 +55,10 @@ public:
     init(qgenpoints);
   }
 
+  QuantTessellation(const std::vector<std::vector<CoordHash>>& rankHashes) {
+    init(rankHashes);
+  }
+
   void init(const std::vector<RealType>& genpoints) {
     const auto& Q = QuantizerType::instance();
     m_loBounds = Q.maxCoord;
@@ -93,6 +96,39 @@ public:
       m_hiBounds = m_hiBounds.maxElements(ip);
       hashes.push_back(Q.hash(ip));
     }
+  }
+
+  // Initialize or extend the generator points
+  void init(const std::vector<std::vector<CoordHash>>& rankHashes) {
+    faces.clear();
+    nodes.clear();
+    cells.clear();
+    faceCells.clear();
+    const auto& Q = Quantizer<Dimension>::instance();
+    auto nranks = rankHashes.size();
+    auto Ntotal = points.size();
+    for (auto& v : rankHashes) {
+      Ntotal += v.size();
+    }
+    // This implies the cell ranks were not filled initially
+    // Fill them now
+    if (cellRank.size() != points.size()) {
+      cellRank.assign(points.size(), Communicator::getRank());
+    }
+    points.reserve(Ntotal);
+    hashes.reserve(Ntotal);
+    cellRank.reserve(Ntotal);
+    unsigned i = Ntotal;
+    for (auto source = 0u; source < nranks; ++source) {
+      for (auto& ch : rankHashes[source]) {
+        auto ip = Q.unhash(ch);
+        ip.index = i++;
+        hashes.push_back(ch);
+        points.push_back(ip);
+        cellRank.push_back(source);
+      }
+    }
+    sortByHash();
   }
 
   void clear() {
@@ -156,6 +192,13 @@ public:
       newPoints[i] = points[sortedIndices[i]];
       newPoints[i].index = i;
       newHashes[i] = hashes[sortedIndices[i]];
+    }
+    if (cellRank.size() > 0) {
+      std::vector<int> newCellRank(numPoints);
+      for (unsigned i = 0; i < numPoints; ++i) {
+        newCellRank[i] = cellRank[sortedIndices[i]];
+      }
+      cellRank = std::move(newCellRank);
     }
     points = std::move(newPoints);
     hashes = std::move(newHashes);
@@ -248,8 +291,66 @@ public:
     faces = std::move(newFaces);
   }
 
+  void makeConvexHull() {
+    if (convexHull.m_convex) {
+      return;
+    }
+    PLC<Dimension> emptyPLC;
+    // Check if hull will be valid
+    convexHull.init(emptyPLC, points);
+    convexHull.makeConvex();
+  }
+
+  //------------------------------------------------------------------------------
+  // Parallel methods
+  //------------------------------------------------------------------------------
+
+  // Extract the visible generators
+  std::vector<CoordHash> visibleGenerators();
+
+  // Determine which ranks generators are neighbors
+  std::set<int> neighboringRanks() {
+    this->computeFaceCells();
+    int rank = Communicator::getRank();
+    std::set<int> neighbors;
+    for (const auto& fc : faceCells) {
+      if (fc.size() < 2) continue;
+      auto af0 = fc[0] < 0 ? ~fc[0] : fc[0];
+      auto af1 = fc[1] < 0 ? ~fc[1] : fc[1];
+      const auto& ranki = cellRank[af0];
+      const auto& rankj = cellRank[af1];
+      if (ranki == rank && rankj != rank) neighbors.insert(rankj);
+      if (rankj == rank && ranki != rank) neighbors.insert(ranki);
+    }
+    return neighbors;
+  }
+
+  void filterToLocalGenerators() {
+    const auto N = points.size();
+    auto rank = Communicator::getRank();
+    std::vector<IntPoint> newPoints;
+    std::vector<CoordHash> newHashes;
+    std::vector<std::vector<int>> newCells;
+    newPoints.reserve(N);
+    newHashes.reserve(N);
+    newCells.reserve(N);
+    for (auto i = 0; i < N; ++i) {
+      if (cellRank[i] == rank) {
+        newPoints.push_back(points[i]);
+        newHashes.push_back(hashes[i]);
+        newCells.push_back(cells[i]);
+      }
+    }
+    points = std::move(newPoints);
+    hashes = std::move(newHashes);
+    cells = std::move(newCells);
+    compactUnusedNodesAndFaces();
+  }
+
+  //------------------------------------------------------------------------------
   // Used for debugging purposes. Creates a file of relevant generator points
-  // and boundary points.
+  //------------------------------------------------------------------------------
+
   // Eject only certain generators
   void ejectEscapePod(std::string filename,
                       const std::vector<unsigned>& genPoints,
@@ -272,6 +373,13 @@ public:
                      QuantPLC<Dimension>& QPLC,
                      std::string& tessellatorName);
 
+  bool cellIntersectsHull(const QuantPLC<Dimension>& QPLC,
+                          const unsigned index) {
+    auto qcell = getCell(index);
+    auto plc_cell = QPLC.getCell();
+    return convexBoundaryIntersect<IntType>(qcell, plc_cell);
+  }
+
   //------------------------------------------------------------------------------
   // Dimension-specific methods (implemented in separate .cc files)
   //------------------------------------------------------------------------------
@@ -285,10 +393,6 @@ public:
 
   // Remove any external generator points
   void cullExternalPoints(const QuantPLC<Dimension>& QPLC);
-
-  // Compare cells with convex hull
-  bool cellIntersectsHull(const QuantPLC<Dimension>& QPLC,
-                          const unsigned cellIndex) const;
 
   //------------------------------------------------------------------------------
   // Output method
@@ -313,8 +417,8 @@ public:
   using Tessellation<Dimension, IntType>::faces; // Faces made up of indices into nodes
   using Tessellation<Dimension, IntType>::cells; // Cells made up of indices into faces
   using Tessellation<Dimension, IntType>::faceCells;
+  using Tessellation<Dimension, IntType>::cellRank;
   QuantPLC<Dimension> convexHull;
-  bool m_computedHull = false;
 };
 
 } // namespace polytope

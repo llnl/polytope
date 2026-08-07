@@ -143,20 +143,6 @@ QuantTessellation<2>::loadEscapePod(std::string filename,
 }
 
 template<>
-std::vector<unsigned>
-QuantTessellation<2>::visibleLocalGenerators() {
-  
-}
-// Check if any cells intersect a convex hull
-template<>
-bool
-QuantTessellation<2>::cellIntersectsHull(const unsigned cellIndex) const {
-  auto plc_cell = convexHull.getCell();
-  auto qcell = getCell(cellIndex);
-  return convexBoundaryIntersect<IntType>(qcell, plc_cell);
-}
-
-template<>
 void
 QuantTessellation<2>::cullExternalPoints(const QuantPLC<2>& QPLC) {
   const auto& Q = Quantizer<2>::instance();
@@ -198,7 +184,8 @@ cellPolygonIntersect(const QuantTessellation<2>::IntCell& currentCell,
   if (NFrag == 0) return PolygonWithHoles(); // Cell was completely outside boundary
   if (NFrag > 1) {
     // Find which part owns the generator
-    while (fragIndex < NFrag and not bp::contains(cellSet[fragIndex], genPoint)) ++fragIndex;
+    while (fragIndex < NFrag and
+           not bp::contains(cellSet[fragIndex], genPoint)) ++fragIndex;
     for (unsigned iPoly = 0; iPoly < NFrag; ++iPoly) {
       if (iPoly != fragIndex) {
         // Check if orphan can be added to other orphans
@@ -305,6 +292,8 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
   // Storage for generator points corresponding to surviving cells
   std::vector<IntPoint> newPoints;
   std::vector<CoordHash> newHashes;
+  std::vector<int> newCellRank;
+  bool updateCellRank = cellRank.size() == 0 ? false : true;
 
   // Map from IntPoint to index in newNodes (for vertex deduplication)
   std::map<IntPoint, int> node2id;
@@ -357,6 +346,9 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
     newCells.push_back(cellEdgeIndices);
     newPoints.push_back(points[curIndex]);
     newHashes.push_back(hashes[curIndex]);
+    if (updateCellRank) {
+      newCellRank.push_back(cellRank[curIndex]);
+    }
   }
   if (remainingOrphans.size() != 0) {
     ejectEscapePod("remainingorphan", QPLC, tessellator.name());
@@ -368,6 +360,9 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
   cells = std::move(newCells);
   points = std::move(newPoints);
   hashes = std::move(newHashes);
+  if (updateCellRank) {
+    cellRank = std::move(newCellRank);
+  }
 }
 #else
 // Must enable Boost to use clipping methods
@@ -394,7 +389,6 @@ QuantTessellation<2>::fillTessellation(TessellationType& mesh) {
   const unsigned numCells = points.size();  // Number of generators
 
   // Allocate space for mesh data
-  // In 2D: nodes are stored as [x0, y0, x1, y1, ...]
   mesh.nodes.resize(numNodes);
   mesh.faces.resize(numFaces, std::vector<unsigned>(2));
   mesh.points.resize(numCells);
@@ -402,16 +396,12 @@ QuantTessellation<2>::fillTessellation(TessellationType& mesh) {
   POLY_ASSERT2(cells.size() == numCells, "Differing number of cells and generator points");
 
   for (unsigned i = 0; i < numCells; ++i) {
-    RealPoint rp = Q.dequantize(points[i]);
-    mesh.points[i].x = rp.x;
-    mesh.points[i].y = rp.y;
+    mesh.points[i] = Q.dequantize(points[i]);
   }
 
   // Dequantize nodes from integer coordinates to real coordinates
   for (unsigned i = 0; i < numNodes; ++i) {
-    RealPoint rp = Q.dequantize(nodes[i]);
-    mesh.nodes[i].x = rp.x;
-    mesh.nodes[i].y = rp.y;
+    mesh.nodes[i] = Q.dequantize(nodes[i]);
   }
 
   // Copy face topology (each face has 2 nodes in 2D)
@@ -422,6 +412,37 @@ QuantTessellation<2>::fillTessellation(TessellationType& mesh) {
     mesh.faces[i][1] = faces[i][1];
   }
   mesh.computeFaceCells();
+  if (cellRank.size() == numCells) {
+    mesh.cellRank = cellRank;
+  }
+}
+
+//------------------------------------------------------------------------------
+// Return the visible CoordHashes
+// TODO: Put this in header file since it should be Dimension agnostic
+//------------------------------------------------------------------------------
+template<>
+std::vector<HashKey<2>::CoordHash>
+QuantTessellation<2>::visibleGenerators() {
+  auto N = points.size();
+  std::vector<CoordHash> result;
+  if (!convexHull.m_convex) {
+    makeConvexHull();
+  }
+  if (N == 0) return result;
+  if (convexHull.isValid()) {
+    result.reserve(N);
+    auto plc_cell = convexHull.getCell();
+    for (auto i = 0u; i < N; ++i) {
+      auto qcell = getCell(i);
+      if (convexBoundaryIntersect<IntType>(qcell, plc_cell)) {
+        result.push_back(hashes[i]);
+      }
+    }
+  } else {
+    result = hashes;
+  }
+  return result;
 }
 
 //------------------------------------------------------------------------------
