@@ -582,27 +582,27 @@ bool segmentIntersection2D(const Point2<CoordType>& a,
                            const Point2<CoordType>& d,
                            Point2<CoordType>& result) {
   if constexpr (std::is_floating_point<CoordType>::value) {
-      const Point2<CoordType> r = b - a;
-      const Point2<CoordType> s = d - c;
-      const Point2<CoordType> ca = c - a;
+    const Point2<CoordType> r = b - a;
+    const Point2<CoordType> s = d - c;
+    const Point2<CoordType> ca = c - a;
 
-      const CoordType denom = r.x*s.y - r.y*s.x;
-      if (std::abs(denom) < std::numeric_limits<CoordType>::epsilon()) {
-        return false;
-      }
+    const CoordType denom = r.x*s.y - r.y*s.x;
+    if (std::abs(denom) < std::numeric_limits<CoordType>::epsilon()) {
+      return false;
+    }
 
-      const CoordType t = (ca.x*s.y - ca.y*s.x) / denom;
-      const CoordType u = (ca.x*r.y - ca.y*r.x) / denom;
+    const CoordType t = (ca.x*s.y - ca.y*s.x) / denom;
+    const CoordType u = (ca.x*r.y - ca.y*r.x) / denom;
 
-      if (t < 0 || t > 1 || u < 0 || u > 1) {
-        return false;
-      }
+    if (t < 0 || t > 1 || u < 0 || u > 1) {
+      return false;
+    }
 
-      result.x = a.x + t*r.x;
-      result.y = a.y + t*r.y;
-      return true;
+    result.x = a.x + t*r.x;
+    result.y = a.y + t*r.y;
+    return true;
 
-    } else {
+  } else {
     using Wide = WideInt<CoordType>;
 
     const Point2<CoordType> r = b - a;

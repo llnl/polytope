@@ -15,8 +15,7 @@ class Cube {
 public:
   using PointType = Point<3, CoordType>;
   std::vector<PointType> nodes;
-  std::vector<std::vector<unsigned>> faces = {
-                                              {0, 1, 2, 3},  // bottom (-z)
+  std::vector<std::vector<unsigned>> faces = {{0, 1, 2, 3},  // bottom (-z)
                                               {4, 7, 6, 5},  // top (+z)
                                               {0, 4, 5, 1},  // front (-y)
                                               {2, 6, 7, 3},  // back (+y)
@@ -34,15 +33,11 @@ public:
   }
 
   inline std::vector<std::vector<unsigned>> createCubeFaces() {
-    // Faces with outward-pointing normals (right-hand rule)
-    return {
-            {0, 1, 2, 3},  // bottom (-z)
-            {4, 7, 6, 5},  // top (+z)
-            {0, 4, 5, 1},  // front (-y)
-            {2, 6, 7, 3},  // back (+y)
-            {0, 3, 7, 4},  // left (-x)
-            {1, 5, 6, 2}   // right (+x)
-    };
+    return faces;
+  }
+
+  inline std::vector<CoordType> flatNodes() {
+    return flattenCoords(nodes);
   }
 
   bool within(const PointType& pos) {

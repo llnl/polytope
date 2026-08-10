@@ -23,6 +23,7 @@
 #include "Point.hh"
 #include "polytope_test_utilities.hh"
 #include "GeomUtils.hh"
+#include "Cube.hh"
 
 #include "Communicator.hh" 
 
@@ -40,41 +41,6 @@ using CoordHash = typename Quantizer3D::CoordHash;
 using Wide = CoordHash;
 
 //------------------------------------------------------------------------------
-// Helper: Create a cube PLC from vertices
-//------------------------------------------------------------------------------
-PLC createCubePLC() {
-  PLC plc;
-
-  // Cube facets (6 faces, each with 4 vertices)
-  plc.facets.resize(6);
-  plc.facets[0] = {0, 1, 2, 3}; // bottom (z = 0)
-  plc.facets[1] = {4, 7, 6, 5}; // top (z = 1)
-  plc.facets[2] = {0, 4, 5, 1}; // front (y = 0)
-  plc.facets[3] = {2, 6, 7, 3}; // back (y = 1)
-  plc.facets[4] = {0, 3, 7, 4}; // left (x = 0)
-  plc.facets[5] = {1, 5, 6, 2}; // right (x = 1)
-
-  return plc;
-}
-
-//------------------------------------------------------------------------------
-// Helper: Create cube vertices with specified bounds
-//------------------------------------------------------------------------------
-vector<RealType> createCubeVertices(const RealPoint& lo = RealPoint(0.0, 0.0, 0.0),
-                                    const RealPoint& hi = RealPoint(1.0, 1.0, 1.0)) {
-  return {
-    lo.x, lo.y, lo.z,  // 0
-    hi.x, lo.y, lo.z,  // 1
-    hi.x, hi.y, lo.z,  // 2
-    lo.x, hi.y, lo.z,  // 3
-    lo.x, lo.y, hi.z,  // 4
-    hi.x, lo.y, hi.z,  // 5
-    hi.x, hi.y, hi.z,  // 6
-    lo.x, hi.y, hi.z   // 7
-  };
-}
-
-//------------------------------------------------------------------------------
 // Test: Basic construction and quantization
 //------------------------------------------------------------------------------
 void testBasicConstruction(const int tnum) {
@@ -85,10 +51,10 @@ void testBasicConstruction(const int tnum) {
   auto& Q = Quantizer3D::instance();
   Q.init(xlo, xhi);
 
-  auto plc = createCubePLC();
-  auto vertices = createCubeVertices(xlo, xhi);
-
-  QuantPLC3D qplc(plc,  vertices);
+  Cube<double> cube(xlo, xhi);
+  PLC plc;
+  plc.facets = cube.createCubeFaces();
+  QuantPLC3D qplc(plc, cube.flatNodes());
 
   // Check that all 8 vertices were quantized
   POLY_CHECK2(qplc.points.size() == 8,
@@ -279,10 +245,10 @@ void testFacetOrientation(const int tnum) {
   auto& Q = Quantizer3D::instance();
   Q.init(xlo, xhi);
 
-  auto plc = createCubePLC();
-  auto vertices = createCubeVertices();
-
-  QuantPLC3D qplc(plc,  vertices);
+  Cube<double> cube(xlo, xhi);
+  PLC plc;
+  plc.facets = cube.createCubeFaces();
+  QuantPLC3D qplc(plc, cube.flatNodes());
   qplc.reduce();
 
   // Compute centroid in floating-point (no need for exact integer math here)
@@ -336,10 +302,10 @@ void testWithinBasic(const int tnum) {
   auto& Q = Quantizer3D::instance();
   Q.init(xlo, xhi);
 
-  auto plc = createCubePLC();
-  auto vertices = createCubeVertices(xlo, xhi);
-
-  QuantPLC3D qplc(plc,  vertices);
+  Cube<double> cube(xlo, xhi);
+  PLC plc;
+  plc.facets = cube.createCubeFaces();
+  QuantPLC3D qplc(plc, cube.flatNodes());
   qplc.makeConvex();
 
   // Test points inside
@@ -453,14 +419,14 @@ void testHashComparison(const int tnum) {
   auto& Q = Quantizer3D::instance();
   Q.init(xlo, xhi);
 
-  auto plc1 = createCubePLC();
-  auto vertices1 = createCubeVertices();
-  QuantPLC3D qplc1(plc1,  vertices1);
+  Cube<double> cube(xlo, xhi);
+  PLC plc1, plc2;
+  plc1.facets = cube.createCubeFaces();
+  plc2.facets = cube.createCubeFaces();
+  QuantPLC3D qplc1(plc1, cube.flatNodes());
 
   // Create identical PLC with permuted vertex indices
-  auto plc2 = createCubePLC();
-  auto vertices2 = createCubeVertices();
-  QuantPLC3D qplc2(plc2,  vertices2);
+  QuantPLC3D qplc2(plc2,  cube.flatNodes());
 
   // Should have same hashes (order-independent comparison)
   POLY_CHECK(QuantPLC3D::compareHashes(qplc1, qplc2));

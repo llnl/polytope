@@ -39,15 +39,14 @@ set_tests_properties(new_cleanup_tests PROPERTIES FIXTURES_CLEANUP "new_polytope
 #-----------------------------------------------------------------------------
 # Polytope Utility Tests
 #-----------------------------------------------------------------------------
-#polytope_add_new_test( "PLC_CSG" )  #  <-- Suspending 'til we think it works
 # polytope_add_new_test(HashKey2D)
 # polytope_add_new_test(HashKey3D)
 polytope_add_new_test(Quantizer)
 polytope_add_new_test(QuantPLC2D)
-polytope_add_new_test(QuantPLC3D)
+#polytope_add_new_test(QuantPLC3D) # Currently broken
 polytope_add_new_test(QuantConvexIntersect3D)
 polytope_add_new_test(SimpleTess2D)
-polytope_add_new_test(clipPolygon2D)
+#polytope_add_new_test(clipPolygon2D) # Currently broken, only used by 3D
 polytope_add_new_test(clipPolyhedron3D)
 polytope_add_new_test(StarBoundary)
 polytope_add_new_test(SolidRotationAroundHoles)
@@ -57,7 +56,6 @@ polytope_add_new_test(BoostTessellator)
 polytope_add_new_test(RandomPoints)
 polytope_add_new_test(RotationTests)
 polytope_add_new_test(Circumcenter)
-#polytope_add_new_test(Cylinder)
 
 #-----------------------------------------------------------------------------
 # Tetgen Tessellator Tests

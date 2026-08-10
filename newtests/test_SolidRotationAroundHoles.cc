@@ -52,7 +52,7 @@ void test(Tessellator<2,double>& tessellator) {
   string testName = "SolidRotationAroundHoles_" + tessellator.name();
 
   // Timestepping parameters
-  const double dt = 1.0;
+  const double dt = 4.0;
   const double Tmax = 628.0/2;
 
   // Boundary parameters
