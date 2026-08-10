@@ -32,18 +32,18 @@ writeTagsToFile(const std::map<std::string, std::vector<int>*>& tags,
 
 inline
 void
-writeFieldsToFile(const std::map<std::string, double*>& fields,
+writeFieldsToFile(const std::map<std::string, std::vector<double>>& fields,
                   DBfile* file,
                   const int numElements,
                   const int centering,
                   DBoptlist* optlist) {
-  for (typename std::map<std::string, double*>::const_iterator iter = fields.begin();
+  for (typename std::map<std::string, std::vector<double>>::const_iterator iter = fields.begin();
        iter != fields.end();
        ++iter) {
     DBPutUcdvar1(file,
                  (char*)iter->first.c_str(),
                  (char*)"mesh",
-                 (void*)iter->second,
+                 (void*)iter->second.data(),
                  numElements,
                  0,
                  0,
@@ -55,19 +55,19 @@ writeFieldsToFile(const std::map<std::string, double*>& fields,
 
 inline
 void
-writeFieldsToFile(const std::map<std::string, double*>& fields,
+writeFieldsToFile(const std::map<std::string, std::vector<double>>& fields,
                   const std::string& meshname,
                   DBfile* file,
                   const int numElements,
                   const int centering,
                   DBoptlist* optlist) {
-  for (typename std::map<std::string, double*>::const_iterator iter = fields.begin();
+  for (typename std::map<std::string, std::vector<double>>::const_iterator iter = fields.begin();
        iter != fields.end();
        ++iter) {
     DBPutUcdvar1(file,
                  (char*)iter->first.c_str(),
                  meshname.c_str(),
-                 (void*)iter->second,
+                 (void*)iter->second.data(),
                  numElements,
                  0,
                  0,
@@ -82,14 +82,14 @@ writeFieldsToFile(const std::map<std::string, double*>& fields,
 
 inline
 void
-putMultivarInFile(const std::map<std::string, double*>& fields,
+putMultivarInFile(const std::map<std::string, std::vector<double>>& fields,
                   int& fieldIndex,
                   std::vector<std::vector<char*> >& varNames,
                   std::vector<int>& varTypes,
                   DBfile* file,
                   const int numChunks,
                   DBoptlist* optlist) {
-  for (typename std::map<std::string, double*>::const_iterator iter = fields.begin();
+  for (typename std::map<std::string, std::vector<double>>::const_iterator iter = fields.begin();
        iter != fields.end();
        ++iter, ++fieldIndex)
   {
@@ -176,7 +176,7 @@ std::vector<std::string> getProcPaths(const std::string& directory,
 
 inline
 void putCellVars(DBfile* file,
-                 const std::map<std::string, double*>& fields,
+                 const std::map<std::string, std::vector<double>>& fields,
                  const std::vector<std::string>& procPaths,
                  const size_t nblocks,
                  const std::vector<int>& varTypes,

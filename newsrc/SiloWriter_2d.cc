@@ -57,20 +57,13 @@ traverseNodes(const TessType& mesh,
 template <typename TessType>
 void
 SiloWriter<2, TessType>::write(const TessType& mesh,
-                               const map<string, double*>& nodeFields,
-                               const map<string, vector<int>*>& nodeTags,
-                               const map<string, double*>& edgeFields,
-                               const map<string, vector<int>*>& edgeTags,
-                               const map<string, double*>& faceFields,
-                               const map<string, vector<int>*>& faceTags,
-                               const map<string, double*>& cellFields,
-                               const map<string, vector<int>*>& cellTags,
+                               const FieldTypeMap& fields,
+                               const TagTypeMap& tags,
                                const string& filePrefix,
                                const string& directory,
                                int cycle,
                                double time,
-                               int numFiles,
-                               int mpiTag) {
+                               int numFiles) {
   int nproc = Communicator::getNProcs();
   int rank = Communicator::getRank();
   int root = Communicator::getRoot();
@@ -231,19 +224,28 @@ SiloWriter<2, TessType>::write(const TessType& mesh,
     // free(elemnames[1]);
     // free(elemnames[2]);
     // Write out tag information.
-    //writeTagsToFile(nodeTags, file, DB_NODECENT);
-    writeTagsToFile(edgeTags, file, DB_EDGECENT);
-    writeTagsToFile(faceTags, file, DB_FACECENT);
-    writeTagsToFile(cellTags, file, DB_ZONECENT);
+    for (const auto& [type, tagmap] : tags) {
+      POLY_CHECK(type == DB_NODECENT || type == DB_EDGECENT ||
+                 type == DB_FACECENT || type == DB_ZONECENT);
+      writeTagsToFile(tagmap, file, type);
+    }
 
     // FIXME: We really should try to use the number of edges for edge fields.
     const int numFaces = mesh.faces.size();
-    //writeFieldsToFile(nodeFields, varmeshname, file, numNodes, DB_NODECENT, optlist);
 
     // Write cell-centered fields to CELLS directory
-    writeFieldsToFile(edgeFields, meshname, file, numFaces, DB_EDGECENT, optlist);
-    writeFieldsToFile(faceFields, meshname, file, numFaces, DB_FACECENT, optlist);
-    writeFieldsToFile(cellFields, meshname, file, numCells, DB_ZONECENT, optlist);
+    // Write out tag information.
+    for (const auto& [type, fieldmap] : fields) {
+      POLY_CHECK(type == DB_NODECENT || type == DB_EDGECENT ||
+                 type == DB_FACECENT || type == DB_ZONECENT);
+      if (type == DB_FACECENT || type == DB_EDGECENT) {
+        writeFieldsToFile(fieldmap, meshname, file, numFaces, type, optlist);
+      } else if (type == DB_NODECENT) {
+        writeFieldsToFile(fieldmap, meshname, file, numNodes, type, optlist);
+      } else {
+        writeFieldsToFile(fieldmap, meshname, file, numCells, type, optlist);
+      }
+    }
 
     int numPoints = mesh.points.size();
     vector<double> xp(numPoints), yp(numPoints);
@@ -300,9 +302,11 @@ SiloWriter<2, TessType>::write(const TessType& mesh,
     DBPutMultimesh(file, global_mesh_name.c_str(), nblocks, cellMeshNames.data(), cellMeshTypes.data(), masteroptlist);
     DBPutMultimesh(file, "PPOINTS", nblocks, pointMeshNames.data(), pointMeshTypes.data(), masteroptlist);
 
-    putCellVars(file, edgeFields, procPaths, nblocks, varTypes, masteroptlist);
-    putCellVars(file, faceFields, procPaths, nblocks, varTypes, masteroptlist);
-    putCellVars(file, cellFields, procPaths, nblocks, varTypes, masteroptlist);
+    for (const auto& [type, fieldmap] : fields) {
+      POLY_CHECK(type == DB_NODECENT || type == DB_EDGECENT ||
+                 type == DB_FACECENT || type == DB_ZONECENT);
+      putCellVars(file, fieldmap, procPaths, nblocks, varTypes, masteroptlist);
+    }
 #ifdef POLYTOPE_ENABLE_DEBUG
     std::vector<char*> nodeMeshNames;
     for (const auto& p : procPaths) {

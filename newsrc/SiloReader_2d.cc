@@ -4,6 +4,7 @@
 #include "Communicator.hh"
 #include "SiloUtils.hh"
 #include "Serializer.hh"
+#include "QuantTessellation.hh"
 
 #include <algorithm>
 #include <fstream>
@@ -11,6 +12,7 @@
 #include <cstring>
 #include <sys/stat.h>
 #include <dirent.h>
+#include <type_traits>
 
 #include "silo.h"
 
@@ -18,12 +20,64 @@ namespace polytope {
 
 using namespace std;
 
+namespace {
+
 //-------------------------------------------------------------------
-template <typename RealType>
+bool
+tocHasName(const int n,
+           char** names,
+           const std::string& name) {
+  for (int i = 0; i < n; ++i) {
+    if (name == names[i]) return true;
+  }
+  return false;
+}
+//-------------------------------------------------------------------
+
+//-------------------------------------------------------------------
+std::vector<std::string>
+getSiloInputPaths(const std::string& masterFilename) {
+  DBfile* file = DBOpen(masterFilename.c_str(), DB_UNKNOWN, DB_READ);
+  POLY_ASSERT2(file, "Could not open file " << masterFilename);
+
+  DBtoc* toc = DBGetToc(file);
+  POLY_ASSERT2(toc, "Could not read Silo table of contents from file " << masterFilename);
+
+  std::vector<std::string> result;
+  const std::string globalMeshName = getGlobalMeshName();
+  const std::string localMeshName = getLocalMeshName();
+
+  if (tocHasName(toc->nmultimesh, toc->multimesh_names, globalMeshName)) {
+    DBmultimesh* mmesh = DBGetMultimesh(file, globalMeshName.c_str());
+    POLY_ASSERT2(mmesh, "Could not read multimesh " << globalMeshName << " from file " << masterFilename);
+    result.resize(mmesh->nblocks);
+    for (int i = 0; i < mmesh->nblocks; ++i) {
+      result[i] = mmesh->meshnames[i];
+    }
+    DBFreeMultimesh(mmesh);
+  } else if (tocHasName(toc->nucdmesh, toc->ucdmesh_names, globalMeshName)) {
+    result.push_back(masterFilename + ":" + globalMeshName);
+  } else if (tocHasName(toc->nucdmesh, toc->ucdmesh_names, localMeshName)) {
+    result.push_back(masterFilename + ":" + localMeshName);
+  } else {
+    POLY_ASSERT2(false, "Could not find multimesh or mesh in file " << masterFilename);
+  }
+
+  DBClose(file);
+  return result;
+}
+//-------------------------------------------------------------------
+
+}
+
+//-------------------------------------------------------------------
+template <typename TessType>
 void
-SiloReader<2, RealType>::read(Tessellation<2, RealType>& mesh,
-                              std::map<std::string, std::vector<RealType> >& fields,
+SiloReader<2, TessType>::read(TessType& mesh,
+                              FieldTypeMap& fields,
+                              TagTypeMap& tags,
                               const string& masterFilename) {
+  using CoordType = typename std::decay<decltype(mesh.nodes[0].x)>::type;
   std::vector<std::string> inputFiles;
   int rank = 0;
   // Open a file in Silo/HDF5 format for reading.
@@ -35,19 +89,8 @@ SiloReader<2, RealType>::read(Tessellation<2, RealType>& mesh,
   int NBlocks = 0;
   std::vector<std::string> block_paths;
   if (rank == root) {
-    DBfile* mfile = DBOpen(masterFilename.c_str(), DB_UNKNOWN, DB_READ);
-    if (!mfile) {
-      NBlocks = -1;
-    } else {
-      DBmultimesh* mmesh = DBGetMultimesh(mfile, getGlobalMeshName().c_str());
-      NBlocks = mmesh->nblocks;
-      block_paths.resize(NBlocks);
-      for (int i = 0; i < NBlocks; ++i) {
-        block_paths[i] = mmesh->meshnames[i];
-      }
-      DBFreeMultimesh(mmesh);
-      DBClose(mfile);
-    }
+    block_paths = getSiloInputPaths(masterFilename);
+    NBlocks = static_cast<int>(block_paths.size());
   }
 
   std::vector<char> buffer;
@@ -75,7 +118,7 @@ SiloReader<2, RealType>::read(Tessellation<2, RealType>& mesh,
     }
   }
 #else
-  inputFiles.push_back(masterFilename);
+  inputFiles = getSiloInputPaths(masterFilename);
 #endif
 
   for (const auto& cpath : inputFiles) {
@@ -95,10 +138,10 @@ SiloReader<2, RealType>::read(Tessellation<2, RealType>& mesh,
     POLY_ASSERT2(dbmesh, "Could not find mesh " << internal_obj_path << " in file " << filename);
 
     // Node coordinates.
-    mesh.nodes.resize(2*dbmesh->nnodes);
+    mesh.nodes.resize(dbmesh->nnodes);
     for (int i = 0; i < dbmesh->nnodes; ++i) {
-      mesh.nodes[2*i] = ((RealType*)(dbmesh->coords[0]))[i];
-      mesh.nodes[2*i+1] = ((RealType*)(dbmesh->coords[1]))[i];
+      mesh.nodes[i].x = static_cast<CoordType>(((double*)(dbmesh->coords[0]))[i]);
+      mesh.nodes[i].y = static_cast<CoordType>(((double*)(dbmesh->coords[1]))[i]);
     }
 
     // Reconstruct the cell-face and face-node connectivity.  The 2D writer
@@ -188,32 +231,63 @@ SiloReader<2, RealType>::read(Tessellation<2, RealType>& mesh,
     DBpointmesh* pmesh = DBGetPointmesh(file, "points");
     POLY_ASSERT2(pmesh, "Could not find generator points in file " << filename);
     int npts = pmesh->nels;
-    mesh.points.resize(2*npts);
+    mesh.points.resize(npts);
     for (int i = 0; i < npts; ++i) {
-      mesh.points[2*i] = ((RealType*)(pmesh->coords[0]))[i];
-      mesh.points[2*i+1] = ((RealType*)(pmesh->coords[1]))[i];
+      mesh.points[i].x = static_cast<CoordType>(((double*)(pmesh->coords[0]))[i]);
+      mesh.points[i].y = static_cast<CoordType>(((double*)(pmesh->coords[1]))[i]);
     }
     DBFreePointmesh(pmesh);
+
+    const std::vector<std::pair<int, std::string> > tagLists = {
+      {DB_NODECENT, "node_tags"},
+      {DB_EDGECENT, "edge_tags"},
+      {DB_FACECENT, "face_tags"},
+      {DB_ZONECENT, "cell_tags"}
+    };
+    const bool readAllTags = tags.empty();
+    for (const auto& [centering, tagListName] : tagLists) {
+      if (!readAllTags && tags.find(centering) == tags.end()) continue;
+      DBcompoundarray* dbtags = DBGetCompoundarray(file, tagListName.c_str());
+      if (dbtags != 0) {
+        int* tagValues = (int*)dbtags->values;
+        int offset = 0;
+        for (int i = 0; i < dbtags->nelems; ++i) {
+          std::vector<int>& tag = tags[centering][dbtags->elemnames[i]];
+          tag.assign(tagValues + offset, tagValues + offset + dbtags->elemlengths[i]);
+          offset += dbtags->elemlengths[i];
+        }
+        DBFreeCompoundarray(dbtags);
+      }
+    }
+
     // Get the cell field variables
-    std::vector<std::string> fieldNames;
+    std::vector<std::pair<int, std::string> > fieldNames;
     if (fields.empty()) {
       DBtoc* contents = DBGetToc(file);
       for (int f = 0; f < contents->nucdvar; ++f) {
-        fieldNames.push_back(std::string(contents->ucdvar_names[f]));
+        fieldNames.push_back({-1, std::string(contents->ucdvar_names[f])});
       }
     } else {
-      for (typename std::map<string, vector<RealType> >::const_iterator iter = fields.begin();
-           iter != fields.end(); ++iter) {
-        fieldNames.push_back(iter->first);
+      for (const auto& [centering, fieldmap] : fields) {
+        for (const auto& field : fieldmap) {
+          fieldNames.push_back({centering, field.first});
+        }
       }
     }
     // Retrieve the fields.
     for (size_t f = 0; f < fieldNames.size(); ++f) {
-      DBucdvar* dbvar = DBGetUcdvar(file, fieldNames[f].c_str());
-      POLY_ASSERT2(dbvar, "Could not find field " << fieldNames[f] << " in file " << filename);
-      fields[fieldNames[f]].resize(dbvar->nels);
-      copy((RealType*)(dbvar->vals[0]), (RealType*)(dbvar->vals[0]) + dbvar->nels,
-           &(fields[fieldNames[f]][0]));
+      const auto requestedCentering = fieldNames[f].first;
+      const auto& fieldName = fieldNames[f].second;
+      DBucdvar* dbvar = DBGetUcdvar(file, fieldName.c_str());
+      POLY_ASSERT2(dbvar, "Could not find field " << fieldName << " in file " << filename);
+      const int centering = requestedCentering >= 0 ? requestedCentering : dbvar->centering;
+      if (requestedCentering >= 0) {
+        POLY_ASSERT2(dbvar->centering == requestedCentering,
+                     "Field " << fieldName << " has unexpected centering in file " << filename);
+      }
+      fields[centering][fieldName].resize(dbvar->nels);
+      copy((double*)(dbvar->vals[0]), (double*)(dbvar->vals[0]) + dbvar->nels,
+           &(fields[centering][fieldName][0]));
       // Clean up.
       DBFreeUcdvar(dbvar);
     }
@@ -224,7 +298,8 @@ SiloReader<2, RealType>::read(Tessellation<2, RealType>& mesh,
 //-------------------------------------------------------------------
 
 // Explicit instantiation.
-template class SiloReader<2, double>;
+template class SiloReader<2, Tessellation<2, double>>;
+template class SiloReader<2, QuantTessellation<2>>;
 
 namespace Silo {
 

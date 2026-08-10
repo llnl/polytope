@@ -6,6 +6,7 @@
 #include <map>
 #include <vector>
 #include "Communicator.hh"
+#include "silo.h"
 
 namespace polytope {
 
@@ -22,7 +23,13 @@ class SiloWriter {
 //! Partial specialization for 2D tessellations.
 template <typename TessType>
 class SiloWriter<2, TessType> {
-  public:
+public:
+  // Map of a field name and it's values
+  using FieldMap = std::map<std::string, std::vector<double>>;
+  using TagMap = std::map<std::string, std::vector<int>*>;
+  // Map of the centering type (DB_ZONECENT, DB_EDGECENT, ect) and it's FieldMap
+  using FieldTypeMap = std::map<int, FieldMap>;
+  using TagTypeMap = std::map<int, TagMap>;
 
   //! Write an arbitrary polygonal mesh, an associated set of
   //! (node, edge, face, cell)-centered fields, and a corresponding set of
@@ -30,41 +37,28 @@ class SiloWriter<2, TessType> {
   //! \param numFiles The number of files that will be written. If this
   //!                 is set to -1, one file will be written for each process.
   static void write(const TessType& mesh,
-                    const std::map<std::string, double*>& nodeFields,
-                    const std::map<std::string, std::vector<int>*>& nodeTags,
-                    const std::map<std::string, double*>& edgeFields,
-                    const std::map<std::string, std::vector<int>*>& edgeTags,
-                    const std::map<std::string, double*>& faceFields,
-                    const std::map<std::string, std::vector<int>*>& faceTags,
-                    const std::map<std::string, double*>& cellFields,
-                    const std::map<std::string, std::vector<int>*>& cellTags,
+                    const FieldTypeMap& fields,
+                    const TagTypeMap& tags,
                     const std::string& filePrefix,
                     const std::string& directory,
                     int cycle,
                     double time,
-                    int numFiles = -1,
-                    int mpiTag = 0);
+                    int numFiles = -1);
 
   //! Write an arbitrary polygonal mesh and an associated set of
   //! (node, edge, face, cell)-centered fields to a SILO file in the given directory.
   //! \param numFiles The number of files that will be written. If this
   //!                 is set to -1, one file will be written for each process.
   static void write(const TessType& mesh,
-                    const std::map<std::string, double*>& nodeFields,
-                    const std::map<std::string, double*>& edgeFields,
-                    const std::map<std::string, double*>& faceFields,
-                    const std::map<std::string, double*>& cellFields,
+                    const FieldTypeMap& fields,
                     const std::string& filePrefix,
                     const std::string& directory,
                     int cycle,
                     double time,
-                    int numFiles = -1,
-                    int mpiTag = 0)
-  {
+                    int numFiles = -1) {
     // Just call the general function with no tags.
-    std::map<std::string, std::vector<int>*> nodeTags, edgeTags, faceTags, cellTags;
-    write(mesh, nodeFields, nodeTags, edgeFields, edgeTags, faceFields, faceTags,
-          cellFields, cellTags, filePrefix, directory, cycle, time, numFiles, mpiTag);
+    TagTypeMap tags;
+    write(mesh, fields, tags, filePrefix, directory, cycle, time, numFiles);
   }
 
   //! Write an arbitrary polygonal mesh and an associated set of
@@ -75,46 +69,30 @@ class SiloWriter<2, TessType> {
   //! \param numFiles The number of files that will be written. If this
   //!                 is set to -1, one file will be written for each process.
   static void write(const TessType& mesh,
-                    const std::map<std::string, double*>& nodeFields,
-                    const std::map<std::string, double*>& edgeFields,
-                    const std::map<std::string, double*>& faceFields,
-                    const std::map<std::string, double*>& cellFields,
+                    const FieldTypeMap& fields,
                     const std::string& filePrefix,
                     int cycle,
                     double time,
-                    int numFiles = -1,
-                    int mpiTag = 0)
-  {
-    write(mesh, nodeFields, edgeFields, faceFields, cellFields, filePrefix, "", cycle, time, numFiles, mpiTag);
+                    int numFiles = -1) {
+    write(mesh, fields, filePrefix, "", cycle, time, numFiles);
   }
 
   //! This version of write omits the cycle and time arguments.
   static void write(const TessType& mesh,
-                    const std::map<std::string, double*>& nodeFields,
-                    const std::map<std::string, double*>& edgeFields,
-                    const std::map<std::string, double*>& faceFields,
-                    const std::map<std::string, double*>& cellFields,
+                    const FieldTypeMap& fields,
                     const std::string& filePrefix,
                     const std::string& directory,
-                    int numFiles = -1,
-                    int mpiTag = 0)
-  {
-    write(mesh, nodeFields, edgeFields, faceFields, cellFields, filePrefix, directory, -1, -1.,
-          numFiles, mpiTag);
+                    int numFiles = -1) {
+    write(mesh, fields,filePrefix, directory, -1, -1., numFiles);
   }
 
   //! This version of write omits the cycle and time arguments and
   //! automatically generates the directory name from the file prefix.
   static void write(const TessType& mesh,
-                    const std::map<std::string, double*>& nodeFields,
-                    const std::map<std::string, double*>& edgeFields,
-                    const std::map<std::string, double*>& faceFields,
-                    const std::map<std::string, double*>& cellFields,
+                    const FieldTypeMap& fields,
                     const std::string& filePrefix,
-                    int numFiles = -1,
-                    int mpiTag = 0) {
-    write(mesh, nodeFields, edgeFields, faceFields, cellFields, filePrefix, "", -1, -1.,
-          numFiles, mpiTag);
+                    int numFiles = -1) {
+    write(mesh, fields, filePrefix, "", -1, -1., numFiles);
   }
 
   static void write(const TessType& mesh,
@@ -122,34 +100,38 @@ class SiloWriter<2, TessType> {
                     int numFiles = -1,
                     int cycle = 0,
                     double time = 0) {
-    std::map<std::string, double*> nodeFields, edgeFields, faceFields, cellFields;
     size_t meshSize = mesh.cells.size();
     std::vector<double> index(meshSize);
     std::vector<double> genx (meshSize);
     std::vector<double> geny (meshSize);
+    FieldMap cellFields;
+#ifdef POLYTOPE_ENABLE_MPI
+    std::vector<double> rankField;
+#endif
     for (auto i = 0u; i < meshSize; ++i) {
       index[i] = double(i);
       genx[i] = static_cast<double>(mesh.points[i].x);
       geny[i] = static_cast<double>(mesh.points[i].y);
     }
-    cellFields["cell_index"] = &index[0];
-    cellFields["gen_x"     ] = &genx[0];
-    cellFields["gen_y"     ] = &geny[0];
+    cellFields["cell_index"] = index;
+    cellFields["gen_x"     ] = genx;
+    cellFields["gen_y"     ] = geny;
 #ifdef POLYTOPE_ENABLE_MPI
     if (mesh.cellRank.size() > 0) {
-      std::vector<double> rankField(meshSize);
+      rankField.resize(meshSize);
       for (auto i = 0u; i < meshSize; ++i) {
         rankField[i] = static_cast<double>(mesh.cellRank[i]);
       }
-      cellFields["rank"      ] = &rankField[0];
+      cellFields["rank"    ] = rankField;
     } else {
       int rank = Communicator::getRank();
-      std::vector<double> rankField(meshSize, static_cast<double>(rank));
-      cellFields["rank"      ] = &rankField[0];
+      rankField.assign(meshSize, static_cast<double>(rank));
+      cellFields["rank"    ] = rankField;
     }
 #endif
-    write(mesh, nodeFields, edgeFields, faceFields, cellFields, filePrefix, "", cycle, time,
-          numFiles, 0);
+    FieldTypeMap fields;
+    fields[DB_ZONECENT] = cellFields;
+    write(mesh, fields, filePrefix, "", cycle, time, numFiles);
   }
 
 };
@@ -158,6 +140,12 @@ class SiloWriter<2, TessType> {
 template <typename TessType>
 class SiloWriter<3, TessType> {
 public:
+  // Map of a field name and it's values
+  using FieldMap = std::map<std::string, std::vector<double>>;
+  using TagMap = std::map<std::string, std::vector<int>*>;
+  // Map of the centering type (DB_ZONECENT, DB_EDGECENT, ect) and it's FieldMap
+  using FieldTypeMap = std::map<int, FieldMap>;
+  using TagTypeMap = std::map<int, TagMap>;
 
   //! Write an arbitrary polygonal mesh, an associated set of
   //! (node, edge, face, cell)-centered fields, and a corresponding set of
@@ -165,41 +153,28 @@ public:
   //! \param numFiles The number of files that will be written. If this
   //!                 is set to -1, one file will be written for each process.
   static void write(const TessType& mesh,
-                    const std::map<std::string, double*>& nodeFields,
-                    const std::map<std::string, std::vector<int>*>& nodeTags,
-                    const std::map<std::string, double*>& edgeFields,
-                    const std::map<std::string, std::vector<int>*>& edgeTags,
-                    const std::map<std::string, double*>& faceFields,
-                    const std::map<std::string, std::vector<int>*>& faceTags,
-                    const std::map<std::string, double*>& cellFields,
-                    const std::map<std::string, std::vector<int>*>& cellTags,
+                    const FieldTypeMap& fields,
+                    const TagTypeMap& tags,
                     const std::string& filePrefix,
                     const std::string& directory,
                     int cycle,
                     double time,
-                    int numFiles = -1,
-                    int mpiTag = 0);
+                    int numFiles = -1);
 
   //! Write an arbitrary polyhedral mesh and an associated set of
   //! (node, edge, face, cell)-centered fields to a SILO file in the given directory.
   //! \param numFiles The number of files that will be written. If this
   //!                 is set to -1, one file will be written for each process.
   static void write(const TessType& mesh,
-                    const std::map<std::string, double*>& nodeFields,
-                    const std::map<std::string, double*>& edgeFields,
-                    const std::map<std::string, double*>& faceFields,
-                    const std::map<std::string, double*>& cellFields,
+                    const FieldTypeMap& fields,
                     const std::string& filePrefix,
                     const std::string& directory,
                     int cycle,
                     double time,
-                    int numFiles = -1,
-                    int mpiTag = 0)
-  {
+                    int numFiles = -1) {
     // Just call the general function with no tags.
-    std::map<std::string, std::vector<int>*> nodeTags, edgeTags, faceTags, cellTags;
-    write(mesh, nodeFields, nodeTags, edgeFields, edgeTags, faceFields, faceTags,
-          cellFields, cellTags, filePrefix, directory, cycle, time, numFiles, mpiTag);
+    TagTypeMap tags;
+    write(mesh, fields, tags, filePrefix, directory, cycle, time, numFiles);
   }
 
   //! Write an arbitrary polyhedral mesh and an associated set of
@@ -210,56 +185,73 @@ public:
   //! \param numFiles The number of files that will be written. If this
   //!                 is set to -1, one file will be written for each process.
   static void write(const TessType& mesh,
-                    const std::map<std::string, double*>& nodeFields,
-                    const std::map<std::string, double*>& edgeFields,
-                    const std::map<std::string, double*>& faceFields,
-                    const std::map<std::string, double*>& cellFields,
+                    const FieldTypeMap& fields,
                     const std::string& filePrefix,
                     int cycle,
                     double time,
-                    int numFiles = -1,
-                    int mpiTag = 0)
+                    int numFiles = -1)
   {
-    write(mesh, nodeFields, edgeFields, faceFields, cellFields, filePrefix, "", cycle, time, numFiles, mpiTag);
+    write(mesh, fields, filePrefix, "", cycle, time, numFiles);
   }
 
   //! This version of write omits the cycle and time arguments.
   static void write(const TessType& mesh,
-                    const std::map<std::string, double*>& nodeFields,
-                    const std::map<std::string, double*>& edgeFields,
-                    const std::map<std::string, double*>& faceFields,
-                    const std::map<std::string, double*>& cellFields,
+                    const FieldTypeMap& fields,
                     const std::string& filePrefix,
                     const std::string& directory,
-                    int numFiles = -1,
-                    int mpiTag = 0)
+                    int numFiles = -1)
   {
-    write(mesh, nodeFields, edgeFields, faceFields, cellFields, filePrefix, directory, -1, -1.,
-          numFiles, mpiTag);
+    write(mesh, fields, filePrefix, directory, -1, -1., numFiles);
   }
 
   //! This version of write omits the cycle and time arguments and
   //! automatically generates the directory name from the file prefix.
   static void write(const TessType& mesh,
-                    const std::map<std::string, double*>& nodeFields,
-                    const std::map<std::string, double*>& edgeFields,
-                    const std::map<std::string, double*>& faceFields,
-                    const std::map<std::string, double*>& cellFields,
+                    const FieldTypeMap& fields,
                     const std::string& filePrefix,
-                    int numFiles = -1,
-                    int mpiTag = 0)
+                    int numFiles = -1)
   {
-    write(mesh, nodeFields, edgeFields, faceFields, cellFields, filePrefix, "", -1, -1.,
-          numFiles, mpiTag);
+    write(mesh, fields, filePrefix, "", -1, -1., numFiles);
   }
 
   static void write(const TessType& mesh,
                     const std::string& filePrefix,
-                    int numFiles = -1,
-                    int mpiTag = 0) {
-    std::map<std::string, double*> nodeFields, edgeFields, faceFields, cellFields;
-    write(mesh, nodeFields, edgeFields, faceFields, cellFields, filePrefix, "", -1, -1.,
-          numFiles, mpiTag);
+                    int numFiles = -1) {
+    size_t meshSize = mesh.cells.size();
+    std::vector<double> index(meshSize);
+    std::vector<double> genx (meshSize);
+    std::vector<double> geny (meshSize);
+    std::vector<double> genz (meshSize);
+    FieldMap cellFields;
+#ifdef POLYTOPE_ENABLE_MPI
+    std::vector<double> rankField;
+#endif
+    for (auto i = 0u; i < meshSize; ++i) {
+      index[i] = double(i);
+      genx[i] = static_cast<double>(mesh.points[i].x);
+      geny[i] = static_cast<double>(mesh.points[i].y);
+      genz[i] = static_cast<double>(mesh.points[i].z);
+    }
+    cellFields["cell_index"] = index;
+    cellFields["gen_x"     ] = genx;
+    cellFields["gen_y"     ] = geny;
+    cellFields["gen_z"     ] = genz;
+#ifdef POLYTOPE_ENABLE_MPI
+    if (mesh.cellRank.size() > 0) {
+      rankField.resize(meshSize);
+      for (auto i = 0u; i < meshSize; ++i) {
+        rankField[i] = static_cast<double>(mesh.cellRank[i]);
+      }
+      cellFields["rank"    ] = rankField;
+    } else {
+      int rank = Communicator::getRank();
+      rankField.assign(meshSize, static_cast<double>(rank));
+      cellFields["rank"      ] = rankField;
+    }
+#endif
+    FieldTypeMap fields;
+    fields[DB_ZONECENT] = cellFields;
+    write(mesh, fields, filePrefix, "", -1, -1., numFiles);
   }
 
 };

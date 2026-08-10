@@ -25,7 +25,9 @@ void outputMesh(const Tessellation<2, double>& mesh,
 		const unsigned testCycle = 1,
 		const double time = 0.0) {
 #ifdef POLYTOPE_ENABLE_SILO
-  std::map<std::string, double*> nodeFields, edgeFields, faceFields, cellFields;
+  using FieldMap = SiloWriter<2, Tessellation<2, double>>::FieldMap;
+  using FieldTypeMap = SiloWriter<2, Tessellation<2, double>>::FieldTypeMap;
+  FieldMap cellFields;
   size_t meshSize = mesh.cells.size();
   std::vector<double> index(meshSize);
   std::vector<double> genx (meshSize);
@@ -35,19 +37,17 @@ void outputMesh(const Tessellation<2, double>& mesh,
     genx[i] = mesh.points[i].x;
     geny[i] = mesh.points[i].y;
   }
-  cellFields["cell_index"] = &index[0];
-  cellFields["gen_x"     ] = &genx[0];
-  cellFields["gen_y"     ] = &geny[0];
+  cellFields["cell_index"] = index;
+  cellFields["gen_x"     ] = genx;
+  cellFields["gen_y"     ] = geny;
 #ifdef POLYTOPE_ENABLE_MPI
   int rank = Communicator::getRank();
   std::vector<double> rankField(meshSize, rank);
-  cellFields["rank"      ] = &rankField[0];
+  cellFields["rank"      ] = rankField;
 #endif
-  std::ostringstream os;
-  os << prefix;
-  SiloWriter<2, Tessellation<2, double>>::write(mesh, nodeFields, edgeFields,
-                                                faceFields, cellFields, os.str(),
-                                                testCycle, time);
+  FieldTypeMap fields;
+  fields[DB_ZONECENT] = cellFields;
+  SiloWriter<2, Tessellation<2, double>>::write(mesh, fields, prefix, testCycle, time);
 #endif
 }
 
@@ -59,7 +59,9 @@ void outputMesh(const Tessellation<2, double>& mesh,
 		const double time = 0.0,
                 const int numFiles = 1) {
 #ifdef POLYTOPE_ENABLE_SILO
-  std::map<std::string, double*> nodeFields, edgeFields, faceFields, cellFields;
+  using FieldMap = SiloWriter<2, Tessellation<2, double>>::FieldMap;
+  using FieldTypeMap = SiloWriter<2, Tessellation<2, double>>::FieldTypeMap;
+  FieldMap cellFields;
   size_t meshSize = mesh.cells.size();
   POLY_CHECK(cellFieldVec.size() == meshSize);
   std::vector<double> index(meshSize);
@@ -70,15 +72,13 @@ void outputMesh(const Tessellation<2, double>& mesh,
     genx[i] = mesh.points[i].x;
     geny[i] = mesh.points[i].y;
   }
-  cellFields["cell_index"] = &index[0];
-  cellFields["gen_x"     ] = &genx[0];
-  cellFields["gen_y"     ] = &geny[0];
-  cellFields[cellFieldName] = &cellFieldVec[0];
-  std::ostringstream os;
-  os << prefix;
-  SiloWriter<2, Tessellation<2, double>>::write(mesh, nodeFields, edgeFields,
-                                                faceFields, cellFields, os.str(),
-                                                testCycle, time, numFiles);
+  cellFields["cell_index"] = index;
+  cellFields["gen_x"     ] = genx;
+  cellFields["gen_y"     ] = geny;
+  cellFields[cellFieldName] = cellFieldVec;
+  FieldTypeMap fields;
+  fields[DB_ZONECENT] = cellFields;
+  SiloWriter<2, Tessellation<2, double>>::write(mesh, fields, prefix, testCycle, time, numFiles);
 #endif
 }
 
@@ -89,6 +89,9 @@ void outputMesh(const Tessellation<3, double>& mesh,
 		const unsigned testCycle = 1,
 		const double time = 0.0) {
 #ifdef POLYTOPE_ENABLE_SILO
+  using FieldMap = SiloWriter<3, Tessellation<3, double>>::FieldMap;
+  using FieldTypeMap = SiloWriter<3, Tessellation<3, double>>::FieldTypeMap;
+  FieldMap cellFields;
   std::vector<double> index(mesh.cells.size());
   std::vector<double> genx (mesh.cells.size());
   std::vector<double> geny (mesh.cells.size());
@@ -103,22 +106,19 @@ void outputMesh(const Tessellation<3, double>& mesh,
     }
     //mesh.computeCellCentroidAndSignedVolume(i, cent, vol[i]);
   }
-  std::map<std::string,double*> nodeFields, edgeFields, faceFields, cellFields;
-  cellFields["cell_index"] = &index[0];
-  cellFields["gen_x"     ] = &genx[0];
-  cellFields["gen_y"     ] = &geny[0];
-  cellFields["gen_z"     ] = &genz[0];
-  //cellFields["volume"    ] = &vol[0];
+  cellFields["cell_index"] = index;
+  cellFields["gen_x"     ] = genx;
+  cellFields["gen_y"     ] = geny;
+  cellFields["gen_z"     ] = genz;
+  //cellFields["volume"    ] = vol;
 #ifdef POLYTOPE_ENABLE_MPI
   int rank = Communicator::getRank();
   std::vector<double> rankField(mesh.cells.size(), rank);
-  cellFields["rank"      ] = &rankField[0];
+  cellFields["rank"      ] = rankField;
 #endif
-  std::ostringstream os;
-  os << prefix;
-  SiloWriter<3, Tessellation<3, double>>::write(mesh, nodeFields, edgeFields,
-                                                faceFields, cellFields, os.str(),
-                                                testCycle, time);
+  FieldTypeMap fields;
+  fields[DB_ZONECENT] = cellFields;
+  SiloWriter<3, Tessellation<3, double>>::write(mesh, fields, prefix, testCycle, time);
 #endif
 }
 
@@ -137,36 +137,6 @@ void outputMesh(const Tessellation<nDim, double>& mesh,
 		std::string prefix) {
   outputMesh(mesh, prefix, 1, 0.0);
 }
-//------------------------------------------------------------------------------
-// a cell-centered field given
-// template <typename RealType>
-// void outputMesh(Tessellation<2,RealType>& mesh,
-// 		std::string prefix,
-//                 std::vector<RealType>& cellField,
-// 		const unsigned testCycle = 1,
-// 		const RealType time = 0.0) {
-// #ifdef POLYTOPE_ENABLE_SILO
-//   POLY_CHECK(cellField.size() == mesh.cells.size());
-//   std::vector<double> index(mesh.cells.size());
-//   std::vector<double> genx (mesh.cells.size());
-//   std::vector<double> geny (mesh.cells.size());
-//   for (int i = 0; i < mesh.cells.size(); ++i){
-//     index[i] = double(i);
-//     genx[i] = mesh.points[2*i];
-//     geny[i] = mesh.points[2*i+1];
-//   }
-//   std::map<std::string,double*> nodeFields, edgeFields, faceFields, cellFields;
-//   cellFields["cell_index"] = &index[0];
-//   cellFields["gen_x"     ] = &genx[0];
-//   cellFields["gen_y"     ] = &geny[0];
-//   cellFields["cond"      ] = &cellField[0];
-//   std::ostringstream os;
-//   os << prefix;
-//   SiloWriter<2, double>::write(mesh, nodeFields, edgeFields,
-//                                faceFields, cellFields, os.str(),
-//                                testCycle, time);
-// #endif
-// }
 
 //------------------------------------------------------------------------------
 // Compute the area of a polytope tessellation cell-by-cell using Boost.Geometry

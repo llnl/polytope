@@ -1,318 +1,291 @@
 
 #include "SiloReader.hh"
 #include "polytope.hh"
+#include "Communicator.hh"
+#include "SiloUtils.hh"
+#include "Serializer.hh"
+#include "Tessellation.hh"
+
+#include <algorithm>
 #include <fstream>
 #include <set>
 #include <cstring>
 #include <sys/stat.h>
 #include <dirent.h>
+#include <type_traits>
 #include "silo.h"
-#include "Communicator.hh"
-
-#ifdef POLYTOPE_ENABLE_MPI
-#include "pmpio.h"
-#endif
 
 namespace polytope {
 
 using namespace std;
 
-#ifdef POLYTOPE_ENABLE_MPI
 namespace {
-//-------------------------------------------------------------------
-void*
-PMPIO_createFile(const char* filename,
-                 const char* dirname,
-                 void* userData)
-{
-  int driver = DB_HDF5;
-  DBfile* file = DBCreate(filename, 0, DB_LOCAL, 0, driver);
-  DBMkDir(file, dirname);
-  DBSetDir(file, dirname);
-  return (void*)file;
-}
-//-------------------------------------------------------------------
 
 //-------------------------------------------------------------------
-void* 
-PMPIO_openFile(const char* filename, 
-               const char* dirname,
-               PMPIO_iomode_t iomode, 
-               void* userData)
-{
-  int driver = DB_HDF5;
-  DBfile* file;
-  if (iomode == PMPIO_WRITE)
-  { 
-    file = DBCreate(filename, 0, DB_LOCAL, 0, driver);
-    DBMkDir(file, dirname);
-    DBSetDir(file, dirname);
+bool
+tocHasName(const int n,
+           char** names,
+           const std::string& name) {
+  for (int i = 0; i < n; ++i) {
+    if (name == names[i]) return true;
   }
-  else
-  {
-    file = DBOpen(filename, driver, DB_READ);
-    DBSetDir(file, dirname);
+  return false;
+}
+//-------------------------------------------------------------------
+
+//-------------------------------------------------------------------
+std::vector<std::string>
+getSiloInputPaths(const std::string& masterFilename) {
+  DBfile* file = DBOpen(masterFilename.c_str(), DB_UNKNOWN, DB_READ);
+  POLY_ASSERT2(file, "Could not open file " << masterFilename);
+
+  DBtoc* toc = DBGetToc(file);
+  POLY_ASSERT2(toc, "Could not read Silo table of contents from file " << masterFilename);
+
+  std::vector<std::string> result;
+  const std::string globalMeshName = getGlobalMeshName();
+  const std::string localMeshName = getLocalMeshName();
+
+  if (tocHasName(toc->nmultimesh, toc->multimesh_names, globalMeshName)) {
+    DBmultimesh* mmesh = DBGetMultimesh(file, globalMeshName.c_str());
+    POLY_ASSERT2(mmesh, "Could not read multimesh " << globalMeshName << " from file " << masterFilename);
+    result.resize(mmesh->nblocks);
+    for (int i = 0; i < mmesh->nblocks; ++i) {
+      result[i] = mmesh->meshnames[i];
+    }
+    DBFreeMultimesh(mmesh);
+  } else if (tocHasName(toc->nucdmesh, toc->ucdmesh_names, globalMeshName)) {
+    result.push_back(masterFilename + ":" + globalMeshName);
+  } else if (tocHasName(toc->nucdmesh, toc->ucdmesh_names, localMeshName)) {
+    result.push_back(masterFilename + ":" + localMeshName);
+  } else {
+    POLY_ASSERT2(false, "Could not find multimesh or mesh in file " << masterFilename);
   }
-  return (void*)file;
+
+  DBClose(file);
+  return result;
 }
 //-------------------------------------------------------------------
 
-//-------------------------------------------------------------------
-void
-PMPIO_closeFile(void* file,
-                void* userData)
-{
-  DBClose((DBfile*)file);
 }
-//-------------------------------------------------------------------
-} // end namespace
-#endif
 
 //-------------------------------------------------------------------
-template <typename RealType>
+template <typename TessType>
 void 
-SiloReader<3, RealType>::
-read(Tessellation<3, RealType>& mesh, 
-     map<string, vector<RealType> >& fields,
-     map<string, vector<int> >& nodeTags,
-     map<string, vector<int> >& edgeTags,
-     map<string, vector<int> >& faceTags,
-     map<string, vector<int> >& cellTags,
-     const string& filePrefix,
-     const string& directory,
-     int cycle,
-     RealType& time,
-     int numFiles,
-     int mpiTag)
+SiloReader<3, TessType>::
+read(TessType& mesh,
+     FieldTypeMap& fields,
+     TagTypeMap& tags,
+     const string& masterFilename)
 {
-  // Strip .silo off of the prefix if it's there.
-  string prefix = filePrefix;
-  int index = prefix.find(".silo");
-  if (index >= 0)
-    prefix.erase(index);
-
+  using CoordType = typename std::decay<decltype(mesh.nodes[0].x)>::type;
+  std::vector<std::string> inputFiles;
+  int rank = 0;
   // Open a file in Silo/HDF5 format for reading.
 #ifdef POLYTOPE_ENABLE_MPI
-  int nproc = 1, rank = 0;
   auto& comm = Communicator::communicator();
-  nproc = Communicator::getNProcs();
+  int nproc = Communicator::getNProcs();
   rank = Communicator::getRank();
-  if (numFiles == -1)
-    numFiles = nproc;
-  POLY_ASSERT(numFiles <= nproc);
-
-  // We put the entire data set into a directory named after the 
-  // prefix, and every process gets its own subdirectory therein.
-
-  // Check for the existence of the master directory.
-  string masterDirName = directory;
-  if (masterDirName.empty()) {
-    masterDirName = filePrefix + "-" + std::to_string(nproc);
-  }
-  DIR* masterDir = opendir(masterDirName.c_str());
-  POLY_CHECK2(masterDir, "Could not find the directory " << masterDirName);
-
-  // Initialize poor man's I/O and figure out group ranks.
-  PMPIO_baton_t* baton = PMPIO_Init(numFiles, PMPIO_READ, comm, mpiTag, 
-                                    &PMPIO_createFile, 
-                                    &PMPIO_openFile, 
-                                    &PMPIO_closeFile,
-                                    0);
-  int groupRank = PMPIO_GroupRank(baton, rank);
-  int rankInGroup = PMPIO_RankInGroup(baton, rank);
-
-  // Figure out the subdirectory for this group.
-  std::string groupdirname = masterDirName + "/" + std::to_string(groupRank);
-  DIR* groupDir = opendir(groupdirname.c_str());
-  POLY_CHECK2(groupDir, "Could not find the directory " << groupdirname);
-  std::string filename;
-  // Determine the file name.
-  if (cycle >= 0) {
-    filename = groupdirname + "/" + prefix + "-" + std::to_string(cycle) + ".silo";
-  } else {
-    filename = groupdirname + "/" + prefix + ".silo";
+  int root = Communicator::getRoot();
+  int NBlocks = 0;
+  std::vector<std::string> block_paths;
+  if (rank == root) {
+    block_paths = getSiloInputPaths(masterFilename);
+    NBlocks = static_cast<int>(block_paths.size());
   }
 
-  std::string dirname = "domain_" + std::to_string(rankInGroup);
-  DBfile* file = (DBfile*)PMPIO_WaitForBaton(baton, filename.c_str(), dirname.c_str());
-  DBSetDir(file, dirname.c_str());
+  std::vector<char> buffer;
+  if (rank == root) {
+    serialize(block_paths, buffer);
+  }
+  int bsize = static_cast<int>(buffer.size());
+  MPI_Bcast(&bsize, 1, MPI_INT, root, comm);
+  if (rank != root) {
+    buffer.resize(bsize);
+  }
+  if (bsize > 0) {
+    MPI_Bcast(buffer.data(), bsize, MPI_CHAR, root, comm);
+  }
+  if (rank != root) {
+    std::vector<char>::const_iterator bufIter = buffer.begin();
+    deserialize<std::vector<std::string>>(block_paths, bufIter, buffer.end());
+  }
+  NBlocks = static_cast<int>(block_paths.size());
+
+  for (int i = 0; i < NBlocks; ++i) {
+    auto& cpath = block_paths[i];
+    if (i % nproc == rank) {
+      inputFiles.push_back(cpath);
+    }
+  }
 #else
-  string dirname = directory;
-  if (dirname.empty()) dirname = ".";
-  std::string filename;
-  // Determine the file name.
-  if (cycle >= 0) {
-    filename = dirname + "/" + prefix + "-" + std::to_string(cycle) + ".silo";
-  } else {
-    filename = dirname + "/" + prefix + ".silo";
-  }
-
-  int driver = DB_HDF5;
-  DBfile* file = DBOpen(filename.c_str(), driver, DB_READ);
-  DBSetDir(file, "/");
+  inputFiles = getSiloInputPaths(masterFilename);
 #endif
 
-  // Retrieve the mesh. Note that we must deallocate the storage 
-  // for this object after we're through!
-  DBucdmesh* dbmesh = DBGetUcdmesh(file, "mesh");
+  for (const auto& cpath : inputFiles) {
+    size_t colon_pos = cpath.find(":");
+    std::string filename = cpath.substr(0, colon_pos);
+    std::string internal_obj_path = getGlobalMeshName();
+    if (colon_pos != std::string::npos) {
+      internal_obj_path = cpath.substr(colon_pos + 1);
+    }
+    DBfile* file = DBOpen(filename.c_str(), DB_HDF5, DB_READ);
+    if (!file) {
+      printf("Rank %d input %s\n", rank, cpath.c_str());
+      printf("Rank %d Failed to open file %s\n", rank, filename.c_str());
+    }
+    POLY_ASSERT2(file, "Could not open file " << filename);
 
-  // Extract time.
-  time = dbmesh->dtime;
+    // Retrieve the mesh. Note that we must deallocate the storage
+    // for this object after we're through!
+    DBucdmesh* dbmesh = DBGetUcdmesh(file, internal_obj_path.c_str());
+    POLY_ASSERT2(dbmesh, "Could not find mesh " << internal_obj_path << " in file " << filename);
 
-  // Node coordinates.
-  mesh.nodes.resize(3*dbmesh->nnodes);
-  for (int i = 0; i < dbmesh->nnodes; ++i)
-  {
-    mesh.nodes[3*i]  = ((RealType*)(dbmesh->coords[i]))[0];
-    mesh.nodes[3*i+1] = ((RealType*)(dbmesh->coords[i]))[1];
-    mesh.nodes[3*i+2] = ((RealType*)(dbmesh->coords[i]))[2];
-  }
+    // Node coordinates.
+    mesh.nodes.resize(dbmesh->nnodes);
+    for (int i = 0; i < dbmesh->nnodes; ++i)
+    {
+      mesh.nodes[i].x = static_cast<CoordType>(((double*)(dbmesh->coords[0]))[i]);
+      mesh.nodes[i].y = static_cast<CoordType>(((double*)(dbmesh->coords[1]))[i]);
+      mesh.nodes[i].z = static_cast<CoordType>(((double*)(dbmesh->coords[2]))[i]);
+    }
 
-  // Reconstruct the faces.
-  mesh.faces.resize(dbmesh->faces->nfaces);
-  int noffset = 0;
-  for (size_t f = 0; f < mesh.faces.size(); ++f)
-  {
-    mesh.faces[f].resize(dbmesh->faces->shapesize[f]);
-    for (size_t n = 0; n < mesh.faces[f].size(); ++n, ++noffset)
-      mesh.faces[f][n] = dbmesh->faces->nodelist[noffset];
-  }
+    // Reconstruct the faces.
+    mesh.faces.resize(dbmesh->faces->nfaces);
+    int noffset = 0;
+    for (size_t f = 0; f < mesh.faces.size(); ++f)
+    {
+      mesh.faces[f].resize(dbmesh->faces->shapesize[f]);
+      for (size_t n = 0; n < mesh.faces[f].size(); ++n, ++noffset)
+        mesh.faces[f][n] = dbmesh->faces->nodelist[noffset];
+    }
 
-  // Reconstruct the cell-face connectivity.
-  mesh.cells.resize(dbmesh->zones->nzones);
-  DBcompoundarray* conn = DBGetCompoundarray(file, "connectivity");
-  POLY_ASSERT2(conn, "Could not find cell-face connectivity in file " << filename);
-  // First element is the number of faces in each zone.
-  // Second element is the list of face indices in each zone.
-  // Third element is a pair of cells for each face.
-  POLY_ASSERT2((conn->nelems == 3 &&
-                conn->elemlengths[0] == dbmesh->zones->nzones &&
-                conn->elemlengths[2] == 2*dbmesh->faces->nfaces),
-               "Found invalid cell-face connectivity in file " << filename);
-  int* connData = (int*)conn->values;
-  int foffset = dbmesh->zones->nzones;
-  for (int c = 0; c < dbmesh->zones->nzones; ++c)
-  {
-    int nfaces = connData[c];
-    mesh.cells[c].resize(nfaces);
-    copy(connData + foffset, connData + foffset + nfaces, mesh.cells[c].begin());
-    foffset += nfaces;
-  }
-  mesh.faceCells.resize(mesh.faces.size());
-  for (size_t f = 0; f < mesh.faceCells.size(); ++f)
-  {
-    mesh.faceCells[f].resize(2);
-    mesh.faceCells[f][0] = connData[foffset];
-    mesh.faceCells[f][1] = connData[foffset+1];
-    foffset += 2;
-  }
-  DBFreeUcdmesh(dbmesh);
-  DBFreeCompoundarray(conn);
+    // Reconstruct the cell-face connectivity.
+    mesh.cells.resize(dbmesh->zones->nzones);
+    DBcompoundarray* conn = DBGetCompoundarray(file, "conn");
+    POLY_ASSERT2(conn, "Could not find cell-face connectivity in file " << filename);
+    // First element is the number of faces in each zone.
+    // Second element is the list of face indices in each zone.
+    POLY_ASSERT2((conn->nelems == 2 &&
+                  conn->elemlengths[0] == dbmesh->zones->nzones),
+                 "Found invalid cell-face connectivity in file " << filename);
+    int* connData = (int*)conn->values;
+    int foffset = dbmesh->zones->nzones;
+    for (int c = 0; c < dbmesh->zones->nzones; ++c)
+    {
+      int nfaces = connData[c];
+      mesh.cells[c].resize(nfaces);
+      copy(connData + foffset, connData + foffset + nfaces, mesh.cells[c].begin());
+      foffset += nfaces;
+    }
+    mesh.computeFaceCells();
+    DBFreeUcdmesh(dbmesh);
+    DBFreeCompoundarray(conn);
   
-  // Check for convex hull data.
-  // First element is the number of facets.
-  // Second element is the array of numbers of nodes per facet.
-  // Third element is the array of node indices for the facets.
-  DBcompoundarray* hull = DBGetCompoundarray(file, "convexhull");
-  if (hull != 0)
-  {
-    POLY_ASSERT2((hull->nelems == 3 && hull->elemlengths[0] == 1),
-                 "Found invalid convex hull data in file " << filename);
-    int* hullData = (int*)conn->values;
-    int nfacets = hullData[0];
-    mesh.convexHull.facets.resize(nfacets);
-    int foffset = 1;
-    for (int f = 0; f < nfacets; ++f, ++foffset)
+    // Check for convex hull data.
+    // First element is the number of facets.
+    // Second element is the array of numbers of nodes per facet.
+    // Third element is the array of node indices for the facets.
+    DBcompoundarray* hull = DBGetCompoundarray(file, "convexhull");
+    if (hull != 0)
     {
-      int nnodes = hullData[foffset];
-      mesh.convexHull.facets[f].resize(nnodes);
+      POLY_ASSERT2((hull->nelems == 3 && hull->elemlengths[0] == 1),
+                   "Found invalid convex hull data in file " << filename);
+      int* hullData = (int*)hull->values;
+      int nfacets = hullData[0];
+      mesh.convexHull.facets.resize(nfacets);
+      int foffset = 1;
+      for (int f = 0; f < nfacets; ++f, ++foffset)
+      {
+        int nnodes = hullData[foffset];
+        mesh.convexHull.facets[f].resize(nnodes);
+      }
+      for (int f = 0; f < nfacets; ++f)
+      {
+        for (size_t n = 0; n < mesh.convexHull.facets[f].size(); ++n, ++foffset)
+          mesh.convexHull.facets[f][n] = hullData[foffset];
+      }
+      DBFreeCompoundarray(hull);
     }
-    for (int f = 0; f < nfacets; ++f, ++foffset)
-    {
-      for (size_t n = 0; n < mesh.convexHull.facets[f].size(); ++n)
-        mesh.convexHull.facets[f][n] = hullData[foffset];
-    }
-    DBFreeCompoundarray(hull);
-  }
 
-  // FIXME: Check for hole data?
+    // FIXME: Check for hole data?
 
-  // Read any tag data.
-  DBcompoundarray* tags = DBGetCompoundarray(file, "node_tags");
-  if (tags != 0)
-  {
-    for (int i = 0; i < tags->nelems; ++i)
-    {
-      std::vector<int>& tag = nodeTags[tags->elemnames[i]];
-      tag.resize(tags->elemlengths[i]);
-      copy((int*)tags->values, (int*)((char*)tags->values + tags->elemlengths[i]), tag.begin());
+    DBpointmesh* pmesh = DBGetPointmesh(file, "points");
+    if (pmesh != 0) {
+      const int npts = pmesh->nels;
+      mesh.points.resize(npts);
+      for (int i = 0; i < npts; ++i) {
+        mesh.points[i].x = static_cast<CoordType>(((double*)(pmesh->coords[0]))[i]);
+        mesh.points[i].y = static_cast<CoordType>(((double*)(pmesh->coords[1]))[i]);
+        mesh.points[i].z = static_cast<CoordType>(((double*)(pmesh->coords[2]))[i]);
+      }
+      DBFreePointmesh(pmesh);
     }
-    DBFreeCompoundarray(tags);
-  }
-  tags = DBGetCompoundarray(file, "edge_tags");
-  if (tags != 0)
-  {
-    for (int i = 0; i < tags->nelems; ++i)
-    {
-      std::vector<int>& tag = edgeTags[tags->elemnames[i]];
-      tag.resize(tags->elemlengths[i]);
-      copy((int*)tags->values, (int*)((char*)tags->values + tags->elemlengths[i]), tag.begin());
-    }
-    DBFreeCompoundarray(tags);
-  }
-  tags = DBGetCompoundarray(file, "face_tags");
-  if (tags != 0)
-  {
-    for (int i = 0; i < tags->nelems; ++i)
-    {
-      std::vector<int>& tag = faceTags[tags->elemnames[i]];
-      tag.resize(tags->elemlengths[i]);
-      copy((int*)tags->values, (int*)((char*)tags->values + tags->elemlengths[i]), tag.begin());
-    }
-    DBFreeCompoundarray(tags);
-  }
-  tags = DBGetCompoundarray(file, "cell_tags");
-  if (tags != 0)
-  {
-    for (int i = 0; i < tags->nelems; ++i)
-    {
-      std::vector<int>& tag = cellTags[tags->elemnames[i]];
-      tag.resize(tags->elemlengths[i]);
-      copy((int*)tags->values, (int*)((char*)tags->values + tags->elemlengths[i]), tag.begin());
-    }
-    DBFreeCompoundarray(tags);
-  }
 
-  // Make a list of the desired fields.
-  vector<string> fieldNames;
-  if (fields.empty()) {
-    DBtoc* contents = DBGetToc(file);
-    for (int f = 0; f < contents->nucdvar; ++f)
-      fieldNames.push_back(string(contents->ucdvar_names[f]));
-  } else {
-    for (typename map<string, vector<RealType> >::const_iterator iter = fields.begin();
-         iter != fields.end(); ++iter)
-    fieldNames.push_back(iter->first);
-  }
+    const std::vector<std::pair<int, std::string> > tagLists = {
+      {DB_NODECENT, "node_tags"},
+      {DB_EDGECENT, "edge_tags"},
+      {DB_FACECENT, "face_tags"},
+      {DB_ZONECENT, "cell_tags"}
+    };
+    const bool readAllTags = tags.empty();
+    for (const auto& [centering, tagListName] : tagLists) {
+      if (!readAllTags && tags.find(centering) == tags.end()) continue;
+      DBcompoundarray* dbtags = DBGetCompoundarray(file, tagListName.c_str());
+      if (dbtags != 0)
+      {
+        int* tagValues = (int*)dbtags->values;
+        int offset = 0;
+        for (int i = 0; i < dbtags->nelems; ++i)
+        {
+          std::vector<int>& tag = tags[centering][dbtags->elemnames[i]];
+          tag.assign(tagValues + offset, tagValues + offset + dbtags->elemlengths[i]);
+          offset += dbtags->elemlengths[i];
+        }
+        DBFreeCompoundarray(dbtags);
+      }
+    }
 
-  // Retrieve the fields.
-  for (size_t f = 0; f < fieldNames.size(); ++f) {
-    DBucdvar* dbvar = DBGetUcdvar(file, fieldNames[f].c_str());
-    POLY_ASSERT2(dbvar, "Could not find field " << fieldNames[f] << " in file " << filename);
-    fields[fieldNames[f]].resize(dbvar->nels);
-    copy((RealType*)(dbvar->vals[0]), (RealType*)(dbvar->vals[0]) + dbvar->nels,
-         &(fields[fieldNames[f]][0]));
+    // Make a list of the desired fields.
+    vector<std::pair<int, string> > fieldNames;
+    if (fields.empty()) {
+      DBtoc* contents = DBGetToc(file);
+      for (int f = 0; f < contents->nucdvar; ++f)
+        fieldNames.push_back({-1, string(contents->ucdvar_names[f])});
+    } else {
+      for (const auto& [centering, fieldmap] : fields) {
+        for (const auto& field : fieldmap) {
+          fieldNames.push_back({centering, field.first});
+        }
+      }
+    }
+
+    // Retrieve the fields.
+    for (size_t f = 0; f < fieldNames.size(); ++f) {
+      const auto requestedCentering = fieldNames[f].first;
+      const auto& fieldName = fieldNames[f].second;
+      DBucdvar* dbvar = DBGetUcdvar(file, fieldName.c_str());
+      POLY_ASSERT2(dbvar, "Could not find field " << fieldName << " in file " << filename);
+      const int centering = requestedCentering >= 0 ? requestedCentering : dbvar->centering;
+      if (requestedCentering >= 0) {
+        POLY_ASSERT2(dbvar->centering == requestedCentering,
+                     "Field " << fieldName << " has unexpected centering in file " << filename);
+      }
+      fields[centering][fieldName].resize(dbvar->nels);
+      copy((double*)(dbvar->vals[0]), (double*)(dbvar->vals[0]) + dbvar->nels,
+           &(fields[centering][fieldName][0]));
+
+      // Clean up.
+      DBFreeUcdvar(dbvar);
+    }
 
     // Clean up.
-    DBFreeUcdvar(dbvar);
+    DBClose(file);
   }
-
-  // Clean up.
-  DBClose(file);
 }
 //-------------------------------------------------------------------
 
 // Explicit instantiation.
-template class SiloReader<3, double>;
+template class SiloReader<3, Tessellation<3, double>>;
 
 } // end namespace

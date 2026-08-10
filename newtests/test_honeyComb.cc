@@ -81,8 +81,8 @@ void test(Tessellator<2,double>& tessellator, const std::string& outname, bool h
   // Read the mesh we just wrote back in
   Tessellation<2, double> readMesh;
   std::string masterFilename = getMasterFilename(outname, cycle);
-  std::map<std::string, std::vector<double>> cellFields;
-  SiloReader<2, double>::read(readMesh, cellFields, masterFilename);
+  std::map<int, std::map<std::string, std::vector<double>>> fields;
+  SiloReader<2, Tessellation<2, double>>::read(readMesh, fields, masterFilename);
   // Try writing the mesh back out
   outputMesh(readMesh, "re"+outname, cycle);
   int meshnodes = readMesh.nodes.size()/2;

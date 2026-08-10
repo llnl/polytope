@@ -116,8 +116,8 @@ void test(Tessellator<2, double>& tessellator) {
   // Now try to open the file we just created
   Tessellation<2, double> readMesh;
   std::string masterFilename = getMasterFilename(outname, 0);
-  std::map<std::string, std::vector<double>> cellFields;
-  SiloReader<2, double>::read(readMesh, cellFields, masterFilename);
+  std::map<int, std::map<std::string, std::vector<double>>> fields;
+  SiloReader<2, Tessellation<2, double>>::read(readMesh, fields, masterFilename);
   localCells = static_cast<int>(readMesh.cells.size());
   totalCells = 0;
   MPI_Allreduce(&localCells, &totalCells, 1, MPI_INT, MPI_SUM, Communicator::communicator());

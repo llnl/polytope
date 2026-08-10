@@ -75,7 +75,7 @@ int main(int argc, char** argv) {
   }
 #ifdef POLYTOPE_ENABLE_SILO
   std::string prefix = "escapefile";
-  std::map<std::string, double*> nodeFields, edgeFields, faceFields, cellFields;
+  std::map<std::string, std::vector<double>> cellFields;
   size_t meshSize = quantMesh.cells.size();
   std::vector<double> index(meshSize);
   std::vector<double> genx (meshSize);
@@ -85,12 +85,12 @@ int main(int argc, char** argv) {
     genx[i] = quantMesh.points[i].x;
     geny[i] = quantMesh.points[i].y;
   }
-  cellFields["cell_index"] = &index[0];
-  cellFields["gen_x"     ] = &genx[0];
-  cellFields["gen_y"     ] = &geny[0];
-  SiloWriter<2, QuantTessellation<2>>::write(quantMesh, nodeFields, edgeFields,
-                                             faceFields, cellFields, prefix,
-                                             1, 0., 1);
+  cellFields["cell_index"] = index;
+  cellFields["gen_x"     ] = genx;
+  cellFields["gen_y"     ] = geny;
+  std::map<int, std::map<std::string, std::vector<double>>> fields;
+  fields[DB_ZONECENT] = cellFields;
+  SiloWriter<2, QuantTessellation<2>>::write(quantMesh, fields, prefix, 1, 0., 1);
 #endif
   comm.finalize();
   return 0;
