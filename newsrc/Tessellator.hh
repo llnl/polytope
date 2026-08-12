@@ -43,17 +43,6 @@ public:
                           const PLC<Dimension>& geometry,
                           Tessellation<Dimension, RealType>& mesh);
 
-  //! Generate a Voronoi-like tessellation for the given set of generator 
-  //! points and a description of the geometry in which they exist.
-  //! The geometry description uses the ReducedPLC to combine vertex
-  //! coordinates and facet topology into a single struct out of convenience.
-  //! \param points A (Dimension*numPoints) array containing point coordinates.
-  //! \param geometry A description of the geometry in Reduced Piecewise Linear Complex form.
-  //! \param mesh This will store the resulting tessellation.
-  virtual void tessellate(const std::vector<RealType>& points,
-                          const ReducedPLC<Dimension, RealType>& geometry,
-                          Tessellation<Dimension, RealType>& mesh);
-
   //! Override this method to return true if this Tessellator supports 
   //! the description of a domain boundary using a PLC (as in the second 
   //! tessellate method, above), and false if it does not. Some algorithms 
@@ -92,7 +81,7 @@ public:
   //! Should be returned appropriately for normalized coordinates, i.e., if all
   //! coordinates are in the range xi \in [0,1], what is the minimum allowed
   //! delta in x.
-  RealType degeneracy() const {
+  Point<Dimension, double> degeneracy() const {
     const auto& Q = Quantizer<Dimension>::instance();
     return Q.m_dx_o / Q.m_lx_o;
   }

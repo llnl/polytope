@@ -6,11 +6,13 @@
 #include "QuantPLC.hh"
 #include "GeomUtils.hh"
 #include "Intersections.hh"
+#ifdef POLYTOPE_ENABLE_QHULL
 #include "libqhullcpp/Qhull.h"
 #include "libqhullcpp/QhullFacet.h"
 #include "libqhullcpp/QhullFacetList.h"
 #include "libqhullcpp/QhullVertex.h"
 #include "libqhullcpp/QhullVertexSet.h"
+#endif
 #include <map>
 #include <set>
 #include "Shapes.hh"
@@ -315,6 +317,7 @@ template<int Dimension>
 template<int D>
 std::enable_if_t<D == 3, void>
 QuantPLC<Dimension>::makeConvex3D() {
+#ifdef POLYTOPE_ENABLE_QHULL
   using RealPoint = Point<Dimension, double>;
   const unsigned n = points.size();
   if (n == 0) return;
@@ -346,6 +349,12 @@ QuantPLC<Dimension>::makeConvex3D() {
   }
   // Remove any points that are not part of the convex hull
   reduce();
+#else
+  if (Communicator::getRank() == Communicator::getRoot()) {
+    std::cerr << "Must enable QHull to use 3D functionality" << std::endl;
+  }
+  Communicator::abort();
+#endif
 }
 
 //------------------------------------------------------------------------------

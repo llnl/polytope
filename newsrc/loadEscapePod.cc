@@ -3,6 +3,10 @@
 #include "QuantTessellation.hh"
 #include "Tessellator.hh"
 
+#ifdef POLYTOPE_ENABLE_SILO
+#include "SiloWriter.hh"
+#endif
+
 #ifdef POLYTOPE_ENABLE_BOOST
 #include "BoostTessellator.hh"
 #endif

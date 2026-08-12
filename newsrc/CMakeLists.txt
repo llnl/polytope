@@ -18,7 +18,6 @@ set(polytope_headers
   HashKey.hh
   Intersections.hh
   PLC.hh
-  ReducedPLC.hh
   Point.hh
   QuantTessellation.hh
   Quantizer.hh
@@ -132,6 +131,6 @@ blt_add_executable(NAME loadEscapePod
 target_compile_options(loadEscapePod PRIVATE ${POLYTOPE_CXX_COMPILE_FLAGS})
 target_link_options(loadEscapePod PUBLIC ${POLYTOPE_CXX_LINK_FLAGS})
 
-if(POLYTOPE_ENABLE_PYTHON)
+if(POLYTOPE_ENABLE_PYTHON AND NOT POLYTOPE_ENABLE_LEGACY_PYTHON)
   add_subdirectory(PYB11)
 endif()

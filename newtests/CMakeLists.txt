@@ -67,6 +67,25 @@ if(POLYTOPE_ENABLE_TETGEN)
 endif()
 
 #-----------------------------------------------------------------------------
+# Python Binding Tests
+#-----------------------------------------------------------------------------
+if(POLYTOPE_ENABLE_PYTHON AND NOT POLYTOPE_ENABLE_LEGACY_PYTHON AND (POLYTOPE_ENABLE_BOOST OR POLYTOPE_ENABLE_TRIANGLE))
+  blt_add_test(NAME setup_polytope_python_env
+    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target polytope_build_virt_env
+  )
+  set_tests_properties(setup_polytope_python_env PROPERTIES
+    FIXTURES_SETUP "polytope_python_env"
+  )
+
+  blt_add_test(NAME new_python_bindings
+    COMMAND ${CMAKE_BINARY_DIR}/venv/bin/python ${CMAKE_CURRENT_SOURCE_DIR}/PYB11/test_python_bindings.py
+  )
+  set_tests_properties(new_python_bindings PROPERTIES
+    FIXTURES_REQUIRED "polytope_python_env"
+  )
+endif()
+
+#-----------------------------------------------------------------------------
 # Distributed Tessellator Tests
 #-----------------------------------------------------------------------------
 if(POLYTOPE_ENABLE_MPI)

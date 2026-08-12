@@ -14,7 +14,6 @@
 
 #include "polytope_internal.hh"
 #include "PLC.hh"
-#include "ReducedPLC.hh"
 
 namespace polytope {
 
@@ -164,33 +163,6 @@ struct Serializer<PLC<Dimension>> {
                               const std::vector<char>::const_iterator& endItr) {
     deserialize(val.facets, bufItr, endItr);
     deserialize(val.holes, bufItr, endItr);
-  }
-};
-
-//------------------------------------------------------------------------------
-// Serialize a ReducedPLC.
-//------------------------------------------------------------------------------
-template<int Dimension, typename RealType>
-struct Serializer<ReducedPLC<Dimension, RealType> > {
-
-  static void serializeImpl(const ReducedPLC<Dimension, RealType>& val,
-                            std::vector<char>& buffer) {
-    const unsigned nf = val.facets.size();
-    serialize(nf, buffer);
-    for (unsigned i = 0; i != nf; ++i) serialize(val.facets[i], buffer);
-    serialize(val.holes, buffer);
-    serialize(val.points, buffer);
-  }
-
-  static void deserializeImpl(ReducedPLC<Dimension, RealType>& val,
-                              std::vector<char>::const_iterator& bufItr,
-                              const std::vector<char>::const_iterator& endItr) {
-    unsigned nf;
-    deserialize(nf, bufItr, endItr);
-    val.facets.resize(nf);
-    for (unsigned i = 0; i != nf; ++i) deserialize(val.facets[i], bufItr, endItr);
-    deserialize(val.holes, bufItr, endItr);
-    deserialize(val.points, bufItr, endItr);
   }
 };
 

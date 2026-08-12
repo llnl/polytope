@@ -66,13 +66,13 @@ public:
   bool valid() const {
     if (Dimension == 2) {
       // In 2D all facets must have at least 2 points.
-      for (std::size_t f = 0; f < facets.size(); ++f) {
+      for (auto f = 0u; f < facets.size(); ++f) {
         if (facets[f].size() != 2) {
           return false;
         }
       }
-      for (std::size_t h = 0; h < holes.size(); ++h) {
-        for (std::size_t f = 0; f < holes[h].size(); ++f) {
+      for (auto h = 0u; h < holes.size(); ++h) {
+        for (auto f = 0u; f < holes[h].size(); ++f) {
           if (holes[h][f].size() != 2) {
             return false;
           }
@@ -80,13 +80,13 @@ public:
       }
     } else if (Dimension == 3) {
       // In 3D all facets must have at least 3 points.
-      for (std::size_t f = 0; f < facets.size(); ++f) {
+      for (auto f = 0u; f < facets.size(); ++f) {
         if (facets[f].size() < 3) {
           return false;
         }
       }
-      for (std::size_t h = 0; h < holes.size(); ++h) {
-        for (std::size_t f = 0; f < holes[h].size(); ++f) {
+      for (auto h = 0u; h < holes.size(); ++h) {
+        for (auto f = 0u; f < holes[h].size(); ++f) {
           if (holes[h][f].size() < 3) {
             return false;
           }
@@ -100,9 +100,9 @@ public:
   friend std::ostream& operator<<(std::ostream& s, const PLC& plc) {
     s << "PLC (" << Dimension << "D):" << std::endl;
     s << plc.facets.size() << " facets:" << std::endl;
-    for (std::size_t f = 0; f < plc.facets.size(); ++f) {
+    for (auto f = 0u; f < plc.facets.size(); ++f) {
       s << " " << f << ": (";
-      for (std::size_t p = 0; p < plc.facets[f].size(); ++p) {
+      for (auto p = 0u; p < plc.facets[f].size(); ++p) {
         if (p < plc.facets[f].size()-1) {
           s << plc.facets[f][p] << ", ";
         } else {
@@ -115,9 +115,9 @@ public:
     s << plc.holes.size() << " holes:" << std::endl;
     for (std::size_t h = 0; h < plc.holes.size(); ++h) {
       s << "Hole #" << h << std::endl;
-      for (std::size_t f = 0; f < plc.holes[h].size(); ++f) {
+      for (auto f = 0u; f < plc.holes[h].size(); ++f) {
         s << "    " << f << ": (";
-        for (std::size_t p = 0; p < plc.holes[h][f].size(); ++p) {
+        for (auto p = 0u; p < plc.holes[h][f].size(); ++p) {
           if (p < plc.holes[h][f].size()-1) {
             s << plc.holes[h][f][p] << ", ";
           } else {

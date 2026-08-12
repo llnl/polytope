@@ -151,6 +151,6 @@ set_target_properties(polytopeC PROPERTIES EXPORT_NAME "polytope")
 install(TARGETS polytopeC EXPORT polytope-targets DESTINATION lib)
 install(FILES ${polytope_headers} DESTINATION include/polytope)
 
-if(POLYTOPE_ENABLE_PYTHON)
+if(POLYTOPE_ENABLE_PYTHON AND POLYTOPE_ENABLE_LEGACY_PYTHON)
   add_subdirectory(PYB11)
 endif()

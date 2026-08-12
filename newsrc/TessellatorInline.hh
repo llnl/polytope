@@ -1,11 +1,10 @@
 #include "findBoundaryElements.hh"
-#include "SiloWriter.hh"
 
 namespace polytope {
 
-//----------------------------------------------------------------------------
+//------------------------------------------------------------------------
 // Tessellate (unbounded)
-//------------------------------------------------------------------------------
+//------------------------------------------------------------------------
 template<int Dimension, typename RealType>
 inline
 void
@@ -35,9 +34,9 @@ tessellate(const std::vector<RealType>& points,
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
 }
 
-//----------------------------------------------------------------------------
+//------------------------------------------------------------------------
 // Tessellate in a PLC.
-//------------------------------------------------------------------------------
+//------------------------------------------------------------------------
 template<int Dimension, typename RealType>
 inline
 void
@@ -76,19 +75,9 @@ tessellate(const std::vector<RealType>& points,
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
 }
 
-//----------------------------------------------------------------------------
-// Tessellate in a ReducedPLC.
-//------------------------------------------------------------------------------
-template<int Dimension, typename RealType>
-inline
-void
-Tessellator<Dimension, RealType>::
-tessellate(const std::vector<RealType>& points,
-           const ReducedPLC<Dimension, RealType>& geometry,
-           Tessellation<Dimension, RealType>& mesh) {
-  this->tessellate(points, geometry.points, geometry, mesh);
-}
-
+//------------------------------------------------------------------------
+// Manual tessellation if only a single generator is provided.
+//------------------------------------------------------------------------
 template<int Dimension, typename RealType>
 inline void
 Tessellator<Dimension, RealType>::

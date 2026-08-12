@@ -136,11 +136,11 @@ public:
   //! Collect the nodes around each cell
   std::vector<std::set<unsigned> > computeCellToNodes() {
     std::vector<std::set<unsigned> > result(cells.size());
-    for (unsigned i = 0; i != cells.size(); ++i){
+    for (auto i = 0u; i < cells.size(); ++i){
       for (std::vector<int>::const_iterator faceItr = cells[i].begin();
            faceItr != cells[i].end(); ++faceItr){
         const auto iface = *faceItr < 0 ? ~(*faceItr) : *faceItr;
-        POLY_ASSERT(iface < faceCells.size());
+        POLY_ASSERT(iface < int(faceCells.size()));
         for (std::vector<unsigned>::const_iterator nodeItr = faces[iface].begin();
              nodeItr != faces[iface].end(); ++nodeItr) {
           POLY_ASSERT(*nodeItr < nodes.size());
@@ -157,7 +157,7 @@ public:
 
   //! output operator.
   friend std::ostream& operator<<(std::ostream& s, const Tessellation& mesh) {
-    for (int i = 0; i < mesh.cells.size(); ++i) {
+    for (auto i = 0u; i < mesh.cells.size(); ++i) {
       s << mesh.getCell(i);
     }
     return s;

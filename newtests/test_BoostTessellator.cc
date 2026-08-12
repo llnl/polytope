@@ -157,11 +157,12 @@ void test3(Tessellator<2,double>& tessellator) {
   }
 
   // Create the boundary
-  ReducedPLC<2, double> plc;
-  plc.points.push_back(x1 - 4.0*dx);  plc.points.push_back(y1 - 4.0*dy);
-  plc.points.push_back(x2 + 4.0*dx);  plc.points.push_back(y1 - 4.0*dy);
-  plc.points.push_back(x2 + 4.0*dx);  plc.points.push_back(y2 + 4.0*dy);
-  plc.points.push_back(x1 - 4.0*dx);  plc.points.push_back(y2 + 4.0*dy);
+  PLC<2> plc;
+  std::vector<double> plcpoints;
+  plcpoints.push_back(x1 - 4.0*dx);  plcpoints.push_back(y1 - 4.0*dy);
+  plcpoints.push_back(x2 + 4.0*dx);  plcpoints.push_back(y1 - 4.0*dy);
+  plcpoints.push_back(x2 + 4.0*dx);  plcpoints.push_back(y2 + 4.0*dy);
+  plcpoints.push_back(x1 - 4.0*dx);  plcpoints.push_back(y2 + 4.0*dy);
 
   plc.facets.resize(4, vector<unsigned>(2));
   for (int i = 0; i != 4; ++i) {
@@ -170,7 +171,7 @@ void test3(Tessellator<2,double>& tessellator) {
   }
 
   auto& Q = Quantizer<2>::instance();
-  Q.init(plc.points);
+  Q.init(plcpoints);
   // The mesh
   Tessellation<2,double> mesh;
 
@@ -180,7 +181,7 @@ void test3(Tessellator<2,double>& tessellator) {
   mesh.clear();
   
   // Tessellate bounded
-  tessellator.tessellate(points, plc.points, plc, mesh);
+  tessellator.tessellate(points, plcpoints, plc, mesh);
   outputMesh(mesh,testName,5);
 }
 
@@ -237,16 +238,17 @@ void test4(Tessellator<2,double>& tessellator) {
   }
 
   // Create the boundary
-  ReducedPLC<2, double> plc;
-  plc.points.push_back(xbc1);  plc.points.push_back(ybc1);
-  plc.points.push_back(xbc2);  plc.points.push_back(ybc1);
-  plc.points.push_back(xbc2);  plc.points.push_back(ybc2);
-  plc.points.push_back(xbc1);  plc.points.push_back(ybc2);
+  PLC<2> plc;
+  std::vector<double> plcpoints;
+  plcpoints.push_back(xbc1);  plcpoints.push_back(ybc1);
+  plcpoints.push_back(xbc2);  plcpoints.push_back(ybc1);
+  plcpoints.push_back(xbc2);  plcpoints.push_back(ybc2);
+  plcpoints.push_back(xbc1);  plcpoints.push_back(ybc2);
 
-  plc.points.push_back(xhole1);  plc.points.push_back(yhole1);
-  plc.points.push_back(xhole1);  plc.points.push_back(yhole2);
-  plc.points.push_back(xhole2);  plc.points.push_back(yhole2);
-  plc.points.push_back(xhole2);  plc.points.push_back(yhole1);
+  plcpoints.push_back(xhole1);  plcpoints.push_back(yhole1);
+  plcpoints.push_back(xhole1);  plcpoints.push_back(yhole2);
+  plcpoints.push_back(xhole2);  plcpoints.push_back(yhole2);
+  plcpoints.push_back(xhole2);  plcpoints.push_back(yhole1);
 
   plc.facets.resize(4, vector<unsigned>(2));
   for (int i = 0; i != 4; ++i) {
@@ -262,7 +264,7 @@ void test4(Tessellator<2,double>& tessellator) {
   }
 
   auto& Q = Quantizer<2>::instance();
-  Q.init(plc.points);
+  Q.init(plcpoints);
   // The mesh
   Tessellation<2,double> mesh;
 
@@ -272,7 +274,7 @@ void test4(Tessellator<2,double>& tessellator) {
   mesh.clear();
   
   // Tessellate bounded
-  tessellator.tessellate(points, plc.points, plc, mesh);
+  tessellator.tessellate(points, plcpoints, plc, mesh);
   outputMesh(mesh,testName,7);
 }
 

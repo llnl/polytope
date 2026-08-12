@@ -4,11 +4,11 @@
 // A Piecewise Linear Complex that stores points in both quantized (integer)
 // and real coordinate spaces, using Morton curve hashing for efficient
 // spatial queries. Combines functionality from:
-//   - ReducedPLC: Stores only points used in facets with index remapping
+//   - PLC: Stores only points used in facets with index remapping
 //   - convexHull_2d/3d: Can compute convex hulls using quantized coordinates
 //   - HashKey/Quantizer: Uses Morton curve hashing for deduplication
 //
-// Key improvements over separate ReducedPLC + convexHull approach:
+// Functionality provided:
 //   1. Automatic deduplication via hash-based comparison (no fuzzy tolerance)
 //   2. Efficient spatial queries via Morton curve ordering
 //   3. Unified interface for both hull construction and PLC reduction
