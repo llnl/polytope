@@ -9,6 +9,7 @@ class TriangleTessellator(Tessellator):
     def pyinit(self):
         "Default constructor"
 
+    @PYB11virtual
     @PYB11const
     def name(self):
         return "std::string"

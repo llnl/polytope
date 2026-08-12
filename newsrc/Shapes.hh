@@ -54,7 +54,7 @@ inline bool isCorner(const BoxSide& side) {
 // 2D specialization with explicit CCW ordering
 template<typename CoordType>
 inline std::vector<Point2<CoordType>>
-createBoxPoints(const Point2<CoordType>& min,
+createSquarePoints(const Point2<CoordType>& min,
                 const Point2<CoordType>& max) {
   std::vector<Point2<CoordType>> out;
   out.reserve(4);
@@ -69,13 +69,6 @@ createBoxPoints(const Point2<CoordType>& min,
     out[i].index = i;
   }
   return out;
-}
-
-template<typename CoordType>
-inline std::vector<Point2<CoordType>>
-createSquarePoints(const Point2<CoordType>& min,
-                   const Point2<CoordType>& max) {
-  return createBoxPoints<CoordType>(min, max);
 }
 
 inline std::vector<std::vector<unsigned>> createSquareFaces() {
@@ -112,7 +105,7 @@ addBoxPoints(const Quantizer<2>& Q,
              std::map<Point<2, CoordType>, int>& node2id,
              std::vector<Point<2, CoordType>>& nodes) {
   std::map<BoxSide, unsigned> cornerIndices; // Ordered lower left and CCW
-  std::vector<Point<2, CoordType>> box = createBoxPoints(Q.minBound, Q.maxBound);
+  std::vector<Point<2, CoordType>> box = createSquarePoints(Q.minBound, Q.maxBound);
   BoxSides sides;
   for (unsigned i = 0; i < 4; i++) {
     const auto n = nodes.size();

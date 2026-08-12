@@ -39,8 +39,8 @@ set_tests_properties(new_cleanup_tests PROPERTIES FIXTURES_CLEANUP "new_polytope
 #-----------------------------------------------------------------------------
 # Polytope Utility Tests
 #-----------------------------------------------------------------------------
-# polytope_add_new_test(HashKey2D)
-# polytope_add_new_test(HashKey3D)
+polytope_add_new_test(HashKey2D)
+polytope_add_new_test(HashKey3D)
 polytope_add_new_test(Quantizer)
 polytope_add_new_test(QuantPLC2D)
 #polytope_add_new_test(QuantPLC3D) # Currently broken
@@ -67,25 +67,6 @@ if(POLYTOPE_ENABLE_TETGEN)
 endif()
 
 #-----------------------------------------------------------------------------
-# Python Binding Tests
-#-----------------------------------------------------------------------------
-if(POLYTOPE_ENABLE_PYTHON AND NOT POLYTOPE_ENABLE_LEGACY_PYTHON AND (POLYTOPE_ENABLE_BOOST OR POLYTOPE_ENABLE_TRIANGLE))
-  blt_add_test(NAME setup_polytope_python_env
-    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target polytope_build_virt_env
-  )
-  set_tests_properties(setup_polytope_python_env PROPERTIES
-    FIXTURES_SETUP "polytope_python_env"
-  )
-
-  blt_add_test(NAME new_python_bindings
-    COMMAND ${CMAKE_BINARY_DIR}/venv/bin/python ${CMAKE_CURRENT_SOURCE_DIR}/PYB11/test_python_bindings.py
-  )
-  set_tests_properties(new_python_bindings PROPERTIES
-    FIXTURES_REQUIRED "polytope_python_env"
-  )
-endif()
-
-#-----------------------------------------------------------------------------
 # Distributed Tessellator Tests
 #-----------------------------------------------------------------------------
 if(POLYTOPE_ENABLE_MPI)
@@ -95,4 +76,14 @@ if(POLYTOPE_ENABLE_MPI)
   polytope_add_new_test(DistributedRandomPoints NUMTASKS 4)
   polytope_add_new_test(DistributedOrderedPoints NUMTASKS 4)
   polytope_add_new_test(DistributedVisible2D NUMTASKS 6)
+endif()
+
+#-----------------------------------------------------------------------------
+# Python Binding Tests
+#-----------------------------------------------------------------------------
+if(POLYTOPE_ENABLE_PYTHON AND NOT POLYTOPE_ENABLE_LEGACY_PYTHON AND (POLYTOPE_ENABLE_BOOST OR POLYTOPE_ENABLE_TRIANGLE))
+  polytope_add_python_test(Quantizer)
+  polytope_add_python_test(HashKey)
+  polytope_add_python_test(SerialTessellator2D)
+  polytope_add_python_test(PLC)  
 endif()

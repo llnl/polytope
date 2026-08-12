@@ -6,6 +6,7 @@
 #include <map>
 #include <utility>
 #include <vector>
+#include "SiloUtils.hh"
 
 namespace polytope {
 
@@ -30,9 +31,7 @@ template <typename TessType>
 class SiloReader<2, TessType> {
 public:
   using FieldMap = std::map<std::string, std::vector<double>>;
-  using TagMap = std::map<std::string, std::vector<int>>;
-  using FieldTypeMap = std::map<int, FieldMap>;
-  using TagTypeMap = std::map<int, TagMap>;
+  using FieldTypeMap = std::map<FieldCentering, FieldMap>;
 
   //! Returns a list of cycle numbers for Silo files dumped by a SiloWriter
   //! with the given prefix, in the given directory. If the directory is 
@@ -42,8 +41,8 @@ public:
     return Silo::findAvailableCycles(filePrefix, directory);
   }
 
-  //! Read an arbitrary polygonal mesh and associated field/tag maps from a
-  //! SILO file. Field and tag maps are keyed by Silo centering type.
+  //! Read an arbitrary polygonal mesh and associated field/t maps from a
+  //! SILO file. Field maps are keyed by Polytope field centering.
   //! \param fields A map that will store arrays of field data read in from 
   //!               the file. If \a fields contains keys, only those fields
   //!               with those keys will be read from the file, and an error 
@@ -51,16 +50,7 @@ public:
   //!               is empty, all data will be read in from the file.
   static void read(TessType& mesh,
                    FieldTypeMap& fields,
-                   TagTypeMap& tags,
                    const std::string& masterFilename);
-
-  //! Read an arbitrary polygonal mesh and associated fields from a SILO file.
-  static void read(TessType& mesh,
-                   FieldTypeMap& fields,
-                   const std::string& masterFilename) {
-    TagTypeMap tags;
-    read(mesh, fields, tags, masterFilename);
-  }
 
 };
 
@@ -69,9 +59,7 @@ template <typename TessType>
 class SiloReader<3, TessType> {
 public:
   using FieldMap = std::map<std::string, std::vector<double>>;
-  using TagMap = std::map<std::string, std::vector<int>>;
-  using FieldTypeMap = std::map<int, FieldMap>;
-  using TagTypeMap = std::map<int, TagMap>;
+  using FieldTypeMap = std::map<FieldCentering, FieldMap>;
 
   //! Returns a list of cycle numbers for Silo files dumped by a SiloWriter
   //! with the given prefix, in the given directory. If the directory is 
@@ -82,8 +70,8 @@ public:
   }
 
   //! Read an arbitrary polyhedral mesh and an associated set of 
-  //! fields and tags from a SILO file. Field and tag maps are keyed by Silo
-  //! centering type.
+  //! fields from a SILO file. Field maps are keyed by Polytope
+  //! field centering.
   //! \param fields A map that will store arrays of field data read in from 
   //!               the file. If \a fields contains keys, only those fields
   //!               with those keys will be read from the file, and an error 
@@ -91,22 +79,7 @@ public:
   //!               is empty, all data will be read in from the file.
   static void read(TessType& mesh,
                    FieldTypeMap& fields,
-                   TagTypeMap& tags,
                    const std::string& masterFilename);
-
-  //! Read an arbitrary polyhedral mesh and an associated set of 
-  //! fields from a SILO file.
-  //! \param fields A map that will store arrays of field data read in from 
-  //!               the file. If \a fields contains keys, only those fields
-  //!               with those keys will be read from the file, and an error 
-  //!               will occur if any of the keys are not found. If \a fields 
-  //!               is empty, all data will be read in from the file.
-  static void read(TessType& mesh,
-                   FieldTypeMap& fields,
-                   const std::string& masterFilename) {
-    TagTypeMap tags;
-    read(mesh, fields, tags, masterFilename);
-  }
 
 };
 

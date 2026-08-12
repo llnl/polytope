@@ -53,8 +53,7 @@ if (POLYTOPE_ENABLE_SILO)
     SiloWriter2D.cc
     SiloWriter3D.cc
     SiloReader2D.cc
-    SiloReader3D.cc
-    SiloUtils.cc)
+    SiloReader3D.cc)
 endif()
 
 # Check if we can include each of the serial tessellators:
@@ -81,18 +80,11 @@ if (POLYTOPE_ENABLE_TRIANGLE)
   endif()
 endif()
 
-# VORO++ tessellator
-if (POLYTOPE_ENABLE_VORO)
-  # list(APPEND polytope_headers VoroPP_2d.hh VoroPP_3d.hh)
-  # list(APPEND polytope_sources VoroPP_2d.cc VoroPP_3d.cc)
-endif()
-
 # Check if we can incude the distributed tessellators:
 if (POLYTOPE_ENABLE_MPI)
   list(APPEND polytope_headers
     DistributedTessellator.hh
-    ParallelUtils.hh
-  )
+    ParallelUtils.hh)
   list(APPEND polytope_sources
     DistributedTessellator.cc)
 endif()

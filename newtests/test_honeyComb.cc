@@ -75,17 +75,17 @@ void test(Tessellator<2,double>& tessellator, const std::string& outname, bool h
   auto& Q = Quantizer<2>::instance();
   Q.init(plcPoints);
   Tessellation<2, double> mesh;
-  tessellator.tessellate(points, mesh);// plcPoints, plc, mesh);
+  tessellator.tessellate(points, mesh);
   outputMesh(mesh, outname, cycle);
   testWatertight(mesh, 0);
   // Read the mesh we just wrote back in
   Tessellation<2, double> readMesh;
   std::string masterFilename = getMasterFilename(outname, cycle);
-  std::map<int, std::map<std::string, std::vector<double>>> fields;
+  SiloReader<2, Tessellation<2, double>>::FieldTypeMap fields;
   SiloReader<2, Tessellation<2, double>>::read(readMesh, fields, masterFilename);
   // Try writing the mesh back out
   outputMesh(readMesh, "re"+outname, cycle);
-  int meshnodes = readMesh.nodes.size()/2;
+  int meshnodes = readMesh.nodes.size();
   POLY_CHECK2(meshnodes == numNodes, "Number of nodes in mesh: " << meshnodes
               << " does not match expected number of nodes: " << numNodes);
 }

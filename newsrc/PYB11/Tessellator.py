@@ -34,10 +34,6 @@ class Tessellator:
         "Generate a tessellation inside a PLC boundary."
         return "void"
 
-    @PYB11const
-    def handlesPLCs(self):
-        return "bool"
-
     @PYB11pure_virtual
     @PYB11const
     def name(self):

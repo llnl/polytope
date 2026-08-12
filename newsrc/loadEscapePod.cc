@@ -92,8 +92,8 @@ int main(int argc, char** argv) {
   cellFields["cell_index"] = index;
   cellFields["gen_x"     ] = genx;
   cellFields["gen_y"     ] = geny;
-  std::map<int, std::map<std::string, std::vector<double>>> fields;
-  fields[DB_ZONECENT] = cellFields;
+  SiloWriter<2, QuantTessellation<2>>::FieldTypeMap fields;
+  fields[FieldCentering::Cell] = cellFields;
   SiloWriter<2, QuantTessellation<2>>::write(quantMesh, fields, prefix, 1, 0., 1);
 #endif
   comm.finalize();

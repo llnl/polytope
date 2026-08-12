@@ -46,6 +46,7 @@ macro(polytope_add_test target)
     WORKING_DIRECTORY "${TEST_WORK_DIR}"
   )
 endmacro()
+
 macro(polytope_add_new_test newtarget)
   set(options )
   set(singleValueArgs NUMTASKS)
@@ -82,6 +83,33 @@ macro(polytope_add_new_test newtarget)
     COMMAND ${CMAKE_BINARY_DIR}/newbin/${newtarget}
     NUM_MPI_TASKS ${arg_NUMTASKS}
   )
+  set_tests_properties(${target}_test PROPERTIES
+    FIXTURES_REQUIRED "new_polytope_fixture"
+    WORKING_DIRECTORY "${NEW_TEST_WORK_DIR}"
+  )
+endmacro()
+
+macro(polytope_add_python_test newtarget)
+  set(options )
+  set(singleValueArgs NUMTASKS)
+  set(multiValueArgs )
+  set(target "new${newtarget}_python")
+
+  cmake_parse_arguments(arg
+    "${options}" "${singleValueArgs}" "${multiValueArgs}" ${ARGN})
+
+  if(NOT DEFINED arg_NUMTASKS OR "${arg_NUMTASKS}" STREQUAL "")
+    set(arg_NUMTASKS 1)
+    message("--- Creating test ${target}")
+  else()
+    message("--- Creating test ${target}: N=${arg_NUMTASKS}")
+  endif()
+
+  blt_add_test(NAME ${target}_test
+    COMMAND ${CMAKE_BINARY_DIR}/venv/bin/python ${CMAKE_CURRENT_SOURCE_DIR}/PYB11/test_${newtarget}.py
+    NUM_MPI_TASKS ${arg_NUMTASKS}
+  )
+
   set_tests_properties(${target}_test PROPERTIES
     FIXTURES_REQUIRED "new_polytope_fixture"
     WORKING_DIRECTORY "${NEW_TEST_WORK_DIR}"

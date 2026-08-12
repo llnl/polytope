@@ -23,8 +23,12 @@ class PLC:
     def __str__(self):
         return "std::string"
 
-    facets = PYB11readwrite(returnpolicy="reference_internal")
-    holes = PYB11readwrite(returnpolicy="reference_internal")
+    facets = PYB11property(getterraw="[](PLC<%(Dimension)s>& self) -> std::vector<std::vector<unsigned>>& { return self.facets; }",
+                           setterraw="[](PLC<%(Dimension)s>& self, const py::object& value) { self.facets = pybind11_helpers::copyFacetList(value, \"facets\"); }",
+                           returnpolicy="reference_internal")
+    holes = PYB11property(getterraw="[](PLC<%(Dimension)s>& self) -> std::vector<std::vector<std::vector<unsigned>>>& { return self.holes; }",
+                          setterraw="[](PLC<%(Dimension)s>& self, const py::object& value) { self.holes = pybind11_helpers::copyHoleList(value, \"holes\"); }",
+                          returnpolicy="reference_internal")
 
 PLC2d = PYB11TemplateClass(PLC, template_parameters="2")
 PLC3d = PYB11TemplateClass(PLC, template_parameters="3")

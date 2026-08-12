@@ -152,16 +152,6 @@ if(POLYTOPE_ENABLE_TETGEN)
   list(APPEND IMPORTED_LIBS tetgen)
 endif()
 
-# if(POLYTOPE_ENABLE_VORO)
-#   blt_import_library(NAME voro
-#     LIBRARIES ${voro_DIR}/lib/libvoro++.so
-#     INCLUDES ${voro_DIR}/include
-#     TREAT_INCLUDES_AS_SYSTEM ON
-#     EXPORTABLE ON)
-#   list(APPEND POLYTOPE_TPL_DEPENDS voro)
-#   list(APPEND IMPORTED_LIBS voro)
-# endif()
-
 foreach(lib ${IMPORTED_LIBS})
   get_target_property(_is_imported ${lib} IMPORTED)
   if(NOT ${_is_imported})

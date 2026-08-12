@@ -58,7 +58,6 @@ template <typename TessType>
 void
 SiloWriter<2, TessType>::write(const TessType& mesh,
                                const FieldTypeMap& fields,
-                               const TagTypeMap& tags,
                                const string& filePrefix,
                                const string& directory,
                                int cycle,
@@ -223,27 +222,21 @@ SiloWriter<2, TessType>::write(const TessType& mesh,
     // free(elemnames[0]);
     // free(elemnames[1]);
     // free(elemnames[2]);
-    // Write out tag information.
-    for (const auto& [type, tagmap] : tags) {
-      POLY_CHECK(type == DB_NODECENT || type == DB_EDGECENT ||
-                 type == DB_FACECENT || type == DB_ZONECENT);
-      writeTagsToFile(tagmap, file, type);
-    }
 
     // FIXME: We really should try to use the number of edges for edge fields.
     const int numFaces = mesh.faces.size();
 
     // Write cell-centered fields to CELLS directory
     // Write out tag information.
-    for (const auto& [type, fieldmap] : fields) {
-      POLY_CHECK(type == DB_NODECENT || type == DB_EDGECENT ||
-                 type == DB_FACECENT || type == DB_ZONECENT);
-      if (type == DB_FACECENT || type == DB_EDGECENT) {
-        writeFieldsToFile(fieldmap, meshname, file, numFaces, type, optlist);
-      } else if (type == DB_NODECENT) {
-        writeFieldsToFile(fieldmap, meshname, file, numNodes, type, optlist);
+    for (const auto& [centering, fieldmap] : fields) {
+      const int siloType = siloCentering(centering);
+      if (centering == FieldCentering::Face ||
+          centering == FieldCentering::Edge) {
+        writeFieldsToFile(fieldmap, meshname, file, numFaces, siloType, optlist);
+      } else if (centering == FieldCentering::Node) {
+        writeFieldsToFile(fieldmap, meshname, file, numNodes, siloType, optlist);
       } else {
-        writeFieldsToFile(fieldmap, meshname, file, numCells, type, optlist);
+        writeFieldsToFile(fieldmap, meshname, file, numCells, siloType, optlist);
       }
     }
 
@@ -302,9 +295,8 @@ SiloWriter<2, TessType>::write(const TessType& mesh,
     DBPutMultimesh(file, global_mesh_name.c_str(), nblocks, cellMeshNames.data(), cellMeshTypes.data(), masteroptlist);
     DBPutMultimesh(file, "PPOINTS", nblocks, pointMeshNames.data(), pointMeshTypes.data(), masteroptlist);
 
-    for (const auto& [type, fieldmap] : fields) {
-      POLY_CHECK(type == DB_NODECENT || type == DB_EDGECENT ||
-                 type == DB_FACECENT || type == DB_ZONECENT);
+    for (const auto& [centering, fieldmap] : fields) {
+      (void)siloCentering(centering);
       putCellVars(file, fieldmap, procPaths, nblocks, varTypes, masteroptlist);
     }
 #ifdef POLYTOPE_ENABLE_DEBUG

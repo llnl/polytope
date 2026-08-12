@@ -43,17 +43,6 @@ public:
                           const PLC<Dimension>& geometry,
                           Tessellation<Dimension, RealType>& mesh);
 
-  //! Override this method to return true if this Tessellator supports 
-  //! the description of a domain boundary using a PLC (as in the second 
-  //! tessellate method, above), and false if it does not. Some algorithms 
-  //! for tessellation do not naturally accommodate an explicit boundary 
-  //! description, and Tessellators using these algorithms should override 
-  //! this method to return false. A stub method for PLC-enabled
-  //! tessellation is provided for convenience.
-  //! This query mechanism prevents us from descending into the taxonomic 
-  //! hell associated with elaborate inheritance hierarchies.
-  virtual bool handlesPLCs() const { return true; }
-
   //! Required for all tessellators:
   //! Compute the quantized tessellation.  This is the basic method all
   //! Tessellator implementations must provide, on which the other tessellation methods

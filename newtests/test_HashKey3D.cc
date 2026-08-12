@@ -190,7 +190,7 @@ void testEdgeCases() {
   testRoundTrip(IntPoint(zero, maxVal, maxVal), "Max Y,Z");
 
   // Powers of 2
-  for (auto bit = 0; bit < min(20u, HashKey3D::num1DBits()); ++bit) {
+  for (auto bit = 0; bit < std::min(20, HashKey3D::num1DBits()); ++bit) {
     auto val = IntType(1) << bit;
     testRoundTrip(IntPoint(val, zero, zero), "Power of 2 in X");
     testRoundTrip(IntPoint(zero, val, zero), "Power of 2 in Y");
@@ -207,15 +207,15 @@ void testEdgeCases() {
 
         if (x + 1 < 8) {
           testDistinctPoints(IntPoint(x, y, z),
-                           IntPoint(x+1, y, z));
+                             IntPoint(x+1, y, z));
         }
         if (y + 1 < 8) {
           testDistinctPoints(IntPoint(x, y, z),
-                           IntPoint(x, y+1, z));
+                             IntPoint(x, y+1, z));
         }
         if (z + 1 < 8) {
           testDistinctPoints(IntPoint(x, y, z),
-                           IntPoint(x, y, z+1));
+                             IntPoint(x, y, z+1));
         }
       }
     }
@@ -386,93 +386,6 @@ int main(int argc, char** argv) {
     POLY_CHECK2(hi_bits > 50, "Too few bits used in hi word: " << hi_bits);
 
     cout << "Bit distribution test passed!" << endl;
-  }
-
-  //----------------------------------------------------------------------------
-  // Flag bit tests
-  //----------------------------------------------------------------------------
-  {
-    cout << "\n=== Testing flag bit functionality ===" << endl;
-
-    // Test that freshly hashed points have flag disabled (inner box)
-    auto key1 = HashKey3D::hash(IntPoint(100, 200, 300));
-    POLY_CHECK2(!HashKey3D::getOuterFlag(key1),
-                "Freshly hashed point should have outer flag disabled");
-
-    // Test enabling the flag
-    HashKey3D::enableOuterFlag(key1);
-    POLY_CHECK2(HashKey3D::getOuterFlag(key1),
-                "Flag should be enabled after enableOuterFlag()");
-
-    // Test disabling the flag
-    HashKey3D::disableOuterFlag(key1);
-    POLY_CHECK2(!HashKey3D::getOuterFlag(key1),
-                "Flag should be disabled after disableOuterFlag()");
-
-    // Test that flag doesn't affect unhashing
-    IntPoint p(12345, 67890, 11111);
-    auto key2 = HashKey3D::hash(p);
-    auto key3 = key2;
-    HashKey3D::enableOuterFlag(key3);
-
-    auto p2 = HashKey3D::unhash(key2);
-    auto p3 = HashKey3D::unhash(key3);
-
-    POLY_CHECK2(p2.x == p.x && p2.y == p.y && p2.z == p.z,
-                "Unhashing with flag disabled should recover original point");
-    POLY_CHECK2(p3.x == p.x && p3.y == p.y && p3.z == p.z,
-                "Unhashing with flag enabled should recover original point");
-
-    // Test that two hashes differ only in flag bit
-    auto keyInner = HashKey3D::hash(IntPoint(500, 750, 999));
-    auto keyOuter = keyInner;
-    HashKey3D::enableOuterFlag(keyOuter);
-
-    POLY_CHECK2(keyInner != keyOuter,
-                "Hashes with different flags should not be equal");
-    POLY_CHECK2((keyInner ^ keyOuter) == HashKey3D::FlagMask(),
-                "Hashes should differ only in the flag bit");
-
-    // Test flag bit position
-    POLY_CHECK2(HashKey3D::flagBit() == 126,
-                "Flag bit should be at position 126 for 3D");
-
-    // Test that flag mask has only one bit set
-    CoordHash mask = HashKey3D::FlagMask();
-    unsigned bitCount = 0;
-    CoordHash temp = mask;
-    while (temp) {
-      bitCount += temp & 1;
-      temp >>= 1;
-    }
-    POLY_CHECK2(bitCount == 1,
-                "Flag mask should have exactly one bit set, found " << bitCount);
-
-    // Test flag operations are idempotent
-    auto key4 = HashKey3D::hash(IntPoint(111, 222, 333));
-    HashKey3D::enableOuterFlag(key4);
-    HashKey3D::enableOuterFlag(key4);  // Enable twice
-    POLY_CHECK2(HashKey3D::getOuterFlag(key4),
-                "Double enable should still have flag set");
-
-    HashKey3D::disableOuterFlag(key4);
-    HashKey3D::disableOuterFlag(key4);  // Disable twice
-    POLY_CHECK2(!HashKey3D::getOuterFlag(key4),
-                "Double disable should still have flag clear");
-
-    // Test that flag doesn't interfere with spatial locality
-    // Hash the same point with and without flag - should sort adjacently
-    IntPoint testPt(1000, 2000, 3000);
-    auto hashInner = HashKey3D::hash(testPt);
-    auto hashOuter = hashInner;
-    HashKey3D::enableOuterFlag(hashOuter);
-
-    // XOR should only have the flag bit set
-    CoordHash diff = hashInner ^ hashOuter;
-    POLY_CHECK2(diff == HashKey3D::FlagMask(),
-                "Flag operations should only affect the flag bit");
-
-    cout << "Flag bit tests passed!" << endl;
   }
 
   cout << "\n=== All HashKey3D tests passed! ===" << endl;

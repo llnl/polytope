@@ -68,6 +68,13 @@ getSiloInputPaths(const std::string& masterFilename) {
 }
 //-------------------------------------------------------------------
 
+struct RequestedField {
+  bool hasCentering;
+  FieldCentering centering;
+  std::string name;
+};
+//-------------------------------------------------------------------
+
 }
 
 //-------------------------------------------------------------------
@@ -75,7 +82,6 @@ template <typename TessType>
 void
 SiloReader<2, TessType>::read(TessType& mesh,
                               FieldTypeMap& fields,
-                              TagTypeMap& tags,
                               const string& masterFilename) {
   using CoordType = typename std::decay<decltype(mesh.nodes[0].x)>::type;
   std::vector<std::string> inputFiles;
@@ -238,52 +244,33 @@ SiloReader<2, TessType>::read(TessType& mesh,
     }
     DBFreePointmesh(pmesh);
 
-    const std::vector<std::pair<int, std::string> > tagLists = {
-      {DB_NODECENT, "node_tags"},
-      {DB_EDGECENT, "edge_tags"},
-      {DB_FACECENT, "face_tags"},
-      {DB_ZONECENT, "cell_tags"}
-    };
-    const bool readAllTags = tags.empty();
-    for (const auto& [centering, tagListName] : tagLists) {
-      if (!readAllTags && tags.find(centering) == tags.end()) continue;
-      DBcompoundarray* dbtags = DBGetCompoundarray(file, tagListName.c_str());
-      if (dbtags != 0) {
-        int* tagValues = (int*)dbtags->values;
-        int offset = 0;
-        for (int i = 0; i < dbtags->nelems; ++i) {
-          std::vector<int>& tag = tags[centering][dbtags->elemnames[i]];
-          tag.assign(tagValues + offset, tagValues + offset + dbtags->elemlengths[i]);
-          offset += dbtags->elemlengths[i];
-        }
-        DBFreeCompoundarray(dbtags);
-      }
-    }
-
     // Get the cell field variables
-    std::vector<std::pair<int, std::string> > fieldNames;
+    std::vector<RequestedField> fieldNames;
     if (fields.empty()) {
       DBtoc* contents = DBGetToc(file);
       for (int f = 0; f < contents->nucdvar; ++f) {
-        fieldNames.push_back({-1, std::string(contents->ucdvar_names[f])});
+        fieldNames.push_back({false, FieldCentering::Cell, std::string(contents->ucdvar_names[f])});
       }
     } else {
       for (const auto& [centering, fieldmap] : fields) {
         for (const auto& field : fieldmap) {
-          fieldNames.push_back({centering, field.first});
+          fieldNames.push_back({true, centering, field.first});
         }
       }
     }
     // Retrieve the fields.
     for (size_t f = 0; f < fieldNames.size(); ++f) {
-      const auto requestedCentering = fieldNames[f].first;
-      const auto& fieldName = fieldNames[f].second;
+      const auto& requestedField = fieldNames[f];
+      const auto& fieldName = requestedField.name;
       DBucdvar* dbvar = DBGetUcdvar(file, fieldName.c_str());
       POLY_ASSERT2(dbvar, "Could not find field " << fieldName << " in file " << filename);
-      const int centering = requestedCentering >= 0 ? requestedCentering : dbvar->centering;
-      if (requestedCentering >= 0) {
-        POLY_ASSERT2(dbvar->centering == requestedCentering,
+      FieldCentering centering = requestedField.centering;
+      if (requestedField.hasCentering) {
+        const int expectedCentering = siloCentering(requestedField.centering);
+        POLY_ASSERT2(dbvar->centering == expectedCentering,
                      "Field " << fieldName << " has unexpected centering in file " << filename);
+      } else {
+        centering = fieldCenteringFromSilo(dbvar->centering);
       }
       fields[centering][fieldName].resize(dbvar->nels);
       copy((double*)(dbvar->vals[0]), (double*)(dbvar->vals[0]) + dbvar->nels,

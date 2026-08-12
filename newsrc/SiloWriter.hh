@@ -6,7 +6,7 @@
 #include <map>
 #include <vector>
 #include "Communicator.hh"
-#include "silo.h"
+#include "SiloUtils.hh"
 
 namespace polytope {
 
@@ -26,19 +26,16 @@ class SiloWriter<2, TessType> {
 public:
   // Map of a field name and it's values
   using FieldMap = std::map<std::string, std::vector<double>>;
-  using TagMap = std::map<std::string, std::vector<int>*>;
-  // Map of the centering type (DB_ZONECENT, DB_EDGECENT, ect) and it's FieldMap
-  using FieldTypeMap = std::map<int, FieldMap>;
-  using TagTypeMap = std::map<int, TagMap>;
+  // Map of a Polytope field centering and its FieldMap
+  using FieldTypeMap = std::map<FieldCentering, FieldMap>;
 
   //! Write an arbitrary polygonal mesh, an associated set of
-  //! (node, edge, face, cell)-centered fields, and a corresponding set of
-  //! tags, to a SILO file in the given directory.
+  //! (node, edge, face, cell)-centered fields
+  //! to a SILO file in the given directory.
   //! \param numFiles The number of files that will be written. If this
   //!                 is set to -1, one file will be written for each process.
   static void write(const TessType& mesh,
                     const FieldTypeMap& fields,
-                    const TagTypeMap& tags,
                     const std::string& filePrefix,
                     const std::string& directory,
                     int cycle,
@@ -46,26 +43,7 @@ public:
                     int numFiles = -1);
 
   //! Write an arbitrary polygonal mesh and an associated set of
-  //! (node, edge, face, cell)-centered fields to a SILO file in the given directory.
-  //! \param numFiles The number of files that will be written. If this
-  //!                 is set to -1, one file will be written for each process.
-  static void write(const TessType& mesh,
-                    const FieldTypeMap& fields,
-                    const std::string& filePrefix,
-                    const std::string& directory,
-                    int cycle,
-                    double time,
-                    int numFiles = -1) {
-    // Just call the general function with no tags.
-    TagTypeMap tags;
-    write(mesh, fields, tags, filePrefix, directory, cycle, time, numFiles);
-  }
-
-  //! Write an arbitrary polygonal mesh and an associated set of
-  //! (node, edge, face, cell)-centered fields to a SILO file. This version generates a
-  //! directory name automatically. For parallel runs, the directory
-  //! name is filePrefix-nproc. For serial runs, the directory is
-  //! the current working directory.
+  //! (node, edge, face, cell)-centered fields to a SILO file.
   //! \param numFiles The number of files that will be written. If this
   //!                 is set to -1, one file will be written for each process.
   static void write(const TessType& mesh,
@@ -130,7 +108,7 @@ public:
     }
 #endif
     FieldTypeMap fields;
-    fields[DB_ZONECENT] = cellFields;
+    fields[FieldCentering::Cell] = cellFields;
     write(mesh, fields, filePrefix, "", cycle, time, numFiles);
   }
 
@@ -142,19 +120,16 @@ class SiloWriter<3, TessType> {
 public:
   // Map of a field name and it's values
   using FieldMap = std::map<std::string, std::vector<double>>;
-  using TagMap = std::map<std::string, std::vector<int>*>;
-  // Map of the centering type (DB_ZONECENT, DB_EDGECENT, ect) and it's FieldMap
-  using FieldTypeMap = std::map<int, FieldMap>;
-  using TagTypeMap = std::map<int, TagMap>;
+  // Map of a Polytope field centering and its FieldMap
+  using FieldTypeMap = std::map<FieldCentering, FieldMap>;
 
   //! Write an arbitrary polygonal mesh, an associated set of
-  //! (node, edge, face, cell)-centered fields, and a corresponding set of
-  //! tags, to a SILO file in the given directory.
+  //! (node, edge, face, cell)-centered fields
+  //! to a SILO file in the given directory.
   //! \param numFiles The number of files that will be written. If this
   //!                 is set to -1, one file will be written for each process.
   static void write(const TessType& mesh,
                     const FieldTypeMap& fields,
-                    const TagTypeMap& tags,
                     const std::string& filePrefix,
                     const std::string& directory,
                     int cycle,
@@ -162,35 +137,15 @@ public:
                     int numFiles = -1);
 
   //! Write an arbitrary polyhedral mesh and an associated set of
-  //! (node, edge, face, cell)-centered fields to a SILO file in the given directory.
+  //! (node, edge, face, cell)-centered fields to a SILO file.
   //! \param numFiles The number of files that will be written. If this
   //!                 is set to -1, one file will be written for each process.
   static void write(const TessType& mesh,
                     const FieldTypeMap& fields,
                     const std::string& filePrefix,
-                    const std::string& directory,
                     int cycle,
                     double time,
                     int numFiles = -1) {
-    // Just call the general function with no tags.
-    TagTypeMap tags;
-    write(mesh, fields, tags, filePrefix, directory, cycle, time, numFiles);
-  }
-
-  //! Write an arbitrary polyhedral mesh and an associated set of
-  //! (node, edge, face, cell)-centered fields to a SILO file. This version generates a
-  //! directory name automatically. For parallel runs, the directory
-  //! name is filePrefix-nproc. For serial runs, the directory is
-  //! the current working directory.
-  //! \param numFiles The number of files that will be written. If this
-  //!                 is set to -1, one file will be written for each process.
-  static void write(const TessType& mesh,
-                    const FieldTypeMap& fields,
-                    const std::string& filePrefix,
-                    int cycle,
-                    double time,
-                    int numFiles = -1)
-  {
     write(mesh, fields, filePrefix, "", cycle, time, numFiles);
   }
 
@@ -199,8 +154,7 @@ public:
                     const FieldTypeMap& fields,
                     const std::string& filePrefix,
                     const std::string& directory,
-                    int numFiles = -1)
-  {
+                    int numFiles = -1) {
     write(mesh, fields, filePrefix, directory, -1, -1., numFiles);
   }
 
@@ -209,8 +163,7 @@ public:
   static void write(const TessType& mesh,
                     const FieldTypeMap& fields,
                     const std::string& filePrefix,
-                    int numFiles = -1)
-  {
+                    int numFiles = -1) {
     write(mesh, fields, filePrefix, "", -1, -1., numFiles);
   }
 
@@ -250,7 +203,7 @@ public:
     }
 #endif
     FieldTypeMap fields;
-    fields[DB_ZONECENT] = cellFields;
+    fields[FieldCentering::Cell] = cellFields;
     write(mesh, fields, filePrefix, "", -1, -1., numFiles);
   }
 

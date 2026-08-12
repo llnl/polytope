@@ -46,7 +46,7 @@ void outputMesh(const Tessellation<2, double>& mesh,
   cellFields["rank"      ] = rankField;
 #endif
   FieldTypeMap fields;
-  fields[DB_ZONECENT] = cellFields;
+  fields[FieldCentering::Cell] = cellFields;
   SiloWriter<2, Tessellation<2, double>>::write(mesh, fields, prefix, testCycle, time);
 #endif
 }
@@ -77,7 +77,7 @@ void outputMesh(const Tessellation<2, double>& mesh,
   cellFields["gen_y"     ] = geny;
   cellFields[cellFieldName] = cellFieldVec;
   FieldTypeMap fields;
-  fields[DB_ZONECENT] = cellFields;
+  fields[FieldCentering::Cell] = cellFields;
   SiloWriter<2, Tessellation<2, double>>::write(mesh, fields, prefix, testCycle, time, numFiles);
 #endif
 }
@@ -117,7 +117,7 @@ void outputMesh(const Tessellation<3, double>& mesh,
   cellFields["rank"      ] = rankField;
 #endif
   FieldTypeMap fields;
-  fields[DB_ZONECENT] = cellFields;
+  fields[FieldCentering::Cell] = cellFields;
   SiloWriter<3, Tessellation<3, double>>::write(mesh, fields, prefix, testCycle, time);
 #endif
 }

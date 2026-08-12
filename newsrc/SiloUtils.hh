@@ -7,14 +7,63 @@
 #include <vector>
 #include <map>
 #include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <stdexcept>
 #include "silo.h"
 #include "Communicator.hh"
 
 namespace polytope {
 
+//! Centering locations for mesh fields.
+enum class FieldCentering {
+  Node = 0,
+  Edge = 1,
+  Face = 2,
+  Cell = 3
+};
+
+inline
+int
+siloCentering(const FieldCentering centering) {
+  switch (centering) {
+  case FieldCentering::Node:
+    return DB_NODECENT;
+  case FieldCentering::Edge:
+    return DB_EDGECENT;
+  case FieldCentering::Face:
+    return DB_FACECENT;
+  case FieldCentering::Cell:
+    return DB_ZONECENT;
+  }
+  throw std::runtime_error("Unknown Polytope field centering");
+}
+
+inline
+FieldCentering
+fieldCenteringFromSilo(const int centering) {
+  switch (centering) {
+  case DB_NODECENT:
+    return FieldCentering::Node;
+  case DB_EDGECENT:
+    return FieldCentering::Edge;
+  case DB_FACECENT:
+    return FieldCentering::Face;
+  case DB_ZONECENT:
+    return FieldCentering::Cell;
+  }
+  throw std::runtime_error("Unknown Silo field centering");
+}
+
 // strdup isn't part of the C standard, so we can't rely on its existence.
 // We keep our own handy.
-char* strDup(const char* s);
+inline char* strDup(const char* s) {
+  if (s == NULL)
+    return NULL;
+  char* dup = (char*)malloc(sizeof(char) * (strlen(s) + 1));
+  strcpy(dup, s);
+  return dup;
+}
 
 // Certain names
 inline std::string getLocalMeshName() {
@@ -24,11 +73,6 @@ inline std::string getLocalMeshName() {
 inline std::string getGlobalMeshName() {
   return "MMESH";
 }
-
-void
-writeTagsToFile(const std::map<std::string, std::vector<int>*>& tags,
-                DBfile* file,
-                int centering);
 
 inline
 void

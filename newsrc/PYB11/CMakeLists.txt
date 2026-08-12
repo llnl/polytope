@@ -15,6 +15,9 @@ configure_file(
   ${PROJECT_BINARY_DIR}/newsrc/PYB11/SerialTessellators.py
 )
 
+get_property(POLYTOPE_TPL_DEPENDS GLOBAL PROPERTY POLYTOPE_TPL_DEPENDS)
+get_property(POLYTOPE_CXX_COMPILE_FLAGS GLOBAL PROPERTY POLYTOPE_CXX_COMPILE_FLAGS)
+get_property(POLYTOPE_CXX_LINK_FLAGS GLOBAL PROPERTY POLYTOPE_CXX_LINK_FLAGS)
 PYB11Generator_add_module(polytope
   MODULE   polytope
   SOURCE   polytope_PYB11.py
@@ -24,9 +27,11 @@ PYB11Generator_add_module(polytope
   LINKS    newpolytopeC
   USE_BLT  ON
   INSTALL  OFF
+  COMPILE_OPTIONS ${POLYTOPE_CXX_COMPILE_FLAGS}
   DEPENDS  newpolytopeC
 )
 
+target_link_options(polytope PUBLIC ${POLYTOPE_CXX_LINK_FLAGS})
 install(TARGETS polytope
   DESTINATION ${POLYTOPE_SITE_PACKAGES_PATH})
 

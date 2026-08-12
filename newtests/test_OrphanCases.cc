@@ -125,7 +125,7 @@ void test(Tessellator<2,double>& tessellator) {
     tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
     outputMesh(mesh, testName,i);
     printArea(boundary,mesh);
-    POLY_CHECK(checkNearestNode(mesh,dist));
+    POLY_CHECK(checkNearestNode(mesh, dist));
     ++i;
   }
 

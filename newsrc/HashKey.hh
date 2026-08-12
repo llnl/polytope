@@ -34,11 +34,10 @@ template<> struct HashKey<2> {
   using HashType = std::hash<CoordHash>;
   using IntPoint = Point<2, IntType>;
 
-  // Flag bit unused so it is just the bit number
-  static constexpr int       flagBit()   { return 64; }
+  static constexpr int       numBits()   { return 64; }
   static constexpr int       num1DBits() { return 31; }
   static constexpr IntType   coordMax()  { return (1ULL << (num1DBits() - 1ULL)) - 1ULL; }
-  static constexpr CoordHash hashMax()   { return ((unsigned CoordHash)1 << (flagBit() - 1ULL)) - 1ULL; }
+  static constexpr CoordHash hashMax()   { return ((unsigned CoordHash)1 << (numBits() - 1ULL)) - 1ULL; }
 
   static CoordHash hash(const IntPoint& point) {
     CoordHash key = 0;
@@ -65,10 +64,10 @@ template<> struct HashKey<3> {
   using IntType = int64_t; // Number of bits must exceed num1DBits
   using IntPoint = Point<3, IntType>;
 
-  static constexpr int       flagBit()   { return 128; }
+  static constexpr int       numBits()   { return 128; }
   static constexpr int       num1DBits() { return 42; }
   static constexpr IntType   coordMax()  { return (1ULL << (num1DBits() - 1ULL)) - 1ULL; }
-  static constexpr CoordHash hashMax()   { return ((unsigned CoordHash)1 << (flagBit() - 1ULL)) - 1ULL; }
+  static constexpr CoordHash hashMax()   { return ((unsigned CoordHash)1 << (numBits() - 1ULL)) - 1ULL; }
 
   static CoordHash hash(const IntPoint& point) {
     CoordHash key = 0;

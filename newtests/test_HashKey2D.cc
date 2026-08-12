@@ -184,7 +184,7 @@ void testEdgeCases() {
   testRoundTrip(IntPoint(zero, maxVal), "Zero X, max Y");
 
   // Powers of 2
-  for (auto bit = 0; bit < min(20u, HashKey2D::num1DBits()); ++bit) {
+  for (auto bit = 0; bit < std::min(20, HashKey2D::num1DBits()); ++bit) {
     auto val = IntType(1) << bit;
     testRoundTrip(IntPoint(val, zero), "Power of 2 in X");
     testRoundTrip(IntPoint(zero, val), "Power of 2 in Y");
@@ -304,76 +304,6 @@ int main(int argc, char** argv) {
     POLY_CHECK(!(key1 == key3));
 
     cout << "Operator tests passed!" << endl;
-  }
-
-  //----------------------------------------------------------------------------
-  // Flag bit tests
-  //----------------------------------------------------------------------------
-  {
-    cout << "\n=== Testing flag bit functionality ===" << endl;
-
-    // Test that freshly hashed points have flag disabled (inner box)
-    auto key1 = HashKey2D::hash(IntPoint(100, 200));
-    POLY_CHECK2(!HashKey2D::getOuterFlag(key1),
-                "Freshly hashed point should have outer flag disabled");
-
-    // Test enabling the flag
-    HashKey2D::enableOuterFlag(key1);
-    POLY_CHECK2(HashKey2D::getOuterFlag(key1),
-                "Flag should be enabled after enableOuterFlag()");
-
-    // Test disabling the flag
-    HashKey2D::disableOuterFlag(key1);
-    POLY_CHECK2(!HashKey2D::getOuterFlag(key1),
-                "Flag should be disabled after disableOuterFlag()");
-
-    // Test that flag doesn't affect unhashing
-    IntPoint p(12345, 67890);
-    auto key2 = HashKey2D::hash(p);
-    auto key3 = key2;
-    HashKey2D::enableOuterFlag(key3);
-
-    auto p2 = HashKey2D::unhash(key2);
-    auto p3 = HashKey2D::unhash(key3);
-
-    POLY_CHECK2(p2.x == p.x && p2.y == p.y,
-                "Unhashing with flag disabled should recover original point");
-    POLY_CHECK2(p3.x == p.x && p3.y == p.y,
-                "Unhashing with flag enabled should recover original point");
-
-    // Test that two hashes differ only in flag bit
-    auto keyInner = HashKey2D::hash(IntPoint(500, 750));
-    auto keyOuter = keyInner;
-    HashKey2D::enableOuterFlag(keyOuter);
-
-    POLY_CHECK2(keyInner != keyOuter,
-                "Hashes with different flags should not be equal");
-    POLY_CHECK2((keyInner ^ keyOuter) == HashKey2D::FlagMask(),
-                "Hashes should differ only in the flag bit");
-
-    // Test flag bit position
-    POLY_CHECK2(HashKey2D::flagBit() == 63,
-                "Flag bit should be at position 63 for 2D");
-
-    // Test that flag mask has only one bit set
-    auto mask = HashKey2D::FlagMask();
-    unsigned bitCount = __builtin_popcountll(mask);
-    POLY_CHECK2(bitCount == 1,
-                "Flag mask should have exactly one bit set, found " << bitCount);
-
-    // Test flag operations are idempotent
-    auto key4 = HashKey2D::hash(IntPoint(111, 222));
-    HashKey2D::enableOuterFlag(key4);
-    HashKey2D::enableOuterFlag(key4);  // Enable twice
-    POLY_CHECK2(HashKey2D::getOuterFlag(key4),
-                "Double enable should still have flag set");
-
-    HashKey2D::disableOuterFlag(key4);
-    HashKey2D::disableOuterFlag(key4);  // Disable twice
-    POLY_CHECK2(!HashKey2D::getOuterFlag(key4),
-                "Double disable should still have flag clear");
-
-    cout << "Flag bit tests passed!" << endl;
   }
 
   cout << "\n=== All HashKey2D tests passed! ===" << endl;

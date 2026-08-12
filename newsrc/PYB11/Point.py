@@ -138,5 +138,10 @@ class Point3:
     z = PYB11readwrite()
     index = PYB11readwrite()
 
-Point2d = PYB11TemplateClass(Point2, template_parameters="double")
-Point3d = PYB11TemplateClass(Point3, template_parameters="double")
+for ndim in [2, 3]:
+    for (name, ctype) in [("", "double"),
+                          ("Coord", f"polytope::HashKey<{ndim}>::IntType"),
+                          ("Hash", f"polytope::HashKey<{ndim}>::CoordHash")]:
+        exec(f'''
+{name}Point{ndim}d = PYB11TemplateClass(Point{ndim}, template_parameters="{ctype}")
+''')

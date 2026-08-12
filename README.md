@@ -80,7 +80,6 @@ These targets all work with Make and Ninja.
 
 Polytope provides interfaces for a number of geometry-related tools:
 
-+ [Voro++](http://math.lbl.gov/voro++) by Chris Rycroft (now at Harvard)
 + [Triangle](http://www.cs.cmu.edu/~quake/triangle.html) by Jonathan Shewchuk
   at Berkeley
 + [Tetgen](http://www.wias-berlin.de/software/index.jsp?id=TetGen&lang=1) by
