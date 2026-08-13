@@ -214,8 +214,6 @@ read(TessType& mesh,
       DBFreeCompoundarray(hull);
     }
 
-    // FIXME: Check for hole data?
-
     DBpointmesh* pmesh = DBGetPointmesh(file, "points");
     if (pmesh != 0) {
       const int npts = pmesh->nels;
@@ -229,6 +227,7 @@ read(TessType& mesh,
     }
 
     // Make a list of the desired fields.
+    // TODO: Retrieve all other field types as well
     vector<RequestedField> fieldNames;
     if (fields.empty()) {
       DBtoc* contents = DBGetToc(file);
@@ -249,13 +248,6 @@ read(TessType& mesh,
       DBucdvar* dbvar = DBGetUcdvar(file, fieldName.c_str());
       POLY_ASSERT2(dbvar, "Could not find field " << fieldName << " in file " << filename);
       FieldCentering centering = requestedField.centering;
-      if (requestedField.hasCentering) {
-        const int expectedCentering = siloCentering(requestedField.centering);
-        POLY_ASSERT2(dbvar->centering == expectedCentering,
-                     "Field " << fieldName << " has unexpected centering in file " << filename);
-      } else {
-        centering = fieldCenteringFromSilo(dbvar->centering);
-      }
       fields[centering][fieldName].resize(dbvar->nels);
       copy((double*)(dbvar->vals[0]), (double*)(dbvar->vals[0]) + dbvar->nels,
            &(fields[centering][fieldName][0]));

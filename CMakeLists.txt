@@ -38,7 +38,6 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 set(POLYTOPE_TPL_DEPENDS )
 
 #option(POLYTOPE_ENABLE_HIP "Build with HIP enabled" OFF) # Currently unsupported
-#set(ENABLE_MPI OFF CACHE BOOL "")
 set(POLYTOPE_ENABLE_MPI ${ENABLE_MPI})
 option(POLYTOPE_ENABLE_BOOST "Enable Boost Voronoi tessellator" OFF)
 option(POLYTOPE_ENABLE_SILO "Enable Silo read/write features" OFF)
@@ -51,22 +50,22 @@ set(TESTING_PREREQS (POLYTOPE_ENABLE_BOOST AND POLYTOPE_ENABLE_SILO))
 option(POLYTOPE_ENABLE_TESTING "Enable testing" OFF)
 option(POLYTOPE_ENABLE_ASAN "Enable ASAN" OFF)
 option(POLYTOPE_ENABLE_UBSAN "Enable UBSAN" OFF)
+#option(POLYTOPE_ENABLE_TIMERS "Enable Caliper timers" OFF)
 if (POLYTOPE_ENABLE_TEST AND NOT TESTING_PREREQS)
   message(FATAL_ERROR "Testing relies on Boost and Silo. Must enable Boost and Silo to enable testing.")
 endif()
-# Voro is not supported
-#option(POLYTOPE_ENABLE_VORO "Enable Voro Voronoi tessellator" OFF)
 option(POLYTOPE_ENABLE_APPLE "Enable Apple installation support" OFF)
 option(ENABLE_STATIC_TPLS "Used for libraries that require older HDF5 versions" OFF)
 option(BUILD_SHARED_LIBS "Build Polytope as shared library" OFF)
 
 include(cmake/Compiler.cmake)
 
-# Configure and include BLT
 if (POLYTOPE_ENABLE_PYTHON AND DEFINED python_DIR)
   set(Python_EXECUTABLE ${python_DIR}/bin/python3)
   set(Python3_EXECUTABLE ${python_DIR}/bin/python3)
 endif()
+
+# Configure and include BLT
 set(BLT_CXX_STD "c++17" CACHE STRING "")
 
 if(NOT EXISTS "${POLYTOPE_ROOT_DIR}/cmake/blt/SetupBLT.cmake")

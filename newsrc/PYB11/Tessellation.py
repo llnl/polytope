@@ -8,6 +8,8 @@ class Tessellation:
   typedef typename Cell<%(Dimension)s, %(RealType)s>::CellType CellType;
 """
 
+    numDims = PYB11property(constexpr=True, static=True, doc="Number of dimensions")
+
     def pyinit(self):
         "Default constructor"
 

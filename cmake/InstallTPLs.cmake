@@ -52,13 +52,13 @@ endif()
 
 # BOOST
 #-----------------------------------------------------------------------------------
-if(POLYTOPE_ENABLE_BOOST)
+if(POLYTOPE_ENABLE_BOOST AND NOT BOOST_FOUND)
   if (DEFINED boost_DIR)
-    list(APPEND FP_DIRS ${boost_DIR})
     list(APPEND FP_TPLS Boost)
+    list(APPEND FP_DIRS ${boost_DIR})
     find_package(Boost 1.50 REQUIRED NO_DEFAULT_PATH PATHS ${boost_DIR})
   else()
-    message(FATAL_ERROR "Must provide boost_DIR if enabling Boost")
+    message(FATAL_ERROR "Must provide boost_DIR to enable Boost")
   endif()
 
   if (TARGET Boost::headers)
@@ -112,13 +112,11 @@ endif()
 
 # Qhull
 #-----------------------------------------------------------------------------------
-if(POLYTOPE_ENABLE_QHULL)
-  if (NOT Qhull_FOUND)
-    list(APPEND FP_TPLS Qhull)
-    list(APPEND FP_DIRS ${qhull_DIR})
-    find_package(Qhull REQUIRED NO_DEFAULT_PATH PATHS ${qhull_DIR})
-    list(APPEND POLYTOPE_TPL_DEPENDS Qhull::qhull_r Qhull::qhullcpp)
-  endif()
+if(POLYTOPE_ENABLE_QHULL AND NOT Qhull_FOUND)
+  list(APPEND FP_TPLS Qhull)
+  list(APPEND FP_DIRS ${qhull_DIR})
+  find_package(Qhull REQUIRED NO_DEFAULT_PATH PATHS ${qhull_DIR})
+  list(APPEND POLYTOPE_TPL_DEPENDS Qhull::qhull_r Qhull::qhullcpp)
 endif()
 
 # Triangle
@@ -126,6 +124,9 @@ endif()
 # Spack does not install Triangle in any useful way so we have to install it ourselves
 # To use it, make sure the triangle source code is in ${triangle_SRC_DIR}.
 if(POLYTOPE_ENABLE_TRIANGLE)
+  if(NOT DEFINED triangle_SRC_DIR)
+    message(FATAL_ERROR "Must provide triangle_SRC_DIR to enable Triangle")
+  endif()
   set(triangle_sources ${triangle_SRC_DIR}/triangle.c)
   set(triangle_headers ${triangle_SRC_DIR}/triangle.h)
   blt_add_library(NAME triangle
@@ -151,6 +152,19 @@ if(POLYTOPE_ENABLE_TETGEN)
   list(APPEND POLYTOPE_TPL_DEPENDS tetgen)
   list(APPEND IMPORTED_LIBS tetgen)
 endif()
+
+# Caliper
+#-----------------------------------------------------------------------------------
+# TODO: add Caliper support
+# if(POLYTOPE_ENABLE_TIMERS)
+#   if(NOT DEFINED caliper_DIR)
+#     message(FATAL_ERROR "Must provide caliper_DIR if enabling timers")
+#   endif()
+#   list(APPEND FP_TPLS caliper)
+#   list(APPEND FP_DIRS ${caliper_DIR})
+#   find_package(caliper REQUIRED NO_DEFAULT_PATHS PATHS ${caliper_DIR}/share/cmake/caliper)
+#   list(APPEND POLYTOPE_TPL_DEPENDS caliper)
+# endif()
 
 foreach(lib ${IMPORTED_LIBS})
   get_target_property(_is_imported ${lib} IMPORTED)

@@ -245,6 +245,7 @@ SiloReader<2, TessType>::read(TessType& mesh,
     DBFreePointmesh(pmesh);
 
     // Get the cell field variables
+    // TODO: Retrieve all other field types as well
     std::vector<RequestedField> fieldNames;
     if (fields.empty()) {
       DBtoc* contents = DBGetToc(file);
@@ -264,17 +265,9 @@ SiloReader<2, TessType>::read(TessType& mesh,
       const auto& fieldName = requestedField.name;
       DBucdvar* dbvar = DBGetUcdvar(file, fieldName.c_str());
       POLY_ASSERT2(dbvar, "Could not find field " << fieldName << " in file " << filename);
-      FieldCentering centering = requestedField.centering;
-      if (requestedField.hasCentering) {
-        const int expectedCentering = siloCentering(requestedField.centering);
-        POLY_ASSERT2(dbvar->centering == expectedCentering,
-                     "Field " << fieldName << " has unexpected centering in file " << filename);
-      } else {
-        centering = fieldCenteringFromSilo(dbvar->centering);
-      }
-      fields[centering][fieldName].resize(dbvar->nels);
+      fields[requestedField.centering][fieldName].resize(dbvar->nels);
       copy((double*)(dbvar->vals[0]), (double*)(dbvar->vals[0]) + dbvar->nels,
-           &(fields[centering][fieldName][0]));
+           &(fields[requestedField.centering][fieldName][0]));
       // Clean up.
       DBFreeUcdvar(dbvar);
     }

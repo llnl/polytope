@@ -1,0 +1,109 @@
+from PYB11Generator import *
+
+@PYB11singleton
+@PYB11template("int Dimension")
+class Quantizer:
+    "Singleton for quantizing and dequantizing points."
+
+    PYB11typedefs = """
+  using QuantizerType = Quantizer<%(Dimension)s>;
+  using RealType = typename QuantizerType::RealType;
+  using IntPoint = typename QuantizerType::IntPoint;
+  using RealPoint = typename QuantizerType::RealPoint;
+"""
+
+    @PYB11static
+    @PYB11returnpolicy("reference")
+    def instance(self):
+        return "QuantizerType&"
+
+    def extend(self,
+               xlo="const RealPoint&",
+               xhi="const RealPoint&"):
+        return "void"
+
+    @PYB11cppname("init")
+    def initBounds(self,
+                   xlo="const RealPoint&",
+                   xhi="const RealPoint&",
+                   degeneracy=("const RealType&", "-1.0"),
+                   pad=("const RealType&", "-1.0")):
+        return "void"
+
+    @PYB11implementation("""[](QuantizerType& self,
+                               const py::object& points,
+                               const RealType& degeneracy,
+                               const RealType& pad) {
+                                 const auto coords = pybind11_helpers::copyCoords<%(Dimension)s, RealType>(points);
+                                 self.init(coords, degeneracy, pad);
+                               }""")
+    def initPoints(self,
+                   points="const py::object&",
+                   degeneracy=("const RealType&", "-1.0"),
+                   pad=("const RealType&", "-1.0")):
+        return "void"
+
+    @PYB11const
+    def quantize(self,
+                 x="const RealPoint&"):
+        return "IntPoint"
+
+    @PYB11const
+    def dequantize(self,
+                   x="const IntPoint&"):
+        return "RealPoint"
+
+    @PYB11const
+    @PYB11implementation("[](const QuantizerType& self, const IntPoint& x) { return pybind11_helpers::coordHashToPy<%(Dimension)s>(self.hash(x)); }")
+    def hash(self,
+             x="const IntPoint&"):
+        return "py::object"
+
+    @PYB11const
+    @PYB11implementation("[](const QuantizerType& self, const RealPoint& x) { return pybind11_helpers::coordHashToPy<%(Dimension)s>(self.hash_quantize(x)); }")
+    def hashQuantize(self,
+                     x="const RealPoint&"):
+        return "py::object"
+
+    @PYB11const
+    @PYB11implementation("[](const QuantizerType& self, const py::object& h) { return self.unhash(pybind11_helpers::pyToCoordHash<%(Dimension)s>(h)); }")
+    def unhash(self,
+               h="const py::object&"):
+        return "IntPoint"
+
+    @PYB11const
+    @PYB11implementation("[](const QuantizerType& self, const py::object& h) { return self.unhash_dequantize(pybind11_helpers::pyToCoordHash<%(Dimension)s>(h)); }")
+    def unhashDequantize(self,
+                         h="const py::object&"):
+        return "RealPoint"
+
+    @PYB11const
+    def degeneracy(self):
+        return "RealPoint"
+
+    @PYB11const
+    def inBounds(self,
+                 point="const RealPoint&"):
+        return "bool"
+
+    @PYB11const
+    def inQBounds(self,
+                  point="const IntPoint&"):
+        return "bool"
+
+    m_lx_o = PYB11readwrite(returnpolicy="reference_internal")
+    m_xlo_o = PYB11readwrite(returnpolicy="reference_internal")
+    m_dx_o = PYB11readwrite(returnpolicy="reference_internal")
+    m_xlo = PYB11readwrite(returnpolicy="reference_internal")
+    m_xhi = PYB11readwrite(returnpolicy="reference_internal")
+    m_pad = PYB11readwrite()
+    maxCoord = PYB11readwrite(returnpolicy="reference_internal")
+    minCoord = PYB11readwrite(returnpolicy="reference_internal")
+    maxBound = PYB11readwrite(returnpolicy="reference_internal")
+    minBound = PYB11readwrite(returnpolicy="reference_internal")
+    rmaxBound = PYB11readwrite(returnpolicy="reference_internal")
+    rminBound = PYB11readwrite(returnpolicy="reference_internal")
+    m_init = PYB11readwrite()
+
+Quantizer2d = PYB11TemplateClass(Quantizer, template_parameters="2")
+Quantizer3d = PYB11TemplateClass(Quantizer, template_parameters="3")

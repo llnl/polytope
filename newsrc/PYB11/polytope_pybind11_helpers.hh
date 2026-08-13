@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 // Wrapper-only helpers for the renovated Polytope Python bindings.
 //------------------------------------------------------------------------------
-#ifndef __Polytope_new_PYB11_helpers__
-#define __Polytope_new_PYB11_helpers__
+#ifndef __Polytope_PYB11_helpers__
+#define __Polytope_PYB11_helpers__
 
 #include "HashKey.hh"
 #include "Point.hh"
@@ -200,8 +200,8 @@ isPythonSequence(const py::handle& value) {
 
 template<typename ValueType>
 std::vector<ValueType>
-copyUnsignedVector(const py::handle& values,
-                   const std::string& name) {
+copyPyToVector(const py::handle& values,
+               const std::string& name) {
   if (not isPythonSequence(values)) {
     throw py::type_error(name + " must be a nested sequence");
   }
@@ -225,7 +225,7 @@ copyFacetList(const py::object& facets,
   const auto seq = facets.cast<py::sequence>();
   result.reserve(seq.size());
   for (const auto facet: seq) {
-    result.push_back(copyUnsignedVector<unsigned>(facet, name));
+    result.push_back(copyPyToVector<unsigned>(facet, name));
   }
   return result;
 }

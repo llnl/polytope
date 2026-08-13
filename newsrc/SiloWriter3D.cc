@@ -213,7 +213,7 @@ SiloWriter<3, TessType>::write(const TessType& mesh,
 
     // Write cell-centered fields to CELLS directory
     for (const auto& [centering, fieldmap] : fields) {
-      const int siloType = siloCentering(centering);
+      const int siloType = static_cast<int>(centering);
       if (centering == FieldCentering::Node) {
         writeFieldsToFile(fieldmap, meshname, file, numNodes, siloType, optlist);
       } else if (centering == FieldCentering::Edge ||
@@ -282,7 +282,6 @@ SiloWriter<3, TessType>::write(const TessType& mesh,
     DBPutMultimesh(file, "PPOINTS", nblocks, pointMeshNames.data(), pointMeshTypes.data(), masteroptlist);
 
     for (const auto& [centering, fieldmap] : fields) {
-      (void)siloCentering(centering);
       putCellVars(file, fieldmap, procPaths, nblocks, varTypes, masteroptlist);
     }
 #ifdef POLYTOPE_ENABLE_DEBUG

@@ -16,6 +16,9 @@ template<int Dimension, typename CoordType>
 class Tessellation {
 public:
   using RealCell = typename Cell<Dimension, CoordType>::CellType;
+
+  static constexpr int numDims() { return Dimension; }
+
   // Default constructor.
   Tessellation():
     points(),

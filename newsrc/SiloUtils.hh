@@ -17,43 +17,19 @@ namespace polytope {
 
 //! Centering locations for mesh fields.
 enum class FieldCentering {
-  Node = 0,
-  Edge = 1,
-  Face = 2,
-  Cell = 3
+  Node = DB_NODECENT,
+  Edge = DB_EDGECENT,
+  Face = DB_FACECENT,
+  Cell = DB_ZONECENT
 };
 
-inline
-int
-siloCentering(const FieldCentering centering) {
-  switch (centering) {
-  case FieldCentering::Node:
-    return DB_NODECENT;
-  case FieldCentering::Edge:
-    return DB_EDGECENT;
-  case FieldCentering::Face:
-    return DB_FACECENT;
-  case FieldCentering::Cell:
-    return DB_ZONECENT;
-  }
-  throw std::runtime_error("Unknown Polytope field centering");
-}
 
-inline
-FieldCentering
-fieldCenteringFromSilo(const int centering) {
-  switch (centering) {
-  case DB_NODECENT:
-    return FieldCentering::Node;
-  case DB_EDGECENT:
-    return FieldCentering::Edge;
-  case DB_FACECENT:
-    return FieldCentering::Face;
-  case DB_ZONECENT:
-    return FieldCentering::Cell;
-  }
-  throw std::runtime_error("Unknown Silo field centering");
-}
+static std::map<std::string, FieldCentering>
+FieldCenteringMap = {{"Node", FieldCentering::Node},
+                     {"Edge", FieldCentering::Edge},
+                     {"Face", FieldCentering::Face},
+                     {"Cell", FieldCentering::Cell}};
+
 
 // strdup isn't part of the C standard, so we can't rely on its existence.
 // We keep our own handy.

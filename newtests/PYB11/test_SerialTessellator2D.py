@@ -1,4 +1,4 @@
-from polytope_test_utilities import *
+import polytope_test_utilities as ptu
 import polytope
 
 
@@ -28,19 +28,34 @@ def test_serial_2d_tessellators():
 
     for tessellator_type in tessellator_types:
         tessellator = tessellator_type()
-        assert tessellator.name()
+        tess_name = tessellator.name()
+        assert tess_name
 
         mesh = polytope.Tessellation2d()
         Q.initPoints(points)
         tessellator.tessellate(points, mesh)
         _assert_mesh_populated(mesh)
+        locfields = ptu.computeLocations(mesh)
+        polytope.writeSilo(mesh=mesh,
+                           filePrefix=f"PySerial{tess_name}",
+                           fields=locfields,
+                           cycle=0,
+                           time=0.,
+                           numFiles=1)
 
         plc_mesh = polytope.Tessellation2d()
         plc = polytope.PLC2d()
-        plc.facets = make_square_facets()
+        plc.facets = ptu.make_square_facets()
         Q.initPoints(plc_points)
         tessellator.tessellate(points, plc_points, plc, plc_mesh)
         _assert_mesh_populated(plc_mesh)
+        locfields = ptu.computeLocations(plc_mesh)
+        polytope.writeSilo(mesh=plc_mesh,
+                           filePrefix=f"PySerial{tess_name}",
+                           fields=locfields,
+                           cycle=1,
+                           time=1.,
+                           numFiles=1)
 
 
 if __name__ == "__main__":
