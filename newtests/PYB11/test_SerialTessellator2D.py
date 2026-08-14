@@ -35,7 +35,7 @@ def test_serial_2d_tessellators():
         Q.initPoints(points)
         tessellator.tessellate(points, mesh)
         _assert_mesh_populated(mesh)
-        locfields = ptu.computeLocations(mesh)
+        locfields = ptu.make_test_fields(mesh)
         polytope.writeSilo(mesh=mesh,
                            filePrefix=f"PySerial{tess_name}",
                            fields=locfields,
@@ -49,7 +49,7 @@ def test_serial_2d_tessellators():
         Q.initPoints(plc_points)
         tessellator.tessellate(points, plc_points, plc, plc_mesh)
         _assert_mesh_populated(plc_mesh)
-        locfields = ptu.computeLocations(plc_mesh)
+        locfields = ptu.make_test_fields(plc_mesh)
         polytope.writeSilo(mesh=plc_mesh,
                            filePrefix=f"PySerial{tess_name}",
                            fields=locfields,

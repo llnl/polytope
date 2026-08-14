@@ -18,6 +18,9 @@
 #ifdef POLYTOPE_ENABLE_TRIANGLE
 #include "TriangleTessellator.hh"
 #endif
+#ifdef POLYTOPE_ENABLE_MPI
+#include "DistributedTessellator.hh"
+#endif
 
 #include "pybind11/pybind11.h"
 #include "pybind11/stl.h"
@@ -159,6 +162,22 @@ pyToCoordHash(const py::object& value) {
     return value.cast<typename HashKey<Dimension>::CoordHash>();
   }
 }
+
+#ifdef POLYTOPE_ENABLE_MPI
+template<int Dimension>
+class PyDistributedTessellator: public DistributedTessellator<Dimension> {
+public:
+  using Base = Tessellator<Dimension, double>;
+
+  explicit PyDistributedTessellator(py::object serialTessellator):
+    DistributedTessellator<Dimension>(serialTessellator.cast<Base&>()),
+    m_serialTessellator(std::move(serialTessellator)) {
+  }
+
+private:
+  py::object m_serialTessellator;
+};
+#endif
 
 // Accept either [(x, y), ...] / [(x, y, z), ...] or a flat coordinate list.
 template<int Dimension, typename RealType>

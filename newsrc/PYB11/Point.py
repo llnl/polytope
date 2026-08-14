@@ -1,5 +1,7 @@
 from PYB11Generator import *
 
+#TODO: Could probably remove repeated code
+
 @PYB11template("CoordType")
 @PYB11cppname("Point2")
 class Point2:
@@ -63,6 +65,27 @@ class Point2:
     @PYB11implementation("[](const Point2<%(CoordType)s>& self, size_t i) { if (i >= 2) throw py::index_error(); return self[i]; }")
     def __getitem__(self, i="size_t"):
         return "%(CoordType)s"
+
+    # Operators
+    def __neg__(self):
+        return
+    def __add__(self):
+        return
+    def __sub__(self):
+        return
+    def __mul__(self):
+        return
+    def __iadd__(self):
+        return
+    def __isub__(self):
+        return
+
+    @PYB11pycppname("__mul__")
+    def __mul__f(self, rhs="%(CoordType)s()"):
+        return
+    @PYB11pycppname("__rmul__")
+    def __rmul__f(self, rhs="%(CoordType)s()"):
+        return
 
     x = PYB11readwrite()
     y = PYB11readwrite()
@@ -132,6 +155,27 @@ class Point3:
     @PYB11implementation("[](const Point3<%(CoordType)s>& self, size_t i) { if (i >= 3) throw py::index_error(); return self[i]; }")
     def __getitem__(self, i="size_t"):
         return "%(CoordType)s"
+
+    # Operators
+    def __neg__(self):
+        return
+    def __add__(self):
+        return
+    def __sub__(self):
+        return
+    def __mul__(self):
+        return
+    def __iadd__(self):
+        return
+    def __isub__(self):
+        return
+
+    @PYB11pycppname("__mul__")
+    def __mul__f(self, rhs="%(CoordType)s()"):
+        return
+    @PYB11pycppname("__rmul__")
+    def __rmul__f(self, rhs="%(CoordType)s()"):
+        return
 
     x = PYB11readwrite()
     y = PYB11readwrite()
