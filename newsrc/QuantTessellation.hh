@@ -72,7 +72,7 @@ public:
     size_t i = 0;
     for (const auto& rp : rpoints) {
       auto ip = Q.quantize(rp);
-      POLY_ASSERT2(Q.inQBounds(ip), "Point provided that exceeds quantizer bounds");
+      POLY_ASSERT2(Q.inQBounds(ip), "Point provided that exceeds quantizer bounds: " << rp);
       ip.index = i++;
       m_loBounds = m_loBounds.minElements(ip);
       m_hiBounds = m_hiBounds.maxElements(ip);
