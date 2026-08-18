@@ -201,7 +201,7 @@ void runTest(Tessellator<2, double>& tessellator,
     }
     time += dt;
     ++step;
-    tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
+    tessellator.tessellate(generators.mPoints, mesh);//boundary.mPLCpoints, boundary.mPLC, mesh);
     outputMesh(mesh, testName, step, time);
 
     // Check the correctness of the parallel data structures

@@ -153,6 +153,18 @@ void tests(const int tnum, bool boostTess) {
       qpoints = extractCoords<2, CoordType>(rqp);
       break;
     }
+  case 16:
+    // In QuantTessellation2D.cc, we check if any new orphans can be unioned with
+    // any existing orphans. If we stop checking after a union is found, this test
+    // will fail.
+    {
+      testname = "Tricky star orphan";
+      boundary.setDefaultBoundary(10);
+      Generators<2> generators(boundary);
+      generators.randomPoints(40, 1049600);
+      points = std::move(generators.mPoints);
+      break;
+    }
   }
   cout << "\n=== " << outname << " Test " << tnum << ":  " << testname << " ===" << endl;
   QuantTessellation<2> quantMesh;
@@ -197,7 +209,7 @@ int main(int argc, char** argv) {
   auto& comm = Communicator::instance();
   comm.init(argc, argv);
 
-  const int numtest = 15;
+  const int numtest = 16;
   try {
 #ifdef POLYTOPE_ENABLE_TRIANGLE
     for (bool boost : {true, false}) {

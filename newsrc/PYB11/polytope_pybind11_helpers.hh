@@ -146,22 +146,29 @@ pyToUInt128(const py::object& value) {
 template<int Dimension>
 py::object
 coordHashToPy(const typename HashKey<Dimension>::CoordHash& value) {
+#ifdef POLYTOPE_ENABLE_HIBIT2D
   return int128ToPy(value);
-  // if constexpr (Dimension == 3) {
-  //   return int128ToPy(value);
-  // } else {
-  //   return py::int_(value);
-  // }
+#else
+  if constexpr (Dimension == 3) {
+    return int128ToPy(value);
+  } else {
+    return py::int_(value);
+  }
+#endif
 }
 
 template<int Dimension>
 typename HashKey<Dimension>::CoordHash
 pyToCoordHash(const py::object& value) {
-  //  if constexpr (Dimension == 3) {
+#ifdef POLYTOPE_ENABLE_HIBIT2D
   return pyToInt128(value);
-  // } else {
-  //   return value.cast<typename HashKey<Dimension>::CoordHash>();
-  // }
+#else
+  if constexpr (Dimension == 3) {
+    return pyToInt128(value);
+  } else {
+    return value.cast<typename HashKey<Dimension>::CoordHash>();
+  }
+#endif
 }
 
 #ifdef POLYTOPE_ENABLE_MPI

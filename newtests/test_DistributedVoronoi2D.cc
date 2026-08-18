@@ -38,8 +38,7 @@ void test(Tessellator<2, double>& tessellator) {
   DistributedTessellator<2> distributed(tessellator);
 
   Tessellation<2, double> localMesh;
-  distributed.tessellate(generators.mPoints, boundary.mPLCpoints,
-                         boundary.mPLC, localMesh);
+  distributed.tessellate(generators.mPoints, localMesh);
 
   const auto localCells = static_cast<int>(localMesh.cells.size());
   int totalCells = 0;
@@ -58,7 +57,7 @@ void test(Tessellator<2, double>& tessellator) {
       generators.randomPoints(Ngen, cseed);
       std::copy(generators.mPoints.begin(), generators.mPoints.end(), std::back_inserter(allPoints));
     }
-    tessellator.tessellate(allPoints, boundary.mPLCpoints, boundary.mPLC, serialMesh);
+    tessellator.tessellate(allPoints, serialMesh);
     serialArea = computeTessellationArea(serialMesh);
   }
   std::string outname = "parallelVoronoi_" + tessellator.name();

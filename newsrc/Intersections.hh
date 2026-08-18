@@ -565,6 +565,58 @@ bool pointOnPolygon(const Point2<CoordType>& point,
 //------------------------------------------------------------------------------
 // 2D line segment intersection
 //
+// General routine for finding intersection point
+//------------------------------------------------------------------------------
+template<typename CoordType>
+bool intersection2D(const Point2<CoordType>& a,
+                    const Point2<CoordType>& b,
+                    const Point2<CoordType>& c,
+                    const Point2<CoordType>& n,
+                    Point2<CoordType>& result,
+                    bool isRay = false) {
+  // Integer implementation with overflow protection
+  using Wide = WideInt<CoordType>;
+
+  const Point2<CoordType> s = b - a;
+  const Point2<CoordType> ca = a - c;
+
+  Wide denom = qcross<CoordType>(n, s);
+  if (denom == 0) return false;
+  Wide t_num = qcross<CoordType>(ca, s);
+  Wide u_num = qcross<CoordType>(ca, n);
+  if (denom < 0) {
+    t_num = -t_num;
+    u_num = -u_num;
+    denom = -denom;
+  }
+  bool no_intersection = t_num < 0 || u_num < 0 || u_num > denom;
+  if (!isRay) {
+    no_intersection = no_intersection || t_num > denom;
+  }
+  if (no_intersection) return false;
+#ifdef POLYTOPE_ENABLE_HIBIT2D
+  using Big = boost::multiprecision::int256_t;
+  auto bn = n.template type_cast<Big>();
+  auto cn = c.template type_cast<Big>();
+  auto bd = Big(denom);
+  for (int d = 0; d < 2; ++d) {
+    const Big num = cn[d]*bd + bn[d]*Big(t_num);
+    result[d] = static_cast<CoordType>((num >= 0) ? (num + bd/2)/bd :
+                                       -(((-num) + bd/2)/bd));
+  }
+#else
+  CoordType q = t_num/denom;
+  auto r = static_cast<double>(t_num%denom);
+  auto frac = (r*n.template type_cast<double>()/
+               static_cast<double>(denom)).template type_cast<CoordType>();
+  result = c + q*n + frac;
+#endif
+  return true;
+}
+
+//------------------------------------------------------------------------------
+// 2D line segment intersection
+//
 // Tests if segment [a, b] intersects segment [c, d].
 // If they intersect, returns true and fills result with intersection point.
 //
@@ -581,58 +633,8 @@ bool segmentIntersection2D(const Point2<CoordType>& a,
                            const Point2<CoordType>& c,
                            const Point2<CoordType>& d,
                            Point2<CoordType>& result) {
-  if constexpr (std::is_floating_point<CoordType>::value) {
-    const Point2<CoordType> r = b - a;
-    const Point2<CoordType> s = d - c;
-    const Point2<CoordType> ca = c - a;
-
-    const CoordType denom = r.x*s.y - r.y*s.x;
-    if (std::abs(denom) < std::numeric_limits<CoordType>::epsilon()) {
-      return false;
-    }
-
-    const CoordType t = (ca.x*s.y - ca.y*s.x) / denom;
-    const CoordType u = (ca.x*r.y - ca.y*r.x) / denom;
-
-    if (t < 0 || t > 1 || u < 0 || u > 1) {
-      return false;
-    }
-
-    result.x = a.x + t*r.x;
-    result.y = a.y + t*r.y;
-    return true;
-
-  } else {
-    using Wide = WideInt<CoordType>;
-
-    const Point2<CoordType> r = b - a;
-    const Point2<CoordType> s = d - c;
-    const Point2<CoordType> ca = c - a;
-
-    Wide denom = qcross<CoordType>(r, s);
-    if (denom == 0) return false;
-
-    Wide t_num = qcross<CoordType>(ca, s);
-    Wide u_num = qcross<CoordType>(ca, r);
-
-    if (denom < 0) {
-      t_num = -t_num;
-      u_num = -u_num;
-      denom = -denom;
-    }
-
-    if (t_num < 0 || t_num > denom || u_num < 0 || u_num > denom) {
-      return false;
-    }
-
-    const CoordType q = static_cast<CoordType>(t_num / denom);
-    const auto rem = static_cast<double>(t_num % denom);
-    const auto frac = (rem*r.template type_cast<double>() /
-                       static_cast<double>(denom)).template type_cast<CoordType>();
-
-    result = a + q*r + frac;
-    return true;
-  }
+  const Point2<CoordType> r = d - c;
+  return intersection2D(a, b, c, r, result);
 }
 
  //------------------------------------------------------------------------------
@@ -654,71 +656,7 @@ bool segmentRayIntersection2D(const Point2<CoordType>& a,
                               const Point2<CoordType>& c,
                               const Point2<CoordType>& n,
                               Point2<CoordType>& result) {
-  if constexpr (std::is_floating_point<CoordType>::value) {
-    // Floating-point implementation
-    const Point2<CoordType> s = b - a;  // Direction of segment [a, b]
-    const Point2<CoordType> ca = a - c;  // Vector from c to a
-
-    // Compute denominator (n × s)
-    CoordType denom = n.x * s.y - n.y * s.x;
-
-    // Parallel or collinear
-    if (std::abs(denom) < std::numeric_limits<CoordType>::epsilon()) {
-      return false;
-    }
-
-    // Compute parametric coordinates
-    // t = (ca × s) / denom  (parameter along ray from c)
-    // u = (ca × n) / denom  (parameter along segment [a, b])
-    CoordType t = (ca.x * s.y - ca.y * s.x) / denom;
-    CoordType u = (ca.x * n.y - ca.y * n.x) / denom;
-
-    // Check if intersection is within segment [0, 1] and on positive ray (t >= 0)
-    if (t < 0 || u < 0 || u > 1) {
-      return false;
-    }
-
-    // Compute intersection point: c + t * n
-    result.x = c.x + t * n.x;
-    result.y = c.y + t * n.y;
-
-    return true;
-  } else {
-    // Integer implementation with overflow protection
-    using Wide = WideInt<CoordType>;
-
-    const Point2<CoordType> s = b - a;
-    const Point2<CoordType> ca = a - c;
-
-    Wide denom = qcross<CoordType>(n, s);
-    if (denom == 0) return false;
-    Wide t_num = qcross<CoordType>(ca, s);
-    Wide u_num = qcross<CoordType>(ca, n);
-    if (denom < 0) {
-      t_num = -t_num;
-      u_num = -u_num;
-      denom = -denom;
-    }
-    if (t_num < 0 || u_num < 0 || u_num > denom) return false;
-#ifdef POLYTOPE_ENABLE_HIBIT2D
-    using Big = boost::multiprecision::int256_t;
-    auto bn = n.template type_cast<Big>();
-    auto cn = c.template type_cast<Big>();
-    auto bd = Big(denom);
-    for (int d = 0; d < 2; ++d) {
-      const Big num = cn[d]*bd + bn[d]*Big(t_num);
-      result[d] = static_cast<CoordType>((num >= 0) ? (num + bd/2)/bd :
-                                         -(((-num) + bd/2)/bd));
-    }
-#else
-    CoordType q = t_num/denom;
-    auto r = static_cast<double>(t_num%denom);
-    auto frac = (r*n.template type_cast<double>()/
-                 static_cast<double>(denom)).template type_cast<CoordType>();
-    result = c + q*n + frac;
-#endif
-    return true;
-  }
+  return intersection2D(a, b, c, n, result, true);
 }
  
 //------------------------------------------------------------------------------

@@ -73,12 +73,14 @@ endif()
 # Distributed Tessellator Tests
 #-----------------------------------------------------------------------------
 if(POLYTOPE_ENABLE_MPI AND NOT POLYTOPE_ENABLE_HIBIT2D)
-  polytope_add_new_test(DistributedVoronoi2D NUMTASKS 4)
+  if(NOT POLYTOPE_ENABLE_HIBIT2D)
+    polytope_add_new_test(DistributedRandomPoints NUMTASKS 4)
+    polytope_add_new_test(DistributedOrderedPoints NUMTASKS 4)
+  endif()
   polytope_add_new_test(DistributedIO2D NUMTASKS 4)
-  polytope_add_new_test(DistributedRotationTests NUMTASKS 4)
-  polytope_add_new_test(DistributedRandomPoints NUMTASKS 4)
-  polytope_add_new_test(DistributedOrderedPoints NUMTASKS 4)
+  polytope_add_new_test(DistributedVoronoi2D NUMTASKS 4)
   polytope_add_new_test(DistributedVisible2D NUMTASKS 6)
+  polytope_add_new_test(DistributedRotationTests NUMTASKS 4)
 endif()
 
 #-----------------------------------------------------------------------------

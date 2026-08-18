@@ -80,7 +80,7 @@ void test(Tessellator<2, double>& tessellator) {
   DistributedTessellator<2> distributed(tessellator);
 
   Tessellation<2, double> localMesh;
-  distributed.tessellate(localPoints, boundaryPoints, boundary, localMesh);
+  distributed.tessellate(localPoints, localMesh);
 
   auto localCells = static_cast<int>(localMesh.cells.size());
   int totalCells = 0;
@@ -101,7 +101,7 @@ void test(Tessellator<2, double>& tessellator) {
   double serialArea = 0.0;
   if (rank == 0) {
     Tessellation<2, double> serialMesh;
-    tessellator.tessellate(allPoints, boundaryPoints, boundary, serialMesh);
+    tessellator.tessellate(allPoints, serialMesh);
     serialArea = computeTessellationArea(serialMesh);
   }
   MPI_Bcast(&serialArea, 1, MPI_DOUBLE, 0, Communicator::communicator());

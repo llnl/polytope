@@ -449,32 +449,6 @@ bool SAT(const std::vector<Point3<CoordType>>& pointsA,
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 #ifdef POLYTOPE_ENABLE_TRIANGLE
-// // Returns a point that is the circumcenter
-// inline
-// Point2<double> circumcenter(const Point2<double>& a,
-//                             const Point2<double>& b,
-//                             const Point2<double>& c) {
-//   // auto ba = b - a;
-//   // auto ca = c - a;
-//   // auto bc = b - c;
-//   // double d = 2*(a.x*bc.y + b.x*ca.y - c.x*ba.y);
-//   double a2 = a.x*a.x + a.y*a.y;
-//   double b2 = b.x*b.x + b.y*b.y;
-//   double c2 = c.x*c.x + c.y*c.y;
-//   // Point2<double> out;
-//   // out.x = (a2*bc.y + b2*ca.y - c2*ba.y)/d;
-//   // out.y = (-a2*bc.x - b2*ca.x + c2*ba.x)/d;
-//   // return out;
-//   double ap[2] = {a[0], a[1]};
-//   double bp[2] = {b[0], b[1]};
-//   double cp[2] = {c[0], c[1]};
-//   double d = 2*orient2d(ap, bp, cp);
-//   double a0[2] = {a2, a[1]}, a1[2] = {a[0], a2};
-//   double b0[2] = {b2, b[1]}, b1[2] = {b[0], b2};
-//   double c0[2] = {c2, c[1]}, c1[2] = {c[0], c2};
-//   return Point2<double>(orient2d(a0,b0,c0)/d, orient2d(a1,b1,c1)/d);
-// }
-
 // Returns a point that is the circumcenter
 inline
 Point2<double> circumcenter(const Point2<double>& a,
@@ -869,20 +843,6 @@ Point<Dimension, double> triangleCentroid(const Point<Dimension, double>& a,
     out[d] = sum/3.;
   }
   return out.template type_cast<double>();
-}
-
-template<int Dimension, typename RealType>
-void UnitVector(RealType* a) {
-  if constexpr (Dimension == 2) {
-    const RealType mag = std::max(1.E-100, std::sqrt(a[0]*a[0] + a[1]*a[1]));
-    a[0] /= mag;
-    a[1] /= mag;
-  } else if constexpr (Dimension == 3) {
-    const RealType mag = std::max(1.0e-100, sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2]));
-    a[0] /= mag;
-    a[1] /= mag;
-    a[2] /= mag;
-  }
 }
 
 template<int Dimension, typename RealType>

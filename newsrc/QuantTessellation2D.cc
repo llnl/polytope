@@ -189,11 +189,11 @@ cellPolygonIntersect(const QuantTessellation<2>::IntCell& currentCell,
     for (unsigned iPoly = 0; iPoly < NFrag; ++iPoly) {
       if (iPoly != fragIndex) {
         // Check if orphan can be added to other orphans
+        // We should check all existing orphans for robustness
         bool foundUnion = false;
         for (auto& orphan : orphans) {
           if (validUnion(cellSet[iPoly], orphan)) {
             foundUnion = true;
-            break;
           }
         }
         if (!foundUnion) {

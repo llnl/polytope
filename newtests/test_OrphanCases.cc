@@ -109,8 +109,9 @@ void test(Tessellator<2,double>& tessellator) {
     generators.randomPoints(20, seed);
     Tessellation<2,double> mesh;
     tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
-    outputMesh(mesh, testName,i);
-    printArea(boundary,mesh);
+    outputMesh(mesh, testName, i, double(i));
+    compareArea(boundary, mesh);
+    testWatertight(mesh, boundary.mPLC.holes.size());
     POLY_CHECK(checkNearestNode(mesh, dist));
     ++i;
   }
@@ -123,8 +124,9 @@ void test(Tessellator<2,double>& tessellator) {
     generators.randomPoints(20, seed);
     Tessellation<2,double> mesh;
     tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
-    outputMesh(mesh, testName,i);
-    printArea(boundary,mesh);
+    outputMesh(mesh, testName, i, double(i));
+    compareArea(boundary, mesh);
+    testWatertight(mesh, boundary.mPLC.holes.size());
     POLY_CHECK(checkNearestNode(mesh, dist));
     ++i;
   }
@@ -137,8 +139,9 @@ void test(Tessellator<2,double>& tessellator) {
     generators.randomPoints(20, seed);
     Tessellation<2,double> mesh;
     tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
-    outputMesh(mesh, testName, i);
-    printArea(boundary,mesh);
+    outputMesh(mesh, testName, i, double(i));
+    compareArea(boundary, mesh);
+    testWatertight(mesh, boundary.mPLC.holes.size());
     POLY_CHECK(checkNearestNode(mesh, dist));
     ++i;
   }
@@ -151,8 +154,9 @@ void test(Tessellator<2,double>& tessellator) {
     generators.randomPoints(20, seed);
     Tessellation<2,double> mesh;
     tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
-    outputMesh(mesh, testName, i);
-    printArea(boundary,mesh);
+    outputMesh(mesh, testName, i, double(i));
+    compareArea(boundary, mesh);
+    testWatertight(mesh, boundary.mPLC.holes.size());
     POLY_CHECK(checkNearestNode(mesh, dist));
     ++i;
   }
@@ -165,8 +169,9 @@ void test(Tessellator<2,double>& tessellator) {
     generators.randomPoints(20, seed);
     Tessellation<2,double> mesh;
     tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
-    outputMesh(mesh, testName, i);
-    printArea(boundary,mesh);
+    outputMesh(mesh, testName, i, double(i));
+    compareArea(boundary, mesh);
+    testWatertight(mesh, boundary.mPLC.holes.size());
     POLY_CHECK(checkNearestNode(mesh, dist));
     ++i;
   }
@@ -174,41 +179,43 @@ void test(Tessellator<2,double>& tessellator) {
   // Test 6: Nonconvex boundary with three internal generators
   {
     cout << "\nTest 6: Nonconvex boundary with three internal generators" << endl;
+    boundary.clear();
     std::vector<double> points;
     points.push_back(0.00); points.push_back(0.60);
     points.push_back(0.40); points.push_back(0.10);
     points.push_back(0.60); points.push_back(0.50);
-    std::vector<double> PLCpoints;
-    PLCpoints.push_back(0.0); PLCpoints.push_back(0.0);
-    PLCpoints.push_back(0.1); PLCpoints.push_back(0.0);
-    PLCpoints.push_back(0.2); PLCpoints.push_back(0.8);
-    PLCpoints.push_back(0.3); PLCpoints.push_back(0.0);
-    PLCpoints.push_back(1.0); PLCpoints.push_back(0.0);
-    PLCpoints.push_back(1.0); PLCpoints.push_back(1.0);
-    PLCpoints.push_back(0.0); PLCpoints.push_back(1.0);
+    boundary.mPLCpoints.push_back(0.0); boundary.mPLCpoints.push_back(0.0);
+    boundary.mPLCpoints.push_back(0.1); boundary.mPLCpoints.push_back(0.0);
+    boundary.mPLCpoints.push_back(0.2); boundary.mPLCpoints.push_back(0.8);
+    boundary.mPLCpoints.push_back(0.3); boundary.mPLCpoints.push_back(0.0);
+    boundary.mPLCpoints.push_back(1.0); boundary.mPLCpoints.push_back(0.0);
+    boundary.mPLCpoints.push_back(1.0); boundary.mPLCpoints.push_back(1.0);
+    boundary.mPLCpoints.push_back(0.0); boundary.mPLCpoints.push_back(1.0);
 
-    for (unsigned k = 0; k != PLCpoints.size(); ++k) {
-      points.push_back(PLCpoints[k]);
+    for (unsigned k = 0; k != boundary.mPLCpoints.size(); ++k) {
+      points.push_back(boundary.mPLCpoints[k]);
     }
 
-    PLC<2> boundary;
-    boundary.facets.resize(7, std::vector<unsigned>(2));
+    boundary.mPLC.facets.resize(7, std::vector<unsigned>(2));
     for (int j = 0; j < 7; ++j){
-      boundary.facets[j][0] = j;
-      boundary.facets[j][1] = (j+1) % 7;
+      boundary.mPLC.facets[j][0] = j;
+      boundary.mPLC.facets[j][1] = (j+1) % 7;
     }
+    boundary.finalize();
     Tessellation<2,double> mesh;
-    tessellator.tessellate(points, PLCpoints, boundary, mesh);
-    outputMesh(mesh, testName, i);
+    tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
+    outputMesh(mesh, testName, i, double(i));
+    compareArea(boundary, mesh);
+    testWatertight(mesh, boundary.mPLC.holes.size());
     ++i;
   }
 
   // Test 7: Original 3x3 Test Case
   {
     cout << "\nTest 7: 3x3 Unit Test with 2 Orphans" << endl;
+    boundary.clear();
     vector<double> PLCpoints;
     vector<double> points;
-    PLC<2> boundary;
     Tessellation<2,double> mesh;
     PLCpoints.push_back(0.0);  PLCpoints.push_back(0.0);
     PLCpoints.push_back(1.2);  PLCpoints.push_back(0.0);
@@ -234,29 +241,45 @@ void test(Tessellator<2,double>& tessellator) {
     }
 
     int nSides = PLCpoints.size()/2;
-    boundary.facets.resize( nSides, std::vector<unsigned>(2) );
+    boundary.mPLC.facets.resize( nSides, std::vector<unsigned>(2) );
     for (unsigned j = 0; j != nSides; ++j){
-      boundary.facets[j][0] = j;
-      boundary.facets[j][1] = (j+1) % nSides;
+      boundary.mPLC.facets[j][0] = j;
+      boundary.mPLC.facets[j][1] = (j+1) % nSides;
     }
     Q.init(PLCpoints, -1, 0.5);
-    tessellator.tessellate(points, PLCpoints, boundary, mesh);
+    tessellator.tessellate(points, PLCpoints, boundary.mPLC, mesh);
     outputMesh(mesh, testName, i);
     const double trueArea = 8.74;
-    const double tessArea = computeTessellationArea(mesh);
-    const double fracerr  = std::abs(trueArea - tessArea)/trueArea;
-    POLY_CHECK2(fracerr < 1.0E-8, "Relative error in the tessellation "
-                 << "area exceeds tolerance:" << endl
-                 << "      Area = " << tessArea << endl
-                 << "     Error = " << trueArea - tessArea << endl
-                 << "Frac Error = " << fracerr);
+    boundary.mArea = trueArea;
+    compareArea(boundary, mesh);
+    testWatertight(mesh, boundary.mPLC.holes.size());
     POLY_CHECK(checkNearestNode(mesh, dist));
     ++i;
   }
 
-  // Test 8: Lots of random points
+  // Test 8: Double orphan union, uses the star in a square
+  // In QuantTessellation2D.cc, we check if any new orphans can be unioned with
+  // any existing orphans. If we stop checking after a union is found, this test
+  // will fail. This means some orphans must be merged with two different existing orphans
   {
-    cout << "\nTest 8: Lots of random points" << endl;
+    seed = 1049600;
+    cout << "\nTest 8: Double orphan union" << endl;
+    boundary.setDefaultBoundary(10);
+    Generators<2> generators(boundary);
+    generators.randomPoints(40, seed);
+    Tessellation<2, double> mesh;
+    tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
+    outputMesh(mesh, testName, i, double(i));
+    compareArea(boundary, mesh);
+    testWatertight(mesh, boundary.mPLC.holes.size());
+    POLY_CHECK(checkNearestNode(mesh, dist));
+    ++i;
+  }
+
+  // Test 9: Lots of random points
+  {
+    cout << "\nTest 9: Lots of random points" << endl;
+    boundary.setDefaultBoundary(bType);
     const unsigned N = 100;
     seed = 10332520;
     Q.init(boundary.mPLCpoints, -1., 0.1);
@@ -267,13 +290,17 @@ void test(Tessellator<2,double>& tessellator) {
       tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
       outputMesh(mesh, testName, i+iter);
       cout << iter << endl;
-      printArea(boundary,mesh);
+      compareArea(boundary, mesh);
+      testWatertight(mesh, boundary.mPLC.holes.size());
+      //printArea(boundary,mesh);
       bool result = checkNearestNode(mesh, dist);
       POLY_CHECK(result);
       seed++;
     }
     ++i;
   }
+
+
 
 }
 
