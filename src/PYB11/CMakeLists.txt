@@ -42,7 +42,8 @@ install(TARGETS polytope
 
 include(PolytopePythonEnvironment)
 
-set(POLYTOPE_VIRT_DIR venv)
+# Set the name of the polytope virutal python environment
+set(POLYTOPE_VIRT_DIR PolytopePy)
 
 polytope_add_python_environment(
   build

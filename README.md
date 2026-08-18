@@ -53,8 +53,7 @@ where `build_dir` is the directory in which you want to build.
 Then just follow the onscreen directions: you change to that build directory,
 edit `config.sh` to define your build, run it with `sh config.sh`, and start
 the build using your generator's build process. For the default generator
-(UNIX makefiles), this is just `make`. For Ninja (recommended if you have it),
-it's `ninja`.
+(UNIX makefiles), this is just `make`.
 
 ### Installing
 
@@ -66,6 +65,20 @@ make install [-j #threads]
 ```
 
 from your build directory.
+
+## Python Interface
+
+The build system generates a python virtual environment in both the build and install.
+The virtual environment is in the directory PolytopePy and can be activated by
+
+```
+source PolytopePy/bin/activate
+```
+or
+```
+source PolytopePy/bin/activate.csh
+```
+depending on your terminal shell.
 
 ## Other Considerations
 

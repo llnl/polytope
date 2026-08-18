@@ -9,7 +9,7 @@
 #     DEPENDS polytope
 #   )
 #
-# This creates a target named polytope_python_env_build.  The environment gets a
+# This creates a target named polytope_python_env_build. The environment gets a
 # polytope.pth file containing a relative path from the venv site-packages
 # directory to the requested pth target.
 
