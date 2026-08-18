@@ -56,8 +56,7 @@ polytope_add_test(Quantizer)
 polytope_add_test(QuantPLC2D)
 #polytope_add_test(QuantPLC3D) # Currently broken
 polytope_add_test(QuantConvexIntersect3D)
-#polytope_add_test(clipPolygon2D) # Currently broken, only used by 3D
-polytope_add_test(clipPolyhedron3D)
+#polytope_add_test(clipPolyhedron3D)
 polytope_add_test(honeyComb)
 
 #-----------------------------------------------------------------------------

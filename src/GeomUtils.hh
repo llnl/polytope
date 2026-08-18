@@ -7,11 +7,6 @@
 #include "EdgeUtils.hh"
 #include "Quantizer.hh"
 
-#ifdef POLYTOPE_ENABLE_TRIANGLE
-// From predicates.cc
-extern double orient2d(double* a, double* b, double* c);
-#endif
-
 namespace polytope {
 
 //------------------------------------------------------------------------------
@@ -40,88 +35,6 @@ using WideInt = typename WideIntHelper<CoordType>::type;
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // General helper routines
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-//------------------------------------------------------------------------------
-// Normalize a scalar by bit-shifting to fit within target bit width
-//
-// Right-shifts the value so it fits within target_bits.
-// Preserves sign and is useful for scale-invariant parametric calculations.
-//
-// Returns: shift_amount
-//------------------------------------------------------------------------------
-template<typename IntType>
-int bitShiftAmount(IntType value,
-                   const int target_bits = 21) {
-  if (value == 0) return 0;
-
-  // Get absolute value for bit counting
-  IntType abs_val = value < 0 ? -value : value;
-
-  // Count bits used
-  int bits_used = 0;
-  IntType temp = abs_val;
-  while (temp > 0) {
-    ++bits_used;
-    temp >>= 1;
-  }
-
-  // Determine shift needed
-  const int shift_amount = std::max(0, bits_used - target_bits);
-
-  if (shift_amount == 0) {
-    return 0;
-  }
-
-  return shift_amount;
-}
-
-//------------------------------------------------------------------------------
-// Normalize a vector by bit-shifting to fit within target bit width
-//
-// Finds the largest component (by absolute value) and right-shifts all
-// components uniformly so the max fits within target_bits.
-//
-// This preserves direction while reducing magnitude, making it safe to use
-// in scale-invariant calculations (e.g., parametric line-plane intersection).
-//
-// target_bits should be less than the bit width of CoordType to leave room
-// for subsequent operations.
-//------------------------------------------------------------------------------
-template<typename CoordType, typename Wide>
-Point2<CoordType> normalizeByBitShift(const Point2<Wide>& vec,
-                                      const int target_bits = 42) {
-  // Find largest absolute value component
-  Wide abs_x = vec.x < 0 ? -vec.x : vec.x;
-  Wide abs_y = vec.y < 0 ? -vec.y : vec.y;
-  Wide max_val = std::max({abs_x, abs_y});
-
-  if (max_val == 0) return Point2<CoordType>(0, 0);
-
-  // Determine bit shift amount
-  auto shift = bitShiftAmount(max_val, target_bits);
-
-  // Shift all components uniformly and cast to target type
-  return vec.template bitShift<CoordType>(shift);
-}
-
-template<typename CoordType, typename Wide>
-Point3<CoordType> normalizeByBitShift(const Point3<Wide>& vec,
-                                      const int target_bits = 42) {
-
-  // Find largest absolute value component
-  Wide abs_x = vec.x < 0 ? -vec.x : vec.x;
-  Wide abs_y = vec.y < 0 ? -vec.y : vec.y;
-  Wide abs_z = vec.z < 0 ? -vec.z : vec.z;
-  Wide max_val = std::max({abs_x, abs_y, abs_z});
-
-  if (max_val == 0) return Point3<CoordType>(0, 0, 0);
-
-  // Determine bit shift amount
-  auto shift = bitShiftAmount(max_val, target_bits);
-
-  // Shift all components uniformly and cast to target type
-  return vec.template bitShift<CoordType>(shift);
-}
 
 //------------------------------------------------------------------------------
 // Quantized dot product with overflow protection
@@ -170,13 +83,6 @@ Point3<WideInt<CoordType>> qcross(const Point3<CoordType>& a,
   const Wide cz = (ah.x * bh.y) - (ah.y * bh.x);
 
   return Point3<Wide>(cx, cy, cz);
-}
-
-template<typename CoordType>
-Point3<CoordType> norm_qcross(const Point3<CoordType>& v0,
-                              const Point3<CoordType>& v1) {
-  const auto cross_full = qcross(v0, v1);
-  return normalizeByBitShift<CoordType>(cross_full);
 }
 
 //------------------------------------------------------------------------------
@@ -270,19 +176,6 @@ Point2<CoordType> outwardRay(const Point2<CoordType>& a,
   } else {
     return Point2<CoordType>(diff.y, -diff.x);
   }
-}
-
-//------------------------------------------------------------------------------
-// From 3 points, compute the plane normal and normalize it by bit shifting
-//------------------------------------------------------------------------------
-template<typename CoordType>
-Point3<CoordType> computeNormal(const Point3<CoordType>& v0,
-                                const Point3<CoordType>& v1,
-                                const Point3<CoordType>& v2) {
-  const auto edge1 = v1 - v0;
-  const auto edge2 = v2 - v0;
-  const auto plane_normal_full = qcross<CoordType>(edge1, edge2);
-  return normalizeByBitShift<CoordType>(plane_normal_full);
 }
 
 //------------------------------------------------------------------------------
@@ -565,206 +458,6 @@ circumcenter(const Point3<double>& p0,
                         z0 + detZ / det);
 }
 #endif
-
-//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// Topology utilities
-//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-//------------------------------------------------------------------------------
-// Orient a 3D facet so its normal points away from a reference point (centroid)
-// Version 2: Uses precomputed normal
-//------------------------------------------------------------------------------
-template<typename CoordType, typename WideType>
-void orientFacetOutward(std::vector<unsigned>& facet,
-                        const std::vector<Point3<CoordType>>& points,
-                        const Point3<CoordType>& precomputedNormal,
-                        const Point3<WideType>& centroid,
-                        WideType numPoints) {
-  if (facet.size() < 3) return;
-
-  // Vector from centroid to facet (use v0 as representative point)
-  const auto& v0 = points[facet[0]];
-  auto toFace = normalizeByBitShift<CoordType>(numPoints * v0.template type_cast<WideType>() - centroid);
-  WideType dot = qdot<3, CoordType>(precomputedNormal, toFace);
-
-  // If dot < 0, normal points inward - reverse vertex order
-  if (dot < 0) {
-    std::reverse(facet.begin(), facet.end());
-  }
-}
-
-//------------------------------------------------------------------------------
-// Remove coplanar adjacent faces by merging them
-// Uses precomputed normals (updates normal array as faces merge)
-//------------------------------------------------------------------------------
-template<typename CoordType>
-void mergeCoplanarFaces(std::vector<std::vector<unsigned>>& faces,
-                        std::vector<Point3<CoordType>>& normals,
-                        const std::vector<Point3<CoordType>>& points) {
-  if (faces.size() < 2) return;
-
-  bool merged = true;
-  while (merged) {
-    merged = false;
-    // Try to find a pair of adjacent coplanar faces to merge
-    for (size_t i = 0; i < faces.size()-1 && !merged; ++i) {
-      edge::EdgeToFaceMap uniqueEdges;
-      edge::addUniqueEdges(faces[i], uniqueEdges);
-      for (size_t j = i + 1; j < faces.size() && !merged; ++j) {
-        if (normals[i] != normals[j]) continue;
-        if (!edge::sharedEdges(faces[j], uniqueEdges)) continue;
-        merged = true;
-        faces.erase(faces.begin() + j);
-        normals.erase(normals.begin() + j);
-        // Get new merged face
-        faces[i] = edge::traceBoundary(uniqueEdges);
-        // Reverse order if normals are different
-        if (computeNormal(points[faces[i][0]],
-                          points[faces[i][1]],
-                          points[faces[i][2]]) == -normals[i]) {
-          std::reverse(faces[i].begin(), faces[i].end());
-        }
-      }
-    }
-  }
-}
-
-//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// Precomputation helpers for normals and centroids
-//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-//------------------------------------------------------------------------------
-// Compute normalized normal for a single face
-//------------------------------------------------------------------------------
-template<typename CoordType>
-Point3<CoordType> computeFaceNormal(const std::vector<unsigned>& face,
-                                    const std::vector<Point3<CoordType>>& vertices) {
-  if (face.size() < 3) return Point3<CoordType>(0, 0, 0);
-
-  const auto& v0 = vertices[face[0]];
-  const auto& v1 = vertices[face[1]];
-  const auto& v2 = vertices[face[2]];
-
-  return computeNormal(v0, v1, v2);
-}
-
-//------------------------------------------------------------------------------
-// Compute normalized normals for all faces
-//------------------------------------------------------------------------------
-template<typename CoordType>
-std::vector<Point3<CoordType>> computeFaceNormals(
-    const std::vector<Point3<CoordType>>& vertices,
-    const std::vector<std::vector<unsigned>>& faces) {
-
-  std::vector<Point3<CoordType>> normals;
-  normals.reserve(faces.size());
-
-  for (const auto& face : faces) {
-    normals.push_back(computeFaceNormal(face, vertices));
-  }
-
-  return normals;
-}
-
-//------------------------------------------------------------------------------
-// Compute centroid for a single face (as unnormalized sum)
-// Returns: (sum of vertices, count of vertices)
-//------------------------------------------------------------------------------
-template<typename CoordType>
-std::pair<Point3<WideInt<CoordType>>, WideInt<CoordType>>
-computeFaceCentroid(const std::vector<unsigned>& face,
-                    const std::vector<Point3<CoordType>>& vertices) {
-  using Wide = WideInt<CoordType>;
-  Point3<Wide> sum(0, 0, 0);
-
-  for (int idx : face) {
-    sum = sum + vertices[idx].template type_cast<Wide>();
-  }
-
-  return {sum, static_cast<Wide>(face.size())};
-}
-
-//------------------------------------------------------------------------------
-// Compute centroids for all faces (as unnormalized sums)
-// Returns vector of (sum, count) pairs
-//------------------------------------------------------------------------------
-template<typename CoordType>
-std::vector<std::pair<Point3<WideInt<CoordType>>, WideInt<CoordType>>>
-computeFaceCentroids(const std::vector<Point3<CoordType>>& vertices,
-                     const std::vector<std::vector<unsigned>>& faces) {
-  using Wide = WideInt<CoordType>;
-  std::vector<std::pair<Point3<Wide>, Wide>> centroids;
-  centroids.reserve(faces.size());
-
-  for (const auto& face : faces) {
-    centroids.push_back(computeFaceCentroid(face, vertices));
-  }
-
-  return centroids;
-}
-
-//------------------------------------------------------------------------------
-// Compute volume-weighted centroid for a polyhedron (as unnormalized sum)
-// Uses tetrahedral decomposition from origin
-// Returns: (weighted sum, total weight)
-//------------------------------------------------------------------------------
-template<typename CoordType>
-std::pair<Point3<WideInt<CoordType>>, WideInt<CoordType>>
-computePolyhedronCentroid(const std::vector<Point3<CoordType>>& vertices,
-                          const std::vector<std::vector<unsigned>>& faces) {
-  using Wide = WideInt<CoordType>;
-  Point3<Wide> weightedSum(0, 0, 0);
-  Wide totalWeight = 0;
-
-  // Decompose polyhedron into tetrahedra from origin
-  for (const auto& face : faces) {
-    if (face.size() < 3) continue;
-
-    // Triangulate face (simple fan triangulation)
-    const auto& v0 = vertices[face[0]];
-    for (size_t i = 1; i + 1 < face.size(); ++i) {
-      const auto& v1 = vertices[face[i]];
-      const auto& v2 = vertices[face[i + 1]];
-
-      // Signed volume of tetrahedron (origin, v0, v1, v2) = dot(v0, cross(v1, v2)) / 6
-      // We'll skip the /6 and accumulate the unnormalized weight
-      auto cross_full = qcross(v1.template type_cast<Wide>(),
-                               v2.template type_cast<Wide>());
-      Wide signedVol6 = qdot<3>(v0.template type_cast<Wide>(), cross_full);
-
-      // Centroid of tetrahedron is at (v0 + v1 + v2) / 4 (plus origin / 4)
-      // Weighted contribution: signedVol6 * (v0 + v1 + v2) / 4
-      // We keep unnormalized: signedVol6 * (v0 + v1 + v2)
-      auto tetCenter = v0.template type_cast<Wide>() +
-                       v1.template type_cast<Wide>() +
-                       v2.template type_cast<Wide>();
-
-      // Normalize both operands before multiplication to prevent overflow
-      // signedVol6 can be ~coord^3, tetCenter components can be ~3*coord
-      // Product would be ~coord^4 which overflows __int128 for large coords
-      // Shift both to fit in ~60 bits so product fits in ~120 bits (< 127 for __int128)
-      Wide vol_abs = signedVol6 < 0 ? -signedVol6 : signedVol6;
-      Wide max_center = std::max({tetCenter.x < 0 ? -tetCenter.x : tetCenter.x,
-                                  tetCenter.y < 0 ? -tetCenter.y : tetCenter.y,
-                                  tetCenter.z < 0 ? -tetCenter.z : tetCenter.z});
-
-      int vol_shift = bitShiftAmount(vol_abs, 60);
-      int center_shift = bitShiftAmount(max_center, 60);
-
-      Wide vol_norm = signedVol6 >> vol_shift;
-      auto center_norm = tetCenter.template bitShift<Wide>(center_shift);
-
-      // Accumulate with normalized values
-      weightedSum = weightedSum + center_norm * vol_norm;
-      totalWeight += vol_norm;
-    }
-  }
-
-  // Return unnormalized weighted sum and total weight
-  // Actual centroid would be: weightedSum / (4 * totalWeight)
-  // But we keep it unnormalized to avoid division
-  return {weightedSum, totalWeight * 4};
-}
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Double and pointer operations

@@ -128,8 +128,8 @@ public:
     if constexpr (Dimension == 2) {
       return convexIntersect<IntType>(a.getCell(), b.getCell());
     } else if constexpr (Dimension == 3) {
-      return convexIntersect(a.points, a.facets, a.m_normals,
-                             b.points, b.facets, b.m_normals);
+      // Implement this
+      return false;
     }
   }
 
@@ -179,12 +179,6 @@ public:
   }
 
   //------------------------------------------------------------------------------
-  // Compute and cache geometric properties
-  //------------------------------------------------------------------------------
-  void computeNormals();
-  void computeCentroids();
-
-  //------------------------------------------------------------------------------
   // Member data
   //------------------------------------------------------------------------------
   using PLC<Dimension>::facets; // Facets as vertex index lists
@@ -193,11 +187,11 @@ public:
   std::vector<IntPoint> points;
 
   // Precomputed geometric properties (3D only)
-  std::vector<IntPoint> m_normals;           // Normalized normals for each facet
-  std::vector<WidePoint> m_faceCentroidSums; // Unnormalized centroid sums
-  std::vector<Wide> m_faceCentroidCounts;    // Vertex counts for each facet
-  WidePoint m_polyCentroidSum;               // Unnormalized polyhedron centroid
-  Wide m_polyCentroidWeight;                 // Weight for polyhedron centroid
+  // std::vector<IntPoint> m_normals;           // Normalized normals for each facet
+  // std::vector<WidePoint> m_faceCentroidSums; // Unnormalized centroid sums
+  // std::vector<Wide> m_faceCentroidCounts;    // Vertex counts for each facet
+  // WidePoint m_polyCentroidSum;               // Unnormalized polyhedron centroid
+  // Wide m_polyCentroidWeight;                 // Weight for polyhedron centroid
 
   bool m_reduced = false;
   bool m_convex = false;
@@ -239,9 +233,6 @@ struct Serializer<QuantPLC<Dimension>> {
     serialize(value.m_convex, buffer);
     serialize(value.m_loBounds, buffer);
     serialize(value.m_hiBounds, buffer);
-    if (Dimension == 3) {
-      serialize(value.m_normals, buffer);
-    }
   }
 
   static void deserializeImpl(QuantPLC<Dimension>& value,
@@ -252,9 +243,6 @@ struct Serializer<QuantPLC<Dimension>> {
     deserialize(value.m_convex, bufItr, endItr);
     deserialize(value.m_loBounds, bufItr, endItr);
     deserialize(value.m_hiBounds, bufItr, endItr);
-    if (Dimension == 3) {
-      deserialize(value.m_normals, bufItr, endItr);
-    }
   }
 };
 }

@@ -397,46 +397,7 @@ template<int Dimension>
 template<int D>
 std::enable_if_t<D == 3, void>
 QuantPLC<Dimension>::orderFacets3D() {
-  if (facets.empty()) return;
-
-  // Compute polyhedron centroid (unnormalized sum)
-  const auto N = static_cast<Wide>(points.size());
-  WidePoint centroid(0, 0, 0);
-  for (const auto& p : points) {
-    centroid = centroid + p.template type_cast<Wide>();
-  }
-
-  // Compute initial normals
-  m_normals = computeFaceNormals(points, facets);
-
-  // Orient all facets outward using precomputed normals
-  for (size_t i = 0; i < facets.size(); ++i) {
-    orientFacetOutward(facets[i], points, m_normals[i], centroid, N);
-  }
-
-  // Recompute normals after orientation
-  m_normals = computeFaceNormals(points, facets);
-
-  // Merge coplanar adjacent faces (updates normals array)
-  mergeCoplanarFaces(facets, m_normals, points);
-
-  // Handle holes similarly
-  for (auto& hole : holes) {
-    auto holeNormals = computeFaceNormals(points, hole);
-    for (size_t i = 0; i < hole.size(); ++i) {
-      orientFacetOutward(hole[i], points, holeNormals[i], centroid, N);
-      // For holes, we actually want inward normals, so reverse the result
-      std::reverse(hole[i].begin(), hole[i].end());
-    }
-    // Recompute normals after reversal
-    holeNormals = computeFaceNormals(points, hole);
-    // Merge coplanar faces in holes
-    mergeCoplanarFaces(hole, holeNormals, points);
-  }
-
-  // Compute and cache geometric properties after all modifications
-  computeNormals();
-  computeCentroids();
+  // Implement this
 }
 
 //------------------------------------------------------------------------------
@@ -515,76 +476,8 @@ template<int Dimension>
 template<int D>
 std::enable_if_t<D == 3, bool>
 QuantPLC<Dimension>::within3D(const IntPoint& point) const {
-  // Use ray casting
-  IntPoint rayEnd = point;
-  rayEnd.x = m_hiBounds.x;
-
-  // Check each face using precomputed normals
-  std::set<CoordHash> crossings;
-  for (size_t i = 0; i < facets.size(); ++i) {
-    const auto& f = facets[i];
-    const auto& normal = m_normals[i];
-    IntPoint hitPoint;
-    int check = segmentFaceIntersection3D(point, rayEnd, f, points, normal, hitPoint);
-    if (check == 0) { // Coplanar and contained in a facet
-      return true;
-    } else if (check == 1) {
-      crossings.insert(Hasher::hash(hitPoint));
-    }
-  }
-
-  for (const auto& hole : holes) {
-    // Holes don't have precomputed normals stored separately, compute on the fly
-    for (const auto& f : hole) {
-      IntPoint hitPoint;
-      auto normal = computeFaceNormal(f, points);
-      int check = segmentFaceIntersection3D(point, rayEnd, f, points, normal, hitPoint);
-      if (check == 0) {
-        return true;
-      } else if (check == 1) {
-        crossings.insert(Hasher::hash(hitPoint));
-      }
-    }
-  }
-  // Odd number of crossings means inside
-  return (crossings.size() % 2) == 1;
-}
-
-//------------------------------------------------------------------------------
-// Compute and cache face normals
-//------------------------------------------------------------------------------
-template<int Dimension>
-void
-QuantPLC<Dimension>::computeNormals() {
-  if constexpr (Dimension == 3) {
-    m_normals = computeFaceNormals(points, facets);
-  }
-}
-
-//------------------------------------------------------------------------------
-// Compute and cache face centroids and polyhedron centroid
-//------------------------------------------------------------------------------
-template<int Dimension>
-void
-QuantPLC<Dimension>::computeCentroids() {
-  if constexpr (Dimension == 3) {
-    // Compute face centroids
-    auto faceCentroids = computeFaceCentroids(points, facets);
-    m_faceCentroidSums.clear();
-    m_faceCentroidCounts.clear();
-    m_faceCentroidSums.reserve(faceCentroids.size());
-    m_faceCentroidCounts.reserve(faceCentroids.size());
-
-    for (const auto& [sum, count] : faceCentroids) {
-      m_faceCentroidSums.push_back(sum);
-      m_faceCentroidCounts.push_back(count);
-    }
-
-    // Compute polyhedron centroid
-    auto [polySum, polyWeight] = computePolyhedronCentroid(points, facets);
-    m_polyCentroidSum = polySum;
-    m_polyCentroidWeight = polyWeight;
-  }
+  // Implement this
+  return false;
 }
 
 //------------------------------------------------------------------------------
