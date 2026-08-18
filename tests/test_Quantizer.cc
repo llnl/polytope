@@ -364,7 +364,6 @@ void stressTest() {
 
     // Quantize and hash
     RealPoint pCopy = p;
-    auto quantized = quantizer.quantize(pCopy);
     pCopy = p;
     auto hash = quantizer.hash_quantize(pCopy);
 

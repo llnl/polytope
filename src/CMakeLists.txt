@@ -8,64 +8,36 @@ configure_file(
 )
 
 set(polytope_headers
-  bisectSearch.hh
-  checkDistributedTessellation.hh
-  clipQuantizedTessellation.hh
-  convexHull_2d.hh
-  convexHull_3d.hh
-  convexIntersect.hh
-  convexWithin.hh
-  deleteCells.hh
-  DimensionTraits.hh
-  DistributedTessellator.hh
-  ErrorHandler.hh
-  findBoundaryElements.hh
+  Cell.hh
+  Clipping2D.hh
+  Communicator.hh
+  Cube.hh
+  EdgeUtils.hh
+  EscapePod.hh
+  GeomUtils.hh
+  HashKey.hh
   Intersections.hh
-  intersect.hh
-  IntPointMap.hh
-  KeyTraits.hh
-  makeBoxPLC.hh
-  MeshEditor.hh
-  mortonOrderIndices.hh
-  nearestPoint.hh
-  OrphanageBase.hh
-  PLC_CSG_2d.hh
-  PLC_CSG_3d.hh
   PLC.hh
   Point.hh
-  Polygon.hh
-  polytope_geometric_utilities.hh
-  polytope_internal.hh
-  polytope_plc_canned_geometries.hh
-  polytope_serialize.hh
-  polytope_tessellator_utilities.hh
-  polytope_write_OOGL.hh
-  QuantizedCoordinates.hh
-  QuantizedTessellation2d.hh
-  QuantizedTessellation3d.hh
   QuantTessellation.hh
-  ReducedPLC.hh
-  removeElements.hh
-  Segment.hh
-  SerialDistributedTessellator.hh
-  simplifyPLCfacets.hh
-  snapToBoundary.hh
+  Quantizer.hh
+  QuantPLC.hh
+  Shapes.hh
   Tessellation.hh
   Tessellator.hh
   TessellatorInline.hh
-  timingUtilities.hh
-  within.hh
+  TetgenTessellator.hh
+  Serializer.hh
+  polytope_internal.hh
+  findBoundaryElements.hh
 )
 
 set(polytope_sources
-  KeyTraits.cc
-  PLC_CSG.cc
-  QuantizedTessellation2d.cc
-  QuantizedTessellation3d.cc
-  clipQuantizedTessellation2d.cc
-  clipQuantizedTessellation3d.cc
-  snapToBoundary.cc
-  ErrorHandler.cc
+  Communicator.cc
+  QuantTessellation2D.cc
+  QuantTessellation3D.cc
+  Tessellation.cc
+  QuantPLC.cc
   polytope_internal_abort.cc
 )
 
@@ -78,55 +50,43 @@ if (POLYTOPE_ENABLE_SILO)
     SiloUtils.hh
     SiloWriter.hh)
   list(APPEND polytope_sources
-    SiloWriter_2d.cc
-    SiloWriter_3d.cc
-    SiloReader_2d.cc
-    SiloReader_3d.cc
-    SiloUtils.cc)
+    SiloWriter2D.cc
+    SiloWriter3D.cc
+    SiloReader2D.cc
+    SiloReader3D.cc)
 endif()
 
 # Check if we can include each of the serial tessellators:
 # Boost tessellator
 if (POLYTOPE_ENABLE_BOOST)
   list(APPEND polytope_headers
-    Clipper2d.hh
-    PLC_Boost_2d.hh
     RegisterBoostPolygonTypes.hh
-    BoostOrphanage.hh
-    BoostTessellator.hh
-    BoostTessellatorTraits.hh)
+    BoostTessellator.hh)
   list(APPEND polytope_sources
-    BoostTessellator.cc
-    MeshEditor.cc)
+    BoostTessellator.cc)
 endif()
 
 # Tetgen tessellator
 if (POLYTOPE_ENABLE_TETGEN)
-  list(APPEND polytope_headers TetgenTessellator.hh)
   list(APPEND polytope_sources TetgenTessellator.cc)
-else()
-  list(APPEND polytope_sources predicates.cc)
 endif ()
 
 # Triangle tessellator
 if (POLYTOPE_ENABLE_TRIANGLE)
   list(APPEND polytope_headers TriangleTessellator.hh)
   list(APPEND polytope_sources TriangleTessellator.cc)
-endif()
-
-# VORO++ tessellator
-if (POLYTOPE_ENABLE_VORO)
-  # list(APPEND polytope_headers VoroPP_2d.hh VoroPP_3d.hh)
-  # list(APPEND polytope_sources VoroPP_2d.cc VoroPP_3d.cc)
+  if (NOT POLYTOPE_ENABLE_TETGEN)
+    list(APPEND polytope_source predicates.cc)
+  endif()
 endif()
 
 # Check if we can incude the distributed tessellators:
 if (POLYTOPE_ENABLE_MPI)
   list(APPEND polytope_headers
-    polytope_parallel_utilities.hh)
+    DistributedTessellator.hh
+    ParallelUtils.hh)
   list(APPEND polytope_sources
-    DistributedTessellator.cc
-    SerialDistributedTessellator.cc)
+    DistributedTessellator.cc)
 endif()
 
 get_property(POLYTOPE_TPL_DEPENDS GLOBAL PROPERTY POLYTOPE_TPL_DEPENDS)
@@ -151,6 +111,18 @@ set_target_properties(polytopeC PROPERTIES EXPORT_NAME "polytope")
 install(TARGETS polytopeC EXPORT polytope-targets DESTINATION lib)
 install(FILES ${polytope_headers} DESTINATION include/polytope)
 
-if(POLYTOPE_ENABLE_PYTHON AND POLYTOPE_ENABLE_LEGACY_PYTHON)
+blt_add_executable(NAME loadEscapePod
+  HEADERS ${polytope_headers}
+  SOURCES loadEscapePod.cc ${polytope_sources}
+  DEPENDS_ON polytopeC ${POLYTOPE_TPL_DEPENDS}
+  OUTPUT_DIR ${CMAKE_BINARY_DIR}/bin
+  OUTPUT_NAME loadEscapePod
+  INCLUDES ${POLYTOPE_ROOT_DIR}/src ${PROJECT_BINARY_DIR}/src
+)
+
+target_compile_options(loadEscapePod PRIVATE ${POLYTOPE_CXX_COMPILE_FLAGS})
+target_link_options(loadEscapePod PUBLIC ${POLYTOPE_CXX_LINK_FLAGS})
+
+if(POLYTOPE_ENABLE_PYTHON)
   add_subdirectory(PYB11)
 endif()

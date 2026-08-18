@@ -42,7 +42,6 @@ set(POLYTOPE_ENABLE_MPI ${ENABLE_MPI})
 option(POLYTOPE_ENABLE_BOOST "Enable Boost Voronoi tessellator" OFF)
 option(POLYTOPE_ENABLE_SILO "Enable Silo read/write features" OFF)
 option(POLYTOPE_ENABLE_PYTHON "Enable Python interface" OFF)
-option(POLYTOPE_ENABLE_LEGACY_PYTHON "Enable legacy src/PYB11 Python interface instead of renovated newsrc/PYB11" OFF)
 option(POLYTOPE_ENABLE_QHULL "Enable QHull for 3D functionality" OFF)
 option(POLYTOPE_ENABLE_TRIANGLE "Enable Triangle Voronoi tessellator" OFF)
 option(POLYTOPE_ENABLE_TETGEN "Enable TetGen Voronoi tessellator" OFF)
@@ -61,6 +60,7 @@ endif()
 option(POLYTOPE_ENABLE_APPLE "Enable Apple installation support" OFF)
 option(ENABLE_STATIC_TPLS "Used for libraries that require older HDF5 versions" OFF)
 option(BUILD_SHARED_LIBS "Build Polytope as shared library" OFF)
+option(POLYTOPE_EXTERNAL_INSTALL "Enable when Polytope is an external TPL" OFF)
 
 include(cmake/Compiler.cmake)
 
@@ -98,16 +98,11 @@ endif()
 
 include(cmake/InstallTPLs.cmake)
 
-# old installs do not work with MPI enabled
-if (NOT ENABLE_MPI)
-  add_subdirectory(src)
-endif()
-add_subdirectory(newsrc)
+add_subdirectory(src)
 
 if (POLYTOPE_ENABLE_TESTING)
   enable_testing()
-  #add_subdirectory(tests)
-  add_subdirectory(newtests)
+  add_subdirectory(tests)
 endif()
 
 # Export package to allow it to be installed with find_package

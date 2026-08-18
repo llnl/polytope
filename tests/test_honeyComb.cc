@@ -4,12 +4,11 @@
 #include "polytope_test_utilities.hh"
 #include "BoostTessellator.hh"
 #include "Generators.hh"
+#include "SiloReader.hh"
+#include "SiloUtils.hh"
+#include "Communicator.hh"
 
 #include <vector>
-
-#ifdef POLYTOPE_ENABLE_MPI
-#include "mpi.h"
-#endif
 
 #ifdef POLYTOPE_ENABLE_TRIANGLE
 #include "TriangleTessellator.hh"
@@ -29,6 +28,7 @@ void test(Tessellator<2,double>& tessellator, const std::string& outname, bool h
   unsigned ny = 8;
   std::vector<double> points;
   int cycle = 0;
+  int numNodes = 0;
   if (honeyComb) {
     double dx = (xmax - xmin)/(nx + 1.);
     double dy = (ymax - ymin)/(ny + 1.);
@@ -50,7 +50,9 @@ void test(Tessellator<2,double>& tessellator, const std::string& outname, bool h
         points.push_back(y);
       }
     }
+    numNodes = 4 + 2*(nx + ny + nx*ny) + nx;
   } else {
+    numNodes = (nx+1)*(ny+1);
     double dx = (xmax - xmin)/double(nx);
     double dy = (ymax - ymin)/double(ny);
     // Cartesian case: Just put the generators at the proposed zone centers.
@@ -65,36 +67,39 @@ void test(Tessellator<2,double>& tessellator, const std::string& outname, bool h
       }
     }
   }
-  PLC<2> PLC;
-  std::vector<double> PLCpoints{xmin, ymin, xmax, ymin, xmax, ymax, xmin, ymax};
-  POLY_ASSERT2( PLCpoints.size() % 2 == 0, "Length of PLC points must be an even number." );
-  int N = PLCpoints.size()/2;
-  PLC.facets.resize(N);
-  for (int i=0; i < N; ++i) {
-    PLC.facets[i].resize(2);
-    PLC.facets[i][0] = i;
-    PLC.facets[i][1] = (i+1) % N;
-  }
+  Point2<double> lo(xmin, ymin);
+  Point2<double> hi(xmax, ymax);
+  std::vector<double> plcPoints = flattenCoords(shapes::createSquarePoints(lo, hi));
+  PLC<2> plc;
+  plc.facets = shapes::createSquareFaces();
+  auto& Q = Quantizer<2>::instance();
+  Q.init(plcPoints);
   Tessellation<2, double> mesh;
-  tessellator.tessellate(points, PLCpoints, PLC, mesh);
-  outputMesh(mesh, outname, points, cycle);
+  tessellator.tessellate(points, mesh);
+  outputMesh(mesh, outname, cycle);
+  testWatertight(mesh, 0);
+  // Read the mesh we just wrote back in
+  Tessellation<2, double> readMesh;
+  std::string masterFilename = getMasterFilename(outname, cycle);
+  SiloReader<2, Tessellation<2, double>>::FieldTypeMap fields;
+  SiloReader<2, Tessellation<2, double>>::read(readMesh, fields, masterFilename);
+  // Try writing the mesh back out
+  outputMesh(readMesh, "re"+outname, cycle);
+  int meshnodes = readMesh.nodes.size();
+  POLY_CHECK2(meshnodes == numNodes, "Number of nodes in mesh: " << meshnodes
+              << " does not match expected number of nodes: " << numNodes);
 }
 // -----------------------------------------------------------------------
 // main
 // -----------------------------------------------------------------------
 int main(int argc, char** argv) {
-#ifdef POLYTOPE_ENABLE_MPI
-  MPI_Init(&argc, &argv);
-#else
-  POLY_CONTRACT_VAR(argc);
-  POLY_CONTRACT_VAR(argv);
-#endif
-
+  auto& comm = Communicator::instance();
+  comm.init(argc, argv);
 
 #ifdef POLYTOPE_ENABLE_BOOST
   {
     cout << "\nBoost Tessellator:\n" << endl;
-    BoostTessellator<double> tessellator;
+    BoostTessellator tessellator;
     test(tessellator, "boosthoney", false);
     test(tessellator, "boosthoney", true);
   }
@@ -103,15 +108,12 @@ int main(int argc, char** argv) {
 #ifdef POLYTOPE_ENABLE_TRIANGLE
   {
     cout << "\nTriangle Tessellator:\n" << endl;
-    TriangleTessellator<double> tessellator;
+    TriangleTessellator tessellator;
     test(tessellator, "trianglehoney", false);
     test(tessellator, "trianglehoney", true);
   }
 #endif
 
-
-#ifdef POLYTOPE_ENABLE_MPI
-  MPI_Finalize();
-#endif
+  comm.finalize();
   return 0;
 }

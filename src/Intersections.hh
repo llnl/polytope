@@ -1,5 +1,5 @@
-#ifndef POLYTOPE_INTERSECTIONS_HH
-#define POLYTOPE_INTERSECTIONS_HH
+#ifndef __Polytope_Intersections__
+#define __Polytope_Intersections__
 
 //------------------------------------------------------------------------------
 // Intersection routines with integer overflow protection
@@ -24,6 +24,13 @@
 #include <algorithm>
 
 #include "GeomUtils.hh"
+#include "Cell.hh"
+#include "Quantizer.hh"
+#include "Shapes.hh"
+
+#ifdef POLYTOPE_ENABLE_BOOST
+#include "RegisterBoostPolygonTypes.hh"
+#endif
 
 namespace polytope {
 
@@ -32,14 +39,12 @@ namespace polytope {
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 //------------------------------------------------------------------------------
-// Test if points intersect with a convex hull using half-space intersection, 2D
+// Test if points are contained in a convex hull using half-space intersection
 //------------------------------------------------------------------------------
 template<typename CoordType>
-bool pointInPolygon_convex(const std::vector<std::vector<int>>& facets,
+bool pointInPolygon_convex(const std::vector<std::vector<unsigned>>& facets,
                            const std::vector<Point2<CoordType>>& vertices,
                            const std::vector<Point2<CoordType>>& points) {
-  const auto NF = facets.size();
-  const auto NP = points.size();
   for (const auto& f : facets) {
     auto vi = vertices[f[0]];
     auto vj = vertices[f[1]];
@@ -51,74 +56,77 @@ bool pointInPolygon_convex(const std::vector<std::vector<int>>& facets,
 }
 
 template<typename CoordType>
-bool convexIntersect(const std::vector<Point2<CoordType>>& pointsA,
-                     const std::vector<std::vector<int>>& facetsA,
-                     const std::vector<Point2<CoordType>>& pointsB,
-                     const std::vector<std::vector<int>>& facetsB) {
-  if (pointInPolygon_convex(facetsA, pointsA, pointsB) ||
-      pointInPolygon_convex(facetsB, pointsB, pointsA)) {
-    return true;
-  }
-  return false;
-}
-
-//------------------------------------------------------------------------------
-// Point-in-polyhedron test using half-space intersection
-//
-// Tests if ANY of the test points is inside the convex polyhedron.
-// A point is inside if it's on the negative (inside) side of ALL face planes.
-// Assumes facets are oriented with outward-pointing normals.
-//------------------------------------------------------------------------------
-template<typename CoordType>
-bool pointInPolyhedron_convex(const std::vector<std::vector<int>>& facets,
-                              const std::vector<Point3<CoordType>>& vertices,
-                              const std::vector<Point3<CoordType>>& points) {
-  const auto NF = facets.size();
-  const auto NP = points.size();
-
-  // For each facet, compute normal once and test all points
-  for (unsigned ifacet = 0; ifacet < NF; ++ifacet) {
-    const auto& v0 = vertices[facets[ifacet][0]];
-    const auto& v1 = vertices[facets[ifacet][1]];
-    const auto& v2 = vertices[facets[ifacet][2]];
-
-    // Compute the plane normal (outward-pointing)
-    const auto normal = computeNormal(v0, v1, v2);
-
-    if (aboveBelow(v0, normal, points)) {
+bool pointInPolygon_convex(const typename Cell<2, CoordType>::CellType& vertices,
+                           const std::vector<Point2<CoordType>>& points) {
+  auto N = vertices.size();
+  for (int i = 0; i < N; ++i) {
+    auto vi = vertices[i];
+    auto vj = vertices[(i+1)%N];
+    if (aboveBelow(vi, vj, points)) {
       return true;
     }
   }
-
-  // If we get here, at least one point is inside (not marked outside)
   return false;
 }
 
+//------------------------------------------------------------------------------
+// Tests if two convex hulls overlap.
+//------------------------------------------------------------------------------
 template<typename CoordType>
-bool convexIntersection(const std::vector<Point3<CoordType>>& pointsA,
-                        const std::vector<std::vector<int>>& facetsA,
-                        const std::vector<Point3<CoordType>>& pointsB,
-                        const std::vector<std::vector<int>>& facetsB) {
+bool convexIntersect(const typename Cell<2, CoordType>::CellType& pointsA,
+                     const typename Cell<2, CoordType>::CellType& pointsB) {
+  if (pointsA.empty() || pointsB.empty()) return false;
+
+  using Wide = WideInt<CoordType>;
+  auto separated = [&pointsA, &pointsB](const typename Cell<2, CoordType>::CellType& axesFrom) {
+    const auto N = axesFrom.size();
+    for (auto i = 0u; i < N; ++i) {
+      const auto& pi = axesFrom[i];
+      const auto& pj = axesFrom[(i + 1)%N];
+      const Wide dx = static_cast<Wide>(pj.x) - static_cast<Wide>(pi.x);
+      const Wide dy = static_cast<Wide>(pj.y) - static_cast<Wide>(pi.y);
+      if (dx == 0 && dy == 0) continue;
+      if (SAT(pointsA, pointsB, Point2<Wide>(-dy, dx))) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  if (separated(pointsA)) return false;
+  if (separated(pointsB)) return false;
+  return true;
+}
+
+template<typename CoordType>
+bool convexIntersect(const std::vector<Point2<CoordType>>& pointsA,
+                     const std::vector<std::vector<unsigned>>& facetsA,
+                     const std::vector<Point2<CoordType>>& pointsB,
+                     const std::vector<std::vector<unsigned>>& facetsB) {
+  const auto cellA = Cell<2, CoordType>::extractCell(pointsA, facetsA);
+  const auto cellB = Cell<2, CoordType>::extractCell(pointsB, facetsB);
+  return convexIntersect<CoordType>(cellA, cellB);
+}
+
+template<typename CoordType>
+bool convexIntersect(const std::vector<Point3<CoordType>>& pointsA,
+                     const std::vector<std::vector<unsigned>>& facetsA,
+                     const std::vector<Point3<CoordType>>& normalsA,
+                     const std::vector<Point3<CoordType>>& pointsB,
+                     const std::vector<std::vector<unsigned>>& facetsB,
+                     const std::vector<Point3<CoordType>>& normalsB) {
   // Separating Axis Theorem: Test face normals of A as potential separating axes
   // For each face of A, check if all vertices of B are on the positive (outside) side
-  for (const auto& facet : facetsA) {
-    const auto& v0 = pointsA[facet[0]];
-    const auto& v1 = pointsA[facet[1]];
-    const auto& v2 = pointsA[facet[2]];
-    const auto normal = computeNormal(v0, v1, v2);
-    if (SAT(pointsA, pointsB, normal)) {
+  for (size_t i = 0; i < facetsA.size(); ++i) {
+    if (SAT(pointsA, pointsB, normalsA[i])) {
       return false;
     }
   }
 
   // Separating Axis Theorem: Test face normals of B as potential separating axes
   // For each face of B, check if all vertices of A are on the positive (outside) side
-  for (const auto& facet : facetsB) {
-    const auto& v0 = pointsB[facet[0]];
-    const auto& v1 = pointsB[facet[1]];
-    const auto& v2 = pointsB[facet[2]];
-    const auto normal = computeNormal(v0, v1, v2);
-    if (SAT(pointsA, pointsB, normal)) {
+  for (size_t i = 0; i < facetsB.size(); ++i) {
+    if (SAT(pointsA, pointsB, normalsB[i])) {
       return false;
     }
   }
@@ -163,9 +171,276 @@ bool convexIntersection(const std::vector<Point3<CoordType>>& pointsA,
   return true;
 }
 
+//------------------------------------------------------------------------------
+// Tests if the boundaries of two polygons intersect. Only returns true if any
+// edges intersect but not if one completely contains the other.
+//------------------------------------------------------------------------------
+
+template<typename CoordType>
+bool convexBoundaryIntersect(const typename Cell<2, CoordType>::CellType& pointsA,
+                             const typename Cell<2, CoordType>::CellType& pointsB) {
+  Point2<CoordType> result;
+  auto Na = pointsA.size();
+  auto Nb = pointsB.size();
+  for (auto fa = 0u; fa < Na; ++fa) {
+    auto vai = pointsA[fa];
+    auto vaj = pointsA[(fa+1)%Na];
+    for (auto fb = 0u; fb < Nb; ++fb) {
+      auto vbi = pointsB[fb];
+      auto vbj = pointsB[(fb+1)%Nb];
+      if (segmentIntersection2D(vai, vaj, vbi, vbj, result)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+//------------------------------------------------------------------------------
+// Tests if the boundaries of two polyhedra intersect but not if one is contained
+// in the other.
+// TODO: Implement this
+//------------------------------------------------------------------------------
+template<typename CoordType>
+bool convexBoundaryIntersect(const typename Cell<3, CoordType>::CellType& pointsA,
+                             const typename Cell<3, CoordType>::CellType& pointsB) {
+  // Point2<CoordType> result;
+  // auto Na = pointsA.size();
+  // auto Nb = pointsB.size();
+  // for (auto fa = 0u; fa < Na; ++fa) {
+  //   auto vai = pointsA[fa];
+  //   auto vaj = pointsA[(fa+1)%Na];
+  //   for (auto fb = 0u; fb < Nb; ++fb) {
+  //     auto vbi = pointsB[fb];
+  //     auto vbj = pointsB[(fb+1)%Nb];
+  //     if (segmentIntersection2D(vai, vaj, vbi, vbj, result)) {
+  //       return true;
+  //     }
+  //   }
+  // }
+  return false;
+}
+
+//------------------------------------------------------------------------------
+// Point-in-polyhedron test using half-space intersection
+//
+// Tests if ANY of the test points is inside the convex polyhedron.
+// A point is inside if it's on the negative (inside) side of ALL face planes.
+// Assumes facets are oriented with outward-pointing normals.
+// Uses precomputed normals for efficiency.
+//------------------------------------------------------------------------------
+template<typename CoordType>
+bool pointInPolyhedron_convex(const std::vector<std::vector<unsigned>>& facets,
+                              const std::vector<Point3<CoordType>>& vertices,
+                              const std::vector<Point3<CoordType>>& normals,
+                              const std::vector<Point3<CoordType>>& points) {
+  // For each facet, use precomputed normal and test all points
+  for (unsigned ifacet = 0; ifacet < facets.size(); ++ifacet) {
+    const auto& v0 = vertices[facets[ifacet][0]];
+    const auto& normal = normals[ifacet];
+
+    if (aboveBelow(v0, normal, points)) {
+      return true;
+    }
+  }
+
+  // If we get here, at least one point is inside (not marked outside)
+  return false;
+}
+
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // General (potentially non-convex) intersection methods
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+#ifdef POLYTOPE_ENABLE_BOOST
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// Boost Polygon methods
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+namespace bp = boost::polygon;
+using namespace boost::polygon::operators;
+
+using IntType2D = HashKey<2>::IntType;
+using Polygon = bp::polygon_data<IntType2D>;
+using PolygonWithHoles = bp::polygon_with_holes_data<IntType2D>;
+using PolygonSet = bp::polygon_set_data<IntType2D>;
+
+inline std::vector<PolygonWithHoles>
+boostUnion(const PolygonWithHoles& p1,
+           const PolygonWithHoles& p2) {
+  std::vector<PolygonWithHoles> intersect;
+  bp::assign(intersect, p1 | p2);
+  return intersect;
+}
+
+inline std::vector<PolygonWithHoles>
+boostIntersect(const PolygonWithHoles& p1,
+               const PolygonWithHoles& p2) {
+  std::vector<PolygonWithHoles> out;
+  bp::assign(out, p1 & p2);
+  return out;
+}
+
+inline PolygonWithHoles
+CellToBoost(const Cell<2, IntType2D>::CellType& pcell) {
+  PolygonWithHoles cell;
+  bp::set_points(cell, pcell.begin(), pcell.end());
+  return cell;
+}
+
+// Clip a Polytope cell against a boost Polygon and return a vector of polygons
+inline std::vector<PolygonWithHoles>
+boostIntersect(const Cell<2, IntType2D>::CellType& pcell,
+               const PolygonWithHoles& boundary) {
+  PolygonWithHoles cell = CellToBoost(pcell);
+  std::vector<PolygonWithHoles> out;
+  bp::assign(out, cell & boundary);
+  return out;
+}
+
+// Check if two polygons can be properly intersected.
+// If they can, overwrite outPoly with the intersection and return true
+inline bool
+validUnion(const PolygonWithHoles& inPoly,
+           PolygonWithHoles& outPoly) {
+  auto trialUnion = boostUnion(outPoly, inPoly);
+  if (trialUnion.size() == 1) {
+    outPoly = trialUnion[0];
+    return true;
+  }
+  return false;
+}
+#endif // POLYTOPE_ENABLE_BOOST
+
+//------------------------------------------------------------------------------
+// Remove collinear points and combine edges where necessary
+//------------------------------------------------------------------------------
+template<typename CoordType>
+void removeCollinear(std::vector<Point2<CoordType>>& vertices) {
+  const auto N = vertices.size();
+  std::vector<Point2<CoordType>> result;
+  for (unsigned i = 0; i < N; ++i) {
+    auto p1 = vertices[(i+N-1)%N];
+    auto p2 = vertices[i];
+    auto p3 = vertices[(i+1)%N];
+    if (!collinear(p1, p3, p2)) {
+      result.push_back(p2);
+    }
+  }
+  vertices = std::move(result);
+}
+
+//------------------------------------------------------------------------------
+// Remove collinear points from an edge loop
+// Edges should form a connected chain where edges[i][1] == edges[i+1][0]
+//------------------------------------------------------------------------------
+template<typename CoordType>
+void removeCollinear(std::vector<edge::Edge>& edges,
+                     const std::vector<Point2<CoordType>>& vertices) {
+  const auto N = edges.size();
+  if (N < 3) return;  // Need at least 3 edges to have collinear points
+
+  std::vector<edge::Edge> result;
+  result.reserve(N);
+
+  for (unsigned i = 0; i < N; ++i) {
+    // Get three consecutive vertices from the edge loop
+    auto p1_idx = edges[(i+N-1)%N].first;   // Previous edge start
+    auto p2_idx = edges[i].first;           // Current edge start
+    auto p3_idx = edges[i].second;          // Current edge end
+
+    const auto& p1 = vertices[p1_idx];
+    const auto& p2 = vertices[p2_idx];
+    const auto& p3 = vertices[p3_idx];
+
+    // Keep this edge only if the middle point is not collinear
+    if (!collinear(p1, p3, p2)) {
+      result.push_back(edges[i]);
+    } else {
+      // Collinear: skip this edge and update the next edge to span across
+      // The next edge should start from p1 instead of p2
+      if (!result.empty()) {
+        // Update the last added edge to connect to p3
+        result.back().second = p3_idx;
+      } else {
+        // Special case: first edges are collinear, need to fix at the end
+        // We'll handle this by checking if the first and last edges merge
+      }
+    }
+  }
+
+  // Handle wraparound: if we removed the first edge, the last edge might need adjustment
+  if (result.size() < N && !result.empty()) {
+    // Check if first and last result edges are now collinear
+    auto p1_idx = result.back().first;
+    auto p2_idx = result.back().second;
+    auto p3_idx = result.front().second;
+
+    const auto& p1 = vertices[p1_idx];
+    const auto& p2 = vertices[p2_idx];
+    const auto& p3 = vertices[p3_idx];
+
+    if (collinear(p1, p3, p2)) {
+      // Merge last and first edges
+      result.back().second = result.front().second;
+      result.erase(result.begin());
+    }
+  }
+
+  edges = std::move(result);
+}
+
+//------------------------------------------------------------------------------
+// Clip infinite ray provided by tessellator.
+//
+// Given the start of the ray and the direction, determine the boundary
+// intersection point and the box side being intersected.
+//------------------------------------------------------------------------------
+
+template<typename CoordType>
+bool
+clipInfiniteRay(const Point2<CoordType>& validVertex,
+                const Point2<CoordType>& normdiffg,
+                Point2<CoordType>& result,
+                shapes::BoxSide& side) {
+  auto& Q = Quantizer<2>::instance();
+  CoordType x_lim = (normdiffg.x > 0) ? Q.maxBound.x : Q.minBound.x;
+  CoordType y_lim = (normdiffg.y > 0) ? Q.maxBound.y : Q.minBound.y;
+  shapes::BoxSide LR = (normdiffg.x > 0) ? shapes::BoxSide::R : shapes::BoxSide::L;
+  shapes::BoxSide TB = (normdiffg.y > 0) ? shapes::BoxSide::T : shapes::BoxSide::B;
+  Point2<CoordType> planey1(Q.minBound.x, y_lim);
+  Point2<CoordType> planey2(Q.maxBound.x, y_lim);
+  Point2<CoordType> intersectionx, intersectiony;
+  bool yint = segmentRayIntersection2D(planey1, planey2, validVertex, normdiffg, intersectiony);
+  Point2<CoordType> planex1(x_lim, Q.minBound.y);
+  Point2<CoordType> planex2(x_lim, Q.maxBound.y);
+  bool xint = segmentRayIntersection2D(planex1, planex2, validVertex, normdiffg, intersectionx);
+  if (!xint && !yint) {
+    return false;
+  }
+  bool hitX = true;
+  if (xint && yint) {
+    if (intersectionx == intersectiony) {
+      result = intersectionx;
+      side = shapes::getBoxCorner(LR, TB);
+      return true;
+    }
+    // Assume it intersects both planes, check if ||p-x|| is longer than ||p-y||
+    if (magComparison(validVertex - intersectionx, validVertex - intersectiony)) {
+      hitX = false;
+    }
+  } else if (yint) {
+    hitX = false;
+  }
+  if (hitX) {
+    result = intersectionx;
+    side = LR;
+  } else {
+    result = intersectiony;
+    side = TB;
+  }
+  return true;
+}
 
 //------------------------------------------------------------------------------
 // Point-in-polygon test using ray casting algorithm
@@ -177,9 +452,10 @@ bool convexIntersection(const std::vector<Point3<CoordType>>& pointsA,
 // exactly on a horizontal edge endpoint.
 // Since 2D routines are also used by 3D routines, the types are more variable
 //------------------------------------------------------------------------------
-template<typename CoordType, typename Wide>
-bool pointInPolygon_impl(const Point2<CoordType>& point,
-                         const std::vector<Point2<CoordType>>& vertices) {
+template<typename CoordType>
+bool pointInPolygon(const Point2<CoordType>& point,
+                    const std::vector<Point2<CoordType>>& vertices) {
+  using Wide = WideInt<CoordType>;
   const auto N = vertices.size();
   bool inside = false;
 
@@ -225,16 +501,6 @@ bool pointInPolygon_impl(const Point2<CoordType>& point,
   return inside;
 }
 
-template<typename CoordType>
-bool pointInPolygon(const Point2<CoordType>& point,
-                    const std::vector<Point2<CoordType>>& vertices) {
-  if (typeid(CoordType) == typeid(NarrowInt<2>)) {
-    return pointInPolygon_impl<CoordType, WideInt<2>>(point, vertices);
-  } else {
-    return pointInPolygon_impl<CoordType, WideInt<3>>(point, vertices);
-  }
-}
-
 //------------------------------------------------------------------------------
 // Point-on-polygon boundary test
 //
@@ -246,50 +512,20 @@ bool pointInPolygon(const Point2<CoordType>& point,
 //   1. Check collinearity: (point - vi) × (vj - vi) == 0
 //   2. Check if point is between vi and vj using bounding box test
 //------------------------------------------------------------------------------
-template<typename CoordType, typename Wide>
-bool pointOnPolygon_impl(const Point2<CoordType>& point,
-                         const std::vector<Point2<CoordType>>& vertices) {
-  const auto N = vertices.size();
-
-  // Cast test point once
-  const auto ph = point.template type_cast<Wide>();
-
-  for (size_t i = 0; i < N; ++i) {
-    // Get edge vertices
-    const auto vi = vertices[i].template type_cast<Wide>();
-    const auto vj = vertices[(i + 1) % N].template type_cast<Wide>();
-
-    // Vector from vi to point and from vi to vj
-    const Point2<Wide> vp(ph.x - vi.x, ph.y - vi.y);
-    const Point2<Wide> ve(vj.x - vi.x, vj.y - vi.y);
-
-    // Check collinearity using cross product
-    const Wide cross = vp.x * ve.y - vp.y * ve.x;
-    if (cross != 0) continue;  // Not collinear with this edge
-
-    // Point is collinear with edge - check if it's between endpoints
-    // Use bounding box test for each coordinate
-    const bool x_between = (ph.x >= std::min(vi.x, vj.x)) &&
-                           (ph.x <= std::max(vi.x, vj.x));
-    const bool y_between = (ph.y >= std::min(vi.y, vj.y)) &&
-                           (ph.y <= std::max(vi.y, vj.y));
-
-    if (x_between && y_between) {
-      return true;  // Point is on this edge
-    }
-  }
-
-  return false;  // Point is not on any edge
-}
-
 template<typename CoordType>
 bool pointOnPolygon(const Point2<CoordType>& point,
                     const std::vector<Point2<CoordType>>& vertices) {
-  if (typeid(CoordType) == typeid(NarrowInt<2>)) {
-    return pointOnPolygon_impl<CoordType, WideInt<2>>(point, vertices);
-  } else {
-    return pointOnPolygon_impl<CoordType, WideInt<3>>(point, vertices);
+  const auto N = vertices.size();
+
+  for (size_t i = 0; i < N; ++i) {
+    // Get edge vertices
+    const auto vi = vertices[i];
+    const auto vj = vertices[(i + 1) % N];
+    if (collinear(vi, vj, point)) {
+      return true;
+    }
   }
+  return false;  // Point is not on any edge
 }
 
 //------------------------------------------------------------------------------
@@ -298,7 +534,7 @@ bool pointOnPolygon(const Point2<CoordType>& point,
 //------------------------------------------------------------------------------
 template<typename CoordType>
 bool pointInPolygon(const Point2<CoordType>& point,
-                    const std::vector<int>& faceIndices,
+                    const std::vector<unsigned>& faceIndices,
                     const std::vector<Point2<CoordType>>& vertices) {
   const size_t N = faceIndices.size();
   std::vector<Point2<CoordType>> faceVerts;
@@ -315,7 +551,7 @@ bool pointInPolygon(const Point2<CoordType>& point,
 //------------------------------------------------------------------------------
 template<typename CoordType>
 bool pointOnPolygon(const Point2<CoordType>& point,
-                    const std::vector<int>& faceIndices,
+                    const std::vector<unsigned>& faceIndices,
                     const std::vector<Point2<CoordType>>& vertices) {
   const size_t N = faceIndices.size();
   std::vector<Point2<CoordType>> faceVerts;
@@ -329,11 +565,63 @@ bool pointOnPolygon(const Point2<CoordType>& point,
 //------------------------------------------------------------------------------
 // 2D line segment intersection
 //
+// General routine for finding intersection point
+//------------------------------------------------------------------------------
+template<typename CoordType>
+bool intersection2D(const Point2<CoordType>& a,
+                    const Point2<CoordType>& b,
+                    const Point2<CoordType>& c,
+                    const Point2<CoordType>& n,
+                    Point2<CoordType>& result,
+                    bool isRay = false) {
+  // Integer implementation with overflow protection
+  using Wide = WideInt<CoordType>;
+
+  const Point2<CoordType> s = b - a;
+  const Point2<CoordType> ca = a - c;
+
+  Wide denom = qcross<CoordType>(n, s);
+  if (denom == 0) return false;
+  Wide t_num = qcross<CoordType>(ca, s);
+  Wide u_num = qcross<CoordType>(ca, n);
+  if (denom < 0) {
+    t_num = -t_num;
+    u_num = -u_num;
+    denom = -denom;
+  }
+  bool no_intersection = t_num < 0 || u_num < 0 || u_num > denom;
+  if (!isRay) {
+    no_intersection = no_intersection || t_num > denom;
+  }
+  if (no_intersection) return false;
+#ifdef POLYTOPE_ENABLE_HIBIT2D
+  using Big = boost::multiprecision::int256_t;
+  auto bn = n.template type_cast<Big>();
+  auto cn = c.template type_cast<Big>();
+  auto bd = Big(denom);
+  for (int d = 0; d < 2; ++d) {
+    const Big num = cn[d]*bd + bn[d]*Big(t_num);
+    result[d] = static_cast<CoordType>((num >= 0) ? (num + bd/2)/bd :
+                                       -(((-num) + bd/2)/bd));
+  }
+#else
+  CoordType q = t_num/denom;
+  auto r = static_cast<double>(t_num%denom);
+  auto frac = (r*n.template type_cast<double>()/
+               static_cast<double>(denom)).template type_cast<CoordType>();
+  result = c + q*n + frac;
+#endif
+  return true;
+}
+
+//------------------------------------------------------------------------------
+// 2D line segment intersection
+//
 // Tests if segment [a, b] intersects segment [c, d].
 // If they intersect, returns true and fills result with intersection point.
 //
-// Uses parametric form and cross products to avoid floating-point operations.
-// Carries normalization denominator to delay division until final result.
+// Integer version: Uses parametric form and cross products to avoid overflow.
+// Floating-point version: Uses standard floating-point arithmetic.
 //
 // Returns false if:
 //   - Segments are parallel/collinear
@@ -345,53 +633,32 @@ bool segmentIntersection2D(const Point2<CoordType>& a,
                            const Point2<CoordType>& c,
                            const Point2<CoordType>& d,
                            Point2<CoordType>& result) {
-  using Wide = WideInt<2>;
-
-  // Direction vectors
-  const Point2<CoordType> r1 = b - a;  // Direction of segment [a, b]
-  const Point2<CoordType> r2 = d - c;  // Direction of segment [c, d]
-  const Point2<CoordType> ca = c - a;  // Vector from a to c
-
-  // Compute denominator (r1 × r2)
-  Wide denom = qcross<CoordType>(r1, r2);
-
-  // Parallel or collinear segments
-  if (denom == 0) return false;
-
-  // Compute parametric coordinates
-  // t = (ca × r2) / denom  (parameter along segment [a, b])
-  // u = (ca × r1) / denom  (parameter along segment [c, d])
-  Wide t_num = qcross<CoordType>(ca, r2);
-  Wide u_num = qcross<CoordType>(ca, r1);
-
-  // Normalize signs (make denominator positive)
-  if (denom < 0) {
-    t_num = -t_num;
-    u_num = -u_num;
-    denom = -denom;
-  }
-
-  // Check if intersection is within both segments [0, 1]
-  if (t_num < 0 || t_num > denom || u_num < 0 || u_num > denom) {
-    return false;
-  }
-
-  // Normalize denom and t_num to prevent overflow in final computation
-  // Target: 21 bits to leave room for coordinate multiplication (31 + 21 = 52 < 64)
-  auto shift = bitShiftAmount(denom, 21);
-  auto denom_norm = denom >> shift;
-  Wide t_num_norm = t_num >> shift;
-
-  // Compute intersection point: a + t * r1
-  // Keep in high-precision until final conversion
-  const auto ah = a.template type_cast<Wide>();
-  const auto r1h = r1.template type_cast<Wide>();
-  const auto intersect = (ah * denom_norm + r1h * t_num_norm) / denom_norm;
-
-  result = intersect.template type_cast<CoordType>();
-  return true;
+  const Point2<CoordType> r = d - c;
+  return intersection2D(a, b, c, r, result);
 }
 
+ //------------------------------------------------------------------------------
+// 2D ray and line segment intersection
+//
+// Tests if segment [a, b] intersects ray that starts at c and travels in direction n.
+// If they intersect, returns true and fills result with intersection point.
+//
+// Integer version: Uses parametric form and cross products to avoid overflow.
+// Floating-point version: Uses standard floating-point arithmetic.
+//
+// Returns false if:
+//   - Segments are parallel/collinear
+//   - Intersection point is outside either segment's bounds
+//------------------------------------------------------------------------------
+template<typename CoordType>
+bool segmentRayIntersection2D(const Point2<CoordType>& a,
+                              const Point2<CoordType>& b,
+                              const Point2<CoordType>& c,
+                              const Point2<CoordType>& n,
+                              Point2<CoordType>& result) {
+  return intersection2D(a, b, c, n, result, true);
+}
+ 
 //------------------------------------------------------------------------------
 // 3D segment-plane intersection
 //
@@ -418,16 +685,16 @@ int segmentPlaneIntersection3D(const Point3<CoordType>& segStart,
                                const Point3<CoordType>& segEnd,
                                const Point3<CoordType>& v0,
                                const Point3<CoordType>& plane_normal,
-                               Point3<WideInt<3>>& result,
-                               WideInt<3>& denom) {
-  using Wide = WideInt<3>;
+                               Point3<WideInt<CoordType>>& result,
+                               WideInt<CoordType>& denom) {
+  using Wide = WideInt<CoordType>;
 
   // Compute signed distances from plane
   const Point3<CoordType> PA = v0 - segStart;
   const Point3<CoordType> PB = v0 - segEnd;
 
-  const Wide dist1 = qdot<3, CoordType>(PA, plane_normal);
-  const Wide dist2 = qdot<3, CoordType>(PB, plane_normal);
+  const Wide dist1 = qdot<3>(PA, plane_normal);
+  const Wide dist2 = qdot<3>(PB, plane_normal);
 
   // Starting point lies on the plane
   if (dist1 == 0) {
@@ -473,33 +740,29 @@ int segmentPlaneIntersection3D(const Point3<CoordType>& segStart,
 // Tests if segment [segStart, segEnd] intersects a polygonal face.
 //
 // Algorithm:
-//   1. Compute face plane from first three vertices
+//   1. Use precomputed face plane normal
 //   2. Test segment-plane intersection
 //   3. Project intersection point and face to 2D
 //   4. Test if 2D point is inside 2D polygon
 //
-// Returns -1 if not intersection exists.
+// Returns -1 if no intersection exists.
 // Returns 0 if ray is coplanar.
 // Otherwise 1 and fills result with intersection point.
 //------------------------------------------------------------------------------
 template<typename CoordType>
 int segmentFaceIntersection3D(const Point3<CoordType>& segStart,
                               const Point3<CoordType>& segEnd,
-                              const std::vector<int>& faceIndices,
+                              const std::vector<unsigned>& faceIndices,
                               const std::vector<Point3<CoordType>>& vertices,
+                              const Point3<CoordType>& plane_normal,
                               Point3<CoordType>& result) {
-  using Wide = WideInt<3>;
+  using Wide = WideInt<CoordType>;
 
   const size_t N = faceIndices.size();
   if (N < 3) return -1; // Degenerate face
 
-  // Get three vertices to define the plane
+  // Get first vertex to define the plane point
   const Point3<CoordType>& v0 = vertices[faceIndices[0]];
-  const Point3<CoordType>& v1 = vertices[faceIndices[1]];
-  const Point3<CoordType>& v2 = vertices[faceIndices[2]];
-
-  // Normalize plane normal to fit in CoordType (direction is all that matters)
-  const Point3<CoordType> plane_normal = computeNormal(v0, v1, v2);
 
   // Find segment-plane intersection (scaled by denom)
   Point3<Wide> intersect;
@@ -601,7 +864,7 @@ int clipEdgeByPlane(const Point3<CoordType>& edgeStart,
                     const Point3<CoordType>& planePoint,
                     const Point3<CoordType>& planeNormal,
                     Point3<CoordType>& result) {
-  using Wide = WideInt<3>;
+  using Wide = WideInt<CoordType>;
 
   Point3<Wide> result_wide;
   Wide denom;
@@ -740,7 +1003,7 @@ FaceClipResult<CoordType> clipFaceByPlane(
 template<typename CoordType>
 struct PolyhedronClipResult {
   std::vector<Point3<CoordType>> vertices;  // All unique vertices
-  std::vector<std::vector<int>> faces;      // Faces as vertex indices
+  std::vector<std::vector<unsigned>> faces; // Faces as vertex indices
   bool fullyClipped;   // True if entire polyhedron was removed
   bool fullyRetained;  // True if no clipping occurred
 
@@ -776,7 +1039,7 @@ struct PolyhedronClipResult {
 template<typename CoordType>
 PolyhedronClipResult<CoordType> clipPolyhedronByPlane(
     const std::vector<Point3<CoordType>>& vertices,
-    const std::vector<std::vector<int>>& faces,
+    const std::vector<std::vector<unsigned>>& faces,
     const Point3<CoordType>& planePoint,
     const Point3<CoordType>& planeNormal)
 {
@@ -847,7 +1110,7 @@ PolyhedronClipResult<CoordType> clipPolyhedronByPlane(
     }
 
     // Build new face with updated indices
-    std::vector<int> newFace;
+    std::vector<unsigned> newFace;
     newFace.reserve(clipResult.vertices.size());
 
     for (const auto& v : clipResult.vertices) {
@@ -887,7 +1150,8 @@ PolyhedronClipResult<CoordType> clipPolyhedronByPlane(
     }
 
     // Order cap vertices by angle around centroid
-    Point2<CoordType> centroid(0, 0);
+    Point2<CoordType> centroid;
+    centroid.zero();
     for (const auto& p : cap2D) {
       centroid.x += p.x;
       centroid.y += p.y;
@@ -915,7 +1179,7 @@ PolyhedronClipResult<CoordType> clipPolyhedronByPlane(
     std::sort(indexedAngles.begin(), indexedAngles.end(), angleCompare);
 
     // Build ordered cap face (reverse if normal points down)
-    std::vector<int> capFace;
+    std::vector<unsigned> capFace;
     for (const auto& pair : indexedAngles) {
       capFace.push_back(pair.first);
     }
@@ -937,6 +1201,230 @@ PolyhedronClipResult<CoordType> clipPolyhedronByPlane(
   }
 
   return result;
+}
+
+//------------------------------------------------------------------------------
+// In-place variant of clipPolyhedronByPlane
+//
+// Convenience overload that modifies vertices and faces in-place using move
+// semantics. Calls the functional version and moves results back.
+//
+// This is useful when the caller doesn't need to preserve the input geometry
+// and wants to avoid explicitly managing result structs.
+//------------------------------------------------------------------------------
+template<typename CoordType>
+void clipPolyhedronByPlane(
+    std::vector<Point3<CoordType>>& vertices,
+    std::vector<std::vector<unsigned>>& faces,
+    const Point3<CoordType>& planePoint,
+    const Point3<CoordType>& planeNormal,
+    bool& fullyClipped,
+    bool& fullyRetained)
+{
+  auto result = clipPolyhedronByPlane(vertices, faces, planePoint, planeNormal);
+
+  vertices = std::move(result.vertices);
+  faces = std::move(result.faces);
+  fullyClipped = result.fullyClipped;
+  fullyRetained = result.fullyRetained;
+}
+
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// 2D Polygon Clipping Primitives
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+//------------------------------------------------------------------------------
+// Result structure for 2D polygon clipping operations
+//------------------------------------------------------------------------------
+template<typename CoordType>
+struct PolygonClipResult {
+  std::vector<Point2<CoordType>> vertices;  // Clipped vertices
+  bool fullyClipped;   // True if entire polygon was removed
+  bool fullyRetained;  // True if polygon was completely kept (no clipping)
+
+  PolygonClipResult() : fullyClipped(false), fullyRetained(false) {}
+};
+
+//------------------------------------------------------------------------------
+// Layer 1: Point classification relative to a line (2D)
+//
+// Classifies a point as left (+1), on (0), or right (-1) of a directed line.
+// Line is defined by two points (lineStart -> lineEnd).
+//
+// Returns:
+//   +1: point is on the left side (CCW from line direction)
+//    0: point is on the line
+//   -1: point is on the right side (CW from line direction)
+//
+// This is the 2D equivalent of classifyPointByPlane for 3D.
+//------------------------------------------------------------------------------
+template<typename CoordType>
+int classifyPointByLine(const Point2<CoordType>& point,
+                        const Point2<CoordType>& lineStart,
+                        const Point2<CoordType>& lineEnd) {
+  // Use cross product to determine which side of the line the point is on
+  // Positive cross product = left side, negative = right side
+  const auto lineDir = lineEnd - lineStart;
+  const auto toPoint = point - lineStart;
+  const auto cross = qcross<CoordType>(lineDir, toPoint);
+  return (cross > 0 ? 1 : cross < 0 ? -1 : 0);
+}
+
+//------------------------------------------------------------------------------
+// Layer 2: Edge-line clipping (2D)
+//
+// Clips an edge against a line, returning the intersection point if it exists.
+// This wraps the existing segmentIntersection2D with a consistent interface.
+//
+// Returns:
+//   -1: edge does not intersect line (parallel or no crossing)
+//    0: edge start point is on the line
+//    1: edge intersects line, result contains intersection point
+//------------------------------------------------------------------------------
+template<typename CoordType>
+int clipEdgeByLine(const Point2<CoordType>& edgeStart,
+                   const Point2<CoordType>& edgeEnd,
+                   const Point2<CoordType>& lineStart,
+                   const Point2<CoordType>& lineEnd,
+                   Point2<CoordType>& result) {
+  // Check if edge start is on the line
+  if (classifyPointByLine(edgeStart, lineStart, lineEnd) == 0) {
+    result = edgeStart;
+    return 0;
+  }
+
+  // Use existing segment intersection routine
+  if (segmentIntersection2D(edgeStart, edgeEnd, lineStart, lineEnd, result)) {
+    return 1;
+  }
+
+  return -1;  // No intersection
+}
+
+//------------------------------------------------------------------------------
+// Layer 3: Polygon-line clipping (Sutherland-Hodgman algorithm for 2D)
+//
+// Clips a polygon against a line, keeping vertices on the "keep" side.
+//
+// Algorithm:
+//   - Classify all vertices relative to line
+//   - Walk edges in order
+//   - Keep vertices on the "keep" side
+//   - Add intersection points where edges cross the line
+//
+// Parameters:
+//   polygonVertices: ordered vertices of the polygon (CCW recommended)
+//   lineStart, lineEnd: defines the clipping line
+//   keepLeft: if true, keep left side; if false, keep right side
+//
+// Returns: PolygonClipResult with clipped vertices and status flags
+//
+// Note: This is the 2D equivalent of clipFaceByPlane for 3D.
+//------------------------------------------------------------------------------
+template<typename CoordType>
+PolygonClipResult<CoordType> clipPolygonByLine(
+    const std::vector<Point2<CoordType>>& polygonVertices,
+    const Point2<CoordType>& lineStart,
+    const Point2<CoordType>& lineEnd,
+    bool keepLeft = true)
+{
+  PolygonClipResult<CoordType> result;
+  const size_t N = polygonVertices.size();
+
+  if (N < 3) {
+    result.fullyClipped = true;
+    return result;  // Degenerate polygon
+  }
+
+  // Classify all vertices (reuses Layer 1)
+  std::vector<int> sides(N);
+  int numLeft = 0, numRight = 0, numOnLine = 0;
+
+  for (size_t i = 0; i < N; ++i) {
+    sides[i] = classifyPointByLine(polygonVertices[i], lineStart, lineEnd);
+    if (sides[i] > 0) ++numLeft;
+    else if (sides[i] < 0) ++numRight;
+    else ++numOnLine;
+  }
+
+  // Early exit: entire polygon on one side
+  if (keepLeft) {
+    if (numRight == 0) {
+      result.vertices = polygonVertices;
+      result.fullyRetained = true;
+      return result;
+    }
+    if (numLeft == 0 && numOnLine == 0) {
+      result.fullyClipped = true;
+      return result;
+    }
+  } else {
+    if (numLeft == 0) {
+      result.vertices = polygonVertices;
+      result.fullyRetained = true;
+      return result;
+    }
+    if (numRight == 0 && numOnLine == 0) {
+      result.fullyClipped = true;
+      return result;
+    }
+  }
+
+  // Sutherland-Hodgman: walk edges and build clipped polygon
+  result.vertices.reserve(N + 2);  // Clipping can add at most 2 vertices
+
+  for (size_t i = 0; i < N; ++i) {
+    const size_t j = (i + 1) % N;
+    const auto& vi = polygonVertices[i];
+    const auto& vj = polygonVertices[j];
+
+    // Adjust signs based on which side we're keeping
+    const int si = keepLeft ? sides[i] : -sides[i];
+    const int sj = keepLeft ? sides[j] : -sides[j];
+
+    // Keep vi if it's on the "keep" side or on the line
+    if (si >= 0) {
+      result.vertices.push_back(vi);
+    }
+
+    // If edge crosses line (signs differ and neither is zero), add intersection
+    if ((si > 0 && sj < 0) || (si < 0 && sj > 0)) {
+      Point2<CoordType> intersection;
+      if (clipEdgeByLine(vi, vj, lineStart, lineEnd, intersection) == 1) {
+        result.vertices.push_back(intersection);
+      }
+    }
+  }
+
+  // Check if clipping produced a degenerate result
+  if (result.vertices.size() < 3) {
+    result.vertices.clear();
+    result.fullyClipped = true;
+  }
+
+  return result;
+}
+
+//------------------------------------------------------------------------------
+// In-place variant of clipPolygonByLine
+//
+// Convenience overload that modifies vertices in-place using move semantics.
+// Calls the functional version and moves results back.
+//------------------------------------------------------------------------------
+template<typename CoordType>
+void clipPolygonByLine(
+    std::vector<Point2<CoordType>>& vertices,
+    const Point2<CoordType>& lineStart,
+    const Point2<CoordType>& lineEnd,
+    bool keepLeft,
+    bool& fullyClipped,
+    bool& fullyRetained)
+{
+  auto result = clipPolygonByLine(vertices, lineStart, lineEnd, keepLeft);
+
+  vertices = std::move(result.vertices);
+  fullyClipped = result.fullyClipped;
+  fullyRetained = result.fullyRetained;
 }
 
 } // namespace polytope

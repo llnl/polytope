@@ -1,370 +1,425 @@
-//------------------------------------------------------------------------------
-// An internal handy intermediate representation of a tessellation.
-//------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------//
+// QuantTessellation
+//
+//-----------------------------------------------------------------------------//
+
 #ifndef __Polytope_QuantTessellation__
 #define __Polytope_QuantTessellation__
 
+#include <vector>
 #include <algorithm>
-#include "polytope_internal.hh"
-#include "DimensionTraits.hh"
+#include <numeric>
+#include <string>
+#include "Quantizer.hh"
+#include "Tessellation.hh"
+#include "QuantPLC.hh"
+#include "Shapes.hh"
+#include "Communicator.hh"
+#include "Intersections.hh"
 
 namespace polytope {
-namespace internal {
 
+// Forward declaration
 template<int Dimension, typename RealType>
-class QuantTessellation {
+class Tessellator;
+
+// TODO: Make this inherit from Tessellation class
+template<int Dimension>
+class QuantTessellation : public Tessellation<Dimension, typename HashKey<Dimension>::IntType> {
 public:
-  typedef typename DimensionTraits<Dimension, RealType>::CoordHash CoordHash;
-  typedef typename DimensionTraits<Dimension, RealType>::CoordHash PointHash;
-  typedef typename DimensionTraits<Dimension, RealType>::IntPoint  IntPoint;
-  typedef typename DimensionTraits<Dimension, RealType>::RealPoint RealPoint;
-  typedef std::pair<int, int> EdgeHash;
-  typedef std::vector<unsigned> FaceHash;
+  using RealType = double;
+  using CoordHash = typename HashKey<Dimension>::CoordHash;
+  using IntType = typename HashKey<Dimension>::IntType;
+  using HashType = typename HashKey<Dimension>::HashType;
+  using IntPoint = Point<Dimension, IntType>;
+  using RealPoint = Point<Dimension, RealType>;
+  using QuantizerType = Quantizer<Dimension>;
+  using TessellationType = Tessellation<Dimension, RealType>;
+  using IntCell = typename Cell<Dimension, IntType>::CellType;
+  using RealCell = typename Cell<Dimension, RealType>::CellType;
 
-  // The normalized generator coordinates.
-  std::vector<RealType> generators;
+  QuantTessellation() = default;
+  QuantTessellation& operator=(const QuantTessellation& other) = default;
+  QuantTessellation(const QuantTessellation& other) = default;
+  virtual ~QuantTessellation() {};
 
-  // The bounds for hashing positions.
-  RealPoint low_labframe, high_labframe;
-  RealPoint low_inner, high_inner, low_outer, high_outer;
-
-  // The degeneracy we're using for quantizing.
-  RealType degeneracy;
-
-  //----------------------------------------------------------------------------
-  // The mesh elements and connectivity.
-  //----------------------------------------------------------------------------
-  std::map<PointHash, int> point2id;              // PointHash -> unique point ID
-  std::map<EdgeHash, int> edge2id;                // EdgeHash  -> unique edge ID
-  std::map<FaceHash, int> face2id;                // FaceHash  -> unique face ID
-  std::vector<PointHash> points;                  // Hashed node positions.
-  std::vector<EdgeHash> edges;                    // Hashed edges (node index pairs).
-  std::vector<std::vector<int> > faces;           // Faces made of edges (with orientation)
-  std::vector<std::vector<int> > cells;           // Cells made of faces (with orientation)
-  std::vector<unsigned> infNodes;                 // Indices of nodes projected to the infSphere
-  std::vector<unsigned> infEdges;                 // Indices of edges projected to the infSphere
-  std::vector<unsigned> infFaces;                 // Indices of faces projected to the infSphere
-
-  //----------------------------------------------------------------------------
-  // Hash the given position.
-  //----------------------------------------------------------------------------
-  PointHash hashPosition(const RealPoint& p) const {
-    return geometry::Hasher<Dimension, RealType>::hashPosition(const_cast<RealType*>(&(p.x)), 
-                                                               const_cast<RealType*>(&low_inner.x), const_cast<RealType*>(&high_inner.x), 
-                                                               const_cast<RealType*>(&low_outer.x), const_cast<RealType*>(&high_outer.x),
-                                                               degeneracy);
-  }
-  RealPoint unhashPosition(const PointHash ip) const {
-    RealPoint result;
-    geometry::Hasher<Dimension, RealType>::unhashPosition(&result.x, 
-                                                          const_cast<RealType*>(&low_inner.x), const_cast<RealType*>(&high_inner.x), 
-                                                          const_cast<RealType*>(&low_outer.x), const_cast<RealType*>(&high_outer.x), 
-                                                          ip, degeneracy);
-    return result;
-  }
-  IntPoint hashedPosition(const PointHash ip) const {
-    IntPoint result;
-    geometry::Hasher<Dimension, RealType>::hashedPosition(&result.x, ip);
-    return result;
+  //------------------------------------------------------------------------------
+  // Constructor - common for all dimensions
+  //------------------------------------------------------------------------------
+  QuantTessellation(const std::vector<RealType>& genpoints) {
+    init(genpoints);
   }
 
-  //----------------------------------------------------------------------------
-  // Add new elements, and return the unique index.
-  //----------------------------------------------------------------------------
-  // Nodes
-  int addNewNode(const PointHash ix) {
-    const int k = point2id.size();
-    const int result = internal::addKeyToMap(ix, point2id);
-    if (result == k) {
-      points.push_back(ix);
+  // Construct a smaller instance, useful during clipping
+  QuantTessellation(const std::vector<IntPoint>& qgenpoints) {
+    init(qgenpoints);
+  }
+
+  QuantTessellation(const std::vector<std::vector<CoordHash>>& rankHashes) {
+    init(rankHashes);
+  }
+
+  void init(const std::vector<RealType>& genpoints) {
+    const auto& Q = QuantizerType::instance();
+    m_loBounds = Q.maxCoord;
+    m_hiBounds = -m_loBounds;
+    // Extract the unrolled coordinates
+    auto rpoints = extractCoords<Dimension, RealType>(genpoints);
+
+    auto N = rpoints.size();
+    hashes.reserve(N);
+    points.reserve(N);
+    size_t i = 0;
+    for (const auto& rp : rpoints) {
+      auto ip = Q.quantize(rp);
+      POLY_ASSERT2(Q.inQBounds(ip), "Point provided that exceeds quantizer bounds: " << rp);
+      ip.index = i++;
+      m_loBounds = m_loBounds.minElements(ip);
+      m_hiBounds = m_hiBounds.maxElements(ip);
+      hashes.push_back(Q.hash(ip));
+      points.push_back(ip);
     }
-    POLY_ASSERT(points.size() == point2id.size());
-    return result;
+    sortByHash();
   }
 
-  int addNewNode(const RealPoint& x) {
-    return this->addNewNode(hashPosition(x));
-  }
-
-  // Edges.
-  int addNewEdge(const EdgeHash& x) {
-    const int k = edge2id.size();
-    const int result = internal::addKeyToMap(x, edge2id);
-    if (result == k) {
-      edges.push_back(x);
+  void init(const std::vector<IntPoint>& qgenpoints) {
+    points = qgenpoints;
+    const auto& Q = QuantizerType::instance();
+    m_loBounds = Q.maxCoord;
+    m_hiBounds = -m_loBounds;
+    auto N = points.size();
+    hashes.reserve(N);
+    unsigned i = 0;
+    for (auto& ip : points) {
+      ip.index = i++;
+      m_loBounds = m_loBounds.minElements(ip);
+      m_hiBounds = m_hiBounds.maxElements(ip);
+      hashes.push_back(Q.hash(ip));
     }
-    POLY_ASSERT(edges.size() == edge2id.size());
-    return result;
   }
 
-  // Faces.
-  // Note this is a little different than above.  A FaceHash is not the same
-  // as the signed, oriented, and ordered list of edges that constitute a face!
-  // Rather a FaceHash is the sorted positive IDs of the edges in the face.
-  int addNewFace(const std::vector<int>& x) {
-    FaceHash fhash;
-    for (unsigned i = 0; i != x.size(); ++i) fhash.push_back(x[i] < 0 ? ~x[i] : x[i]);
-    std::sort(fhash.begin(), fhash.end());
-    const int k = face2id.size();
-    const int result = internal::addKeyToMap(fhash, face2id);
-    if (result == k) {
-      faces.push_back(x);
+  // Initialize or extend the generator points
+  void init(const std::vector<std::vector<CoordHash>>& rankHashes) {
+    faces.clear();
+    nodes.clear();
+    cells.clear();
+    faceCells.clear();
+    const auto& Q = Quantizer<Dimension>::instance();
+    auto nranks = rankHashes.size();
+    auto Ntotal = points.size();
+    for (auto& v : rankHashes) {
+      Ntotal += v.size();
     }
-    POLY_ASSERT(faces.size() == face2id.size());
-    return result;
-  }
-
-  //----------------------------------------------------------------------------
-  // Floating position for a point (normalized coordinates).
-  //----------------------------------------------------------------------------
-  RealPoint nodePosition(const unsigned i) {
-    POLY_ASSERT(i < points.size());
-    return unhashPosition(points[i]);
-  }
-
-//   //----------------------------------------------------------------------------
-//   // Integer position for a point (normalized coordinates).
-//   //----------------------------------------------------------------------------
-//   IntPoint nodePosition(const unsigned i) {
-//     POLY_ASSERT(i < points.size());
-//     return hashedPosition(points[i]);
-//   }
-
-  //----------------------------------------------------------------------------
-  // Floating position for a point (lab frame).
-  //----------------------------------------------------------------------------
-  RealPoint labNodePosition(const unsigned i) {
-    POLY_ASSERT(i < points.size());
-    RealPoint result = nodePosition(i);
-    for (unsigned j = 0; j != Dimension; ++j) {
-      result[j] = result[j]*(high_labframe[j] - low_labframe[j]) + low_labframe[j];
+    // This implies the cell ranks were not filled initially
+    // Fill them now
+    if (cellRank.size() != points.size()) {
+      cellRank.assign(points.size(), Communicator::getRank());
     }
-    return result;
-  }
-
-  //----------------------------------------------------------------------------
-  // Floating position for a point (lab frame).
-  //----------------------------------------------------------------------------
-  RealPoint labNodePositionCollinear(const unsigned i) {
-    POLY_ASSERT(i < points.size());
-    RealPoint result = nodePosition(i);
-    for (unsigned j = 0; j != Dimension; ++j) {
-      if (low_labframe[j] == high_labframe[j]) {
-	result[j] = result[j] + low_labframe[j];
-      } else {
-	result[j] = result[j]*(high_labframe[j] - low_labframe[j]) + low_labframe[j];
+    points.reserve(Ntotal);
+    hashes.reserve(Ntotal);
+    cellRank.reserve(Ntotal);
+    unsigned i = Ntotal;
+    for (auto source = 0u; source < nranks; ++source) {
+      for (auto& ch : rankHashes[source]) {
+        auto ip = Q.unhash(ch);
+        ip.index = i++;
+        hashes.push_back(ch);
+        points.push_back(ip);
+        cellRank.push_back(source);
       }
     }
-    return result;
+    sortByHash();
   }
 
-  //----------------------------------------------------------------------------
-  // Floating position for an edge.
-  //----------------------------------------------------------------------------
-  RealPoint edgePosition(const EdgeHash& ehash) {
-    RealPoint result = nodePosition(ehash.first) + nodePosition(ehash.second);
-    result *= 0.5;
-    return result;
+  void clear() {
+    Tessellation<Dimension, IntType>::clear();
+    hashes.clear();
   }
 
-  //----------------------------------------------------------------------------
-  // Compute the node->edge connectivity.
-  //----------------------------------------------------------------------------
-  std::vector<std::vector<unsigned> > nodeEdges() const {
-    std::vector<std::vector<unsigned> > result(points.size());
-    for (unsigned iedge = 0; iedge != edges.size(); ++iedge) {
-      POLY_ASSERT(edges[iedge].first < points.size());
-      POLY_ASSERT(edges[iedge].second < points.size());
-      result[edges[iedge].first].push_back(iedge);
-      result[edges[iedge].second].push_back(iedge);
+  //------------------------------------------------------------------------------
+  // Common methods
+  //------------------------------------------------------------------------------
+
+  // Returns quantized points cast as doubles to give to the tessellator
+  std::vector<RealPoint> getRealPoints() const {
+    std::vector<RealPoint> realPoints;
+    realPoints.reserve(points.size());
+    for (const auto& p : points) {
+      realPoints.push_back(p.template type_cast<RealType>());
     }
-    return result;
+    return realPoints;
   }
 
-  //----------------------------------------------------------------------------
-  // Compute the edge->face connectivity.
-  //----------------------------------------------------------------------------
-  std::vector<std::vector<int> > edgeFaces() const {
-    std::vector<std::vector<int> > result(edges.size());
-    for (int iface = 0; iface != faces.size(); ++iface) {
-      for (unsigned k = 0; k != faces[iface].size(); ++k) {
-        if (faces[iface][k] < 0) {
-          POLY_ASSERT(~faces[iface][k] < edges.size());
-          result[~faces[iface][k]].push_back(~iface);
+  // Returns dequantized points cast as a flattened vector of reals
+  std::vector<RealType> getRealCoords() const {
+    const auto& Q = QuantizerType::instance();
+    std::vector<RealPoint> realPoints;
+    realPoints.reserve(points.size());
+    for (const auto& p : points) {
+      realPoints.push_back(Q.dequantize(p));
+    }
+    return flattenCoords(realPoints);
+  }
+
+  // Returns quantized points
+  const std::vector<IntPoint> getIntPoints() const { return points; }
+
+  virtual IntCell getCell(const unsigned cellIndex) const override {
+    return Cell<Dimension, IntType>::extractCell(nodes, cells[cellIndex], faces);
+  }
+
+  // Reorder points and cells based on sorted hashes for deterministic output
+  void sortByHash() {
+    const auto numPoints = points.size();
+    if (numPoints == 0) return;
+
+    // Create index vector and sort by hash
+    std::vector<unsigned> sortedIndices(numPoints);
+    std::iota(sortedIndices.begin(), sortedIndices.end(), 0);
+    std::sort(sortedIndices.begin(), sortedIndices.end(),
+              [this](unsigned a, unsigned b) { return hashes[a] < hashes[b]; });
+
+    // Create mapping from old index to new index
+    std::vector<unsigned> oldToNew(numPoints);
+    for (unsigned i = 0; i < numPoints; ++i) {
+      oldToNew[sortedIndices[i]] = i;
+    }
+
+    // Reorder points and hashes
+    std::vector<IntPoint> newPoints(numPoints);
+    std::vector<CoordHash> newHashes(numPoints);
+    for (unsigned i = 0; i < numPoints; ++i) {
+      newPoints[i] = points[sortedIndices[i]];
+      newPoints[i].index = i;
+      newHashes[i] = hashes[sortedIndices[i]];
+    }
+    if (cellRank.size() > 0) {
+      std::vector<int> newCellRank(numPoints);
+      for (unsigned i = 0; i < numPoints; ++i) {
+        newCellRank[i] = cellRank[sortedIndices[i]];
+      }
+      cellRank = std::move(newCellRank);
+    }
+    points = std::move(newPoints);
+    hashes = std::move(newHashes);
+
+    // Reorder cells array using the same permutation
+    if (cells.size() > 0) {
+      std::vector<std::vector<int>> newCells(numPoints);
+      for (unsigned i = 0; i < numPoints; ++i) {
+        newCells[i] = std::move(cells[sortedIndices[i]]);
+      }
+      cells = std::move(newCells);
+    }
+  }
+
+  //------------------------------------------------------------------------------
+  // Common methods for all dimensions
+  //------------------------------------------------------------------------------
+
+  // Remove unused nodes and faces (not referenced by any cells)
+  void compactUnusedNodesAndFaces() {
+    const unsigned numCells = points.size();
+
+    // Step 1: Find all faces referenced by cells
+    std::set<unsigned> usedFaces;
+    for (unsigned i = 0; i < numCells; ++i) {
+      for (auto faceIdx : cells[i]) {
+        // Handle signed face indices (negative means inverted orientation)
+        unsigned absFaceIdx = (faceIdx < 0) ? ~faceIdx : faceIdx;
+        usedFaces.insert(absFaceIdx);
+      }
+    }
+
+    // Step 2: Find all nodes referenced by used faces
+    std::set<unsigned> usedNodes;
+    for (auto faceIdx : usedFaces) {
+      for (auto nodeIdx : faces[faceIdx]) {
+        usedNodes.insert(nodeIdx);
+      }
+    }
+
+    // Step 3: Create mapping from old indices to new compact indices
+    std::map<unsigned, unsigned> oldToNewNode;
+    unsigned newNodeIdx = 0;
+    for (auto oldIdx : usedNodes) {
+      oldToNewNode[oldIdx] = newNodeIdx++;
+    }
+
+    std::map<unsigned, unsigned> oldToNewFace;
+    unsigned newFaceIdx = 0;
+    for (auto oldIdx : usedFaces) {
+      oldToNewFace[oldIdx] = newFaceIdx++;
+    }
+
+    // Step 4: Create compacted node and face arrays
+    std::vector<IntPoint> newNodes;
+    newNodes.reserve(usedNodes.size());
+    for (auto oldIdx : usedNodes) {
+      IntPoint node = nodes[oldIdx];
+      node.index = oldToNewNode[oldIdx];
+      newNodes.push_back(node);
+    }
+
+    std::vector<std::vector<unsigned>> newFaces;
+    newFaces.reserve(usedFaces.size());
+    for (auto oldIdx : usedFaces) {
+      std::vector<unsigned> face;
+      face.reserve(faces[oldIdx].size());
+      for (auto nodeIdx : faces[oldIdx]) {
+        face.push_back(oldToNewNode[nodeIdx]);
+      }
+      newFaces.push_back(face);
+    }
+
+    // Step 5: Remap cell face indices
+    for (unsigned i = 0; i < numCells; ++i) {
+      for (auto& faceIdx : cells[i]) {
+        if (faceIdx < 0) {
+          // Negative index: inverted face orientation
+          unsigned oldFaceIdx = ~faceIdx;
+          faceIdx = ~oldToNewFace[oldFaceIdx];
         } else {
-          POLY_ASSERT(faces[iface][k] < edges.size());
-          result[faces[iface][k]].push_back(iface);
+          // Positive index: normal face orientation
+          faceIdx = oldToNewFace[faceIdx];
         }
       }
     }
-    return result;
+
+    // Step 6: Replace with compacted arrays
+    nodes = std::move(newNodes);
+    faces = std::move(newFaces);
   }
 
-  //----------------------------------------------------------------------------
-  // Compute the face->cell connectivity.
-  //----------------------------------------------------------------------------
-  std::vector<std::vector<int> > faceCells() const {
-    std::vector<std::vector<int> > result(faces.size());
-    for (int icell = 0; icell != cells.size(); ++icell) {
-      for (unsigned k = 0; k != cells[icell].size(); ++k) {
-        if (cells[icell][k] < 0) {
-          POLY_ASSERT(~cells[icell][k] < faces.size());
-          result[~cells[icell][k]].push_back(~icell);
-        } else {
-          POLY_ASSERT(cells[icell][k] < faces.size());
-          result[cells[icell][k]].push_back(icell);
-        }
-      }
+  void makeConvexHull() {
+    if (convexHull.m_convex) {
+      return;
     }
-    return result;
+    PLC<Dimension> emptyPLC;
+    // Check if hull will be valid
+    convexHull.init(emptyPLC, points);
+    convexHull.makeConvex();
   }
 
-  //----------------------------------------------------------------------------
-  // Convert our internal data to a standard polytope Tessellation.
-  //----------------------------------------------------------------------------
-  void tessellation(Tessellation<Dimension, RealType>& mesh) {
-    mesh.clear();
+  //------------------------------------------------------------------------------
+  // Parallel methods
+  //------------------------------------------------------------------------------
 
-    // Nodes.
-    mesh.nodes.resize(Dimension*points.size());
-    if (low_labframe.x == high_labframe.x or
-	low_labframe.y == high_labframe.y) {
-      for (unsigned i = 0; i != points.size(); ++i) {
-	RealPoint p = labNodePositionCollinear(i);
-	std::copy(&p.x, &p.x + Dimension, &mesh.nodes[Dimension*i]);
-      }
-    } else {
-      for (unsigned i = 0; i != points.size(); ++i) {
-	RealPoint p = labNodePosition(i);
-	std::copy(&p.x, &p.x + Dimension, &mesh.nodes[Dimension*i]);
-      }
+  // Extract the visible generators
+  std::vector<CoordHash> visibleGenerators();
+
+  // Determine which ranks generators are neighbors
+  std::set<int> neighboringRanks() {
+    this->computeFaceCells();
+    int rank = Communicator::getRank();
+    std::set<int> neighbors;
+    for (const auto& fc : faceCells) {
+      if (fc.size() < 2) continue;
+      auto af0 = fc[0] < 0 ? ~fc[0] : fc[0];
+      auto af1 = fc[1] < 0 ? ~fc[1] : fc[1];
+      const auto& ranki = cellRank[af0];
+      const auto& rankj = cellRank[af1];
+      if (ranki == rank && rankj != rank) neighbors.insert(rankj);
+      if (rankj == rank && ranki != rank) neighbors.insert(ranki);
     }
-
-    // Faces.
-    mesh.faces.reserve(faces.size());
-    for (unsigned i = 0; i != faces.size(); ++i) {
-      mesh.faces.push_back(std::vector<unsigned>());
-      if (faces[i].size() == 1) {
-	mesh.faces[i].push_back(edges[faces[i][0]].first);
-	mesh.faces[i].push_back(edges[faces[i][0]].second);
-      } else {
-	for (unsigned j = 0; j != faces[i].size(); ++j) {
-	  if (faces[i][j] >= 0) {
-	    mesh.faces[i].push_back(edges[faces[i][j]].first);
-	  } else {
-	    mesh.faces[i].push_back(edges[~faces[i][j]].second);
-	  }
-	  POLY_ASSERT(mesh.faces[i].back() < mesh.nodes.size()/Dimension);
-	}
-	POLY_ASSERT(mesh.faces[i].size() == faces[i].size());
-      }
-    }
-
-    // Much of our data can simply be copied over wholesale.
-    mesh.cells = cells;
-    mesh.infNodes = infNodes;
-    mesh.infFaces = infFaces;
-    mesh.faceCells = this->faceCells();
+    return neighbors;
   }
 
-  //----------------------------------------------------------------------------
-  // A contract heavy validity check.
-  //----------------------------------------------------------------------------
-  void assertValid() const {
-    POLY_BEGIN_CONTRACT_SCOPE;
-    {
-      if (Dimension == 3) {
-        const QuantTessellation<Dimension, RealType> qmesh = *this;
-        const unsigned numGenerators = qmesh.generators.size()/Dimension;
-        const std::vector<std::vector<unsigned> > nodeEdges = qmesh.nodeEdges();
-        const std::vector<std::vector<int> > edgeFaces = qmesh.edgeFaces();
-        const std::vector<std::vector<int> > faceCells = qmesh.faceCells();
-        POLY_ASSERT(qmesh.points.size() == qmesh.point2id.size());
-        POLY_ASSERT(qmesh.edges.size() == qmesh.edge2id.size());
-        POLY_ASSERT(qmesh.faces.size() == qmesh.face2id.size());
-        POLY_ASSERT(qmesh.cells.size() == numGenerators);
-        POLY_ASSERT(nodeEdges.size() == qmesh.point2id.size());
-        POLY_ASSERT(edgeFaces.size() == qmesh.edges.size());
-        POLY_ASSERT(faceCells.size() == qmesh.faces.size());
-        for (int i = 0; i != qmesh.points.size(); ++i) {
-          for (int j = 0; j != nodeEdges[i].size(); ++j) {
-            POLY_ASSERT(qmesh.edges[nodeEdges[i][j]].first == i or qmesh.edges[nodeEdges[i][j]].second == i);
-          }
-        }
-        for (int i = 0; i != qmesh.edges.size(); ++i) {
-          POLY_ASSERT(qmesh.edges[i].first < qmesh.points.size());
-          POLY_ASSERT(qmesh.edges[i].second < qmesh.points.size());
-          POLY_ASSERT(count(nodeEdges[qmesh.edges[i].first].begin(),
-                            nodeEdges[qmesh.edges[i].first].end(), 
-                            i) == 1);
-          POLY_ASSERT(count(nodeEdges[qmesh.edges[i].second].begin(),
-                            nodeEdges[qmesh.edges[i].second].end(), 
-                            i) == 1);
-          for (int j = 0; j != edgeFaces[i].size(); ++j) {
-            const int iface = edgeFaces[i][j];
-            POLY_ASSERT(internal::positiveID(iface) < qmesh.faces.size());
-            if (iface < 0) {
-              POLY_ASSERT(count(qmesh.faces[~iface].begin(), qmesh.faces[~iface].end(), ~i) == 1);
-            } else {
-              POLY_ASSERT(count(qmesh.faces[iface].begin(), qmesh.faces[iface].end(), i) == 1);
-            }
-          }
-        }
-        for (int i = 0; i != qmesh.faces.size(); ++i) {
-          const unsigned nedges = qmesh.faces[i].size();
-          POLY_ASSERT(nedges >= 3);
-          for (int j = 0; j != nedges; ++j) {
-            const int k = (j + 1) % nedges;
-            const int iedge1 = qmesh.faces[i][j];
-            const int iedge2 = qmesh.faces[i][k];
-            POLY_ASSERT(internal::positiveID(iedge1) < qmesh.edges.size());
-            POLY_ASSERT(internal::positiveID(iedge2) < qmesh.edges.size());
-            if (iedge1 >= 0 and iedge2 >= 0) {
-              POLY_ASSERT(qmesh.edges[iedge1].second == qmesh.edges[iedge2].first);
-            } else if (iedge1 >= 0 and iedge2 < 0) {
-              POLY_ASSERT(qmesh.edges[iedge1].second == qmesh.edges[~iedge2].second);
-            } else if (iedge1 < 0 and iedge2 >= 0) {
-              POLY_ASSERT(qmesh.edges[~iedge1].first == qmesh.edges[iedge2].first);
-            } else {
-              POLY_ASSERT(qmesh.edges[~iedge1].first == qmesh.edges[~iedge2].second);
-            }
-            if (iedge1 < 0) {
-              POLY_ASSERT(count(edgeFaces[~iedge1].begin(), edgeFaces[~iedge1].end(), ~i) == 1);
-            } else {
-              POLY_ASSERT(count(edgeFaces[iedge1].begin(), edgeFaces[iedge1].end(), i) == 1);
-            }
-          }
-          POLY_ASSERT(faceCells[i].size() == 1 or faceCells[i].size() == 2);
-          for (int j = 0; j != faceCells[i].size(); ++ j) {
-            const int icell = faceCells[i][j];
-            POLY_ASSERT(internal::positiveID(icell) < numGenerators);
-            if (icell < 0) {
-              POLY_ASSERT(count(qmesh.cells[~icell].begin(), qmesh.cells[~icell].begin(), ~i) == 1);
-            } else {
-              POLY_ASSERT(count(qmesh.cells[icell].begin(), qmesh.cells[icell].begin(), i) == 1);
-            }
-          }
-        }
-        for (int i = 0; i != numGenerators; ++i) {
-          const unsigned nfaces = qmesh.cells[i].size();
-          POLY_ASSERT(nfaces >= 4);
-          for (int j = 0; j != nfaces; ++j) {
-            const int iface = qmesh.cells[i][j];
-            POLY_ASSERT(internal::positiveID(iface) < qmesh.faces.size());
-            if (iface < 0) {
-              POLY_ASSERT(count(faceCells[~iface].begin(), faceCells[~iface].end(), ~i) == 1);
-            } else {
-              POLY_ASSERT(count(faceCells[iface].begin(), faceCells[iface].end(), i) == 1);
-            }
-          }
-        }
+  void filterToLocalGenerators() {
+    const auto N = points.size();
+    auto rank = Communicator::getRank();
+    std::vector<IntPoint> newPoints;
+    std::vector<CoordHash> newHashes;
+    std::vector<std::vector<int>> newCells;
+    newPoints.reserve(N);
+    newHashes.reserve(N);
+    newCells.reserve(N);
+    for (auto i = 0; i < N; ++i) {
+      if (cellRank[i] == rank) {
+        newPoints.push_back(points[i]);
+        newHashes.push_back(hashes[i]);
+        newCells.push_back(cells[i]);
       }
     }
-    POLY_END_CONTRACT_SCOPE;
+    points = std::move(newPoints);
+    hashes = std::move(newHashes);
+    cells = std::move(newCells);
+    compactUnusedNodesAndFaces();
   }
+
+  //------------------------------------------------------------------------------
+  // Used for debugging purposes. Creates a file of relevant generator points
+  //------------------------------------------------------------------------------
+
+  // Eject only certain generators
+  void ejectEscapePod(std::string filename,
+                      const std::vector<unsigned>& genPoints,
+                      const QuantPLC<Dimension>& QPLC,
+                      const std::string& tessellatorName = "");
+  // Eject all generators
+  void ejectEscapePod(std::string filename,
+                      const QuantPLC<Dimension>& QPLC,
+                      const std::string& tessellatorName = "") {
+    std::vector<unsigned> genPoints(points.size());
+    for (auto i = 0u; i < points.size(); ++i) {
+      genPoints[i] = i;
+    }
+    ejectEscapePod(filename, genPoints, QPLC, tessellatorName);
+  }
+
+  void loadEscapePod(std::string filename,
+                     QuantPLC<Dimension>& QPLC);
+  void loadEscapePod(std::string filename,
+                     QuantPLC<Dimension>& QPLC,
+                     std::string& tessellatorName);
+
+  bool cellIntersectsHull(const QuantPLC<Dimension>& QPLC,
+                          const unsigned index) {
+    auto qcell = getCell(index);
+    auto plc_cell = QPLC.getCell();
+    return convexBoundaryIntersect<IntType>(qcell, plc_cell);
+  }
+
+  //------------------------------------------------------------------------------
+  // Dimension-specific methods (implemented in separate .cc files)
+  //------------------------------------------------------------------------------
+
+  // Dequantize and fill the tessellation type after tessellation
+  void fillTessellation(TessellationType& mesh);
+
+  // Clip tessellation against PLC boundary planes
+  void clipTessellation(const QuantPLC<Dimension>& QPLC,
+                        Tessellator<Dimension, double>& tessellator);
+
+  // Remove any external generator points
+  void cullExternalPoints(const QuantPLC<Dimension>& QPLC);
+
+  //------------------------------------------------------------------------------
+  // Output method
+  //------------------------------------------------------------------------------
+  friend std::ostream& operator<<(std::ostream& s, const QuantTessellation& mesh) {
+    for (int i = 0; i < mesh.cells.size(); ++i) {
+      s << mesh.getCell(i);
+    }
+    return s;
+  }
+
+  //------------------------------------------------------------------------------
+  // Member data
+  //------------------------------------------------------------------------------
+  bool m_isEscapePod = false;
+  std::vector<CoordHash> hashes;
+  // Local lower and upper bounding box coordinates
+  IntPoint m_loBounds;
+  IntPoint m_hiBounds;
+  using Tessellation<Dimension, IntType>::points; // Generator points
+  using Tessellation<Dimension, IntType>::nodes; // Nodes that make up the Voronoi
+  using Tessellation<Dimension, IntType>::faces; // Faces made up of indices into nodes
+  using Tessellation<Dimension, IntType>::cells; // Cells made up of indices into faces
+  using Tessellation<Dimension, IntType>::faceCells;
+  using Tessellation<Dimension, IntType>::cellRank;
+  QuantPLC<Dimension> convexHull;
 };
 
-}
-}
-
+} // namespace polytope
 #endif

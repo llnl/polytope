@@ -54,8 +54,6 @@ endif()
 #-----------------------------------------------------------------------------------
 if(POLYTOPE_ENABLE_BOOST AND NOT BOOST_FOUND)
   if (DEFINED boost_DIR)
-    list(APPEND FP_TPLS Boost)
-    list(APPEND FP_DIRS ${boost_DIR})
     find_package(Boost 1.50 REQUIRED NO_DEFAULT_PATH PATHS ${boost_DIR})
   else()
     message(FATAL_ERROR "Must provide boost_DIR to enable Boost")

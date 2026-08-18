@@ -7,10 +7,9 @@
 
 #include "polytope.hh"
 #include "polytope_test_utilities.hh"
+#include "BoostTessellator.hh"
 
-#ifdef POLYTOPE_ENABLE_MPI
-#include "mpi.h"
-#endif
+#include "Communicator.hh" 
 
 using namespace std;
 using namespace polytope;
@@ -18,7 +17,7 @@ using namespace polytope;
 //------------------------------------------------------------------------
 // test1
 //------------------------------------------------------------------------
-void test1(Tessellator<2,double>& tessellator) {
+void test1(Tessellator<2, double>& tessellator) {
   
   // Output name
   string testName = "BoostTessellator";
@@ -54,22 +53,24 @@ void test1(Tessellator<2,double>& tessellator) {
 
   PLC<2> boundary;
   int nSides = 4;
-  boundary.facets.resize(nSides, vector<int>(2));
+  boundary.facets.resize(nSides, vector<unsigned>(2));
   for (int i = 0; i != nSides; ++i) {
     boundary.facets[i][0] = i;
     boundary.facets[i][1] = (i+1)%nSides;
   }
 
+  auto& Q = Quantizer<2>::instance();
+  Q.init(PLCpoints);
   Tessellation<2,double> mesh;
 
   // Tessellate unbounded
   tessellator.tessellate(points, mesh);
-  outputMesh(mesh,testName,points,0);
+  outputMesh(mesh,testName,0);
   mesh.clear();
 
   // Tessellate bounded
   tessellator.tessellate(points, PLCpoints, boundary, mesh);
-  outputMesh(mesh,testName,points,1);
+  outputMesh(mesh,testName,1);
 }
 
 
@@ -97,22 +98,24 @@ void test2(Tessellator<2,double>& tessellator) {
   // Facets
   PLC<2> boundary;
   int nSides = 4;
-  boundary.facets.resize(nSides, vector<int>(2));
+  boundary.facets.resize(nSides, vector<unsigned>(2));
   for (int i = 0; i != nSides; ++i) {
     boundary.facets[i][0] = i;
     boundary.facets[i][1] = (i+1)%nSides;
   }
-  
+
+  auto& Q = Quantizer<2>::instance();
+  Q.init(PLCpoints);
   Tessellation<2,double> mesh;
 
   // Tessellate unbounded
   tessellator.tessellate(points, mesh);
-  outputMesh(mesh,testName,points,2);
+  outputMesh(mesh,testName,2);
   mesh.clear();
 
   // Tessellate bounded
   tessellator.tessellate(points, PLCpoints, boundary, mesh);
-  outputMesh(mesh,testName,points,3);
+  outputMesh(mesh,testName,3);
 }
 
 
@@ -154,29 +157,32 @@ void test3(Tessellator<2,double>& tessellator) {
   }
 
   // Create the boundary
-  ReducedPLC<2, double> plc;
-  plc.points.push_back(x1 - 4.0*dx);  plc.points.push_back(y1 - 4.0*dy);
-  plc.points.push_back(x2 + 4.0*dx);  plc.points.push_back(y1 - 4.0*dy);
-  plc.points.push_back(x2 + 4.0*dx);  plc.points.push_back(y2 + 4.0*dy);
-  plc.points.push_back(x1 - 4.0*dx);  plc.points.push_back(y2 + 4.0*dy);
+  PLC<2> plc;
+  std::vector<double> plcpoints;
+  plcpoints.push_back(x1 - 4.0*dx);  plcpoints.push_back(y1 - 4.0*dy);
+  plcpoints.push_back(x2 + 4.0*dx);  plcpoints.push_back(y1 - 4.0*dy);
+  plcpoints.push_back(x2 + 4.0*dx);  plcpoints.push_back(y2 + 4.0*dy);
+  plcpoints.push_back(x1 - 4.0*dx);  plcpoints.push_back(y2 + 4.0*dy);
 
-  plc.facets.resize(4, vector<int>(2));
+  plc.facets.resize(4, vector<unsigned>(2));
   for (int i = 0; i != 4; ++i) {
     plc.facets[i][0] = i;
     plc.facets[i][1] = (i+1)%4;
   }
 
+  auto& Q = Quantizer<2>::instance();
+  Q.init(plcpoints);
   // The mesh
   Tessellation<2,double> mesh;
 
   // Tessellate unbounded
   tessellator.tessellate(points, mesh);
-  outputMesh(mesh,testName,points,4);
+  outputMesh(mesh,testName,4);
   mesh.clear();
   
   // Tessellate bounded
-  tessellator.tessellate(points, plc.points, plc, mesh);
-  outputMesh(mesh,testName,points,5);
+  tessellator.tessellate(points, plcpoints, plc, mesh);
+  outputMesh(mesh,testName,5);
 }
 
 
@@ -232,41 +238,44 @@ void test4(Tessellator<2,double>& tessellator) {
   }
 
   // Create the boundary
-  ReducedPLC<2, double> plc;
-  plc.points.push_back(xbc1);  plc.points.push_back(ybc1);
-  plc.points.push_back(xbc2);  plc.points.push_back(ybc1);
-  plc.points.push_back(xbc2);  plc.points.push_back(ybc2);
-  plc.points.push_back(xbc1);  plc.points.push_back(ybc2);
+  PLC<2> plc;
+  std::vector<double> plcpoints;
+  plcpoints.push_back(xbc1);  plcpoints.push_back(ybc1);
+  plcpoints.push_back(xbc2);  plcpoints.push_back(ybc1);
+  plcpoints.push_back(xbc2);  plcpoints.push_back(ybc2);
+  plcpoints.push_back(xbc1);  plcpoints.push_back(ybc2);
 
-  plc.points.push_back(xhole1);  plc.points.push_back(yhole1);
-  plc.points.push_back(xhole1);  plc.points.push_back(yhole2);
-  plc.points.push_back(xhole2);  plc.points.push_back(yhole2);
-  plc.points.push_back(xhole2);  plc.points.push_back(yhole1);
+  plcpoints.push_back(xhole1);  plcpoints.push_back(yhole1);
+  plcpoints.push_back(xhole1);  plcpoints.push_back(yhole2);
+  plcpoints.push_back(xhole2);  plcpoints.push_back(yhole2);
+  plcpoints.push_back(xhole2);  plcpoints.push_back(yhole1);
 
-  plc.facets.resize(4, vector<int>(2));
+  plc.facets.resize(4, vector<unsigned>(2));
   for (int i = 0; i != 4; ++i) {
     plc.facets[i][0] = i;
     plc.facets[i][1] = (i+1)%4;
   }
 
   plc.holes.resize(1);
-  plc.holes[0].resize(4, vector<int>(2));
+  plc.holes[0].resize(4, vector<unsigned>(2));
   for (int i = 0; i != 4; ++i) {
     plc.holes[0][i][0] = 4 + i;
     plc.holes[0][i][1] = 4 + (i+1)%4;
   }
 
+  auto& Q = Quantizer<2>::instance();
+  Q.init(plcpoints);
   // The mesh
   Tessellation<2,double> mesh;
 
   // Tessellate unbounded
   tessellator.tessellate(points, mesh);
-  outputMesh(mesh,testName,points,6);
+  outputMesh(mesh,testName,6);
   mesh.clear();
   
   // Tessellate bounded
-  tessellator.tessellate(points, plc.points, plc, mesh);
-  outputMesh(mesh,testName,points,7);
+  tessellator.tessellate(points, plcpoints, plc, mesh);
+  outputMesh(mesh,testName,7);
 }
 
 
@@ -276,11 +285,10 @@ void test4(Tessellator<2,double>& tessellator) {
 int 
 main(int argc, char** argv) 
 {
-#ifdef POLYTOPE_ENABLE_MPI
-  MPI_Init(&argc, &argv);
-#endif
+  auto& comm = Communicator::instance();
+  comm.init(argc, argv);
 
-  BoostTessellator<double> tessellator;
+  BoostTessellator tessellator;
   
   {
     cout << "\nTest 1" << endl;
@@ -300,14 +308,9 @@ main(int argc, char** argv)
   {
     cout << "\nTest 4" << endl;
     test4(tessellator);
-  }
+  }  
 
-
-  
-
-#ifdef POLYTOPE_ENABLE_MPI
-  MPI_Finalize();
-#endif
+  comm.finalize();
   return 0;
 }
 //------------------------------------------------------------------------

@@ -1,242 +1,210 @@
-#ifndef POLYTOPE_SILO_WRITER_HH
-#define POLYTOPE_SILO_WRITER_HH
+#ifndef __Polytope_SiloWriter__
+#define __Polytope_SiloWriter__
 
-#ifdef POLYTOPE_ENABLE_MPI
-#include <mpi.h>
-#define MMPI_Comm MPI_Comm
-#define MMPI_COMM_WORLD MPI_COMM_WORLD
-#else
-#define MMPI_Comm int
-#define MMPI_COMM_WORLD 0
-#endif 
-
-#include "Tessellation.hh"
 #include <string>
 #include <float.h>
 #include <map>
+#include <vector>
+#include "Communicator.hh"
+#include "SiloUtils.hh"
 
-namespace polytope
-{
+namespace polytope {
+
+template<int Dimension, typename RealType> class Tessellation;
 
 //! \class SiloWriter
-//! This class provides a static interface for writing Silo files 
+//! This class provides a static interface for writing Silo files
 //! containing tessellations made by polytope.
-template <int Dimension, typename RealType>
-class SiloWriter
-{
+template <int Dimension, typename TessType>
+class SiloWriter {
   // No general recipe
 };
 
 //! Partial specialization for 2D tessellations.
-template <typename RealType>
-class SiloWriter<2, RealType>
-{
-  public:
+template <typename TessType>
+class SiloWriter<2, TessType> {
+public:
+  // Map of a field name and it's values
+  using FieldMap = std::map<std::string, std::vector<double>>;
+  // Map of a Polytope field centering and its FieldMap
+  using FieldTypeMap = std::map<FieldCentering, FieldMap>;
 
-  //! Write an arbitrary polygonal mesh, an associated set of 
-  //! (node, edge, face, cell)-centered fields, and a corresponding set of 
-  //! tags, to a SILO file in the given directory.
-  //! \param numFiles The number of files that will be written. If this 
+  //! Write an arbitrary polygonal mesh, an associated set of
+  //! (node, edge, face, cell)-centered fields
+  //! to a SILO file in the given directory.
+  //! \param numFiles The number of files that will be written. If this
   //!                 is set to -1, one file will be written for each process.
-  static void write(const Tessellation<2, RealType>& mesh, 
-                    const std::map<std::string, RealType*>& nodeFields,
-                    const std::map<std::string, std::vector<int>*>& nodeTags,
-                    const std::map<std::string, RealType*>& edgeFields,
-                    const std::map<std::string, std::vector<int>*>& edgeTags,
-                    const std::map<std::string, RealType*>& faceFields,
-                    const std::map<std::string, std::vector<int>*>& faceTags,
-                    const std::map<std::string, RealType*>& cellFields,
-                    const std::map<std::string, std::vector<int>*>& cellTags,
+  static void write(const TessType& mesh,
+                    const FieldTypeMap& fields,
                     const std::string& filePrefix,
                     const std::string& directory,
                     int cycle,
-                    RealType time,
-                    MMPI_Comm comm = MMPI_COMM_WORLD,
-                    int numFiles = -1,
-                    int mpiTag = 0);
+                    double time,
+                    int numFiles = -1);
 
-  //! Write an arbitrary polygonal mesh and an associated set of 
-  //! (node, edge, face, cell)-centered fields to a SILO file in the given directory.
-  //! \param numFiles The number of files that will be written. If this 
+  //! Write an arbitrary polygonal mesh and an associated set of
+  //! (node, edge, face, cell)-centered fields to a SILO file.
+  //! \param numFiles The number of files that will be written. If this
   //!                 is set to -1, one file will be written for each process.
-  static void write(const Tessellation<2, RealType>& mesh, 
-                    const std::map<std::string, RealType*>& nodeFields,
-                    const std::map<std::string, RealType*>& edgeFields,
-                    const std::map<std::string, RealType*>& faceFields,
-                    const std::map<std::string, RealType*>& cellFields,
-                    const std::string& filePrefix,
-                    const std::string& directory,
-                    int cycle,
-                    RealType time,
-                    MMPI_Comm comm = MMPI_COMM_WORLD,
-                    int numFiles = -1,
-                    int mpiTag = 0)
-  {
-    // Just call the general function with no tags.
-    std::map<std::string, std::vector<int>*> nodeTags, edgeTags, faceTags, cellTags;
-    write(mesh, nodeFields, nodeTags, edgeFields, edgeTags, faceFields, faceTags, 
-          cellFields, cellTags, filePrefix, directory, cycle, time, comm, numFiles, mpiTag);
-  }
-
-  //! Write an arbitrary polygonal mesh and an associated set of 
-  //! (node, edge, face, cell)-centered fields to a SILO file. This version generates a 
-  //! directory name automatically. For parallel runs, the directory 
-  //! name is filePrefix-nproc. For serial runs, the directory is 
-  //! the current working directory.
-  //! \param numFiles The number of files that will be written. If this 
-  //!                 is set to -1, one file will be written for each process.
-  static void write(const Tessellation<2, RealType>& mesh, 
-                    const std::map<std::string, RealType*>& nodeFields,
-                    const std::map<std::string, RealType*>& edgeFields,
-                    const std::map<std::string, RealType*>& faceFields,
-                    const std::map<std::string, RealType*>& cellFields,
+  static void write(const TessType& mesh,
+                    const FieldTypeMap& fields,
                     const std::string& filePrefix,
                     int cycle,
-                    RealType time,
-                    MMPI_Comm comm = MMPI_COMM_WORLD,
-                    int numFiles = -1,
-                    int mpiTag = 0)
-  {
-    write(mesh, nodeFields, edgeFields, faceFields, cellFields, filePrefix, "", cycle, time, comm, numFiles, mpiTag);
+                    double time,
+                    int numFiles = -1) {
+    write(mesh, fields, filePrefix, "", cycle, time, numFiles);
   }
 
   //! This version of write omits the cycle and time arguments.
-  static void write(const Tessellation<2, RealType>& mesh, 
-                    const std::map<std::string, RealType*>& nodeFields,
-                    const std::map<std::string, RealType*>& edgeFields,
-                    const std::map<std::string, RealType*>& faceFields,
-                    const std::map<std::string, RealType*>& cellFields,
+  static void write(const TessType& mesh,
+                    const FieldTypeMap& fields,
                     const std::string& filePrefix,
                     const std::string& directory,
-                    MMPI_Comm comm = MMPI_COMM_WORLD,
-                    int numFiles = -1,
-                    int mpiTag = 0)
-  {
-    write(mesh, nodeFields, edgeFields, faceFields, cellFields, filePrefix, directory, -1, -FLT_MAX,
-          comm, numFiles, mpiTag);
+                    int numFiles = -1) {
+    write(mesh, fields,filePrefix, directory, -1, -1., numFiles);
   }
 
-  //! This version of write omits the cycle and time arguments and 
+  //! This version of write omits the cycle and time arguments and
   //! automatically generates the directory name from the file prefix.
-  static void write(const Tessellation<2, RealType>& mesh, 
-                    const std::map<std::string, RealType*>& nodeFields,
-                    const std::map<std::string, RealType*>& edgeFields,
-                    const std::map<std::string, RealType*>& faceFields,
-                    const std::map<std::string, RealType*>& cellFields,
+  static void write(const TessType& mesh,
+                    const FieldTypeMap& fields,
                     const std::string& filePrefix,
-                    MMPI_Comm comm = MMPI_COMM_WORLD,
+                    int numFiles = -1) {
+    write(mesh, fields, filePrefix, "", -1, -1., numFiles);
+  }
+
+  static void write(const TessType& mesh,
+                    const std::string& filePrefix,
                     int numFiles = -1,
-                    int mpiTag = 0)
-  {
-    write(mesh, nodeFields, edgeFields, faceFields, cellFields, filePrefix, "", -1, -FLT_MAX,
-          comm, numFiles, mpiTag);
+                    int cycle = 0,
+                    double time = 0) {
+    size_t meshSize = mesh.cells.size();
+    std::vector<double> index(meshSize);
+    std::vector<double> genx (meshSize);
+    std::vector<double> geny (meshSize);
+    FieldMap cellFields;
+#ifdef POLYTOPE_ENABLE_MPI
+    std::vector<double> rankField;
+#endif
+    for (auto i = 0u; i < meshSize; ++i) {
+      index[i] = double(i);
+      genx[i] = static_cast<double>(mesh.points[i].x);
+      geny[i] = static_cast<double>(mesh.points[i].y);
+    }
+    cellFields["cell_index"] = index;
+    cellFields["gen_x"     ] = genx;
+    cellFields["gen_y"     ] = geny;
+#ifdef POLYTOPE_ENABLE_MPI
+    if (mesh.cellRank.size() > 0) {
+      rankField.resize(meshSize);
+      for (auto i = 0u; i < meshSize; ++i) {
+        rankField[i] = static_cast<double>(mesh.cellRank[i]);
+      }
+      cellFields["rank"    ] = rankField;
+    } else {
+      int rank = Communicator::getRank();
+      rankField.assign(meshSize, static_cast<double>(rank));
+      cellFields["rank"    ] = rankField;
+    }
+#endif
+    FieldTypeMap fields;
+    fields[FieldCentering::Cell] = cellFields;
+    write(mesh, fields, filePrefix, "", cycle, time, numFiles);
   }
 
 };
 
 //! Partial specialization for 3D tessellations.
-template <typename RealType>
-class SiloWriter<3, RealType>
-{
-  public:
+template <typename TessType>
+class SiloWriter<3, TessType> {
+public:
+  // Map of a field name and it's values
+  using FieldMap = std::map<std::string, std::vector<double>>;
+  // Map of a Polytope field centering and its FieldMap
+  using FieldTypeMap = std::map<FieldCentering, FieldMap>;
 
-  //! Write an arbitrary polygonal mesh, an associated set of 
-  //! (node, edge, face, cell)-centered fields, and a corresponding set of 
-  //! tags, to a SILO file in the given directory.
-  //! \param numFiles The number of files that will be written. If this 
+  //! Write an arbitrary polygonal mesh, an associated set of
+  //! (node, edge, face, cell)-centered fields
+  //! to a SILO file in the given directory.
+  //! \param numFiles The number of files that will be written. If this
   //!                 is set to -1, one file will be written for each process.
-  static void write(const Tessellation<3, RealType>& mesh, 
-                    const std::map<std::string, RealType*>& nodeFields,
-                    const std::map<std::string, std::vector<int>*>& nodeTags,
-                    const std::map<std::string, RealType*>& edgeFields,
-                    const std::map<std::string, std::vector<int>*>& edgeTags,
-                    const std::map<std::string, RealType*>& faceFields,
-                    const std::map<std::string, std::vector<int>*>& faceTags,
-                    const std::map<std::string, RealType*>& cellFields,
-                    const std::map<std::string, std::vector<int>*>& cellTags,
+  static void write(const TessType& mesh,
+                    const FieldTypeMap& fields,
                     const std::string& filePrefix,
                     const std::string& directory,
                     int cycle,
-                    RealType time,
-                    MMPI_Comm comm = MMPI_COMM_WORLD,
-                    int numFiles = -1,
-                    int mpiTag = 0);
+                    double time,
+                    int numFiles = -1);
 
-  //! Write an arbitrary polyhedral mesh and an associated set of 
-  //! (node, edge, face, cell)-centered fields to a SILO file in the given directory.
-  //! \param numFiles The number of files that will be written. If this 
+  //! Write an arbitrary polyhedral mesh and an associated set of
+  //! (node, edge, face, cell)-centered fields to a SILO file.
+  //! \param numFiles The number of files that will be written. If this
   //!                 is set to -1, one file will be written for each process.
-  static void write(const Tessellation<3, RealType>& mesh, 
-                    const std::map<std::string, RealType*>& nodeFields,
-                    const std::map<std::string, RealType*>& edgeFields,
-                    const std::map<std::string, RealType*>& faceFields,
-                    const std::map<std::string, RealType*>& cellFields,
-                    const std::string& filePrefix,
-                    const std::string& directory,
-                    int cycle,
-                    RealType time,
-                    MMPI_Comm comm = MMPI_COMM_WORLD,
-                    int numFiles = -1,
-                    int mpiTag = 0)
-  {
-    // Just call the general function with no tags.
-    std::map<std::string, std::vector<int>*> nodeTags, edgeTags, faceTags, cellTags;
-    write(mesh, nodeFields, nodeTags, edgeFields, edgeTags, faceFields, faceTags, 
-          cellFields, cellTags, filePrefix, directory, cycle, time, comm, numFiles, mpiTag);
-  }
-
-  //! Write an arbitrary polyhedral mesh and an associated set of 
-  //! (node, edge, face, cell)-centered fields to a SILO file. This version generates a 
-  //! directory name automatically. For parallel runs, the directory 
-  //! name is filePrefix-nproc. For serial runs, the directory is 
-  //! the current working directory.
-  //! \param numFiles The number of files that will be written. If this 
-  //!                 is set to -1, one file will be written for each process.
-  static void write(const Tessellation<3, RealType>& mesh, 
-                    const std::map<std::string, RealType*>& nodeFields,
-                    const std::map<std::string, RealType*>& edgeFields,
-                    const std::map<std::string, RealType*>& faceFields,
-                    const std::map<std::string, RealType*>& cellFields,
+  static void write(const TessType& mesh,
+                    const FieldTypeMap& fields,
                     const std::string& filePrefix,
                     int cycle,
-                    RealType time,
-                    MMPI_Comm comm = MMPI_COMM_WORLD,
-                    int numFiles = -1,
-                    int mpiTag = 0)
-  {
-    write(mesh, nodeFields, edgeFields, faceFields, cellFields, filePrefix, "", cycle, time, comm, numFiles, mpiTag);
+                    double time,
+                    int numFiles = -1) {
+    write(mesh, fields, filePrefix, "", cycle, time, numFiles);
   }
 
   //! This version of write omits the cycle and time arguments.
-  static void write(const Tessellation<3, RealType>& mesh, 
-                    const std::map<std::string, RealType*>& nodeFields,
-                    const std::map<std::string, RealType*>& edgeFields,
-                    const std::map<std::string, RealType*>& faceFields,
-                    const std::map<std::string, RealType*>& cellFields,
+  static void write(const TessType& mesh,
+                    const FieldTypeMap& fields,
                     const std::string& filePrefix,
                     const std::string& directory,
-                    MMPI_Comm comm = MMPI_COMM_WORLD,
-                    int numFiles = -1,
-                    int mpiTag = 0)
-  {
-    write(mesh, nodeFields, edgeFields, faceFields, cellFields, filePrefix, directory, -1, -FLT_MAX,
-          comm, numFiles, mpiTag);
+                    int numFiles = -1) {
+    write(mesh, fields, filePrefix, directory, -1, -1., numFiles);
   }
 
-  //! This version of write omits the cycle and time arguments and 
+  //! This version of write omits the cycle and time arguments and
   //! automatically generates the directory name from the file prefix.
-  static void write(const Tessellation<3, RealType>& mesh, 
-                    const std::map<std::string, RealType*>& nodeFields,
-                    const std::map<std::string, RealType*>& edgeFields,
-                    const std::map<std::string, RealType*>& faceFields,
-                    const std::map<std::string, RealType*>& cellFields,
+  static void write(const TessType& mesh,
+                    const FieldTypeMap& fields,
                     const std::string& filePrefix,
-                    MMPI_Comm comm = MMPI_COMM_WORLD,
-                    int numFiles = -1,
-                    int mpiTag = 0)
-  {
-    write(mesh, nodeFields, edgeFields, faceFields, cellFields, filePrefix, "", -1, -FLT_MAX,
-          comm, numFiles, mpiTag);
+                    int numFiles = -1) {
+    write(mesh, fields, filePrefix, "", -1, -1., numFiles);
+  }
+
+  static void write(const TessType& mesh,
+                    const std::string& filePrefix,
+                    int numFiles = -1) {
+    size_t meshSize = mesh.cells.size();
+    std::vector<double> index(meshSize);
+    std::vector<double> genx (meshSize);
+    std::vector<double> geny (meshSize);
+    std::vector<double> genz (meshSize);
+    FieldMap cellFields;
+#ifdef POLYTOPE_ENABLE_MPI
+    std::vector<double> rankField;
+#endif
+    for (auto i = 0u; i < meshSize; ++i) {
+      index[i] = double(i);
+      genx[i] = static_cast<double>(mesh.points[i].x);
+      geny[i] = static_cast<double>(mesh.points[i].y);
+      genz[i] = static_cast<double>(mesh.points[i].z);
+    }
+    cellFields["cell_index"] = index;
+    cellFields["gen_x"     ] = genx;
+    cellFields["gen_y"     ] = geny;
+    cellFields["gen_z"     ] = genz;
+#ifdef POLYTOPE_ENABLE_MPI
+    if (mesh.cellRank.size() > 0) {
+      rankField.resize(meshSize);
+      for (auto i = 0u; i < meshSize; ++i) {
+        rankField[i] = static_cast<double>(mesh.cellRank[i]);
+      }
+      cellFields["rank"    ] = rankField;
+    } else {
+      int rank = Communicator::getRank();
+      rankField.assign(meshSize, static_cast<double>(rank));
+      cellFields["rank"      ] = rankField;
+    }
+#endif
+    FieldTypeMap fields;
+    fields[FieldCentering::Cell] = cellFields;
+    write(mesh, fields, filePrefix, "", -1, -1., numFiles);
   }
 
 };

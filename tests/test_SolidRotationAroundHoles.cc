@@ -15,15 +15,16 @@
 
 #include "polytope.hh"
 #include "polytope_test_utilities.hh"
-#include "MeshEditor.hh"
+#include "BoostTessellator.hh"
 
-#ifdef POLYTOPE_ENABLE_MPI
-#include "mpi.h"
+#include "Communicator.hh" 
+
+#ifdef POLYTOPE_ENABLE_TRIANGLE
+#include "TriangleTessellator.hh"
 #endif
 
 using namespace std;
 using namespace polytope;
-
 
 // -----------------------------------------------------------------------
 // computeConstantVorticityFlow
@@ -43,17 +44,17 @@ void computeConstantVorticityFlow(const vector<double>& points,
 // -----------------------------------------------------------------------
 void test(Tessellator<2,double>& tessellator) {
   // Initialize star-hole boundary, tessellator, and generator set
-  Boundary2D<double> boundary;
+  Boundary2D boundary;
   boundary.setDefaultBoundary(5);
   vector<double> points;
-  
+
   // Test name for output
   string testName = "SolidRotationAroundHoles_" + tessellator.name();
-  
+
   // Timestepping parameters
-  const double dt = 1.0;
+  const double dt = 3.14;
   const double Tmax = 628.0/2;
-  
+
   // Boundary parameters
   const double boundRadius = 1.0;
   const double theta0 = 2*M_PI/5;
@@ -62,11 +63,11 @@ void test(Tessellator<2,double>& tessellator) {
 
   // Add star-shaped-hole points as generators
   const bool addBoundaryGenerators = true;
-  
-  // Initialize a mask to determine if a generator will 
+
+  // Initialize a mask to determine if a generator will
   // move CCW (1), CW(-1), or stay fixed (0)
   vector<int> velMask;
-  
+
   // Add generators between boundRadius and outerRadius
   const unsigned numRows = 6;
   const unsigned nArcs   = 90;
@@ -88,7 +89,6 @@ void test(Tessellator<2,double>& tessellator) {
       velMask.push_back(direction);
     }
   }
-  
   if (addBoundaryGenerators) {
     for (unsigned j = 0; j != 5; ++j) {
       unsigned index = boundary.mPLCpoints.size()/2 - 10 + 2*j;
@@ -98,7 +98,6 @@ void test(Tessellator<2,double>& tessellator) {
       velMask.push_back(0);
     }
   }
-
   // Add additional generators that will remain fixed.
   double r = 0.5*(innerRadius + outerRadius);
   unsigned numFixed = 4;
@@ -111,19 +110,19 @@ void test(Tessellator<2,double>& tessellator) {
     velMask.push_back(0);
     velMask.push_back(0);
   }
-  
+
   // The velocity field
   vector<double> velocityField(points.size());
   POLY_CHECK(velMask.size() == points.size());
-  
+
   // The initial tessellation
   unsigned step = 0;
   double time = 0.0;
   Tessellation<2,double> mesh;
-  MeshEditor<2,double> meshEditor(mesh);
   tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
-  outputMesh(mesh, testName, points, step, time);
-  
+  outputMesh(mesh, testName, step, time);
+  compareArea(boundary, mesh);
+
   // Update the point positions and generate the mesh
   vector<double> halfTimePositions(points.size());
   while (time < Tmax) {
@@ -140,8 +139,8 @@ void test(Tessellator<2,double>& tessellator) {
     time += dt;
     ++step;
     tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
-    meshEditor.cleanEdges(0.001);
-    outputMesh(mesh, testName, points, step, time);
+    outputMesh(mesh, testName, step, time);
+    compareArea(boundary, mesh);
   }
 }
 
@@ -151,32 +150,25 @@ void test(Tessellator<2,double>& tessellator) {
 // -----------------------------------------------------------------------
 int main(int argc, char** argv)
 {
-#ifdef POLYTOPE_ENABLE_MPI
-   MPI_Init(&argc, &argv);
-#endif
-
-
-#ifdef POLYTOPE_ENABLE_TRIANGLE
-  {
-    cout << "\nTriangle Tessellator:\n" << endl;
-    TriangleTessellator<double> tessellator;
-    test(tessellator);
-  }
-#endif
+  auto& comm = Communicator::instance();
+  comm.init(argc, argv);
 
 #ifdef POLYTOPE_ENABLE_BOOST
   {
     cout << "\nBoost Tessellator:\n" << endl;
-    BoostTessellator<double> tessellator;
+    BoostTessellator tessellator;
     test(tessellator);
   }
 #endif
 
-
-   
-
-#ifdef POLYTOPE_ENABLE_MPI
-   MPI_Finalize();
+#ifdef POLYTOPE_ENABLE_TRIANGLE
+  {
+    cout << "\nTriangle Tessellator:\n" << endl;
+    TriangleTessellator tessellator;
+    test(tessellator);
+  }
 #endif
-   return 0;
+
+  comm.finalize();
+  return 0;
 }

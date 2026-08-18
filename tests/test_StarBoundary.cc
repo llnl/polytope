@@ -9,10 +9,13 @@
 
 #include "polytope.hh"
 #include "polytope_test_utilities.hh"
+#include "BoostTessellator.hh"
 #include "Generators.hh"
 
-#ifdef POLYTOPE_ENABLE_MPI
-#include "mpi.h"
+#include "Communicator.hh" 
+
+#ifdef POLYTOPE_ENABLE_TRIANGLE
+#include "TriangleTessellator.hh"
 #endif
 
 using namespace std;
@@ -25,11 +28,11 @@ void test(Tessellator<2,double>& tessellator) {
   unsigned i;
   int test = 1;
   string testName = "StarBoundary_" + tessellator.name();
-  
+
   // Set the boundary and tessellator
-  Boundary2D<double> boundary;
-  boundary.setStarWithHole();
-  
+  Boundary2D boundary;
+  boundary.setDefaultBoundary(8);
+
   // 9 input generators points
   double gens[18] = {0.11,  0.11,
                      0.10,  0.44,
@@ -45,22 +48,23 @@ void test(Tessellator<2,double>& tessellator) {
   {
     cout << "\nTest 1: 9 input generators" << endl;
     std::vector<double> points;
-    for (i = 0; i < 9; ++i){
+    for (i = 0; i < 9; ++i) {
       points.push_back(gens[2*i  ]);
       points.push_back(gens[2*i+1]);
     }
     Tessellation<2,double> mesh;
-    tessellator.tessellate(points,boundary.mPLCpoints,boundary.mPLC,mesh);
-    outputMesh(mesh,testName,points,test);
+    tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC, mesh);
+    outputMesh(mesh,testName,test);
+    compareArea(boundary, mesh);
+    testWatertight(mesh, boundary.mPLC.holes.size());
     ++test;
   }
-  
 
   // Test 2: Input generators + boundary generators
   {
     cout << "\nTest 2: 9 input generators + boundary generators" << endl;
     std::vector<double> points;
-    for (i = 0; i < 9; ++i){
+    for (i = 0; i < 9; ++i) {
       points.push_back(gens[2*i  ]);
       points.push_back(gens[2*i+1]);
     }
@@ -68,34 +72,37 @@ void test(Tessellator<2,double>& tessellator) {
                   boundary.mPLCpoints.begin(),
                   boundary.mPLCpoints.end());
     Tessellation<2,double> mesh;
-    //tessellator.tessellate(points,mesh);
-    //tessellator.tessellate(points,points,boundary.mPLC,mesh);
-    tessellator.tessellate(points,boundary.mPLCpoints,boundary.mPLC,mesh);
-    outputMesh(mesh,testName,points,test);
+    tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC,mesh);
+    outputMesh(mesh,testName,test);
+    compareArea(boundary, mesh);
+    testWatertight(mesh, boundary.mPLC.holes.size());
     ++test;
   }
-  
 
   // Test 3: 800 random generators
   {
     cout << "\nTest 3: 800 random generators" << endl;
-    Generators<2,double> generators(boundary);
-    generators.randomPoints(800);
+    Generators<2> generators(boundary);
+    generators.randomPoints(800, 10);
     Tessellation<2,double> mesh;
-    tessellator.tessellate(generators.mPoints,boundary.mPLCpoints,boundary.mPLC,mesh);
-    outputMesh(mesh,testName,generators.mPoints,test);
+    tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
+    outputMesh(mesh,testName,test);
+    compareArea(boundary, mesh);
+    testWatertight(mesh, boundary.mPLC.holes.size());
     ++test;
   }
-  
+
 
   // Test 4: 2000 random generators
   {
     cout << "\nTest 4: 2000 random generators" << endl;
-    Generators<2,double> generators(boundary);
-    generators.randomPoints(2000);
+    Generators<2> generators(boundary);
+    generators.randomPoints(2000, 10);
     Tessellation<2,double> mesh;
-    tessellator.tessellate(generators.mPoints,boundary.mPLCpoints,boundary.mPLC,mesh);
-    outputMesh(mesh,testName,generators.mPoints,test);
+    tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
+    outputMesh(mesh,testName,test);
+    compareArea(boundary, mesh);
+    testWatertight(mesh, boundary.mPLC.holes.size());
     ++test;
   }
 }
@@ -106,35 +113,26 @@ void test(Tessellator<2,double>& tessellator) {
 // -----------------------------------------------------------------------
 int main(int argc, char** argv)
 {
-#ifdef POLYTOPE_ENABLE_MPI
-  MPI_Init(&argc, &argv);
-#else
-  POLY_CONTRACT_VAR(argc);
-  POLY_CONTRACT_VAR(argv);
-#endif
-
-
-#ifdef POLYTOPE_ENABLE_TRIANGLE
-  {
-    cout << "\nTriangle Tessellator:\n" << endl;
-    TriangleTessellator<double> tessellator;
-    test(tessellator);  
-  }
-#endif   
+  auto& comm = Communicator::instance();
+  comm.init(argc, argv);
 
 
 #ifdef POLYTOPE_ENABLE_BOOST
   {
     cout << "\nBoost Tessellator:\n" << endl;
-    BoostTessellator<double> tessellator;
+    BoostTessellator tessellator;
     test(tessellator);
   }
 #endif
-   
-  
 
-#ifdef POLYTOPE_ENABLE_MPI
-  MPI_Finalize();
+#ifdef POLYTOPE_ENABLE_TRIANGLE
+  {
+    cout << "\nTriangle Tessellator:\n" << endl;
+    TriangleTessellator tessellator;
+    test(tessellator);
+  }
 #endif
-   return 0;
+
+  comm.finalize();
+  return 0;
 }

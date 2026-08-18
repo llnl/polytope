@@ -3,7 +3,7 @@
 // A collection of rotation fields on the unit square
 //
 // Flow fields:
-// 1. Constant Vorticity / Rigid Body Rotation 
+// 1. Constant Vorticity / Rigid Body Rotation
 // 2. Single "Vortex in a Box" (Bell, Colella, Glas, JCP, 1989)
 // 3. Taylor-Green Vortex
 // 4. 16-Vortex Deformation
@@ -16,12 +16,12 @@
 #include <sstream>
 
 #include "polytope.hh"
-#include "MeshEditor.hh"
-#include "polytope_test_utilities.hh"
-
-#ifdef POLYTOPE_ENABLE_MPI
-#include "mpi.h"
+#include "BoostTessellator.hh"
+#ifdef POLYTOPE_ENABLE_TRIANGLE
+#include "TriangleTessellator.hh"
 #endif
+#include "Communicator.hh"
+#include "polytope_test_utilities.hh"
 
 using namespace std;
 using namespace polytope;
@@ -32,11 +32,11 @@ using namespace polytope;
 // -----------------------------------------------------------------------
 void computeConstantVorticityFlow(const vector<double>& points,
                                   vector<double>& velocities) {
-   const unsigned numGenerators = points.size()/2;
-   for (unsigned i = 0; i != numGenerators; ++i) {
-      velocities[2*i  ] = (0.5 - points[2*i+1]) * M_PI / 314;
-      velocities[2*i+1] = (points[2*i  ] - 0.5) * M_PI / 314;
-   }
+  const unsigned numGenerators = points.size()/2;
+  for (unsigned i = 0; i != numGenerators; ++i) {
+    velocities[2*i  ] = (0.5 - points[2*i+1]) * M_PI / 314;
+    velocities[2*i+1] = (points[2*i  ] - 0.5) * M_PI / 314;
+  }
 }
 
 // -----------------------------------------------------------------------
@@ -44,11 +44,11 @@ void computeConstantVorticityFlow(const vector<double>& points,
 // -----------------------------------------------------------------------
 void computeSingleVortexFlow(const vector<double>& points,
                              vector<double>& velocities) {
-   const unsigned numGenerators = points.size()/2;
-   for (unsigned i = 0; i != numGenerators; ++i) {
-      velocities[2*i  ] =  sin(M_PI*points[2*i]) * cos(M_PI*points[2*i+1]);
-      velocities[2*i+1] = -cos(M_PI*points[2*i]) * sin(M_PI*points[2*i+1]);
-   }
+  const unsigned numGenerators = points.size()/2;
+  for (unsigned i = 0; i != numGenerators; ++i) {
+    velocities[2*i  ] =  sin(M_PI*points[2*i]) * cos(M_PI*points[2*i+1]);
+    velocities[2*i+1] = -cos(M_PI*points[2*i]) * sin(M_PI*points[2*i+1]);
+  }
 }
 
 // -----------------------------------------------------------------------
@@ -56,28 +56,28 @@ void computeSingleVortexFlow(const vector<double>& points,
 // -----------------------------------------------------------------------
 void computeTaylorGreenVortexFlow(const vector<double>& points,
                                   vector<double>& velocities) {
-   const unsigned numGenerators = points.size()/2;
-   for (unsigned i = 0; i != numGenerators; ++i) {
-      velocities[2*i  ] =  0.5 * (cos(2*M_PI*(points[2*i  ]-0.25)) * 
-                                  sin(2*M_PI*(points[2*i+1]-0.25)) );
-      velocities[2*i+1] = -0.5 * (sin(2*M_PI*(points[2*i  ]-0.25)) * 
-                                  cos(2*M_PI*(points[2*i+1]-0.25)) );
-   }
+  const unsigned numGenerators = points.size()/2;
+  for (unsigned i = 0; i != numGenerators; ++i) {
+    velocities[2*i  ] =  0.5 * (cos(2*M_PI*(points[2*i  ]-0.25)) *
+                                sin(2*M_PI*(points[2*i+1]-0.25)) );
+    velocities[2*i+1] = -0.5 * (sin(2*M_PI*(points[2*i  ]-0.25)) *
+                                cos(2*M_PI*(points[2*i+1]-0.25)) );
+  }
 }
 
 // -----------------------------------------------------------------------
 // computeDeformationFlow
 // -----------------------------------------------------------------------
 void computeDeformationFlow(const vector<double>& points,
-                             vector<double>& velocities) {
-   const unsigned numGenerators = points.size()/2;
-   double x,y;
-   for (unsigned i = 0; i != numGenerators; ++i) {
-      x = points[2*i  ];
-      y = points[2*i+1];
-      velocities[2*i  ] = -sin(4*M_PI*(x + 0.5)) * sin(4*M_PI*(y - 0.125));
-      velocities[2*i+1] = -cos(4*M_PI*(x + 0.5)) * cos(4*M_PI*(y - 0.125));
-   }
+                            vector<double>& velocities) {
+  const unsigned numGenerators = points.size()/2;
+  double x,y;
+  for (unsigned i = 0; i != numGenerators; ++i) {
+    x = points[2*i  ];
+    y = points[2*i+1];
+    velocities[2*i  ] = -sin(4*M_PI*(x + 0.5)) * sin(4*M_PI*(y - 0.125));
+    velocities[2*i+1] = -cos(4*M_PI*(x + 0.5)) * cos(4*M_PI*(y - 0.125));
+  }
 }
 
 // -----------------------------------------------------------------------
@@ -86,21 +86,21 @@ void computeDeformationFlow(const vector<double>& points,
 void getVelocities(const vector<double>& points,
                    const unsigned flowType,
                    vector<double>& velocities) {
-   POLY_CHECK(points.size() == velocities.size());
-   switch(flowType){
-   case 1:
-      computeConstantVorticityFlow(points, velocities);
-      break;
-   case 2:
-      computeSingleVortexFlow(points, velocities);
-      break;
-   case 3:
-      computeTaylorGreenVortexFlow(points, velocities);
-      break;
-   case 4:
-      computeDeformationFlow(points, velocities);
-      break;
-   }
+  POLY_CHECK(points.size() == velocities.size());
+  switch(flowType){
+  case 1:
+    computeConstantVorticityFlow(points, velocities);
+    break;
+  case 2:
+    computeSingleVortexFlow(points, velocities);
+    break;
+  case 3:
+    computeTaylorGreenVortexFlow(points, velocities);
+    break;
+  case 4:
+    computeDeformationFlow(points, velocities);
+    break;
+  }
 }
 
 
@@ -111,7 +111,7 @@ void runTest(Tessellator<2,double>& tessellator,
              const unsigned flowType,
              const unsigned nx) {
   POLY_CHECK(flowType >= 1 and flowType <= 4);
-  
+
   // Boundary size parameters
   const double xmin = 0.0, xmax = 1.0;
   const double ymin = 0.0, ymax = 1.0;
@@ -121,7 +121,7 @@ void runTest(Tessellator<2,double>& tessellator,
   ostringstream os;
   os << "RotationTests_" << tessellator.name() << "_" << flowType;
   string testName = os.str();
-   
+
   // Time stepping and point-resizing stuff
   double dt = 0.5*dx;
   double Tmax = 2.0;
@@ -161,12 +161,12 @@ void runTest(Tessellator<2,double>& tessellator,
 
   // The unit square PLC facets
   PLC<2> boundary;
-  boundary.facets.resize(4, vector<int>(2));
+  boundary.facets.resize(4, vector<unsigned>(2));
   for (int i = 0; i != 4; ++i) {
     boundary.facets[i][0] = i;
     boundary.facets[i][1] = (i+1)%4;
   }
-   
+
   // The generator set
   vector<double> points;
   unsigned ix, iy;
@@ -183,7 +183,7 @@ void runTest(Tessellator<2,double>& tessellator,
   // Resize the generator so we dont' fling them out of the boundary
   if (scaleFactor != 1.0) {
     for (unsigned i = 0; i != points.size(); ++i) {
-      points[i] = 0.5 + (points[i]-0.5)*scaleFactor;  
+      points[i] = 0.5 + (points[i]-0.5)*scaleFactor;
     }
   }
 
@@ -202,11 +202,9 @@ void runTest(Tessellator<2,double>& tessellator,
   unsigned step = 0;
   double time = 0.0;
   Tessellation<2,double> mesh;
-  MeshEditor<2,double> meshEditor(mesh);
   tessellator.tessellate(points, PLCpoints, boundary, mesh);
-  //tessellator.tessellate(points, mesh);
-  outputMesh(mesh, testName, points, step, time);
-   
+  outputMesh(mesh, testName, step, time);
+
   // Update the point positions and generate the mesh
   vector<double> halfTimePositions(points.size());
   while (time < Tmax) {
@@ -224,9 +222,7 @@ void runTest(Tessellator<2,double>& tessellator,
     time += dt;
     ++step;
     tessellator.tessellate(points, PLCpoints, boundary, mesh);
-    //tessellator.tessellate(points, mesh);
-    meshEditor.cleanEdges(0.01);
-    outputMesh(mesh, testName, points, step, time);
+    outputMesh(mesh, testName, step, time);
   }
 }
 
@@ -234,12 +230,11 @@ void runTest(Tessellator<2,double>& tessellator,
 // -----------------------------------------------------------------------
 // main
 // -----------------------------------------------------------------------
-int main(int argc, char** argv)
-{
-#ifdef POLYTOPE_ENABLE_MPI
-  MPI_Init(&argc, &argv);
-#endif
-
+int main(int argc, char** argv) {
+  auto& comm = Communicator::instance();
+  comm.init(argc, argv);
+  const int testBegin = 1;
+  const int testEnd = 5;
   int nx = 20;
 
   if(argc >= 2) {
@@ -250,26 +245,22 @@ int main(int argc, char** argv)
 #ifdef POLYTOPE_ENABLE_TRIANGLE
   {
     cout << "\nTriangle Tessellator:\n" << endl;
-    TriangleTessellator<double> tessellator;
-    for (unsigned flowTest = 1; flowTest < 5; ++flowTest) {
+    TriangleTessellator tessellator;
+    for (unsigned flowTest = testBegin; flowTest < testEnd; ++flowTest) {
       runTest(tessellator, flowTest, nx);
     }
   }
-#endif   
+#endif
 
 
-#ifdef POLYTOPE_ENABLE_BOOST
   {
     cout << "\nBoost Tessellator:\n" << endl;
-    BoostTessellator<double> tessellator;
-    for (unsigned flowTest = 1; flowTest < 5; ++flowTest) {
+    BoostTessellator tessellator;
+    for (unsigned flowTest = testBegin; flowTest < testEnd; ++flowTest) {
       runTest(tessellator, flowTest, nx);
     }
   }
-#endif  
 
-#ifdef POLYTOPE_ENABLE_MPI
-  MPI_Finalize();
-#endif
+  comm.finalize();
   return 0;
 }

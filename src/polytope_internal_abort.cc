@@ -2,22 +2,22 @@
 #include <cstdlib>
 
 #include "polytope_internal.hh"
-
-#ifdef POLYTOPE_ENABLE_MPI
-// extern "C" {
-#include <mpi.h>
-// }
-#endif
+#include "Communicator.hh"
 
 namespace polytope {
 
 void internal_abort() {
-  std::cout.flush();
-  std::cerr.flush();
 
 #ifdef POLYTOPE_ENABLE_MPI
-  MPI_Abort(MPI_COMM_WORLD, -1);
+  const int rank = Communicator::getRank();
+  if (rank == Communicator::getRoot()) {
+    std::cout.flush();
+    std::cerr.flush();
+  }
+  Communicator::abort();
 #else
+  std::cout.flush();
+  std::cerr.flush();
   abort();
 #endif
 }
