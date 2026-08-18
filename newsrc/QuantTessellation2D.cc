@@ -164,7 +164,7 @@ QuantTessellation<2>::cullExternalPoints(const QuantPLC<2>& QPLC) {
 }
 
 // All clipping functionality relies on Boost
-#ifdef POLYTOPE_ENABLE_BOOST
+#if defined(POLYTOPE_ENABLE_BOOST) && !defined(POLYTOPE_ENABLE_HIBIT2D)
 namespace bp = boost::polygon;
 // Need this to use the -=, +=, etc operators
 using namespace boost::polygon::operators;
@@ -370,7 +370,7 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
 template<>
 void
 QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
-                                       const Tessellator<2, double>& tessellator) {
+                                       Tessellator<2, double>& tessellator) {
   POLY_CONTRACT_VAR(QPLC);
   POLY_CONTRACT_VAR(tessellator);
 }

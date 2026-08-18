@@ -61,5 +61,5 @@ from PLC import *
 from Tessellation import *
 from Tessellator import *
 from SerialTessellators import *
-from DistributedTessellators import *
+from DistributedTessellator import *
 from SiloUtils import *

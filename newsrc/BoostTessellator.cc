@@ -40,16 +40,12 @@ tessellateQuantizedImpl(QuantizedTessellation& result) {
   VD voronoi;
 
   // Invoke the Boost.Voronoi diagram constructor
-  // If we manage to fix int64 coordinates, use the following
-  // typedef boost::polygon::detail::voronoi_ctype_traits<IntType> MyTraits;
-  // boost::polygon::voronoi_builder<IntType, MyTraits> builder;
-  // for (const auto& p : generators) {
-  //   builder.insert_point(p.x, p.y);
-  // }
-  // builder.construct(&voronoi);
-
-  // For now, just this
-  construct_voronoi(generators.begin(), generators.end(), &voronoi);
+  typedef boost::polygon::detail::voronoi_ctype_traits<IntType> MyTraits;
+  boost::polygon::voronoi_builder<IntType, MyTraits> builder;
+  for (const auto& p : generators) {
+    builder.insert_point(p.x, p.y);
+  }
+  builder.construct(&voronoi);
 
   // Build the tessellation data structures
   // In 2D: nodes are Voronoi vertices, faces are edges, cells are Voronoi cells

@@ -29,22 +29,31 @@ struct Int128Hash {
 template<int Dimension> struct HashKey;
 
 template<> struct HashKey<2> {
+#ifdef POLYTOPE_ENABLE_HIBIT2D
+  using CoordHash = __int128;
+  using IntType = int64_t;
+  using HashType = Int128Hash;
+  using IntPoint = Point<2, IntType>;
+  static constexpr int       numBits()   { return 128; }
+  // Exceeding 52 prevents consistent conversion to doubles
+  static constexpr int       num1DBits() { return 52; }
+#else
   using CoordHash = int64_t;
   using IntType = int; // Number of bits must exceed num1DBits
   using HashType = std::hash<CoordHash>;
   using IntPoint = Point<2, IntType>;
-
-  static constexpr int       numDims()   { return 2; }
   static constexpr int       numBits()   { return 64; }
   static constexpr int       num1DBits() { return 31; }
+#endif
+  static constexpr int       numDims()   { return 2; }
   static constexpr IntType   coordMax()  { return (1ULL << (num1DBits() - 1ULL)) - 1ULL; }
   static constexpr CoordHash hashMax()   { return ((unsigned CoordHash)1 << (numBits() - 1ULL)) - 1ULL; }
 
   static CoordHash hash(const IntPoint& point) {
     CoordHash key = 0;
     for (auto i = 0; i < num1DBits(); ++i) {
-      key |= (static_cast<CoordHash>((point.x >> i) & 1UL) << (2*i));
-      key |= (static_cast<CoordHash>((point.y >> i) & 1UL) << (2*i + 1));
+      key |= (static_cast<CoordHash>((point.x >> i) & 1ULL) << (2*i));
+      key |= (static_cast<CoordHash>((point.y >> i) & 1ULL) << (2*i + 1));
     }
     return key;
   }
@@ -52,8 +61,8 @@ template<> struct HashKey<2> {
   static IntPoint unhash(const CoordHash& key) {
     IntType x = 0, y = 0;
     for (auto i = 0; i < num1DBits(); ++i) {
-      x |= ((key >> (2*i))   & 1UL) << i;
-      y |= ((key >> (2*i+1)) & 1UL) << i;
+      x |= ((key >> (2*i))   & 1ULL) << i;
+      y |= ((key >> (2*i+1)) & 1ULL) << i;
     }
     return IntPoint(x, y);
   }

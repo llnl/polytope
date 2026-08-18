@@ -700,11 +700,23 @@ bool segmentRayIntersection2D(const Point2<CoordType>& a,
       denom = -denom;
     }
     if (t_num < 0 || u_num < 0 || u_num > denom) return false;
+#ifdef POLYTOPE_ENABLE_HIBIT2D
+    using Big = boost::multiprecision::int256_t;
+    auto bn = n.template type_cast<Big>();
+    auto cn = c.template type_cast<Big>();
+    auto bd = Big(denom);
+    for (int d = 0; d < 2; ++d) {
+      const Big num = cn[d]*bd + bn[d]*Big(t_num);
+      result[d] = static_cast<CoordType>((num >= 0) ? (num + bd/2)/bd :
+                                         -(((-num) + bd/2)/bd));
+    }
+#else
     CoordType q = t_num/denom;
     auto r = static_cast<double>(t_num%denom);
     auto frac = (r*n.template type_cast<double>()/
                  static_cast<double>(denom)).template type_cast<CoordType>();
     result = c + q*n + frac;
+#endif
     return true;
   }
 }

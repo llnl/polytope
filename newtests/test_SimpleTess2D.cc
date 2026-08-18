@@ -132,12 +132,12 @@ void tests(const int tnum, bool boostTess) {
     {
       testname = "Difficult quantized points";
       boundary.setDefaultBoundary(0);
-      std::vector<int> rqp = {547445970, 380834812,
-                              545899097, 374153061,
-                              544323133, 368524286,
-                              542713618, 709756041,
-                              547445970, 692907011,
-                              630394586, 932588752};
+      std::vector<CoordType> rqp = {547445970, 380834812,
+                                    545899097, 374153061,
+                                    544323133, 368524286,
+                                    542713618, 709756041,
+                                    547445970, 692907011,
+                                    630394586, 932588752};
       qpoints = extractCoords<2, CoordType>(rqp);
       break;
     }
@@ -145,11 +145,11 @@ void tests(const int tnum, bool boostTess) {
     {
       testname = "Difficult quantized points 2";
       boundary.setDefaultBoundary(0);
-      std::vector<int> rqp = {958459259, 368147224,
-                              947586761, 544198943,
-                              772074713, 824295508,
-                              950857238, 541497367,
-                              960886415, 365110638};
+      std::vector<CoordType> rqp = {958459259, 368147224,
+                                    947586761, 544198943,
+                                    772074713, 824295508,
+                                    950857238, 541497367,
+                                    960886415, 365110638};
       qpoints = extractCoords<2, CoordType>(rqp);
       break;
     }

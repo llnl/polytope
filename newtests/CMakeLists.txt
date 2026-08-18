@@ -39,23 +39,26 @@ set_tests_properties(new_cleanup_tests PROPERTIES FIXTURES_CLEANUP "new_polytope
 #-----------------------------------------------------------------------------
 # Polytope Utility Tests
 #-----------------------------------------------------------------------------
-polytope_add_new_test(HashKey2D)
+# Cannot test any clipped geometries when hi bit 2D is enabled
+if(NOT POLYTOPE_ENABLE_HIBIT2D)
+  polytope_add_new_test(HashKey2D)
+  polytope_add_new_test(SimpleTess2D)
+  polytope_add_new_test(StarBoundary)
+  polytope_add_new_test(SolidRotationAroundHoles)
+  polytope_add_new_test(OrphanCases)
+  polytope_add_new_test(BoostTessellator)
+  polytope_add_new_test(RandomPoints)
+  polytope_add_new_test(RotationTests)
+  polytope_add_new_test(Circumcenter)
+endif()
 polytope_add_new_test(HashKey3D)
 polytope_add_new_test(Quantizer)
 polytope_add_new_test(QuantPLC2D)
 #polytope_add_new_test(QuantPLC3D) # Currently broken
 polytope_add_new_test(QuantConvexIntersect3D)
-polytope_add_new_test(SimpleTess2D)
 #polytope_add_new_test(clipPolygon2D) # Currently broken, only used by 3D
 polytope_add_new_test(clipPolyhedron3D)
-polytope_add_new_test(StarBoundary)
-polytope_add_new_test(SolidRotationAroundHoles)
-polytope_add_new_test(OrphanCases)
 polytope_add_new_test(honeyComb)
-polytope_add_new_test(BoostTessellator)
-polytope_add_new_test(RandomPoints)
-polytope_add_new_test(RotationTests)
-polytope_add_new_test(Circumcenter)
 
 #-----------------------------------------------------------------------------
 # Tetgen Tessellator Tests
@@ -69,7 +72,7 @@ endif()
 #-----------------------------------------------------------------------------
 # Distributed Tessellator Tests
 #-----------------------------------------------------------------------------
-if(POLYTOPE_ENABLE_MPI)
+if(POLYTOPE_ENABLE_MPI AND NOT POLYTOPE_ENABLE_HIBIT2D)
   polytope_add_new_test(DistributedVoronoi2D NUMTASKS 4)
   polytope_add_new_test(DistributedIO2D NUMTASKS 4)
   polytope_add_new_test(DistributedRotationTests NUMTASKS 4)
@@ -81,7 +84,7 @@ endif()
 #-----------------------------------------------------------------------------
 # Python Binding Tests
 #-----------------------------------------------------------------------------
-if(POLYTOPE_ENABLE_PYTHON AND NOT POLYTOPE_ENABLE_LEGACY_PYTHON AND (POLYTOPE_ENABLE_BOOST OR POLYTOPE_ENABLE_TRIANGLE))
+if(POLYTOPE_ENABLE_PYTHON AND NOT POLYTOPE_ENABLE_LEGACY_PYTHON)
   polytope_add_python_test(Quantizer)
   polytope_add_python_test(HashKey)
   polytope_add_python_test(SerialTessellator2D)
