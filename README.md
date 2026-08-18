@@ -96,7 +96,7 @@ the config.sh that bootstrap creates. Specifically, `POLYTOPE_ENABLE_{TOOLNAME}=
 and `{toolname}_DIR=/path/to/tool/install`.
 
 To use Triangle, set `POLYTOPE_ENABLE_TRIANGLE=ON` and set
-`triangle_SRC_DIR` to point to the source of a local Triangle repo.
+`triangle_SRC_DIR` to point to the **SOURCE** of a local Triangle repo.
 This is different than other TPLs where you must point to an existing TPL
 install.
 
