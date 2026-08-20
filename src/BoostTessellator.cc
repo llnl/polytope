@@ -29,19 +29,17 @@ void
 BoostTessellator::
 tessellateQuantizedImpl(QuantizedTessellation& result) {
   // Type aliases
-  using IntType = typename QuantTessellation<2>::IntType;
-  using IntPoint = typename QuantTessellation<2>::IntPoint;
   using VD = boost::polygon::voronoi_diagram<RealType>;
   const auto& Q = Quantizer<2>::instance();
   // Get the generators
-  std::vector<IntPoint> generators = result.getIntPoints();
+  std::vector<QuantizedPoint<2>> generators = result.getQuantizedPoints();
   const size_t numGenerators = generators.size();
 
   VD voronoi;
 
   // Invoke the Boost.Voronoi diagram constructor
-  typedef boost::polygon::detail::voronoi_ctype_traits<IntType> MyTraits;
-  boost::polygon::voronoi_builder<IntType, MyTraits> builder;
+  typedef boost::polygon::detail::voronoi_ctype_traits<QuantizedCoordinate<2>> MyTraits;
+  boost::polygon::voronoi_builder<QuantizedCoordinate<2>, MyTraits> builder;
   for (const auto& p : generators) {
     builder.insert_point(p.x, p.y);
   }
@@ -53,8 +51,8 @@ tessellateQuantizedImpl(QuantizedTessellation& result) {
   result.faces.reserve(voronoi.num_edges());
   result.cells.resize(numGenerators);
 
-  // Map IntPoint coordinates to our node indices (for deduplication)
-  std::map<IntPoint, int> node2id;
+  // Map QuantizedPoint coordinates to our node indices (for deduplication)
+  std::map<QuantizedPoint<2>, int> node2id;
 
   // Map canonical edges to face indices for oriented edge tracking
   edge::EdgeToFaceMap edgeToFace;
@@ -63,7 +61,7 @@ tessellateQuantizedImpl(QuantizedTessellation& result) {
   edge::GenPairToEdgeDataMap genPairToEdge;
 
   // Add nodes for the box extent and keep track of their indices
-  auto cornerIndices = shapes::addBoxPoints(Q, node2id, result.nodes);
+  auto cornerIndices = addBoxPoints(Q, node2id, result.nodes);
 
   // Process each Voronoi cell
   for (typename VD::const_cell_iterator cellItr = voronoi.cells().begin();
@@ -103,7 +101,7 @@ tessellateQuantizedImpl(QuantizedTessellation& result) {
         startSide = ed.endSide;
         endSide = ed.startSide;
       } else {
-        Clip2D<IntType> clipper;
+        Clip2D<QuantizedCoordinate<2>> clipper;
         clipper.gen0 = result.points[gindx1];
         clipper.gen1 = result.points[gindx2];
         if (v0) {
@@ -119,7 +117,7 @@ tessellateQuantizedImpl(QuantizedTessellation& result) {
           clipper.normalRay = outwardRay(clipper.gen0, clipper.gen1);
         }
         if (v1 && v0) {
-          clipper.normalRay = pointDirection<IntType>(clipper.rp0, clipper.rp1);
+          clipper.normalRay = pointDirection<QuantizedCoordinate<2>>(clipper.rp0, clipper.rp1);
         }
         if (clipper.doClipping()) {
           edge = nextEdge;
@@ -144,7 +142,7 @@ tessellateQuantizedImpl(QuantizedTessellation& result) {
       edge = nextEdge;
     } while (edge != firstEdge);
     // Walk edges and clipped nodes to connect them
-    std::vector<edge::Edge> finalEdges = shapes::closeClippedEdges(localEdges, clippedNodeSides, cornerIndices);
+    std::vector<edge::Edge> finalEdges = closeClippedEdges(localEdges, clippedNodeSides, cornerIndices);
     // Create faces and cells from local edges
     removeCollinear(finalEdges, result.nodes);
     for (const auto& cedge : finalEdges) {

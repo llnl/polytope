@@ -123,7 +123,7 @@ tessellateQuantizedImpl(QuantizedTessellation& qmesh) {
   }
 
   auto neighborGenerators =
-    exchangeNeighborGenerators<Dimension, CoordHash>(qmesh.hashes, neighborRanks);
+    exchangeNeighborGenerators<Dimension, MortonKey<Dimension>>(qmesh.hashes, neighborRanks);
 
   // Extend the QuantTessellation by it's neighbor generators and retessellate
   if (!qmesh.points.empty()) {
@@ -143,7 +143,7 @@ generateVisibleMesh(QuantizedTessellation& qmesh) {
     m_serialTessellator.tessellateQuantized(qmesh);
   }
   auto visibleHashes = qmesh.visibleGenerators();
-  auto allVisibleRecords = allGatherGenerators<Dimension, CoordHash>(visibleHashes);
+  auto allVisibleRecords = allGatherGenerators<Dimension, MortonKey<Dimension>>(visibleHashes);
   size_t nvisible = 0;
   for (const auto& rankHashes : allVisibleRecords) {
     nvisible += rankHashes.size();

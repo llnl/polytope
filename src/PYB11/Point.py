@@ -184,8 +184,8 @@ class Point3:
 
 for ndim in [2, 3]:
     for (name, ctype) in [("", "double"),
-                          ("Coord", f"polytope::HashKey<{ndim}>::IntType"),
-                          ("Hash", f"polytope::HashKey<{ndim}>::CoordHash")]:
+                          ("Coordinate", f"polytope::QuantizedCoordinate<{ndim}>"),
+                          ("Key", f"polytope::MortonKey<{ndim}>")]:
         exec(f'''
 {name}Point{ndim}d = PYB11TemplateClass(Point{ndim}, template_parameters="{ctype}")
 ''')

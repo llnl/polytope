@@ -23,15 +23,12 @@ using namespace std;
 
 namespace {
 
-using CoordType = typename HashKey<2>::IntType;;
-using IntPoint = Point2<CoordType>;
-
 void tests(const int tnum, bool boostTess) {
   std::string outname = (boostTess) ? "boost" : "triangle";
   Boundary2D boundary;
   boundary.mDiff = 1.;
   std::vector<double> points;
-  std::vector<IntPoint> qpoints;
+  std::vector<QuantizedPoint<2>> qpoints;
   std::string testname;
   // Number of nodes expected from test if not -1
   int numNodes = -1;
@@ -132,25 +129,25 @@ void tests(const int tnum, bool boostTess) {
     {
       testname = "Difficult quantized points";
       boundary.setDefaultBoundary(0);
-      std::vector<CoordType> rqp = {547445970, 380834812,
+      std::vector<QuantizedCoordinate<2>> rqp = {547445970, 380834812,
                                     545899097, 374153061,
                                     544323133, 368524286,
                                     542713618, 709756041,
                                     547445970, 692907011,
                                     630394586, 932588752};
-      qpoints = extractCoords<2, CoordType>(rqp);
+      qpoints = extractCoords<2, QuantizedCoordinate<2>>(rqp);
       break;
     }
   case 15: // Difficult set of quantized points discovered during rotation test
     {
       testname = "Difficult quantized points 2";
       boundary.setDefaultBoundary(0);
-      std::vector<CoordType> rqp = {958459259, 368147224,
+      std::vector<QuantizedCoordinate<2>> rqp = {958459259, 368147224,
                                     947586761, 544198943,
                                     772074713, 824295508,
                                     950857238, 541497367,
                                     960886415, 365110638};
-      qpoints = extractCoords<2, CoordType>(rqp);
+      qpoints = extractCoords<2, QuantizedCoordinate<2>>(rqp);
       break;
     }
   case 16:

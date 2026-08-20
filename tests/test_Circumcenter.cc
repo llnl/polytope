@@ -78,8 +78,8 @@ void createPrism(const double loval,
 // main
 // -----------------------------------------------------------------------
 int main(int argc, char** argv) {
-  using IntType2D = typename HashKey<2>::IntType;
-  using IntType3D = typename HashKey<3>::IntType;
+  using IntType2D = QuantizedCoordinate<2>;
+  using IntType3D = QuantizedCoordinate<3>;
   auto& comm = Communicator::instance();
   comm.init(argc, argv);
 

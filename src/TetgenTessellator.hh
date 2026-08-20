@@ -15,8 +15,6 @@ public:
   using RealType = double;
   using QT = QuantTessellation<3>;
   using QPLC = QuantPLC<3>;
-  using IntType = QT::IntType;
-  using IntPoint = QT::IntPoint;
   using RealPoint = Point<3, double>;
 
   TetgenTessellator() = default;

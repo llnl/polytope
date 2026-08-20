@@ -68,8 +68,6 @@ void
 TriangleTessellator::
 tessellateQuantizedImpl(QuantizedTessellation& result) {
   // Type aliases
-  using IntType = typename QuantTessellation<2>::IntType;
-  using IntPoint = typename QuantTessellation<2>::IntPoint;
   const auto& Q = Quantizer<2>::instance();
   // Get the generators
   std::vector<double> generators = flattenCoords(result.getRealPoints());
@@ -78,8 +76,8 @@ tessellateQuantizedImpl(QuantizedTessellation& result) {
   // Build tessellation data structures (common for both cases)
   result.cells.resize(N);
 
-  // Map IntPoint coordinates to node indices for deduplication
-  std::map<IntPoint, int> node2id;
+  // Map QuantizedPoint coordinates to node indices for deduplication
+  std::map<QuantizedPoint<2>, int> node2id;
 
   // Map canonical edges to face indices for orientation tracking
   edge::EdgeToFaceMap edgeToFace;
@@ -88,7 +86,7 @@ tessellateQuantizedImpl(QuantizedTessellation& result) {
   edge::GenPairToEdgeDataMap genPairToEdge;
 
   // Add nodes for the box extent and keep track of their indices
-  auto cornerIndices = shapes::addBoxPoints(Q, node2id, result.nodes);
+  auto cornerIndices = addBoxPoints(Q, node2id, result.nodes);
 
   // Prepare Triangle input structure
   triangulateio in, out;
@@ -113,12 +111,12 @@ tessellateQuantizedImpl(QuantizedTessellation& result) {
     std::vector<std::vector<std::pair<int, int>>> clippedNodeSides(N);
     for (auto cellIndex = 0u; cellIndex < N-1; ++cellIndex) {
       int nextPoint = cellIndex + 1;
-      Clip2D<IntType> clipper;
+      Clip2D<QuantizedCoordinate<2>> clipper;
       clipper.gen0 = result.points[cellIndex];
       clipper.gen1 = result.points[nextPoint];
       clipper.inf0 = true;
       clipper.inf1 = true;
-      clipper.normalRay = outwardRay<IntType>(clipper.gen0, clipper.gen1);
+      clipper.normalRay = outwardRay<QuantizedCoordinate<2>>(clipper.gen0, clipper.gen1);
       if (clipper.doClipping()){
         continue;
       }
@@ -132,7 +130,7 @@ tessellateQuantizedImpl(QuantizedTessellation& result) {
       clippedNodeSides[nextPoint].push_back(std::make_pair(endSide, startSide));
     }
     for (auto cellIndex = 0u; cellIndex < N; ++cellIndex) {
-      std::vector<edge::Edge> finalEdges = shapes::closeClippedEdges(localEdges[cellIndex], clippedNodeSides[cellIndex], cornerIndices);
+      std::vector<edge::Edge> finalEdges = closeClippedEdges(localEdges[cellIndex], clippedNodeSides[cellIndex], cornerIndices);
       removeCollinear(finalEdges, result.nodes);
       for (const auto& cedge : finalEdges) {
         int signedFaceIndex = edge::addOrientedEdge(cedge.first, cedge.second, result.faces, edgeToFace);
@@ -224,7 +222,7 @@ tessellateQuantizedImpl(QuantizedTessellation& result) {
         startSide = ed.endSide;
         endSide = ed.startSide;
       } else {
-        Clip2D<IntType> clipper;
+        Clip2D<QuantizedCoordinate<2>> clipper;
         // gen0 should always be the current cell's generator
         clipper.gen0 = result.points[cellIndex];
         clipper.gen1 = result.points[otherGen];
@@ -235,7 +233,7 @@ tessellateQuantizedImpl(QuantizedTessellation& result) {
           clipper.normalRay = outwardRay(clipper.gen0, clipper.gen1, thirdPoint);
         } else {
           clipper.rp1 = centers[nextTri];
-          clipper.normalRay = pointDirection<IntType>(clipper.rp0, clipper.rp1);
+          clipper.normalRay = pointDirection<QuantizedCoordinate<2>>(clipper.rp0, clipper.rp1);
         }
         if (clipper.doClipping()) {
           curTri = nextTri;
@@ -268,7 +266,7 @@ tessellateQuantizedImpl(QuantizedTessellation& result) {
       // Order the edges to have a consistent sequence of clipped node sides
       edge::orderClippedNodes(clippedNodeSides, localEdges);
     }
-    std::vector<edge::Edge> finalEdges = shapes::closeClippedEdges(localEdges, clippedNodeSides, cornerIndices);
+    std::vector<edge::Edge> finalEdges = closeClippedEdges(localEdges, clippedNodeSides, cornerIndices);
     // Remove collinear points from the edge loop
     removeCollinear(finalEdges, result.nodes);
     // Create faces and add to cell

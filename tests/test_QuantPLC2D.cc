@@ -8,7 +8,7 @@
 //   - Point containment (within) tests
 //   - Intersection tests
 //   - Reduction (removing unused points)
-//   - Hash-based point comparison
+//   - Morton-key point comparison
 
 #include <iostream>
 #include <vector>
@@ -36,8 +36,7 @@ using RealPoint = Point2<RealType>;
 using PLC = PLC<2>;
 using QuantPLC2D = QuantPLC<2>;
 using Quantizer2D = Quantizer<2>;
-using IntPoint = typename Quantizer2D::IntPoint;
-using CoordHash = typename Quantizer2D::CoordHash;
+using PointType = QuantizedPoint<2>;
 
 //------------------------------------------------------------------------------
 // Helper: Create a square PLC from vertices
@@ -119,7 +118,7 @@ void testQuantizationAccuracy(const int tnum) {
   RealType maxError = Q.m_dx_o.x * 2.0;  // Allow 2x grid spacing
 
   for (const auto& p : testPoints) {
-    IntPoint quantized = Q.quantize(p);
+    PointType quantized = Q.quantize(p);
     RealPoint recovered = Q.dequantize(quantized);
 
     RealType dx = abs(recovered.x - p.x);

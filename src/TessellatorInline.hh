@@ -83,20 +83,19 @@ inline void
 Tessellator<Dimension, RealType>::
 singleNodeTessellate(QuantTessellation<Dimension>& result) {
   if constexpr (Dimension == 2) {
-    using IntPoint = typename QuantTessellation<2>::IntPoint;
     const auto& Q = Quantizer<2>::instance();
     result.cells.resize(1);
 
     // Map canonical edges to face indices for orientation tracking
     edge::EdgeToFaceMap edgeToFace;
 
-    // Map IntPoint coordinates to node indices for deduplication
-    std::map<IntPoint, int> node2id;
+    // Map QuantizedPoint coordinates to node indices for deduplication
+    std::map<QuantizedPoint<2>, int> node2id;
 
     // Add nodes for the box extent and keep track of their indices
-    auto cornerIndices = shapes::addBoxPoints(Q, node2id, result.nodes);
+    auto cornerIndices = addBoxPoints(Q, node2id, result.nodes);
     const int N = 4;
-    shapes::BoxSides side;
+    BoxSides side;
     for (int i = 0; i < N; ++i) {
       auto point0 = cornerIndices[side.corner(i)];
       auto point1 = cornerIndices[side.corner((i+1)%N)];

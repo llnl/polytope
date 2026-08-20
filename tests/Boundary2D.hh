@@ -156,9 +156,9 @@ public:
     const double y2 = mCenter[1] + mDiff;
     Point2<double> low(x1, y1);
     Point2<double> hi(x2, y2);
-    std::vector<Point2<double>> points = shapes::createSquarePoints(low, hi);
+    std::vector<Point2<double>> points = createSquarePoints(low, hi);
     mPLCpoints = flattenCoords(points);
-    mPLC.facets = shapes::createSquareFaces();
+    mPLC.facets = createSquareFaces();
     mType = square;
   }
 
@@ -671,13 +671,13 @@ public:
   //------------------------------------------------------------------------
   void getPointInside(double* point) {
     auto& Q = Quantizer<2>::instance();
-    using IntType = typename HashKey<2>::IntType;
-    using IntPoint = Point<2, IntType>;
+    using Coordinate = QuantizedCoordinate<2>;
+    using PointType = QuantizedPoint<2>;
     bool inside = false;
-    IntPoint p;
+    PointType p;
     while( !inside ){
-      p.x = Q.minBound.x + static_cast<IntType>(random01())*Q.maxBound.x;
-      p.y = Q.minBound.y + static_cast<IntType>(random01())*Q.maxBound.y;
+      p.x = Q.minBound.x + static_cast<Coordinate>(random01())*Q.maxBound.x;
+      p.y = Q.minBound.y + static_cast<Coordinate>(random01())*Q.maxBound.y;
       inside = mQPLC.within(p);
     }
     Point<2, double> pd = Q.dequantize(p);

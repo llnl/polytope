@@ -91,19 +91,19 @@ QuantTessellation<3>::fillTessellation(TessellationType& mesh) {
 // Extract the local visible generators
 //------------------------------------------------------------------------------
 template<>
-std::vector<HashKey<3>::CoordHash>
+std::vector<MortonKey<3>>
 QuantTessellation<3>::visibleGenerators() {
   auto N = points.size();
   if (!convexHull.m_convex) {
     makeConvexHull();
   }
-  std::vector<CoordHash> result;
+  std::vector<MortonKey<3>> result;
   if (convexHull.isValid()) {
     result.reserve(N);
     auto plc_cell = convexHull.getCell();
     for (auto i = 0u; i < N; ++i) {
       auto qcell = getCell(i);
-      // if (convexBoundaryIntersect<IntType>(qcell, plc_cell)) {
+      // if (convexBoundaryIntersect<QuantizedCoordinate<3>>(qcell, plc_cell)) {
       //   result.push_back(hashes[i]);
       // }
     }

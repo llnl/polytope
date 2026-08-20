@@ -16,7 +16,7 @@ set(polytope_headers
   EdgeUtils.hh
   EscapePod.hh
   GeomUtils.hh
-  HashKey.hh
+  MortonKeyTraits.hh
   Intersections.hh
   PLC.hh
   Point.hh

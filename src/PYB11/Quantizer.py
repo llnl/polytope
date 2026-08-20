@@ -8,7 +8,7 @@ class Quantizer:
     PYB11typedefs = """
   using QuantizerType = Quantizer<%(Dimension)s>;
   using RealType = typename QuantizerType::RealType;
-  using IntPoint = typename QuantizerType::IntPoint;
+  using PointType = QuantizedPoint<%(Dimension)s>;
   using RealPoint = typename QuantizerType::RealPoint;
 """
 
@@ -46,35 +46,35 @@ class Quantizer:
     @PYB11const
     def quantize(self,
                  x="const RealPoint&"):
-        return "IntPoint"
+        return "PointType"
 
     @PYB11const
     def dequantize(self,
-                   x="const IntPoint&"):
+                   x="const PointType&"):
         return "RealPoint"
 
     @PYB11const
-    @PYB11implementation("[](const QuantizerType& self, const IntPoint& x) { return pybind11_helpers::coordHashToPy<%(Dimension)s>(self.hash(x)); }")
-    def hash(self,
-             x="const IntPoint&"):
+    @PYB11implementation("[](const QuantizerType& self, const PointType& x) { return pybind11_helpers::keyToPy<%(Dimension)s>(self.encode(x)); }")
+    def encode(self,
+               x="const PointType&"):
         return "py::object"
 
     @PYB11const
-    @PYB11implementation("[](const QuantizerType& self, const RealPoint& x) { return pybind11_helpers::coordHashToPy<%(Dimension)s>(self.hash_quantize(x)); }")
-    def hashQuantize(self,
-                     x="const RealPoint&"):
+    @PYB11implementation("[](const QuantizerType& self, const RealPoint& x) { return pybind11_helpers::keyToPy<%(Dimension)s>(self.quantizeAndEncode(x)); }")
+    def quantizeAndEncode(self,
+                          x="const RealPoint&"):
         return "py::object"
 
     @PYB11const
-    @PYB11implementation("[](const QuantizerType& self, const py::object& h) { return self.unhash(pybind11_helpers::pyToCoordHash<%(Dimension)s>(h)); }")
-    def unhash(self,
+    @PYB11implementation("[](const QuantizerType& self, const py::object& h) { return self.decode(pybind11_helpers::pyToKey<%(Dimension)s>(h)); }")
+    def decode(self,
                h="const py::object&"):
-        return "IntPoint"
+        return "PointType"
 
     @PYB11const
-    @PYB11implementation("[](const QuantizerType& self, const py::object& h) { return self.unhash_dequantize(pybind11_helpers::pyToCoordHash<%(Dimension)s>(h)); }")
-    def unhashDequantize(self,
-                         h="const py::object&"):
+    @PYB11implementation("[](const QuantizerType& self, const py::object& h) { return self.decodeAndDequantize(pybind11_helpers::pyToKey<%(Dimension)s>(h)); }")
+    def decodeAndDequantize(self,
+                            h="const py::object&"):
         return "RealPoint"
 
     @PYB11const
@@ -88,7 +88,7 @@ class Quantizer:
 
     @PYB11const
     def inQBounds(self,
-                  point="const IntPoint&"):
+                  point="const PointType&"):
         return "bool"
 
     m_lx_o = PYB11readwrite(returnpolicy="reference_internal")

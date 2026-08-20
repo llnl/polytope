@@ -185,9 +185,9 @@ public:
     const RealType y2 = mCenter[1] + 0.5;
     Point2<RealType> low(x1, y1);
     Point2<RealType> hi(x2, y2);
-    std::vector<Point2<RealType>> points = shapes::createSquarePoints(low, hi);
+    std::vector<Point2<RealType>> points = createSquarePoints(low, hi);
     mPLCpoints = flattenCoords(points);
-    mPLC.facets = shapes::createSquareFaces();
+    mPLC.facets = createSquareFaces();
     mType = square;
     this->finalize();
   }

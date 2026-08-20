@@ -17,8 +17,8 @@ struct Clip2D {
   Point2<CoordType> normalRay;
 
   // Output parameters
-  shapes::BoxSide firstSide = shapes::BoxSide::L;
-  shapes::BoxSide secondSide = shapes::BoxSide::L;
+  BoxSide firstSide = BoxSide::L;
+  BoxSide secondSide = BoxSide::L;
   Point2<CoordType> p0, p1;
 
   // Input and output parameters

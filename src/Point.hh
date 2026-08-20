@@ -120,22 +120,22 @@ struct Point<2, CoordType> {
     return Point<2, int>(0, 0).template type_cast<CoordType>();
   }
 
-  template<typename IntType, typename RealType>
-  Point<2, IntType> convertXi(const Point<2, RealType>& blo,
+  template<typename Coordinate, typename RealType>
+  Point<2, Coordinate> convertXi(const Point<2, RealType>& blo,
                               const Point<2, RealType>& dx) const {
-    // Quantize: RealType -> IntType
+    // Quantize: RealType -> Coordinate
     POLY_ASSERT(typeid(CoordType) == typeid(RealType));
-    IntType xOut, yOut;
-    xOut = static_cast<IntType>((this->x - blo.x)/dx.x + 0.5);
-    yOut = static_cast<IntType>((this->y - blo.y)/dx.y + 0.5);
-    return Point<2, IntType>(xOut, yOut);
+    Coordinate xOut, yOut;
+    xOut = static_cast<Coordinate>((this->x - blo.x)/dx.x + 0.5);
+    yOut = static_cast<Coordinate>((this->y - blo.y)/dx.y + 0.5);
+    return Point<2, Coordinate>(xOut, yOut);
   }
 
   template<typename RealType>
   Point<2, RealType> convertx(const Point<2, RealType>& blo,
                               const Point<2, RealType>& dx) const {
     RealType xOut, yOut;
-    // Dequantize: IntType -> RealType
+    // Dequantize: Coordinate -> RealType
     xOut = dx.x*(static_cast<RealType>(this->x) - 0.5) + blo.x;
     yOut = dx.y*(static_cast<RealType>(this->y) - 0.5) + blo.y;
     return Point<2, RealType>(xOut, yOut);
@@ -164,11 +164,11 @@ struct Point<2, CoordType> {
     return (x >= y) ? 0 : 1;
   }
 
-  template<typename IntType>
-  Point<2, IntType> bitShift(const int shift) const {
-    return Point<2, IntType>(
-      static_cast<IntType>(x >> shift),
-      static_cast<IntType>(y >> shift)
+  template<typename Coordinate>
+  Point<2, Coordinate> bitShift(const int shift) const {
+    return Point<2, Coordinate>(
+      static_cast<Coordinate>(x >> shift),
+      static_cast<Coordinate>(y >> shift)
     );
   }
 };
@@ -191,8 +191,8 @@ operator>>(std::istream& is, Point<2, CoordType>& p) {
   return is;
 }
 
-template<typename CoordType, typename CoordHash>
-CoordHash dot(const Point2<CoordType>& a,
+template<typename CoordType, typename Key>
+Key dot(const Point2<CoordType>& a,
               const Point2<CoordType>& b) {
   return (a.x*b.x) + (a.y*b.y);
 }
@@ -306,22 +306,22 @@ struct Point<3, CoordType> {
     return Point<3, int>(0, 0, 0).template type_cast<CoordType>();
   }
 
-  template<typename IntType, typename RealType>
-  Point<3, IntType> convertXi(const Point<3, RealType>& blo,
+  template<typename Coordinate, typename RealType>
+  Point<3, Coordinate> convertXi(const Point<3, RealType>& blo,
                               const Point<3, RealType>& dx) const {
-    // Quantize: RealType -> IntType
-    IntType xOut, yOut, zOut;
-    xOut = static_cast<IntType>((this->x - blo.x)/dx.x + 0.5);
-    yOut = static_cast<IntType>((this->y - blo.y)/dx.y + 0.5);
-    zOut = static_cast<IntType>((this->z - blo.z)/dx.z + 0.5);
-    return Point<3, IntType>(xOut, yOut, zOut, index);
+    // Quantize: RealType -> Coordinate
+    Coordinate xOut, yOut, zOut;
+    xOut = static_cast<Coordinate>((this->x - blo.x)/dx.x + 0.5);
+    yOut = static_cast<Coordinate>((this->y - blo.y)/dx.y + 0.5);
+    zOut = static_cast<Coordinate>((this->z - blo.z)/dx.z + 0.5);
+    return Point<3, Coordinate>(xOut, yOut, zOut, index);
   }
 
   template<typename RealType>
   Point<3, RealType> convertx(const Point<3, RealType>& blo,
                               const Point<3, RealType>& dx) const {
     RealType xOut, yOut, zOut;
-    // Dequantize: IntType -> RealType
+    // Dequantize: Coordinate -> RealType
     xOut = dx.x*(static_cast<RealType>(this->x) - 0.5) + blo.x;
     yOut = dx.y*(static_cast<RealType>(this->y) - 0.5) + blo.y;
     zOut = dx.z*(static_cast<RealType>(this->z) - 0.5) + blo.z;
@@ -359,18 +359,18 @@ struct Point<3, CoordType> {
     return 2;
   }
 
-  template<typename IntType>
-  Point<3, IntType> bitShift(const int shift) const {
-    return Point<3, IntType>(
-      static_cast<IntType>(x >> shift),
-      static_cast<IntType>(y >> shift),
-      static_cast<IntType>(z >> shift)
+  template<typename Coordinate>
+  Point<3, Coordinate> bitShift(const int shift) const {
+    return Point<3, Coordinate>(
+      static_cast<Coordinate>(x >> shift),
+      static_cast<Coordinate>(y >> shift),
+      static_cast<Coordinate>(z >> shift)
     );
   }
 };
 
-template<typename CoordType, typename CoordHash>
-CoordHash dot(const Point3<CoordType>& a, const Point3<CoordType>& b) {
+template<typename CoordType, typename Key>
+Key dot(const Point3<CoordType>& a, const Point3<CoordType>& b) {
   return (a.x*b.x) + (a.y*b.y);
 }
 

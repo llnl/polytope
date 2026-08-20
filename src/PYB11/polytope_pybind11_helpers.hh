@@ -4,7 +4,7 @@
 #ifndef __Polytope_PYB11_helpers__
 #define __Polytope_PYB11_helpers__
 
-#include "HashKey.hh"
+#include "MortonKeyTraits.hh"
 #include "Point.hh"
 #include "polytope.hh"
 
@@ -145,7 +145,7 @@ pyToUInt128(const py::object& value) {
 
 template<int Dimension>
 py::object
-coordHashToPy(const typename HashKey<Dimension>::CoordHash& value) {
+keyToPy(const MortonKey<Dimension>& value) {
 #ifdef POLYTOPE_ENABLE_HIBIT2D
   return int128ToPy(value);
 #else
@@ -158,15 +158,15 @@ coordHashToPy(const typename HashKey<Dimension>::CoordHash& value) {
 }
 
 template<int Dimension>
-typename HashKey<Dimension>::CoordHash
-pyToCoordHash(const py::object& value) {
+MortonKey<Dimension>
+pyToKey(const py::object& value) {
 #ifdef POLYTOPE_ENABLE_HIBIT2D
   return pyToInt128(value);
 #else
   if constexpr (Dimension == 3) {
     return pyToInt128(value);
   } else {
-    return value.cast<typename HashKey<Dimension>::CoordHash>();
+    return value.cast<MortonKey<Dimension>>();
   }
 #endif
 }

@@ -10,8 +10,7 @@
 // Type system:
 //   - CoordType: Input coordinate type (int for 2D, int64_t for 3D)
 //   - WideInt: Larger type for intermediate calculations (int64_t for 2D, __int128 for 3D)
-//   - WideInt is automatically deduced from dimension via HashKey<Dim>::CoordHash
-//     (named CoordHash in HashKey for historical reasons, but used here for arithmetic)
+//   - WideInt is automatically deduced from dimension via MortonKeyTraits<Dim>
 //
 // Strategy:
 //   - Cast to WideInt before multiplication to prevent overflow
@@ -193,10 +192,10 @@ bool pointInPolyhedron_convex(const std::vector<std::vector<unsigned>>& facets,
 namespace bp = boost::polygon;
 using namespace boost::polygon::operators;
 
-using IntType2D = HashKey<2>::IntType;
-using Polygon = bp::polygon_data<IntType2D>;
-using PolygonWithHoles = bp::polygon_with_holes_data<IntType2D>;
-using PolygonSet = bp::polygon_set_data<IntType2D>;
+using Polygon = bp::polygon_data<QuantizedCoordinate<2>>;
+using PolygonWithHoles = bp::polygon_with_holes_data<QuantizedCoordinate<2>>;
+using PolygonSet = bp::polygon_set_data<QuantizedCoordinate<2>>;
+
 
 inline std::vector<PolygonWithHoles>
 boostUnion(const PolygonWithHoles& p1,
@@ -214,18 +213,11 @@ boostIntersect(const PolygonWithHoles& p1,
   return out;
 }
 
-inline PolygonWithHoles
-CellToBoost(const Cell<2, IntType2D>::CellType& pcell) {
-  PolygonWithHoles cell;
-  bp::set_points(cell, pcell.begin(), pcell.end());
-  return cell;
-}
-
 // Clip a Polytope cell against a boost Polygon and return a vector of polygons
 inline std::vector<PolygonWithHoles>
-boostIntersect(const Cell<2, IntType2D>::CellType& pcell,
+boostIntersect(const Cell<2, QuantizedCoordinate<2>>::CellType& pcell,
                const PolygonWithHoles& boundary) {
-  PolygonWithHoles cell = CellToBoost(pcell);
+  PolygonWithHoles cell = bp::polytopeToBoost(pcell);
   std::vector<PolygonWithHoles> out;
   bp::assign(out, cell & boundary);
   return out;
@@ -335,12 +327,12 @@ bool
 clipInfiniteRay(const Point2<CoordType>& validVertex,
                 const Point2<CoordType>& normdiffg,
                 Point2<CoordType>& result,
-                shapes::BoxSide& side) {
+                BoxSide& side) {
   auto& Q = Quantizer<2>::instance();
   CoordType x_lim = (normdiffg.x > 0) ? Q.maxBound.x : Q.minBound.x;
   CoordType y_lim = (normdiffg.y > 0) ? Q.maxBound.y : Q.minBound.y;
-  shapes::BoxSide LR = (normdiffg.x > 0) ? shapes::BoxSide::R : shapes::BoxSide::L;
-  shapes::BoxSide TB = (normdiffg.y > 0) ? shapes::BoxSide::T : shapes::BoxSide::B;
+  BoxSide LR = (normdiffg.x > 0) ? BoxSide::R : BoxSide::L;
+  BoxSide TB = (normdiffg.y > 0) ? BoxSide::T : BoxSide::B;
   Point2<CoordType> planey1(Q.minBound.x, y_lim);
   Point2<CoordType> planey2(Q.maxBound.x, y_lim);
   Point2<CoordType> intersectionx, intersectiony;
@@ -355,7 +347,7 @@ clipInfiniteRay(const Point2<CoordType>& validVertex,
   if (xint && yint) {
     if (intersectionx == intersectiony) {
       result = intersectionx;
-      side = shapes::getBoxCorner(LR, TB);
+      side = getBoxCorner(LR, TB);
       return true;
     }
     // Assume it intersects both planes, check if ||p-x|| is longer than ||p-y||

@@ -31,8 +31,6 @@ using RealPoint = Point3<RealType>;
 using PLC = PLC<3>;
 using QuantPLC3D = QuantPLC<3>;
 using Quantizer3D = Quantizer<3>;
-using IntPoint = typename Quantizer3D::IntPoint;
-using CoordHash = typename Quantizer3D::CoordHash;
 
 //------------------------------------------------------------------------------
 // Helper: Create a cube PLC with 6 facets

@@ -31,7 +31,7 @@ void test2DQuantizer() {
   using RealType = double;
   using RealPoint = Point2<RealType>;
   using Quantizer2D = Quantizer<2>;
-  using IntPoint = typename Quantizer2D::IntPoint;
+  using IntPoint = QuantizedPoint<2>;
 
   // Define a bounding box: [0, 10] x [0, 10]
   RealPoint xlo(0.0, 0.0);
@@ -77,24 +77,24 @@ void test2DQuantizer() {
   IntPoint quantizedPt = quantizer.quantize(testPtCopy);
 
   testPtCopy = testPt;
-  auto hash1 = quantizer.hash_quantize(testPtCopy);  // Hash from real point (with quantization)
-  auto hash2 = quantizer.hash(quantizedPt);          // Hash from integer point
+  auto hash1 = quantizer.quantizeAndEncode(testPtCopy);
+  auto hash2 = quantizer.encode(quantizedPt);
 
   POLY_CHECK2(hash1 == hash2,
               "Hash from real point should match hash from quantized point");
 
   // Test unhashing to IntPoint
-  IntPoint unhashed1 = quantizer.unhash(hash1);
+  IntPoint unhashed1 = quantizer.decode(hash1);
   POLY_CHECK2(unhashed1.x == quantizedPt.x && unhashed1.y == quantizedPt.y,
               "Unhashing should recover quantized coordinates");
 
-  // Test unhash_dequantize (combined operation)
-  RealPoint unhashed2 = quantizer.unhash_dequantize(hash1);
+  // Test decodeAndDequantize (combined operation)
+  RealPoint unhashed2 = quantizer.decodeAndDequantize(hash1);
   RealType dx = abs(unhashed2.x - testPt.x);
   RealType dy = abs(unhashed2.y - testPt.y);
   RealType maxError = quantizer.m_dx_o.x * 2.0;
   POLY_CHECK2(dx < maxError && dy < maxError,
-              "unhash_dequantize should recover original (within tolerance)");
+              "decodeAndDequantize should recover original (within tolerance)");
 
   cout << "  2D Quantizer tests passed!" << endl;
 }
@@ -108,7 +108,7 @@ void test3DQuantizer() {
   using RealType = double;
   using RealPoint = Point3<RealType>;
   using Quantizer3D = Quantizer<3>;
-  using IntPoint = typename Quantizer3D::IntPoint;
+  using IntPoint = QuantizedPoint<3>;
 
   // Define a bounding box: [-5, 5]^3
   RealPoint xlo(-5.0, -5.0, -5.0);
@@ -154,14 +154,14 @@ void test3DQuantizer() {
   IntPoint quantizedPt = quantizer.quantize(testPtCopy);
 
   testPtCopy = testPt;
-  auto hash1 = quantizer.hash_quantize(testPtCopy);  // Hash with quantization
-  auto hash2 = quantizer.hash(quantizedPt);          // Hash from integer point
+  auto hash1 = quantizer.quantizeAndEncode(testPtCopy);
+  auto hash2 = quantizer.encode(quantizedPt);
 
   POLY_CHECK2(hash1 == hash2,
               "Hash from real point should match hash from quantized point");
 
   // Test unhashing
-  IntPoint unhashed1 = quantizer.unhash(hash1);
+  IntPoint unhashed1 = quantizer.decode(hash1);
   POLY_CHECK2(unhashed1.x == quantizedPt.x && unhashed1.y == quantizedPt.y && unhashed1.z == quantizedPt.z,
               "Unhashing should recover quantized coordinates");
 
@@ -232,14 +232,14 @@ void testHashUniqueness() {
 
   // Generate random points and verify they hash uniquely
   const unsigned nPoints = 1000;
-  vector<typename Quantizer2D::CoordHash> hashes;
+  vector<MortonKey<2>> hashes;
   hashes.reserve(nPoints);
 
   cout << "  Testing " << nPoints << " random points..." << endl;
   for (unsigned i = 0; i < nPoints; ++i) {
     RealPoint p(random01() * 100.0, random01() * 100.0);
     RealPoint pCopy = p;
-    auto hash = quantizer.hash_quantize(pCopy);
+    auto hash = quantizer.quantizeAndEncode(pCopy);
 
     // Check that this hash hasn't been seen before
     // (Note: quantization may cause nearby points to collide, which is acceptable)
@@ -247,7 +247,7 @@ void testHashUniqueness() {
   }
 
   // Count unique hashes
-  set<typename Quantizer2D::CoordHash> uniqueHashes(hashes.begin(), hashes.end());
+  set<MortonKey<2>> uniqueHashes(hashes.begin(), hashes.end());
   double uniqueRatio = double(uniqueHashes.size()) / nPoints;
 
   cout << "  Unique hashes: " << uniqueHashes.size() << " / " << nPoints
@@ -270,7 +270,7 @@ void testGridAlignment() {
   using RealType = double;
   using RealPoint = Point2<RealType>;
   using Quantizer2D = Quantizer<2>;
-  using IntPoint = typename Quantizer2D::IntPoint;
+  using IntPoint = QuantizedPoint<2>;
 
   RealPoint xlo(0.0, 0.0);
   RealPoint xhi(10.0, 10.0);
@@ -325,11 +325,11 @@ void testHashConsistency() {
 
   cout << "  Hashing same point 100 times..." << endl;
   RealPoint testCopy = testPoint;
-  auto hash1 = quantizer.hash_quantize(testCopy);
+  auto hash1 = quantizer.quantizeAndEncode(testCopy);
 
   for (unsigned i = 0; i < 100; ++i) {
     testCopy = testPoint;
-    auto hash2 = quantizer.hash_quantize(testCopy);
+    auto hash2 = quantizer.quantizeAndEncode(testCopy);
     POLY_CHECK2(hash1 == hash2,
                 "Hash inconsistency detected on iteration " << i);
   }
@@ -365,10 +365,10 @@ void stressTest() {
     // Quantize and hash
     RealPoint pCopy = p;
     pCopy = p;
-    auto hash = quantizer.hash_quantize(pCopy);
+    auto hash = quantizer.quantizeAndEncode(pCopy);
 
     // Unhash and verify using combined operation
-    RealPoint recovered = quantizer.unhash_dequantize(hash);
+    RealPoint recovered = quantizer.decodeAndDequantize(hash);
 
     RealType dx = abs(recovered.x - x);
     RealType dy = abs(recovered.y - y);

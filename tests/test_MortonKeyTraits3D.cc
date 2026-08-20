@@ -13,7 +13,7 @@
 #include <iomanip>
 
 #include "polytope.hh"
-#include "HashKey.hh"
+#include "MortonKeyTraits.hh"
 #include "Point.hh"
 
 #include "Communicator.hh" 
@@ -30,17 +30,17 @@ double random01() {
 //------------------------------------------------------------------------------
 // Type alias for HashKey3D
 //------------------------------------------------------------------------------
-using HashKey3D = HashKey<3>;
-using CoordHash = typename HashKey3D::CoordHash;
-using IntType = typename HashKey3D::IntType;
-using IntPoint = typename HashKey3D::IntPoint;
+using MortonKeyTraits3D = MortonKeyTraits<3>;
+using Key = MortonKey<3>;
+using IntType = QuantizedCoordinate<3>;
+using IntPoint = QuantizedPoint<3>;
 
 //------------------------------------------------------------------------------
-// Test that hash/unhash are inverses
+// Test that encode/decode are inverses
 //------------------------------------------------------------------------------
 void testRoundTrip(const IntPoint& p, const string& label) {
-  auto key = HashKey3D::hash(p);
-  auto p2 = HashKey3D::unhash(key);
+  auto key = MortonKeyTraits3D::encode(p);
+  auto p2 = MortonKeyTraits3D::decode(key);
 
   POLY_CHECK2(p.x == p2.x && p.y == p2.y && p.z == p2.z,
               label << ": Round-trip failed for (" << p.x << ", " << p.y << ", " << p.z
@@ -51,8 +51,8 @@ void testRoundTrip(const IntPoint& p, const string& label) {
 // Test that identical points produce identical hashes
 //------------------------------------------------------------------------------
 void testIdenticalPoints(const IntPoint& p) {
-  auto key1 = HashKey3D::hash(p);
-  auto key2 = HashKey3D::hash(p);
+  auto key1 = MortonKeyTraits3D::encode(p);
+  auto key2 = MortonKeyTraits3D::encode(p);
 
   POLY_CHECK2(key1 == key2,
               "Identical points should hash identically: (" << p.x << ", " << p.y
@@ -65,8 +65,8 @@ void testIdenticalPoints(const IntPoint& p) {
 void testDistinctPoints(const IntPoint& p1, const IntPoint& p2) {
   if (p1.x == p2.x && p1.y == p2.y && p1.z == p2.z) return;
 
-  auto key1 = HashKey3D::hash(p1);
-  auto key2 = HashKey3D::hash(p2);
+  auto key1 = MortonKeyTraits3D::encode(p1);
+  auto key2 = MortonKeyTraits3D::encode(p2);
 
   POLY_CHECK2(key1 != key2,
               "Distinct points should hash differently: (" << p1.x << ", " << p1.y
@@ -77,10 +77,10 @@ void testDistinctPoints(const IntPoint& p1, const IntPoint& p2) {
 // Test uniqueness - N distinct points produce N distinct hashes
 //------------------------------------------------------------------------------
 void testUniqueness(const vector<IntPoint>& points) {
-  map<CoordHash, vector<IntType>> collisions;
+  map<Key, vector<IntType>> collisions;
 
   for (unsigned i = 0; i < points.size(); ++i) {
-    auto key = HashKey3D::hash(points[i]);
+    auto key = MortonKeyTraits3D::encode(points[i]);
     collisions[key].push_back(i);
   }
 
@@ -126,9 +126,9 @@ void testSpatialLocality() {
   }
 
   // Hash and sort by Morton code
-  vector<pair<CoordHash, unsigned>> hashed;
+  vector<pair<Key, unsigned>> hashed;
   for (unsigned i = 0; i < points.size(); ++i) {
-    auto key = HashKey3D::hash(points[i]);
+    auto key = MortonKeyTraits3D::encode(points[i]);
     hashed.push_back(make_pair(key, i));
   }
 
@@ -180,7 +180,7 @@ void testEdgeCases() {
   testRoundTrip(IntPoint(zero, zero, zero), "Origin");
 
   // Max values for coordinate type (42 bits per dimension)
-  const auto maxVal = HashKey3D::coordMax();
+  const auto maxVal = MortonKeyTraits3D::maxCoordinate();
   testRoundTrip(IntPoint(maxVal, maxVal, maxVal), "Max coordinates");
   testRoundTrip(IntPoint(maxVal, zero, zero), "Max X");
   testRoundTrip(IntPoint(zero, maxVal, zero), "Max Y");
@@ -190,7 +190,7 @@ void testEdgeCases() {
   testRoundTrip(IntPoint(zero, maxVal, maxVal), "Max Y,Z");
 
   // Powers of 2
-  for (auto bit = 0; bit < std::min(20, HashKey3D::num1DBits); ++bit) {
+  for (auto bit = 0; bit < std::min(20, MortonKeyTraits3D::bitsPerCoordinate); ++bit) {
     auto val = IntType(1) << bit;
     testRoundTrip(IntPoint(val, zero, zero), "Power of 2 in X");
     testRoundTrip(IntPoint(zero, val, zero), "Power of 2 in Y");
@@ -236,8 +236,8 @@ void test128BitStructure() {
   p.y = IntType(1) << 41;
   p.z = IntType(1) << 41;
 
-  auto key = HashKey3D::hash(p);
-  auto p2 = HashKey3D::unhash(key);
+  auto key = MortonKeyTraits3D::encode(p);
+  auto p2 = MortonKeyTraits3D::decode(key);
 
   POLY_CHECK2(p.x == p2.x && p.y == p2.y && p.z == p2.z,
               "Failed to represent 42-bit values: (" << p.x << ", " << p.y
@@ -281,7 +281,7 @@ int main(int argc, char** argv) {
     cout << "Testing random points (42-bit non-negative range)..." << endl;
     const unsigned n = 800;
     vector<IntPoint> points;
-    const auto range = HashKey3D::coordMax();
+    const auto range = MortonKeyTraits3D::maxCoordinate();
     for (unsigned i = 0; i < n; ++i) {
       auto x = IntType(random01() * range);
       auto y = IntType(random01() * range);
@@ -322,14 +322,14 @@ int main(int argc, char** argv) {
     const unsigned nOps = 5000;
     cout << "Performing " << nOps << " hash/unhash operations..." << endl;
 
-    const auto range = HashKey3D::coordMax();
+    const auto range = MortonKeyTraits3D::maxCoordinate();
     for (unsigned i = 0; i < nOps; ++i) {
       auto x = IntType(random01() * range);
       auto y = IntType(random01() * range);
       auto z = IntType(random01() * range);
 
-      auto key = HashKey3D::hash(IntPoint(x, y, z));
-      auto recovered = HashKey3D::unhash(key);
+      auto key = MortonKeyTraits3D::encode(IntPoint(x, y, z));
+      auto recovered = MortonKeyTraits3D::decode(key);
 
       POLY_CHECK(recovered.x == x && recovered.y == y && recovered.z == z);
     }
@@ -342,9 +342,9 @@ int main(int argc, char** argv) {
   {
     cout << "\n=== Testing operators ===" << endl;
 
-    auto key1 = HashKey3D::hash(IntPoint(42, 73, 101));
-    auto key2 = HashKey3D::hash(IntPoint(42, 73, 101));
-    auto key3 = HashKey3D::hash(IntPoint(101, 73, 42));
+    auto key1 = MortonKeyTraits3D::encode(IntPoint(42, 73, 101));
+    auto key2 = MortonKeyTraits3D::encode(IntPoint(42, 73, 101));
+    auto key3 = MortonKeyTraits3D::encode(IntPoint(101, 73, 42));
 
     // Equality
     POLY_CHECK(key1 == key2);
@@ -365,13 +365,13 @@ int main(int argc, char** argv) {
 
     // Test that both lo and hi bits are used
     uint64_t lo_or = 0, hi_or = 0;
-    const auto range = HashKey3D::coordMax();
+    const auto range = MortonKeyTraits3D::maxCoordinate();
     for (unsigned i = 0; i < 1000; ++i) {
       auto x = IntType(random01() * range);
       auto y = IntType(random01() * range);
       auto z = IntType(random01() * range);
 
-      auto key = HashKey3D::hash(IntPoint(x, y, z));
+      auto key = MortonKeyTraits3D::encode(IntPoint(x, y, z));
       lo_or |= (uint64_t)key;
       hi_or |= (uint64_t)(key >> 64);
     }

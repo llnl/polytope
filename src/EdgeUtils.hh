@@ -5,7 +5,7 @@
 // Useful for face merging
 
 #include "Point.hh"
-#include "HashKey.hh"
+#include "MortonKeyTraits.hh"
 
 namespace polytope {
 namespace edge {

@@ -11,11 +11,11 @@ def test_quantizer():
     assert q2.inBounds(point)
     assert q2.inQBounds(qpoint)
 
-    h = q2.hash(qpoint)
-    assert isinstance(h, int)
-    unhash = q2.unhash(h)
-    assert (unhash.x, unhash.y) == (qpoint.x, qpoint.y)
-    rpoint = q2.unhashDequantize(h)
+    ckey = q2.encode(qpoint)
+    assert isinstance(ckey, int)
+    uckey = q2.decode(ckey)
+    assert (uckey.x, uckey.y) == (qpoint.x, qpoint.y)
+    rpoint = q2.decodeAndDequantize(h)
     assert isinstance(rpoint.x, float)
 
 

@@ -49,27 +49,27 @@ allGatherBuffers(const std::vector<char>& localBuffer) {
 
 // Gather a vector of vectors of the coordinate hashes.
 // It is ordered result[rank][point index]
-template<int Dimension, typename CoordHash>
-std::vector<std::vector<CoordHash>>
-allGatherGenerators(const std::vector<CoordHash>& localGenerators) {
+template<int Dimension, typename Key>
+std::vector<std::vector<Key>>
+allGatherGenerators(const std::vector<Key>& localGenerators) {
   auto size = Communicator::getNProcs();
   std::vector<char> localBuffer;
   serialize(localGenerators, localBuffer);
   auto buffers = allGatherBuffers(localBuffer);
-  std::vector<std::vector<CoordHash>> result(buffers.size());
+  std::vector<std::vector<Key>> result(buffers.size());
   // Loop over source ranks so we can track which points came from where
   for (int source = 0; source < size; ++source) {
     auto itr = buffers[source].cbegin();
-    std::vector<CoordHash> recvGens;
-    deserialize<std::vector<CoordHash>>(recvGens, itr, buffers[source].end());
+    std::vector<Key> recvGens;
+    deserialize<std::vector<Key>>(recvGens, itr, buffers[source].end());
     result[source] = std::move(recvGens);
   }
   return result;
 }
 
-template<int Dimension, typename CoordHash>
-std::vector<std::vector<CoordHash>>
-exchangeNeighborGenerators(const std::vector<CoordHash>& localGenerators,
+template<int Dimension, typename Key>
+std::vector<std::vector<Key>>
+exchangeNeighborGenerators(const std::vector<Key>& localGenerators,
                            const std::set<int>& neighbors) {
   auto& comm = Communicator::communicator();
   auto rank = Communicator::getRank();
@@ -108,12 +108,12 @@ exchangeNeighborGenerators(const std::vector<CoordHash>& localGenerators,
     MPI_Waitall(static_cast<int>(requests.size()), requests.data(), MPI_STATUSES_IGNORE);
   }
 
-  std::vector<std::vector<CoordHash>> result(size);
+  std::vector<std::vector<Key>> result(size);
   for (int source = 0; source < size; ++source) {
     auto itr = recvBuffers[source].cbegin();
-    std::vector<CoordHash> received;
+    std::vector<Key> received;
     if (recvBuffers[source].size() > 0) {
-      deserialize<std::vector<CoordHash>>(received, itr, recvBuffers[source].end());
+      deserialize<std::vector<Key>>(received, itr, recvBuffers[source].end());
     }
     result[source] = std::move(received);
   }

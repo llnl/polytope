@@ -3,17 +3,17 @@
 
 #include "polytope.hh"
 #include "Point.hh"
-#include "HashKey.hh"
+#include "MortonKeyTraits.hh"
 #include "EdgeUtils.hh"
 #include "Quantizer.hh"
 
 namespace polytope {
 
 template<int Dimension>
-using WideInt = typename HashKey<Dimension>::Wide;
+using WideInt = typename MortonKeyTraits<Dimension>::Wide;
 
 template<int Dimension>
-using BigInt = typename HashKey<Dimension>::Big;
+using BigInt = typename MortonKeyTraits<Dimension>::Big;
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // General helper routines
@@ -115,7 +115,7 @@ Point2<CoordType> pointDirection(const Point2<double>& p1,
     return Point<2, CoordType>::Zero();
   }
   auto norm = diff/len;
-  const double SCALE = std::pow(2.0, HashKey<2>::num1DBits - 2);
+  const double SCALE = std::pow(2.0, MortonKeyTraits<2>::bitsPerCoordinate - 2);
   return (norm*SCALE).template type_cast<CoordType>();
 }
 
@@ -314,7 +314,7 @@ bool SAT(const std::vector<Point3<CoordType>>& pointsA,
          const std::vector<Point3<CoordType>>& pointsB,
          const Point3<CoordType>& axis) {
   using Wide = WideInt<3>;
-  Wide minA = HashKey<3>::hashMax();
+  Wide minA = MortonKeyTraits<3>::maxKey();
   Wide minB = minA, maxA = -minA, maxB = maxA;
   for (const auto& p : pointsA) {
     auto ztest = qdot<3>(p, axis);

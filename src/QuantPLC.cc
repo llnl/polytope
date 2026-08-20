@@ -28,9 +28,9 @@ QuantPLC<Dimension>::QuantPLC(const PLC<Dimension>& plc,
 
 template<int Dimension>
 QuantPLC<Dimension>::QuantPLC(const PLC<Dimension>& plc,
-                              const std::vector<IntPoint>& ipoints) :
+                              const std::vector<QuantizedPoint<Dimension>>& quantizedPoints) :
   PLC<Dimension>(plc) {
-  init(ipoints);
+  init(quantizedPoints);
 }
 
 template<int Dimension>
@@ -66,7 +66,7 @@ QuantPLC<Dimension>::init(const std::vector<RealType>& allpoints) {
     ip.index = i++;
     m_loBounds = m_loBounds.minElements(ip);
     m_hiBounds = m_hiBounds.maxElements(ip);
-    hashes.push_back(Q.hash(ip));
+    hashes.push_back(Q.encode(ip));
     points.push_back(ip);
   }
   if (isValid()) {
@@ -80,29 +80,29 @@ QuantPLC<Dimension>::init(const std::vector<RealType>& allpoints) {
 template<int Dimension>
 void
 QuantPLC<Dimension>::init(const PLC<Dimension>& plc,
-                          const std::vector<IntPoint>& ipoints) {
+                          const std::vector<QuantizedPoint<Dimension>>& quantizedPoints) {
   facets = plc.facets;
   holes = plc.holes;
-  init(ipoints);
+  init(quantizedPoints);
 }
 
 template<int Dimension>
 void
-QuantPLC<Dimension>::init(const std::vector<IntPoint>& ipoints) {
+QuantPLC<Dimension>::init(const std::vector<QuantizedPoint<Dimension>>& quantizedPoints) {
   const auto& Q = Quantizer<Dimension>::instance();
   m_loBounds = Q.maxCoord;
   m_hiBounds = -m_loBounds;
 
-  auto N = ipoints.size();
+  auto N = quantizedPoints.size();
   hashes.reserve(N);
   points.reserve(N);
   size_t i = 0;
-  for (const auto& ip : ipoints) {
+  for (const auto& ip : quantizedPoints) {
     auto nip(ip);
     nip.index = i++;
     m_loBounds = m_loBounds.minElements(nip);
     m_hiBounds = m_hiBounds.maxElements(nip);
-    hashes.push_back(Q.hash(nip));
+    hashes.push_back(Q.encode(nip));
     points.push_back(nip);
   }
   if (isValid()) {
@@ -120,8 +120,8 @@ template<int Dimension>
 void
 QuantPLC<Dimension>::removeDegeneracies() {
   const auto N = hashes.size();
-  std::map<CoordHash, unsigned> seen;
-  std::vector<CoordHash> new_hashes;
+  std::map<MortonKey<Dimension>, unsigned> seen;
+  std::vector<MortonKey<Dimension>> new_hashes;
   std::vector<int> oldToNew(N, -1);
   new_hashes.reserve(N);
   unsigned newIndx = 0;
@@ -142,7 +142,7 @@ QuantPLC<Dimension>::removeDegeneracies() {
   points.clear();
   points.reserve(hashes.size());
   for (auto& h : hashes) {
-    points.push_back(Q.unhash(h));
+    points.push_back(Q.decode(h));
   }
   for (auto& f : facets) {
     for (auto& idx : f) {
@@ -171,8 +171,8 @@ QuantPLC<Dimension>::reduce() {
 
   unsigned newIdx = 0;
   std::map<unsigned, unsigned> old2new;
-  std::map<CoordHash, unsigned> hashToIndex;
-  std::vector<CoordHash> newHashes;
+  std::map<MortonKey<Dimension>, unsigned> hashToIndex;
+  std::vector<MortonKey<Dimension>> newHashes;
   for(int oldIdx : indices) {
     auto hash = hashes[oldIdx];
     if (hashToIndex.find(hash) != hashToIndex.end()) {
@@ -190,7 +190,7 @@ QuantPLC<Dimension>::reduce() {
   points.clear();
   points.reserve(N);
   for (auto h : hashes) {
-    points.push_back(Q.unhash(h));
+    points.push_back(Q.decode(h));
   }
 
   // Remap facet indices
@@ -235,7 +235,7 @@ QuantPLC<Dimension>::makeConvex2D() {
   m_convex = true;
 
   // Unhash all points to integer coordinates and pair with original indices
-  std::vector<std::pair<IntPoint, unsigned>> sortedPoints;
+  std::vector<std::pair<QuantizedPoint<Dimension>, unsigned>> sortedPoints;
   sortedPoints.reserve(n);
   for (unsigned i = 0; i < n; ++i) {
     sortedPoints.push_back(std::make_pair(points[i], i));
@@ -243,8 +243,8 @@ QuantPLC<Dimension>::makeConvex2D() {
 
   // Sort by x-coordinate, then y-coordinate (using Point's operator<)
   std::sort(sortedPoints.begin(), sortedPoints.end(),
-            [](const std::pair<IntPoint, unsigned>& a,
-               const std::pair<IntPoint, unsigned>& b) {
+            [](const std::pair<QuantizedPoint<Dimension>, unsigned>& a,
+               const std::pair<QuantizedPoint<Dimension>, unsigned>& b) {
               return a.first < b.first;
             });
 
@@ -326,7 +326,7 @@ QuantPLC<Dimension>::makeConvex3D() {
   std::vector<double> q_points;
   q_points.reserve(n*3);
   for (auto i = 0u; i < n; ++i) {
-    IntPoint ps = points[i];
+    QuantizedPoint<Dimension> ps = points[i];
     RealPoint rpoint = ps.template type_cast<double>();
     q_points.push_back(rpoint.x);
     q_points.push_back(rpoint.y);
@@ -410,20 +410,20 @@ QuantPLC<Dimension>::within(const RealPoint& point) const {
   if (!Q.inBounds(point)) {
     return false;
   }
-  IntPoint ip = Q.quantize(point);
+  QuantizedPoint<Dimension> ip = Q.quantize(point);
   return within(ip);
 }
 
 template<int Dimension>
 bool
-QuantPLC<Dimension>::within(const IntPoint& point) const {
+QuantPLC<Dimension>::within(const QuantizedPoint<Dimension>& point) const {
   POLY_ASSERT2(facets.size() > 0,
                "Must have facets before checking within");
   // First checks the bounds
   if (point < m_loBounds || point > m_hiBounds) {
     return false;
   }
-  CoordHash phash = Hasher::hash(point);
+  MortonKey<Dimension> phash = MortonKeyTraits<Dimension>::encode(point);
   // Check if point is coincident with any vertices
   for (const auto& h : hashes) {
     if (h == phash) {
@@ -440,10 +440,10 @@ QuantPLC<Dimension>::within(const IntPoint& point) const {
 template<int Dimension>
 template<int D>
 std::enable_if_t<D == 2, bool>
-QuantPLC<Dimension>::within2D(const IntPoint& point) const {
+QuantPLC<Dimension>::within2D(const QuantizedPoint<Dimension>& point) const {
   // Build the outer boundary polygon from ordered facets (edges)
   // Since facets are now ordered, simply collect first vertex of each edge
-  std::vector<IntPoint> polygon;
+  std::vector<QuantizedPoint<Dimension>> polygon;
   polygon.reserve(facets.size());
   for (const auto& f : facets) {
     polygon.push_back(points[f[0]]);
@@ -457,7 +457,7 @@ QuantPLC<Dimension>::within2D(const IntPoint& point) const {
 
   // Check if point is in any holes (if so, it's outside)
   for (const auto& hole : holes) {
-    std::vector<IntPoint> holePoly;
+    std::vector<QuantizedPoint<Dimension>> holePoly;
     holePoly.reserve(hole.size());
     for (const auto& f : hole) {
       holePoly.push_back(points[f[0]]);
@@ -475,7 +475,7 @@ QuantPLC<Dimension>::within2D(const IntPoint& point) const {
 template<int Dimension>
 template<int D>
 std::enable_if_t<D == 3, bool>
-QuantPLC<Dimension>::within3D(const IntPoint& point) const {
+QuantPLC<Dimension>::within3D(const QuantizedPoint<Dimension>& /*point*/) const {
   // Implement this
   return false;
 }

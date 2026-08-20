@@ -49,8 +49,6 @@ public:
   using Base = Tessellator<Dimension, RealType>;
   using QuantizedTessellation = QuantTessellation<Dimension>;
   using TessellationType = Tessellation<Dimension, RealType>;
-  using IntType = typename HashKey<Dimension>::IntType;
-  using CoordHash = typename HashKey<Dimension>::CoordHash;
 
   DistributedTessellator(Base& serialTessellator);
   virtual ~DistributedTessellator() = default;

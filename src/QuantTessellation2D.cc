@@ -147,9 +147,9 @@ void
 QuantTessellation<2>::cullExternalPoints(const QuantPLC<2>& QPLC) {
   const auto& Q = Quantizer<2>::instance();
   auto N = points.size();
-  std::vector<IntPoint> newPoints;
+  std::vector<QuantizedPoint<2>> newPoints;
   newPoints.reserve(N);
-  std::vector<CoordHash> newHashes;
+  std::vector<MortonKey<2>> newHashes;
   newHashes.reserve(N);
   unsigned indx = 0;
   for (auto i = 0u; i < N; ++i) {
@@ -157,7 +157,7 @@ QuantTessellation<2>::cullExternalPoints(const QuantPLC<2>& QPLC) {
     if (!QPLC.within(point)) continue;
     point.index = indx++;
     newPoints.push_back(point);
-    newHashes.push_back(Q.hash(point));
+    newHashes.push_back(Q.encode(point));
   }
   points = std::move(newPoints);
   hashes = std::move(newHashes);
@@ -172,12 +172,12 @@ using namespace boost::polygon::operators;
 // Intersect the current cell with a boundary and extend the orphans vector if necessary.
 // Return the polygon that contains the generator point
 PolygonWithHoles
-cellPolygonIntersect(const QuantTessellation<2>::IntCell& currentCell,
-                     const QuantTessellation<2>::IntPoint& genPointP,
+cellPolygonIntersect(const QuantTessellation<2>::QuantizedCell& currentCell,
+                     const QuantizedPoint<2>& genPointP,
                      const PolygonWithHoles boundary,
                      std::vector<PolygonWithHoles>& orphans) {
-  bp::point_data<QuantTessellation<2>::IntType> genPoint =
-    bp::construct<QuantTessellation<2>::IntPoint>(genPointP.x, genPointP.y);
+  bp::point_data<QuantizedCoordinate<2>> genPoint =
+    bp::construct<QuantizedPoint<2>>(genPointP.x, genPointP.y);
   std::vector<PolygonWithHoles> cellSet = boostIntersect(currentCell, boundary);
   unsigned fragIndex = 0;
   auto NFrag = cellSet.size();
@@ -227,10 +227,10 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
   // Keep track of any orphans
   std::vector<PolygonWithHoles> orphans;
   std::vector<PolygonWithHoles> cellPolygons;
-  std::vector<Point2<IntType>> localGenPoints;
+  std::vector<Point2<QuantizedCoordinate<2>>> localGenPoints;
   std::vector<int> polyIndex;
   // Map between hashed vertices to associated polygons in cellPolygons
-  std::unordered_map<CoordHash, std::set<unsigned>, HashType> vertexMap;
+  std::unordered_map<MortonKey<2>, std::set<unsigned>, MortonKeyHasher<2>> vertexMap;
 
   // Loop over cells and intersect them with the boundary
   for (auto i = 0u; i < cells.size(); ++i) {
@@ -239,7 +239,7 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
     const auto curP = cellPolygons.size();
     // Hash and map the vertices for this polygon
     for (const auto& v : clippedPolygon) {
-      auto vertexHash = Q.hash(BoostToPolytope(v));
+      auto vertexHash = Q.encode(BoostToPolytope(v));
       vertexMap[vertexHash].insert(curP);
     }
     polyIndex.push_back(i);
@@ -250,14 +250,14 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
   // Loop over each orphan, keep track of any newly created orphans
   std::vector<PolygonWithHoles> remainingOrphans;
   for (auto& orphan : orphans) {
-    std::vector<Point2<IntType>> genPoints;
+    std::vector<Point2<QuantizedCoordinate<2>>> genPoints;
     std::set<unsigned> genIndex;
     // For converting between this smaller subset of generators to the larger one
     std::unordered_map<unsigned, unsigned> smallToLarge;
     PolygonWithHoles orphanBound = orphan;
     // Grab any neighboring cells by looping over the vertices
     for (const auto& v : orphan) {
-      auto vertexHash = Q.hash(BoostToPolytope(v));
+      auto vertexHash = Q.encode(BoostToPolytope(v));
       for (const auto& pi : vertexMap[vertexHash]) {
         auto [it, added] = genIndex.insert(pi);
         if (added && validUnion(cellPolygons[pi], orphanBound)) {
@@ -286,17 +286,17 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
     }
   }
   std::vector<std::vector<int>> newCells;
-  std::vector<IntPoint> newNodes;
+  std::vector<QuantizedPoint<2>> newNodes;
   std::vector<std::vector<unsigned>> newFaces;
 
   // Storage for generator points corresponding to surviving cells
-  std::vector<IntPoint> newPoints;
-  std::vector<CoordHash> newHashes;
+  std::vector<QuantizedPoint<2>> newPoints;
+  std::vector<MortonKey<2>> newHashes;
   std::vector<int> newCellRank;
   bool updateCellRank = cellRank.size() == 0 ? false : true;
 
-  // Map from IntPoint to index in newNodes (for vertex deduplication)
-  std::map<IntPoint, int> node2id;
+  // Map from QuantizedPoint to index in newNodes (for vertex deduplication)
+  std::map<QuantizedPoint<2>, int> node2id;
 
   // Map from canonical edge to face index (for oriented edge tracking)
   edge::EdgeToFaceMap edgeToFace;
@@ -315,7 +315,7 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
                        }),
         remainingOrphans.end());
     }
-    std::vector<IntPoint> keptVertices = bp::BoostToPolytope(cellPoly);
+    std::vector<QuantizedPoint<2>> keptVertices = bp::BoostToPolytope(cellPoly);
     removeCollinear(keptVertices);
     auto nv = keptVertices.size();
     std::vector<int> localCellIndex;
@@ -366,13 +366,12 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
 }
 #else
 // Must enable Boost to use clipping methods
-
 template<>
 void
-QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
-                                       Tessellator<2, double>& tessellator) {
-  POLY_CONTRACT_VAR(QPLC);
-  POLY_CONTRACT_VAR(tessellator);
+QuantTessellation<2>::clipTessellation(const QuantPLC<2>& /*QPLC*/,
+                                       Tessellator<2, double>& /*tessellator*/) {
+  std::cerr << "Must compile with POLYTOPE_ENABLE_BOOST=ON and POLYTOPE_ENABLE_HIBIT2D=OFF to use clipping\n";
+  Communicator::abort();
 }
 #endif // POLYTOPE_ENABLE_BOOST
 
@@ -418,14 +417,14 @@ QuantTessellation<2>::fillTessellation(TessellationType& mesh) {
 }
 
 //------------------------------------------------------------------------------
-// Return the visible CoordHashes
+// Return the visible Keyes
 // TODO: Put this in header file since it should be Dimension agnostic
 //------------------------------------------------------------------------------
 template<>
-std::vector<HashKey<2>::CoordHash>
+std::vector<MortonKey<2>>
 QuantTessellation<2>::visibleGenerators() {
   auto N = points.size();
-  std::vector<CoordHash> result;
+  std::vector<MortonKey<2>> result;
   if (!convexHull.m_convex) {
     makeConvexHull();
   }
@@ -435,7 +434,7 @@ QuantTessellation<2>::visibleGenerators() {
     auto plc_cell = convexHull.getCell();
     for (auto i = 0u; i < N; ++i) {
       auto qcell = getCell(i);
-      if (convexBoundaryIntersect<IntType>(qcell, plc_cell)) {
+      if (convexBoundaryIntersect<QuantizedCoordinate<2>>(qcell, plc_cell)) {
         result.push_back(hashes[i]);
       }
     }

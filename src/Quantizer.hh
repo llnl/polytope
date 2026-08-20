@@ -7,7 +7,7 @@
 #define __Polytope_Quantizer__
 
 #include "Point.hh"
-#include "HashKey.hh"
+#include "MortonKeyTraits.hh"
 #include <mutex>
 
 namespace polytope {
@@ -16,10 +16,7 @@ template<int Dimension>
 class Quantizer {
 public:
   using RealType = double;
-  using Hasher = HashKey<Dimension>;
-  using CoordHash = typename Hasher::CoordHash;
-  using IntType = typename Hasher::IntType;
-  using IntPoint = Point<Dimension, IntType>;
+  using Traits = MortonKeyTraits<Dimension>;
   using RealPoint = Point<Dimension, RealType>;
 
   // Delete copy constructor and assignment operator
@@ -37,15 +34,15 @@ public:
   // Original coordinate locations
   RealPoint m_xlo, m_xhi;
   // Percent to pad the bounding box for good measure
-  RealType m_pad = 0.1;
+  RealType m_pad = 0.04;
   // Maximum possible coordinate in a single direction
   // Not necessarily the max for this instance
-  constexpr static IntType m_coordMax = HashKey<Dimension>::coordMax();
+  constexpr static QuantizedCoordinate<Dimension> m_maxCoordinate = Traits::maxCoordinate();
   // Current maximum coordinate in a single direction
-  IntPoint maxCoord = IntPoint(m_coordMax);
-  IntPoint minCoord = IntPoint();
-  IntPoint maxBound = maxCoord - 1000;
-  IntPoint minBound = minCoord + 1000;
+  QuantizedPoint<Dimension> maxCoord = QuantizedPoint<Dimension>(m_maxCoordinate);
+  QuantizedPoint<Dimension> minCoord = QuantizedPoint<Dimension>();
+  QuantizedPoint<Dimension> maxBound = maxCoord - 1000;
+  QuantizedPoint<Dimension> minBound = minCoord + 1000;
   RealPoint rmaxBound = maxBound.template type_cast<RealType>();
   RealPoint rminBound = minBound.template type_cast<RealType>();
   bool m_init = false;
@@ -58,34 +55,34 @@ public:
     _init_impl(m_xlo, m_xhi, -1, m_pad);
   }
 
-  IntPoint quantize(const RealPoint& x) const {
+  QuantizedPoint<Dimension> quantize(const RealPoint& x) const {
     POLY_ASSERT2(m_init, "Must initialize quantizer before using it");
-    return x.template convertXi<IntType>(m_xlo_o, m_dx_o);
+    return x.template convertXi<QuantizedCoordinate<Dimension>>(m_xlo_o, m_dx_o);
   }
 
-  RealPoint dequantize(const IntPoint& X) const {
+  RealPoint dequantize(const QuantizedPoint<Dimension>& X) const {
     POLY_CHECK2(m_init, "Must initialize quantizer before using it");
     return X.convertx(m_xlo_o, m_dx_o);
   }
 
-  CoordHash hash(const IntPoint& X) const {
+  MortonKey<Dimension> encode(const QuantizedPoint<Dimension>& X) const {
     POLY_CHECK2(m_init, "Must initialize quantizer before using it");
-    return Hasher::hash(X);
+    return Traits::encode(X);
   }
 
-  CoordHash hash_quantize(const RealPoint& x) const {
+  MortonKey<Dimension> quantizeAndEncode(const RealPoint& x) const {
     POLY_CHECK2(m_init, "Must initialize quantizer before using it");
-    return Hasher::hash(quantize(x));
+    return Traits::encode(quantize(x));
   }
 
-  IntPoint unhash(const CoordHash& h) const {
+  QuantizedPoint<Dimension> decode(const MortonKey<Dimension>& h) const {
     POLY_CHECK2(m_init, "Must initialize quantizer before using it");
-    return Hasher::unhash(h);
+    return Traits::decode(h);
   }
 
-  RealPoint unhash_dequantize(const CoordHash& h) const {
+  RealPoint decodeAndDequantize(const MortonKey<Dimension>& h) const {
     POLY_CHECK2(m_init, "Must initialize quantizer before using it");
-    return dequantize(unhash(h));
+    return dequantize(decode(h));
   }
 
   RealPoint degeneracy() const {
@@ -119,7 +116,7 @@ public:
     return false;
   }
 
-  bool inQBounds(const IntPoint& point) const {
+  bool inQBounds(const QuantizedPoint<Dimension>& point) const {
     if (point.allLess(maxBound) && point.allGreater(minBound)) {
       return true;
     }
@@ -168,11 +165,11 @@ private:
     m_xlo_o = xlo - 0.5*(xhi - xlo)*m_pad;
     if (degeneracy > 0.) {
       m_dx_o = degeneracy*m_lx_o;
-      maxCoord = (m_lx_o/m_dx_o).template type_cast<IntType>();
+      maxCoord = (m_lx_o/m_dx_o).template type_cast<QuantizedCoordinate<Dimension>>();
       maxBound = maxCoord - 1;
       rmaxBound = maxBound.template type_cast<RealType>();
     } else {
-      m_dx_o = m_lx_o/static_cast<RealType>(m_coordMax);
+      m_dx_o = m_lx_o/static_cast<RealType>(m_maxCoordinate);
     }
     m_init = true;
   }

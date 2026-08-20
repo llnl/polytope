@@ -69,9 +69,9 @@ void test(Tessellator<2,double>& tessellator, const std::string& outname, bool h
   }
   Point2<double> lo(xmin, ymin);
   Point2<double> hi(xmax, ymax);
-  std::vector<double> plcPoints = flattenCoords(shapes::createSquarePoints(lo, hi));
+  std::vector<double> plcPoints = flattenCoords(createSquarePoints(lo, hi));
   PLC<2> plc;
-  plc.facets = shapes::createSquareFaces();
+  plc.facets = createSquareFaces();
   auto& Q = Quantizer<2>::instance();
   Q.init(plcPoints);
   Tessellation<2, double> mesh;

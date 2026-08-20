@@ -25,17 +25,13 @@ class Tessellator;
 
 // TODO: Make this inherit from Tessellation class
 template<int Dimension>
-class QuantTessellation : public Tessellation<Dimension, typename HashKey<Dimension>::IntType> {
+class QuantTessellation : public Tessellation<Dimension, QuantizedCoordinate<Dimension>> {
 public:
   using RealType = double;
-  using CoordHash = typename HashKey<Dimension>::CoordHash;
-  using IntType = typename HashKey<Dimension>::IntType;
-  using HashType = typename HashKey<Dimension>::HashType;
-  using IntPoint = Point<Dimension, IntType>;
   using RealPoint = Point<Dimension, RealType>;
   using QuantizerType = Quantizer<Dimension>;
   using TessellationType = Tessellation<Dimension, RealType>;
-  using IntCell = typename Cell<Dimension, IntType>::CellType;
+  using QuantizedCell = typename Cell<Dimension, QuantizedCoordinate<Dimension>>::CellType;
   using RealCell = typename Cell<Dimension, RealType>::CellType;
 
   QuantTessellation() = default;
@@ -51,11 +47,11 @@ public:
   }
 
   // Construct a smaller instance, useful during clipping
-  QuantTessellation(const std::vector<IntPoint>& qgenpoints) {
+  QuantTessellation(const std::vector<QuantizedPoint<Dimension>>& qgenpoints) {
     init(qgenpoints);
   }
 
-  QuantTessellation(const std::vector<std::vector<CoordHash>>& rankHashes) {
+  QuantTessellation(const std::vector<std::vector<MortonKey<Dimension>>>& rankHashes) {
     init(rankHashes);
   }
 
@@ -76,13 +72,13 @@ public:
       ip.index = i++;
       m_loBounds = m_loBounds.minElements(ip);
       m_hiBounds = m_hiBounds.maxElements(ip);
-      hashes.push_back(Q.hash(ip));
+      hashes.push_back(Q.encode(ip));
       points.push_back(ip);
     }
     sortByHash();
   }
 
-  void init(const std::vector<IntPoint>& qgenpoints) {
+  void init(const std::vector<QuantizedPoint<Dimension>>& qgenpoints) {
     points = qgenpoints;
     const auto& Q = QuantizerType::instance();
     m_loBounds = Q.maxCoord;
@@ -94,12 +90,12 @@ public:
       ip.index = i++;
       m_loBounds = m_loBounds.minElements(ip);
       m_hiBounds = m_hiBounds.maxElements(ip);
-      hashes.push_back(Q.hash(ip));
+      hashes.push_back(Q.encode(ip));
     }
   }
 
   // Initialize or extend the generator points
-  void init(const std::vector<std::vector<CoordHash>>& rankHashes) {
+  void init(const std::vector<std::vector<MortonKey<Dimension>>>& rankHashes) {
     faces.clear();
     nodes.clear();
     cells.clear();
@@ -121,7 +117,7 @@ public:
     unsigned i = Ntotal;
     for (auto source = 0u; source < nranks; ++source) {
       for (auto& ch : rankHashes[source]) {
-        auto ip = Q.unhash(ch);
+        auto ip = Q.decode(ch);
         ip.index = i++;
         hashes.push_back(ch);
         points.push_back(ip);
@@ -132,7 +128,7 @@ public:
   }
 
   void clear() {
-    Tessellation<Dimension, IntType>::clear();
+    Tessellation<Dimension, QuantizedCoordinate<Dimension>>::clear();
     hashes.clear();
   }
 
@@ -162,10 +158,10 @@ public:
   }
 
   // Returns quantized points
-  const std::vector<IntPoint> getIntPoints() const { return points; }
+  const std::vector<QuantizedPoint<Dimension>> getQuantizedPoints() const { return points; }
 
-  virtual IntCell getCell(const unsigned cellIndex) const override {
-    return Cell<Dimension, IntType>::extractCell(nodes, cells[cellIndex], faces);
+  virtual QuantizedCell getCell(const unsigned cellIndex) const override {
+    return Cell<Dimension, QuantizedCoordinate<Dimension>>::extractCell(nodes, cells[cellIndex], faces);
   }
 
   // Reorder points and cells based on sorted hashes for deterministic output
@@ -186,8 +182,8 @@ public:
     }
 
     // Reorder points and hashes
-    std::vector<IntPoint> newPoints(numPoints);
-    std::vector<CoordHash> newHashes(numPoints);
+    std::vector<QuantizedPoint<Dimension>> newPoints(numPoints);
+    std::vector<MortonKey<Dimension>> newHashes(numPoints);
     for (unsigned i = 0; i < numPoints; ++i) {
       newPoints[i] = points[sortedIndices[i]];
       newPoints[i].index = i;
@@ -253,10 +249,10 @@ public:
     }
 
     // Step 4: Create compacted node and face arrays
-    std::vector<IntPoint> newNodes;
+    std::vector<QuantizedPoint<Dimension>> newNodes;
     newNodes.reserve(usedNodes.size());
     for (auto oldIdx : usedNodes) {
-      IntPoint node = nodes[oldIdx];
+      QuantizedPoint<Dimension> node = nodes[oldIdx];
       node.index = oldToNewNode[oldIdx];
       newNodes.push_back(node);
     }
@@ -306,7 +302,7 @@ public:
   //------------------------------------------------------------------------------
 
   // Extract the visible generators
-  std::vector<CoordHash> visibleGenerators();
+  std::vector<MortonKey<Dimension>> visibleGenerators();
 
   // Determine which ranks generators are neighbors
   std::set<int> neighboringRanks() {
@@ -328,8 +324,8 @@ public:
   void filterToLocalGenerators() {
     const auto N = points.size();
     auto rank = Communicator::getRank();
-    std::vector<IntPoint> newPoints;
-    std::vector<CoordHash> newHashes;
+    std::vector<QuantizedPoint<Dimension>> newPoints;
+    std::vector<MortonKey<Dimension>> newHashes;
     std::vector<std::vector<int>> newCells;
     newPoints.reserve(N);
     newHashes.reserve(N);
@@ -377,7 +373,7 @@ public:
                           const unsigned index) {
     auto qcell = getCell(index);
     auto plc_cell = QPLC.getCell();
-    return convexBoundaryIntersect<IntType>(qcell, plc_cell);
+    return convexBoundaryIntersect<QuantizedCoordinate<Dimension>>(qcell, plc_cell);
   }
 
   //------------------------------------------------------------------------------
@@ -408,16 +404,16 @@ public:
   // Member data
   //------------------------------------------------------------------------------
   bool m_isEscapePod = false;
-  std::vector<CoordHash> hashes;
+  std::vector<MortonKey<Dimension>> hashes;
   // Local lower and upper bounding box coordinates
-  IntPoint m_loBounds;
-  IntPoint m_hiBounds;
-  using Tessellation<Dimension, IntType>::points; // Generator points
-  using Tessellation<Dimension, IntType>::nodes; // Nodes that make up the Voronoi
-  using Tessellation<Dimension, IntType>::faces; // Faces made up of indices into nodes
-  using Tessellation<Dimension, IntType>::cells; // Cells made up of indices into faces
-  using Tessellation<Dimension, IntType>::faceCells;
-  using Tessellation<Dimension, IntType>::cellRank;
+  QuantizedPoint<Dimension> m_loBounds;
+  QuantizedPoint<Dimension> m_hiBounds;
+  using Tessellation<Dimension, QuantizedCoordinate<Dimension>>::points; // Generator points
+  using Tessellation<Dimension, QuantizedCoordinate<Dimension>>::nodes; // Nodes that make up the Voronoi
+  using Tessellation<Dimension, QuantizedCoordinate<Dimension>>::faces; // Faces made up of indices into nodes
+  using Tessellation<Dimension, QuantizedCoordinate<Dimension>>::cells; // Cells made up of indices into faces
+  using Tessellation<Dimension, QuantizedCoordinate<Dimension>>::faceCells;
+  using Tessellation<Dimension, QuantizedCoordinate<Dimension>>::cellRank;
   QuantPLC<Dimension> convexHull;
 };
 

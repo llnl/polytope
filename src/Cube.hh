@@ -6,7 +6,6 @@
 //------------------------------------------------------------------------------
 
 #include "Point.hh"
-#include "HashKey.hh"
 
 namespace polytope {
 

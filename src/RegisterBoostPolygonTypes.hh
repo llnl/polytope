@@ -13,8 +13,8 @@
 // Include Boost multiprecision types
 #include <boost/multiprecision/cpp_int.hpp>
 
-#include "Point.hh"
-#include "HashKey.hh"
+#include "MortonKeyTraits.hh"
+#include "Cell.hh"
 
 //------------------------------------------------------------------------
 // Map Polytope's point class to Boost.Polygon
@@ -51,26 +51,27 @@ struct voronoi_ctype_traits<std::int64_t> {
 } // namespace detail
 #endif
 
-using IntType = typename polytope::HashKey<2>::IntType;
-using IntPoint = polytope::Point2<IntType>;
+using QuantizedCoordinate2D = polytope::QuantizedCoordinate<2>;
+using QuantizedPoint2D = polytope::QuantizedPoint<2>;
+using QuantizedCell = polytope::Cell<2, QuantizedCoordinate2D>::CellType;
 
 template <>
-struct geometry_concept<IntPoint> { typedef point_concept type; };
+struct geometry_concept<QuantizedPoint2D> { typedef point_concept type; };
 
 template <>
-struct point_traits<IntPoint> {
-  typedef IntPoint point_type;
-  typedef IntType coordinate_type;
+struct point_traits<QuantizedPoint2D> {
+  typedef QuantizedPoint2D point_type;
+  typedef QuantizedCoordinate2D coordinate_type;
 
-  static inline coordinate_type get(const IntPoint& point, orientation_2d orient) {
+  static inline coordinate_type get(const QuantizedPoint2D& point, orientation_2d orient) {
     return (orient == HORIZONTAL) ? point.x : point.y;
   }
 };
 
 template <>
-struct point_mutable_traits<IntPoint> {
-  typedef IntPoint point_type;
-  typedef IntType coordinate_type;
+struct point_mutable_traits<QuantizedPoint2D> {
+  typedef QuantizedPoint2D point_type;
+  typedef QuantizedCoordinate2D coordinate_type;
 
   static inline void set(point_type& point, orientation_2d orient, coordinate_type value) {
     if (orient == HORIZONTAL)
@@ -83,13 +84,13 @@ struct point_mutable_traits<IntPoint> {
   }
 };
 
-inline IntPoint BoostToPolytope(const point_data<IntType>& point, const int index = 0) {
-  return IntPoint(point.x(), point.y(), index);
+inline QuantizedPoint2D BoostToPolytope(const point_data<QuantizedCoordinate2D>& point, const int index = 0) {
+  return QuantizedPoint2D(point.x(), point.y(), index);
 }
 
-inline std::vector<IntPoint> BoostToPolytope(const polygon_data<IntType>& polygon) {
+inline std::vector<QuantizedPoint2D> BoostToPolytope(const polygon_data<QuantizedCoordinate2D>& polygon) {
   const auto N = polygon.size();
-  std::vector<IntPoint> points;
+  std::vector<QuantizedPoint2D> points;
   points.reserve(N);
   unsigned i = 0;
   for (const auto& p : polygon) {
@@ -101,9 +102,9 @@ inline std::vector<IntPoint> BoostToPolytope(const polygon_data<IntType>& polygo
   return points;
 }
 
-inline std::vector<IntPoint> BoostToPolytope(const polygon_with_holes_data<IntType>& polygon) {
+inline std::vector<QuantizedPoint2D> BoostToPolytope(const polygon_with_holes_data<QuantizedCoordinate2D>& polygon) {
   const auto N = polygon.size();
-  std::vector<IntPoint> points;
+  std::vector<QuantizedPoint2D> points;
   points.reserve(N);
   unsigned i = 0;
   for (const auto& p : polygon) {
@@ -115,26 +116,33 @@ inline std::vector<IntPoint> BoostToPolytope(const polygon_with_holes_data<IntTy
   return points;
 }
 
-inline std::vector<IntPoint> outerPoints(const polygon_with_holes_data<IntType>& polygon) {
-  std::vector<IntPoint> out;
+inline std::vector<QuantizedPoint2D> outerPoints(const polygon_with_holes_data<QuantizedCoordinate2D>& polygon) {
+  std::vector<QuantizedPoint2D> out;
   for(auto it = begin_points(polygon); it != end_points(polygon); ++it) {
     out.push_back(BoostToPolytope(*it));
   }
   return out;
 }
 
-inline std::vector<std::vector<IntPoint>> innerPoints(const polygon_with_holes_data<IntType>& polygon) {
-  std::vector<std::vector<IntPoint>> out;
+inline std::vector<std::vector<QuantizedPoint2D>> innerPoints(const polygon_with_holes_data<QuantizedCoordinate2D>& polygon) {
+  std::vector<std::vector<QuantizedPoint2D>> out;
   auto hole_it = begin_holes(polygon);
   auto hole_end = end_holes(polygon);
   for(; hole_it != hole_end; ++hole_it) {
     const auto& hole = *hole_it;
-    out.push_back(std::vector<IntPoint>());
+    out.push_back(std::vector<QuantizedPoint2D>());
     for (auto& point : hole) {
       out.back().push_back(BoostToPolytope(point));
     }
   }
   return out;
+}
+
+inline polygon_with_holes_data<QuantizedCoordinate2D>
+polytopeToBoost(const QuantizedCell& cell) {
+  polygon_with_holes_data<QuantizedCoordinate2D> polygon;
+  set_points(polygon, cell.begin(), cell.end());
+  return polygon;
 }
 
 } //end boost namespace

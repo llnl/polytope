@@ -52,7 +52,7 @@ rebuildTessellationPointMetadata(TessellationType& tessellation) {
     point.index = i;
     tessellation.m_loBounds = tessellation.m_loBounds.minElements(point);
     tessellation.m_hiBounds = tessellation.m_hiBounds.maxElements(point);
-    tessellation.hashes.push_back(Q.hash(point));
+    tessellation.hashes.push_back(Q.encode(point));
   }
 }
 
@@ -70,7 +70,7 @@ rebuildQPLCPointMetadata(QPLCType& qplc) {
     point.index = i;
     qplc.m_loBounds = qplc.m_loBounds.minElements(point);
     qplc.m_hiBounds = qplc.m_hiBounds.maxElements(point);
-    qplc.hashes.push_back(Q.hash(point));
+    qplc.hashes.push_back(Q.encode(point));
   }
 }
 

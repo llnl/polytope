@@ -6,7 +6,7 @@
 // spatial queries. Combines functionality from:
 //   - PLC: Stores only points used in facets with index remapping
 //   - convexHull_2d/3d: Can compute convex hulls using quantized coordinates
-//   - HashKey/Quantizer: Uses Morton curve hashing for deduplication
+//   - MortonKeyTraits/Quantizer: Uses Morton keys for deduplication
 //
 // Functionality provided:
 //   1. Automatic deduplication via hash-based comparison (no fuzzy tolerance)
@@ -20,7 +20,7 @@
 #include <type_traits>
 
 #include "PLC.hh"
-#include "HashKey.hh"
+#include "MortonKeyTraits.hh"
 #include "Quantizer.hh"
 #include "Intersections.hh"
 #include "Cell.hh"
@@ -34,15 +34,11 @@ template<int Dimension>
 class QuantPLC : public PLC<Dimension> {
 public:
   using RealType = double;
-  using CoordHash = typename HashKey<Dimension>::CoordHash;
-  using IntType = typename HashKey<Dimension>::IntType;
-  using IntPoint = Point<Dimension, IntType>;
   using RealPoint = Point<Dimension, RealType>;
-  using Wide = typename HashKey<Dimension>::CoordHash;
+  using Wide = MortonKey<Dimension>;
   using WidePoint = Point<Dimension, Wide>;
   using Quant = Quantizer<Dimension>;
-  using Hasher = HashKey<Dimension>;
-  using IntCell = typename Cell<Dimension, IntType>::CellType;
+  using QuantizedCell = typename Cell<Dimension, QuantizedCoordinate<Dimension>>::CellType;
 
   QuantPLC() = default;
   virtual ~QuantPLC() = default;
@@ -53,7 +49,7 @@ public:
   explicit QuantPLC(const std::vector<RealType>& allpoints);
 
   QuantPLC(const PLC<Dimension>& plc,
-           const std::vector<IntPoint>& ipoints);
+           const std::vector<QuantizedPoint<Dimension>>& quantizedPoints);
 
   void init(const PLC<Dimension>& plc,
             const std::vector<RealType>& allpoints);
@@ -61,9 +57,9 @@ public:
   void init(const std::vector<RealType>& allpoints);
 
   void init(const PLC<Dimension>& plc,
-            const std::vector<IntPoint>& ipoints);
+            const std::vector<QuantizedPoint<Dimension>>& quantizedPoints);
 
-  void init(const std::vector<IntPoint>& ipoints);
+  void init(const std::vector<QuantizedPoint<Dimension>>& quantizedPoints);
 
   // Remove any degenerate points
   void removeDegeneracies();
@@ -76,7 +72,7 @@ public:
   // Order facets to form proper boundaries
   void orderFacets();
 
-  bool within(const IntPoint& point) const;
+  bool within(const QuantizedPoint<Dimension>& point) const;
 
   bool within(const RealPoint& point) const;
 
@@ -101,15 +97,15 @@ public:
     return flattenCoords(realPoints);
   }
 
-  IntCell getCell() const {
-    return Cell<Dimension, IntType>::extractCell(points, facets);
+  QuantizedCell getCell() const {
+    return Cell<Dimension, QuantizedCoordinate<Dimension>>::extractCell(points, facets);
   }
 
-  std::vector<IntCell> getHolePoints() const {
-    std::vector<IntCell> holePoints;
+  std::vector<QuantizedCell> getHolePoints() const {
+    std::vector<QuantizedCell> holePoints;
     holePoints.reserve(holes.size());
     for (const auto& hole : holes) {
-      holePoints.push_back(Cell<Dimension, IntType>::extractCell(points, hole));
+      holePoints.push_back(Cell<Dimension, QuantizedCoordinate<Dimension>>::extractCell(points, hole));
     }
     return holePoints;
   }
@@ -126,7 +122,7 @@ public:
     }
     POLY_ASSERT2((a.m_convex && b.m_convex), "Must call makeConvex() on both inputs");
     if constexpr (Dimension == 2) {
-      return convexIntersect<IntType>(a.getCell(), b.getCell());
+      return convexIntersect<QuantizedCoordinate<Dimension>>(a.getCell(), b.getCell());
     } else if constexpr (Dimension == 3) {
       // Implement this
       return false;
@@ -136,8 +132,8 @@ public:
   //------------------------------------------------------------------------
   //! Functions used for testing
   //------------------------------------------------------------------------
-  std::vector<CoordHash> sortedHashes() const {
-    std::vector<CoordHash> sorted(hashes);
+  std::vector<MortonKey<Dimension>> sortedHashes() const {
+    std::vector<MortonKey<Dimension>> sorted(hashes);
     std::sort(sorted.begin(), sorted.end());
     return sorted;
   }
@@ -147,10 +143,10 @@ public:
     return lhs.sortedHashes() == rhs.sortedHashes();
   }
 
-  std::vector<std::set<CoordHash>> facetHashSet() const {
-    std::vector<std::set<CoordHash>> facetSet;
+  std::vector<std::set<MortonKey<Dimension>>> facetHashSet() const {
+    std::vector<std::set<MortonKey<Dimension>>> facetSet;
     for (const auto& f : facets) {
-      facetSet.push_back(std::set<CoordHash>());
+      facetSet.push_back(std::set<MortonKey<Dimension>>());
       for (const auto& idx : f) {
         facetSet.back().insert(hashes[idx]);
       }
@@ -183,11 +179,11 @@ public:
   //------------------------------------------------------------------------------
   using PLC<Dimension>::facets; // Facets as vertex index lists
   using PLC<Dimension>::holes; // Holes (each hole is a list of facets)
-  std::vector<CoordHash> hashes;
-  std::vector<IntPoint> points;
+  std::vector<MortonKey<Dimension>> hashes;
+  std::vector<QuantizedPoint<Dimension>> points;
 
   // Precomputed geometric properties (3D only)
-  // std::vector<IntPoint> m_normals;           // Normalized normals for each facet
+  // std::vector<QuantizedPoint<Dimension>> m_normals; // Normalized normals for each facet
   // std::vector<WidePoint> m_faceCentroidSums; // Unnormalized centroid sums
   // std::vector<Wide> m_faceCentroidCounts;    // Vertex counts for each facet
   // WidePoint m_polyCentroidSum;               // Unnormalized polyhedron centroid
@@ -196,8 +192,8 @@ public:
   bool m_reduced = false;
   bool m_convex = false;
   // Local lower and upper bounding box coordinates
-  IntPoint m_loBounds;
-  IntPoint m_hiBounds;
+  QuantizedPoint<Dimension> m_loBounds;
+  QuantizedPoint<Dimension> m_hiBounds;
 
 private:
   template<int D = Dimension>
@@ -214,11 +210,11 @@ private:
 
   template<int D = Dimension>
   std::enable_if_t<D == 2, bool>
-  within2D(const IntPoint& point) const;
+  within2D(const QuantizedPoint<Dimension>& point) const;
 
   template<int D = Dimension>
   std::enable_if_t<D == 3, bool>
-  within3D(const IntPoint& point) const;
+  within3D(const QuantizedPoint<Dimension>& point) const;
 };
 
 // Serialization

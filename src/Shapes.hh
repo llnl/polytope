@@ -2,15 +2,14 @@
 #define __Polytope_Shapes__
 
 //------------------------------------------------------------------------------
-// Simple shape routines for 2D and 3D.
+// Simple 2D box routines.
 //------------------------------------------------------------------------------
 
 #include "Point.hh"
-#include "HashKey.hh"
+#include "MortonKeyTraits.hh"
 #include "EdgeUtils.hh"
 
 namespace polytope {
-namespace shapes {
 
 enum BoxSide {
     L, // Left
@@ -55,7 +54,7 @@ inline bool isCorner(const BoxSide& side) {
 template<typename CoordType>
 inline std::vector<Point2<CoordType>>
 createSquarePoints(const Point2<CoordType>& min,
-                const Point2<CoordType>& max) {
+                   const Point2<CoordType>& max) {
   std::vector<Point2<CoordType>> out;
   out.reserve(4);
 
@@ -169,7 +168,6 @@ inline std::vector<edge::Edge> closeClippedEdges(const std::vector<edge::Edge>& 
     }
   }
   return out;
-}
 }
 }
 #endif
