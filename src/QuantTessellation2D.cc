@@ -13,7 +13,7 @@
 #include <set>
 #include <algorithm>
 #ifdef POLYTOPE_ENABLE_BOOST
-#include "RegisterBoostPolygonTypes.hh"
+#include "BoostPolygonIntersections.hh"
 #include "boost/polygon/polygon_set_data.hpp"
 #endif
 

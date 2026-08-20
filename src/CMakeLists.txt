@@ -62,6 +62,7 @@ endif()
 if (POLYTOPE_ENABLE_BOOST)
   list(APPEND polytope_headers
     RegisterBoostPolygonTypes.hh
+    BoostPolygonIntersections.hh
     BoostTessellator.hh)
   list(APPEND polytope_sources
     BoostTessellator.cc)

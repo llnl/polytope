@@ -26,10 +26,6 @@
 #include "Quantizer.hh"
 #include "Shapes.hh"
 
-#ifdef POLYTOPE_ENABLE_BOOST
-#include "RegisterBoostPolygonTypes.hh"
-#endif
-
 namespace polytope {
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -183,59 +179,6 @@ bool pointInPolyhedron_convex(const std::vector<std::vector<unsigned>>& facets,
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // General (potentially non-convex) intersection methods
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-#ifdef POLYTOPE_ENABLE_BOOST
-//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// Boost Polygon methods
-//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-namespace bp = boost::polygon;
-using namespace boost::polygon::operators;
-
-using Polygon = bp::polygon_data<QuantizedCoordinate<2>>;
-using PolygonWithHoles = bp::polygon_with_holes_data<QuantizedCoordinate<2>>;
-using PolygonSet = bp::polygon_set_data<QuantizedCoordinate<2>>;
-
-
-inline std::vector<PolygonWithHoles>
-boostUnion(const PolygonWithHoles& p1,
-           const PolygonWithHoles& p2) {
-  std::vector<PolygonWithHoles> intersect;
-  bp::assign(intersect, p1 | p2);
-  return intersect;
-}
-
-inline std::vector<PolygonWithHoles>
-boostIntersect(const PolygonWithHoles& p1,
-               const PolygonWithHoles& p2) {
-  std::vector<PolygonWithHoles> out;
-  bp::assign(out, p1 & p2);
-  return out;
-}
-
-// Clip a Polytope cell against a boost Polygon and return a vector of polygons
-inline std::vector<PolygonWithHoles>
-boostIntersect(const Cell<2, QuantizedCoordinate<2>>::CellType& pcell,
-               const PolygonWithHoles& boundary) {
-  PolygonWithHoles cell = bp::polytopeToBoost(pcell);
-  std::vector<PolygonWithHoles> out;
-  bp::assign(out, cell & boundary);
-  return out;
-}
-
-// Check if two polygons can be properly intersected.
-// If they can, overwrite outPoly with the intersection and return true
-inline bool
-validUnion(const PolygonWithHoles& inPoly,
-           PolygonWithHoles& outPoly) {
-  auto trialUnion = boostUnion(outPoly, inPoly);
-  if (trialUnion.size() == 1) {
-    outPoly = trialUnion[0];
-    return true;
-  }
-  return false;
-}
-#endif // POLYTOPE_ENABLE_BOOST
 
 //------------------------------------------------------------------------------
 // Remove collinear points and combine edges where necessary

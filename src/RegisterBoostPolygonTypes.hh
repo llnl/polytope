@@ -1,5 +1,6 @@
 //------------------------------------------------------------------------------
 // This file is used to register our types with the Boost.Polygon library.
+// It also provides routines for converting between Boost and Polytope types.
 //------------------------------------------------------------------------------
 #ifndef __polytope_RegisterBoostPolygonType__
 #define __polytope_RegisterBoostPolygonType__
