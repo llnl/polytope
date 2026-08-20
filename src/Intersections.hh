@@ -76,7 +76,7 @@ bool convexIntersect(const typename Cell<2, CoordType>::CellType& pointsA,
                      const typename Cell<2, CoordType>::CellType& pointsB) {
   if (pointsA.empty() || pointsB.empty()) return false;
 
-  using Wide = WideInt<CoordType>;
+  using Wide = WideInt<2>;
   auto separated = [&pointsA, &pointsB](const typename Cell<2, CoordType>::CellType& axesFrom) {
     const auto N = axesFrom.size();
     for (auto i = 0u; i < N; ++i) {
@@ -388,7 +388,7 @@ clipInfiniteRay(const Point2<CoordType>& validVertex,
 template<typename CoordType>
 bool pointInPolygon(const Point2<CoordType>& point,
                     const std::vector<Point2<CoordType>>& vertices) {
-  using Wide = WideInt<CoordType>;
+  using Wide = WideInt<2>;
   const auto N = vertices.size();
   bool inside = false;
 
@@ -399,7 +399,7 @@ bool pointInPolygon(const Point2<CoordType>& point,
   for (size_t i = 0; i < N; ++i) {
     // Get edge vertices (cast to Wide for all operations)
     auto vi = vertices[i].template type_cast<Wide>();
-    auto vj = vertices[(i + 1) % N].template type_cast<Wide>();
+    auto vj = vertices[(i+1)%N].template type_cast<Wide>();
 
     // Ensure vi.y <= vj.y
     if (vi.y > vj.y) std::swap(vi, vj);
@@ -508,7 +508,8 @@ bool intersection2D(const Point2<CoordType>& a,
                     Point2<CoordType>& result,
                     bool isRay = false) {
   // Integer implementation with overflow protection
-  using Wide = WideInt<CoordType>;
+  using Wide = WideInt<2>;
+  using Big = BigInt<2>;
 
   const Point2<CoordType> s = b - a;
   const Point2<CoordType> ca = a - c;
@@ -527,23 +528,10 @@ bool intersection2D(const Point2<CoordType>& a,
     no_intersection = no_intersection || t_num > denom;
   }
   if (no_intersection) return false;
-#ifdef POLYTOPE_ENABLE_HIBIT2D
-  using Big = boost::multiprecision::int256_t;
-  auto bn = n.template type_cast<Big>();
+  auto bn = n.template type_cast<Big>()*static_cast<Big>(t_num);
   auto cn = c.template type_cast<Big>();
-  auto bd = Big(denom);
-  for (int d = 0; d < 2; ++d) {
-    const Big num = cn[d]*bd + bn[d]*Big(t_num);
-    result[d] = static_cast<CoordType>((num >= 0) ? (num + bd/2)/bd :
-                                       -(((-num) + bd/2)/bd));
-  }
-#else
-  CoordType q = t_num/denom;
-  auto r = static_cast<double>(t_num%denom);
-  auto frac = (r*n.template type_cast<double>()/
-               static_cast<double>(denom)).template type_cast<CoordType>();
-  result = c + q*n + frac;
-#endif
+  auto bd = static_cast<Big>(denom);
+  result = ((bd*cn + bn)/bd).template type_cast<CoordType>();
   return true;
 }
 
@@ -600,8 +588,8 @@ int segmentPlaneIntersection3D(const Point3<CoordType>& segStart,
                                const Point3<CoordType>& segEnd,
                                const Point3<CoordType>& v0,
                                const Point3<CoordType>& plane_normal,
-                               Point3<WideInt<CoordType>>& result,
-                               WideInt<CoordType>& denom) {
+                               Point3<WideInt<3>>& result,
+                               WideInt<3>& denom) {
   // Implement this
   return 0;
 }

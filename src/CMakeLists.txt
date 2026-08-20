@@ -8,6 +8,7 @@ configure_file(
 )
 
 set(polytope_headers
+  ac_wrapper.hh
   Cell.hh
   Clipping2D.hh
   Communicator.hh

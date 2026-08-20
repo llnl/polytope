@@ -4,3 +4,6 @@
 [submodule "cmake/blt"]
 	path = cmake/blt
 	url = https://github.com/llnl/blt
+[submodule "extern/ac_types"]
+	path = extern/ac_types
+	url = https://github.com/hlslibs/ac_types

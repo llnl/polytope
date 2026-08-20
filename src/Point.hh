@@ -7,6 +7,7 @@
 
 #include "Serializer.hh"
 #include "polytope_internal.hh"
+#include "ac_wrapper.hh"
 
 #include <iostream>
 #include <iterator>
@@ -133,7 +134,6 @@ struct Point<2, CoordType> {
   template<typename RealType>
   Point<2, RealType> convertx(const Point<2, RealType>& blo,
                               const Point<2, RealType>& dx) const {
-    //POLY_ASSERT(typeid(CoordType) != typeid(RealType));
     RealType xOut, yOut;
     // Dequantize: IntType -> RealType
     xOut = dx.x*(static_cast<RealType>(this->x) - 0.5) + blo.x;
@@ -143,7 +143,8 @@ struct Point<2, CoordType> {
 
   template<typename RealType>
   Point<2, RealType> type_cast() const {
-    return Point<2, RealType>(static_cast<RealType>(x), static_cast<RealType>(y));
+    return Point<2, RealType>(ac_converter<CoordType, RealType>(x),
+                              ac_converter<CoordType, RealType>(y));
   }
 
   // Return the min and max elements in each direction
@@ -309,7 +310,6 @@ struct Point<3, CoordType> {
   Point<3, IntType> convertXi(const Point<3, RealType>& blo,
                               const Point<3, RealType>& dx) const {
     // Quantize: RealType -> IntType
-    POLY_ASSERT(typeid(CoordType) == typeid(RealType));
     IntType xOut, yOut, zOut;
     xOut = static_cast<IntType>((this->x - blo.x)/dx.x + 0.5);
     yOut = static_cast<IntType>((this->y - blo.y)/dx.y + 0.5);
@@ -320,7 +320,6 @@ struct Point<3, CoordType> {
   template<typename RealType>
   Point<3, RealType> convertx(const Point<3, RealType>& blo,
                               const Point<3, RealType>& dx) const {
-    POLY_ASSERT(typeid(CoordType) != typeid(RealType));
     RealType xOut, yOut, zOut;
     // Dequantize: IntType -> RealType
     xOut = dx.x*(static_cast<RealType>(this->x) - 0.5) + blo.x;
@@ -331,9 +330,9 @@ struct Point<3, CoordType> {
 
   template<typename RealType>
   Point<3, RealType> type_cast() const {
-    return Point<3, RealType>(static_cast<RealType>(x),
-                              static_cast<RealType>(y),
-                              static_cast<RealType>(z));                            
+    return Point<3, RealType>(ac_converter<CoordType, RealType>(x),
+                              ac_converter<CoordType, RealType>(y),
+                              ac_converter<CoordType, RealType>(z));
   }
 
   // Return the min and max elements in each direction

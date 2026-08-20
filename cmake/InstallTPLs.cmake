@@ -50,6 +50,18 @@ if (POLYTOPE_ENABLE_PYTHON)
   list(APPEND IMPORTED_LIBS pybind11_headers)
 endif()
 
+# AC Types
+#-----------------------------------------------------------------------------------
+set(ac_DIR "extern/ac_types")
+add_library(polytope_ac_types INTERFACE)
+target_include_directories(polytope_ac_types INTERFACE
+  $<BUILD_INTERFACE:${Polytope_SOURCE_DIR}/extern/ac_types/include>
+  $<INSTALL_INTERFACE:include/ac_types>
+)
+list(APPEND POLYTOPE_TPL_DEPENDS polytope_ac_types)
+install(DIRECTORY extern/ac_types/include DESTINATION include/ac_types)
+install(TARGETS polytope_ac_types EXPORT polytope-targets DESTINATION lib)
+
 # BOOST
 #-----------------------------------------------------------------------------------
 if(POLYTOPE_ENABLE_BOOST AND NOT BOOST_FOUND)
@@ -67,6 +79,7 @@ if(POLYTOPE_ENABLE_BOOST AND NOT BOOST_FOUND)
     add_library(polytope_boost_headers INTERFACE)
     target_include_directories(polytope_boost_headers SYSTEM INTERFACE ${Boost_INCLUDE_DIRS})
     list(APPEND POLYTOPE_TPL_DEPENDS polytope_boost_headers)
+    list(APPEND IMPORTED_LIBS polytope_boost_headers)
   endif()
 endif()
 

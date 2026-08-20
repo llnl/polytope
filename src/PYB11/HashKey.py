@@ -9,7 +9,7 @@ class HashKey:
   using IntPoint = typename HashKeyType::IntPoint;
 """
     numDims = PYB11property(constexpr=True, static=True, doc="Number of dimensions")
-    num1DBits = PYB11property(constexpr=True, static=True, doc="Number of bits in a single direction")
+    bits1D = PYB11property(constexpr=True, static=True, doc="Number of bits in a single direction")
 
     def pyinit(self):
         "Default constructor"

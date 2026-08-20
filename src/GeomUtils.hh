@@ -9,28 +9,11 @@
 
 namespace polytope {
 
-//------------------------------------------------------------------------------
-// Type alias for wide integer type used in overflow-safe arithmetic
-// Based on CoordType size to ensure safety when 2D methods are called from 3D
-// - 32-bit or smaller coords → int64_t (safe for products)
-// - 64-bit coords → __int128 (safe for products)
-// - Floating-point types → same type (no widening needed)
-//------------------------------------------------------------------------------
-template<typename CoordType>
-struct WideIntHelper {
-  using type = typename std::conditional<
-    std::is_floating_point<CoordType>::value,
-    CoordType,  // For float/double, return same type
-    typename std::conditional<
-      (sizeof(CoordType) <= 4),
-      int64_t,
-      __int128
-    >::type
-  >::type;
-};
+template<int Dimension>
+using WideInt = typename HashKey<Dimension>::Wide;
 
-template<typename CoordType>
-using WideInt = typename WideIntHelper<CoordType>::type;
+template<int Dimension>
+using BigInt = typename HashKey<Dimension>::Big;
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // General helper routines
@@ -40,15 +23,33 @@ using WideInt = typename WideIntHelper<CoordType>::type;
 // Quantized dot product with overflow protection
 // Casts to WideInt before multiplication to prevent overflow
 //------------------------------------------------------------------------------
-template<int Dim, typename CoordType>
-WideInt<CoordType> qdot(const Point<Dim, CoordType>& a,
-                        const Point<Dim, CoordType>& b) {
-  using Wide = WideInt<CoordType>;
+template<int Dimension, typename CoordType>
+WideInt<Dimension> qdot(const Point<Dimension, CoordType>& a,
+                        const Point<Dimension, CoordType>& b) {
+  using Wide = WideInt<Dimension>;
   const auto ah = a.template type_cast<Wide>();
   const auto bh = b.template type_cast<Wide>();
 
   Wide sum = 0;
-  for (int i = 0; i < Dim; ++i) {
+  for (int i = 0; i < Dimension; ++i) {
+    sum += ah[i] * bh[i];
+  }
+  return sum;
+}
+
+//------------------------------------------------------------------------------
+// Larger quantized dot product with overflow protection
+// Casts to BigInt before multiplication to prevent overflow
+//------------------------------------------------------------------------------
+template<int Dimension, typename CoordType, typename Wide>
+BigInt<Dimension> qqdot(const Point<Dimension, Wide>& a,
+                        const Point<Dimension, CoordType>& b) {
+  using Big = BigInt<Dimension>;
+  const auto ah = a.template type_cast<Big>();
+  const auto bh = b.template type_cast<Big>();
+
+  Big sum = 0;
+  for (int i = 0; i < Dimension; ++i) {
     sum += ah[i] * bh[i];
   }
   return sum;
@@ -59,9 +60,9 @@ WideInt<CoordType> qdot(const Point<Dim, CoordType>& a,
 // Computes: a.x * b.y - a.y * b.x
 //------------------------------------------------------------------------------
 template<typename CoordType>
-WideInt<CoordType> qcross(const Point2<CoordType>& a,
-                          const Point2<CoordType>& b) {
-  using Wide = WideInt<CoordType>;
+WideInt<2> qcross(const Point2<CoordType>& a,
+                  const Point2<CoordType>& b) {
+  using Wide = WideInt<2>;
   const auto ah = a.template type_cast<Wide>();
   const auto bh = b.template type_cast<Wide>();
   return (ah.x * bh.y) - (ah.y * bh.x);
@@ -72,9 +73,9 @@ WideInt<CoordType> qcross(const Point2<CoordType>& a,
 // Computes: a × b
 //------------------------------------------------------------------------------
 template<typename CoordType>
-Point3<WideInt<CoordType>> qcross(const Point3<CoordType>& a,
-                                  const Point3<CoordType>& b) {
-  using Wide = WideInt<CoordType>;
+Point3<WideInt<3>> qcross(const Point3<CoordType>& a,
+                          const Point3<CoordType>& b) {
+  using Wide = WideInt<3>;
   const auto ah = a.template type_cast<Wide>();
   const auto bh = b.template type_cast<Wide>();
 
@@ -91,7 +92,7 @@ Point3<WideInt<CoordType>> qcross(const Point3<CoordType>& a,
 template<int Dimension, typename CoordType>
 bool magComparison(const Point<Dimension, CoordType>& p1,
                    const Point<Dimension, CoordType>& p2) {
-  using Wide = WideInt<CoordType>;
+  using Wide = WideInt<Dimension>;
   auto p1w = p1.template type_cast<Wide>();
   auto p2w = p2.template type_cast<Wide>();
   Wide mag1 = 0, mag2 = 0;
@@ -114,7 +115,7 @@ Point2<CoordType> pointDirection(const Point2<double>& p1,
     return Point<2, CoordType>::Zero();
   }
   auto norm = diff/len;
-  const double SCALE = std::pow(2.0, HashKey<2>::num1DBits() - 2);
+  const double SCALE = std::pow(2.0, HashKey<2>::num1DBits - 2);
   return (norm*SCALE).template type_cast<CoordType>();
 }
 
@@ -143,8 +144,9 @@ bool isRayExternal(const Point<Dimension, double>& origin,
 template<typename CoordType>
 Point2<CoordType> midPoint(const Point2<CoordType>& gen0,
                            const Point2<CoordType>& gen1) {
-  using Wide = WideInt<CoordType>;
-  Point2<Wide> sum = gen0.template type_cast<Wide>() + gen1.template type_cast<Wide>();
+  using Wide = WideInt<2>;
+  Point2<Wide> sum = gen0.template type_cast<Wide>()
+    + gen1.template type_cast<Wide>();
   return (sum/2).template type_cast<CoordType>();
 }
 
@@ -273,21 +275,17 @@ bool aboveBelow(const Point<Dimension, CoordType>& v0,
 template<typename CoordType>
 bool SAT(const std::vector<Point2<CoordType>>& pointsA,
          const std::vector<Point2<CoordType>>& pointsB,
-         const Point2<WideInt<CoordType>>& axis) {
-  using AxisType = WideInt<CoordType>;
-  using Projection = WideInt<AxisType>;
+         const Point2<WideInt<2>>& axis) {
+  using Wide = WideInt<2>;
+  using Big = BigInt<2>;
   POLY_ASSERT(!pointsA.empty());
   POLY_ASSERT(!pointsB.empty());
   if (axis.iszero()) return false;
 
-  auto project = [&axis](const Point2<CoordType>& p) {
-    return static_cast<Projection>(p.x)*static_cast<Projection>(axis.x) +
-           static_cast<Projection>(p.y)*static_cast<Projection>(axis.y);
-  };
-
-  Projection minA = project(pointsA.front()), maxA = minA;
+  Big minA = qqdot(axis, pointsA.front());
+  Big maxA = minA;
   for (const auto& p : pointsA) {
-    const auto ztest = project(p);
+    const auto ztest = qqdot(axis, p);
     if (ztest < minA) {
       minA = ztest;
     }
@@ -296,9 +294,10 @@ bool SAT(const std::vector<Point2<CoordType>>& pointsA,
     }
   }
 
-  Projection minB = project(pointsB.front()), maxB = minB;
+  Big minB = qqdot(axis, pointsB.front());
+  Big maxB = minB;
   for (const auto& p : pointsB) {
-    const auto ztest = project(p);
+    const auto ztest = qqdot(axis, p);
     if (ztest < minB) {
       minB = ztest;
     }
@@ -306,6 +305,7 @@ bool SAT(const std::vector<Point2<CoordType>>& pointsA,
       maxB = ztest;
     }
   }
+
   return maxA < minB || maxB < minA;
 }
 
@@ -313,7 +313,7 @@ template<typename CoordType>
 bool SAT(const std::vector<Point3<CoordType>>& pointsA,
          const std::vector<Point3<CoordType>>& pointsB,
          const Point3<CoordType>& axis) {
-  using Wide = WideInt<CoordType>;
+  using Wide = WideInt<3>;
   Wide minA = HashKey<3>::hashMax();
   Wide minB = minA, maxA = -minA, maxB = maxA;
   for (const auto& p : pointsA) {

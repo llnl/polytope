@@ -190,7 +190,7 @@ void testEdgeCases() {
   testRoundTrip(IntPoint(zero, maxVal, maxVal), "Max Y,Z");
 
   // Powers of 2
-  for (auto bit = 0; bit < std::min(20, HashKey3D::num1DBits()); ++bit) {
+  for (auto bit = 0; bit < std::min(20, HashKey3D::num1DBits); ++bit) {
     auto val = IntType(1) << bit;
     testRoundTrip(IntPoint(val, zero, zero), "Power of 2 in X");
     testRoundTrip(IntPoint(zero, val, zero), "Power of 2 in Y");

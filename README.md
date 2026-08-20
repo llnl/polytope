@@ -108,3 +108,9 @@ application, you must contact the author for permission.
 
 To keep things simple, we don't distribute the source for either of these
 tools. Only use these tools after you've made arrangements to comply with the license(s).
+
+License
+=======
+
+Polytope is released under a BSD-stype 
+- [thirdparty_licenses.md](/thirdparty_licenses.md)
