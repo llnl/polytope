@@ -85,6 +85,69 @@ tessellate(const std::vector<RealType>& points,
 }
 
 //------------------------------------------------------------------------------
+// Partitioned unbounded tessellation
+//------------------------------------------------------------------------------
+template<int Dimension>
+void
+DistributedTessellator<Dimension>::
+partitionAndTessellate(const std::vector<RealType>& points,
+                       const Partitioner<Dimension>& partitioner,
+                       TessellationType& mesh) {
+  POLY_ASSERT(mesh.empty());
+  POLY_ASSERT(points.size() % Dimension == 0);
+
+  auto& Q = Quantizer<Dimension>::instance();
+  if (!Q.m_init) {
+    typename Quantizer<Dimension>::RealPoint globalMin, globalMax;
+    findGlobalBounds<Dimension>(points, globalMin, globalMax);
+    Q.init(globalMin, globalMax);
+  }
+
+  QuantizedTessellation replicatedMesh(points);
+  QuantizedTessellation quantmesh(partitioner.computePartition(
+    replicatedMesh.getQuantizedPoints()));
+  this->tessellateQuantized(quantmesh);
+  quantmesh.filterToLocalGenerators();
+  quantmesh.fillTessellation(mesh);
+  findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
+}
+
+//------------------------------------------------------------------------------
+// Partitioned PLC-bounded tessellation
+//------------------------------------------------------------------------------
+template<int Dimension>
+void
+DistributedTessellator<Dimension>::
+partitionAndTessellate(const std::vector<RealType>& points,
+                       const std::vector<RealType>& PLCpoints,
+                       const PLC<Dimension>& geometry,
+                       const Partitioner<Dimension>& partitioner,
+                       TessellationType& mesh) {
+  POLY_ASSERT(mesh.empty());
+  POLY_ASSERT(points.size() % Dimension == 0);
+  POLY_ASSERT(PLCpoints.size() % Dimension == 0);
+
+  auto& Q = Quantizer<Dimension>::instance();
+  if (!Q.m_init) {
+    const auto& boundsPoints = PLCpoints.empty() ? points : PLCpoints;
+    typename Quantizer<Dimension>::RealPoint globalMin, globalMax;
+    findGlobalBounds<Dimension>(boundsPoints, globalMin, globalMax);
+    Q.init(globalMin, globalMax);
+  }
+
+  QuantizedTessellation replicatedMesh(points);
+  QuantPLC<Dimension> qplc(geometry, PLCpoints);
+  replicatedMesh.cullExternalPoints(qplc);
+  QuantizedTessellation quantmesh(partitioner.computePartition(
+    replicatedMesh.getQuantizedPoints()));
+  this->tessellateQuantized(quantmesh);
+  quantmesh.clipTessellation(qplc, m_serialTessellator);
+  quantmesh.filterToLocalGenerators();
+  quantmesh.fillTessellation(mesh);
+  findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
+}
+
+//------------------------------------------------------------------------------
 // Quantized distributed tessellation
 //------------------------------------------------------------------------------
 template<int Dimension>

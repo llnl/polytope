@@ -53,6 +53,7 @@ endif()
 polytope_add_test(MortonKeyTraits2D)
 polytope_add_test(MortonKeyTraits3D)
 polytope_add_test(Quantizer)
+polytope_add_test(Partitioners2D)
 polytope_add_test(QuantPLC2D)
 #polytope_add_test(QuantPLC3D) # Currently broken
 polytope_add_test(QuantConvexIntersect3D)
@@ -72,6 +73,14 @@ endif()
 # Distributed Tessellator Tests
 #-----------------------------------------------------------------------------
 if(POLYTOPE_ENABLE_MPI AND NOT POLYTOPE_ENABLE_HIBIT2D)
+  blt_add_test(NAME DistributedPartitioners2D_test
+    COMMAND ${CMAKE_BINARY_DIR}/bin/Partitioners2D
+    NUM_MPI_TASKS 4
+  )
+  set_tests_properties(DistributedPartitioners2D_test PROPERTIES
+    FIXTURES_REQUIRED "polytope_fixture"
+    WORKING_DIRECTORY "${TEST_WORK_DIR}"
+  )
   if(NOT POLYTOPE_ENABLE_HIBIT2D)
     polytope_add_test(DistributedRandomPoints NUMTASKS 4)
     polytope_add_test(DistributedOrderedPoints NUMTASKS 4)

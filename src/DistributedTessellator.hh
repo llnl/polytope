@@ -36,6 +36,7 @@
 #include <string>
 
 #include "polytope.hh"
+#include "Partitioner.hh"
 #include "Tessellator.hh"
 
 namespace polytope {
@@ -60,6 +61,21 @@ public:
                           const std::vector<RealType>& PLCpoints,
                           const PLC<Dimension>& geometry,
                           TessellationType& mesh) override;
+
+  //! Partition a replicated generator set, then tessellate the local result.
+  //! Every rank must pass the same points in the same order.
+  void partitionAndTessellate(const std::vector<RealType>& points,
+                              const Partitioner<Dimension>& partitioner,
+                              TessellationType& mesh);
+
+  //! Partition a replicated generator set inside a bounding PLC, then
+  //! tessellate the local result. Every rank must pass the same points in the
+  //! same order.
+  void partitionAndTessellate(const std::vector<RealType>& points,
+                              const std::vector<RealType>& PLCpoints,
+                              const PLC<Dimension>& geometry,
+                              const Partitioner<Dimension>& partitioner,
+                              TessellationType& mesh);
 
   //! Simply becomes a wrapper for the Impl
   virtual void tessellateQuantized(QuantizedTessellation& qmesh) override {

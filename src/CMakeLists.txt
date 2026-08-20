@@ -18,6 +18,7 @@ set(polytope_headers
   GeomUtils.hh
   MortonKeyTraits.hh
   Intersections.hh
+  Partitioner.hh
   PLC.hh
   Point.hh
   QuantTessellation.hh
