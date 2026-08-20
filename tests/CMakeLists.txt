@@ -41,7 +41,6 @@ set_tests_properties(cleanup_tests PROPERTIES FIXTURES_CLEANUP "polytope_fixture
 #-----------------------------------------------------------------------------
 # Cannot test any clipped geometries when hi bit 2D is enabled
 if(NOT POLYTOPE_ENABLE_HIBIT2D)
-  polytope_add_test(MortonKeyTraits2D)
   polytope_add_test(SimpleTess2D)
   polytope_add_test(StarBoundary)
   polytope_add_test(SolidRotationAroundHoles)
@@ -51,6 +50,7 @@ if(NOT POLYTOPE_ENABLE_HIBIT2D)
   polytope_add_test(RotationTests)
   polytope_add_test(Circumcenter)
 endif()
+polytope_add_test(MortonKeyTraits2D)
 polytope_add_test(MortonKeyTraits3D)
 polytope_add_test(Quantizer)
 polytope_add_test(QuantPLC2D)
