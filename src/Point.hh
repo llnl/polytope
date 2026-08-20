@@ -122,7 +122,7 @@ struct Point<2, CoordType> {
 
   template<typename Coordinate, typename RealType>
   Point<2, Coordinate> convertXi(const Point<2, RealType>& blo,
-                              const Point<2, RealType>& dx) const {
+                                 const Point<2, RealType>& dx) const {
     // Quantize: RealType -> Coordinate
     POLY_ASSERT(typeid(CoordType) == typeid(RealType));
     Coordinate xOut, yOut;
@@ -163,14 +163,6 @@ struct Point<2, CoordType> {
   int maxAxis() const {
     return (x >= y) ? 0 : 1;
   }
-
-  template<typename Coordinate>
-  Point<2, Coordinate> bitShift(const int shift) const {
-    return Point<2, Coordinate>(
-      static_cast<Coordinate>(x >> shift),
-      static_cast<Coordinate>(y >> shift)
-    );
-  }
 };
 
 // It's nice being able to print these things.
@@ -193,7 +185,7 @@ operator>>(std::istream& is, Point<2, CoordType>& p) {
 
 template<typename CoordType, typename Key>
 Key dot(const Point2<CoordType>& a,
-              const Point2<CoordType>& b) {
+        const Point2<CoordType>& b) {
   return (a.x*b.x) + (a.y*b.y);
 }
 
@@ -308,7 +300,7 @@ struct Point<3, CoordType> {
 
   template<typename Coordinate, typename RealType>
   Point<3, Coordinate> convertXi(const Point<3, RealType>& blo,
-                              const Point<3, RealType>& dx) const {
+                                 const Point<3, RealType>& dx) const {
     // Quantize: RealType -> Coordinate
     Coordinate xOut, yOut, zOut;
     xOut = static_cast<Coordinate>((this->x - blo.x)/dx.x + 0.5);
@@ -357,15 +349,6 @@ struct Point<3, CoordType> {
       return 1;
     }
     return 2;
-  }
-
-  template<typename Coordinate>
-  Point<3, Coordinate> bitShift(const int shift) const {
-    return Point<3, Coordinate>(
-      static_cast<Coordinate>(x >> shift),
-      static_cast<Coordinate>(y >> shift),
-      static_cast<Coordinate>(z >> shift)
-    );
   }
 };
 
