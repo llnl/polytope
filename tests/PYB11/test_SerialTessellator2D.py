@@ -32,7 +32,7 @@ def test_serial_2d_tessellators():
         assert tess_name
 
         mesh = polytope.Tessellation2d()
-        Q.initPoints(points)
+        Q.init(points)
         tessellator.tessellate(points, mesh)
         _assert_mesh_populated(mesh)
         locfields = ptu.make_test_fields(mesh)
@@ -46,7 +46,7 @@ def test_serial_2d_tessellators():
         plc_mesh = polytope.Tessellation2d()
         plc = polytope.PLC2d()
         plc.facets = ptu.make_square_facets()
-        Q.initPoints(plc_points)
+        Q.init(plc_points)
         tessellator.tessellate(points, plc_points, plc, plc_mesh)
         _assert_mesh_populated(plc_mesh)
         locfields = ptu.make_test_fields(plc_mesh)

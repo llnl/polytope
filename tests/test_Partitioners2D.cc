@@ -4,6 +4,7 @@
 
 #include "Communicator.hh"
 #include "Partitioner.hh"
+#include "Quantizer.hh"
 #include "polytope_internal.hh"
 
 using namespace polytope;
@@ -14,18 +15,28 @@ using PointType = QuantizedPoint<2>;
 
 std::vector<PointType>
 generators() {
+  const auto& Q = Quantizer<2>::instance();
+  const auto& lower = Q.minBound;
+  const auto& upper = Q.maxBound;
+  const auto xmid = lower.x + (upper.x - lower.x)/2;
+  const auto ymid = lower.y + (upper.y - lower.y)/2;
   return {
-    PointType(0, 0), PointType(49, 49),
-    PointType(50, 10), PointType(100, 40),
-    PointType(10, 50), PointType(40, 100),
-    PointType(50, 50), PointType(100, 100)
+    lower, PointType(lower.x + 100, lower.y + 100),
+    PointType(xmid, lower.y + 100), PointType(upper.x, lower.y + 100),
+    PointType(lower.x + 100, ymid), PointType(lower.x + 100, upper.y),
+    PointType(xmid, ymid), upper
   };
+}
+
+void initializeQuantizer() {
+  Quantizer<2>::instance().init(Point<2, double>(0.0, 0.0),
+                                Point<2, double>(1.0, 1.0));
 }
 
 void testSerial() {
   const auto points = generators();
   RandomPartitioner<2> random(123456789ULL);
-  LatticePartitioner<2> lattice(PointType(0, 0), PointType(100, 100), {1, 1});
+  LatticePartitioner<2> lattice({1, 1});
   POLY_CHECK(random.computePartition(points) == points);
   POLY_CHECK(lattice.computePartition(points) == points);
 }
@@ -35,7 +46,7 @@ void testDistributed() {
   const auto points = generators();
   const auto rank = Communicator::getRank();
 
-  LatticePartitioner<2> lattice(PointType(0, 0), PointType(100, 100), {2, 2});
+  LatticePartitioner<2> lattice({2, 2});
   const std::vector<std::vector<PointType>> expected = {
     {points[0], points[1]}, {points[2], points[3]},
     {points[4], points[5]}, {points[6], points[7]}
@@ -72,6 +83,7 @@ void testDistributed() {
 int main(int argc, char** argv) {
   auto& communicator = Communicator::instance();
   communicator.init(argc, argv);
+  initializeQuantizer();
 
   const auto nranks = Communicator::getNProcs();
   if (nranks == 1) {

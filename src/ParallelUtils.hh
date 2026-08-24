@@ -47,29 +47,31 @@ allGatherBuffers(const std::vector<char>& localBuffer) {
   return result;
 }
 
-// Gather a vector of vectors of the coordinate hashes.
-// It is ordered result[rank][point index]
-template<int Dimension, typename Key>
-std::vector<std::vector<Key>>
-allGatherGenerators(const std::vector<Key>& localGenerators) {
+// Gather serialized generator records, ordered result[rank][point index].
+// Records may be Morton keys or quantized points.
+template<int Dimension, typename Generator>
+std::vector<std::vector<Generator>>
+allGatherGenerators(const std::vector<Generator>& localGenerators) {
   auto size = Communicator::getNProcs();
   std::vector<char> localBuffer;
   serialize(localGenerators, localBuffer);
   auto buffers = allGatherBuffers(localBuffer);
-  std::vector<std::vector<Key>> result(buffers.size());
+  std::vector<std::vector<Generator>> result(buffers.size());
   // Loop over source ranks so we can track which points came from where
   for (int source = 0; source < size; ++source) {
     auto itr = buffers[source].cbegin();
-    std::vector<Key> recvGens;
-    deserialize<std::vector<Key>>(recvGens, itr, buffers[source].end());
+    std::vector<Generator> recvGens;
+    deserialize<std::vector<Generator>>(recvGens, itr, buffers[source].end());
     result[source] = std::move(recvGens);
   }
   return result;
 }
 
-template<int Dimension, typename Key>
-std::vector<std::vector<Key>>
-exchangeNeighborGenerators(const std::vector<Key>& localGenerators,
+// Exchange serialized generator records with the selected neighboring ranks.
+// Records may be Morton keys or quantized points.
+template<int Dimension, typename Generator>
+std::vector<std::vector<Generator>>
+exchangeNeighborGenerators(const std::vector<Generator>& localGenerators,
                            const std::set<int>& neighbors) {
   auto& comm = Communicator::communicator();
   auto rank = Communicator::getRank();
@@ -108,12 +110,12 @@ exchangeNeighborGenerators(const std::vector<Key>& localGenerators,
     MPI_Waitall(static_cast<int>(requests.size()), requests.data(), MPI_STATUSES_IGNORE);
   }
 
-  std::vector<std::vector<Key>> result(size);
+  std::vector<std::vector<Generator>> result(size);
   for (int source = 0; source < size; ++source) {
     auto itr = recvBuffers[source].cbegin();
-    std::vector<Key> received;
+    std::vector<Generator> received;
     if (recvBuffers[source].size() > 0) {
-      deserialize<std::vector<Key>>(received, itr, recvBuffers[source].end());
+      deserialize<std::vector<Generator>>(received, itr, recvBuffers[source].end());
     }
     result[source] = std::move(received);
   }

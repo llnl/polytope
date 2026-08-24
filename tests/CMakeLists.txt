@@ -73,14 +73,6 @@ endif()
 # Distributed Tessellator Tests
 #-----------------------------------------------------------------------------
 if(POLYTOPE_ENABLE_MPI AND NOT POLYTOPE_ENABLE_HIBIT2D)
-  blt_add_test(NAME DistributedPartitioners2D_test
-    COMMAND ${CMAKE_BINARY_DIR}/bin/Partitioners2D
-    NUM_MPI_TASKS 4
-  )
-  set_tests_properties(DistributedPartitioners2D_test PROPERTIES
-    FIXTURES_REQUIRED "polytope_fixture"
-    WORKING_DIRECTORY "${TEST_WORK_DIR}"
-  )
   if(NOT POLYTOPE_ENABLE_HIBIT2D)
     polytope_add_test(DistributedRandomPoints NUMTASKS 4)
     polytope_add_test(DistributedOrderedPoints NUMTASKS 4)
@@ -97,6 +89,7 @@ endif()
 if(POLYTOPE_ENABLE_PYTHON AND NOT POLYTOPE_ENABLE_LEGACY_PYTHON)
   polytope_add_python_test(Quantizer)
   polytope_add_python_test(MortonKeyTraits)
+  polytope_add_python_test(Partitioner)
   polytope_add_python_test(SerialTessellator2D)
   polytope_add_python_test(PLC)
   if(POLYTOPE_ENABLE_MPI)

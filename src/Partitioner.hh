@@ -15,8 +15,8 @@
 #include <vector>
 
 #include "Communicator.hh"
-#include "MortonKeyTraits.hh"
 #include "Point.hh"
+#include "Quantizer.hh"
 #include "polytope_internal.hh"
 
 namespace polytope {
@@ -27,6 +27,8 @@ public:
   using PointType = QuantizedPoint<Dimension>;
 
   virtual ~Partitioner() = default;
+
+  virtual std::string name() const = 0;
 
   //! Return the generators owned by this MPI rank.  Inputs must have been
   //! quantized with a globally consistent Quantizer instance.
@@ -48,6 +50,8 @@ public:
   explicit RandomPartitioner(const std::uint64_t seed):
     m_seed(seed) {
   }
+
+  virtual std::string name() const override { return "RandomPartitioner"; }
 
   std::vector<PointType>
   computePartition(const std::vector<PointType>& globalPoints) const override {
@@ -89,6 +93,12 @@ private:
 
 //----------------------------------------------------------------------------//
 // LatticePartitioner
+//
+// The complete partitioning domain is Quantizer<Dimension>::minBound through
+// Quantizer<Dimension>::maxBound, inclusive. The Quantizer must be initialized
+// before computePartition is called. This domain is divided uniformly into
+// ranksPerAxis[d] tiles along each axis; a point on the global upper bound
+// belongs to the final tile on that axis.
 //----------------------------------------------------------------------------//
 template<int Dimension>
 class LatticePartitioner: public Partitioner<Dimension> {
@@ -96,32 +106,30 @@ public:
   using PointType = typename Partitioner<Dimension>::PointType;
   using RanksPerAxis = std::array<unsigned, Dimension>;
 
-  LatticePartitioner(const PointType& lower,
-                     const PointType& upper,
-                     const RanksPerAxis& ranksPerAxis):
-    m_lower(lower),
-    m_upper(upper),
+  virtual std::string name() const override { return "LatticePartitioner"; }
+
+  explicit LatticePartitioner(const RanksPerAxis& ranksPerAxis):
     m_ranksPerAxis(ranksPerAxis) {
     std::size_t expectedRanks = 1;
     for (int d = 0; d < Dimension; ++d) {
-      POLY_VERIFY2(m_lower[d] < m_upper[d],
-                   "Each lattice lower bound must be less than its upper bound");
       POLY_VERIFY2(m_ranksPerAxis[d] > 0,
                    "Each lattice axis must have at least one rank");
       POLY_VERIFY2(expectedRanks <= std::numeric_limits<std::size_t>::max()/m_ranksPerAxis[d],
                    "Lattice rank count overflow");
       expectedRanks *= m_ranksPerAxis[d];
     }
-    POLY_VERIFY2(expectedRanks == static_cast<std::size_t>(Communicator::getNProcs()),
-                 "Product of lattice ranks per axis must equal the MPI rank count");
+    POLY_VERIFY2(expectedRanks <= static_cast<std::size_t>(Communicator::getNProcs()),
+                 "Product of lattice ranks per axis must less than or equal the MPI rank count");
   }
 
   std::vector<PointType>
   computePartition(const std::vector<PointType>& globalPoints) const override {
     const auto rank = static_cast<std::size_t>(Communicator::getRank());
+    const auto& Q = Quantizer<Dimension>::instance();
+    POLY_VERIFY2(Q.m_init, "The Quantizer must be initialized before lattice partitioning");
     std::vector<PointType> result;
     for (const auto& point : globalPoints) {
-      if (owner(point) == rank) {
+      if (owner(point, Q.minBound, Q.maxBound) == rank) {
         result.push_back(point);
       }
     }
@@ -129,18 +137,20 @@ public:
   }
 
 private:
-  std::size_t owner(const PointType& point) const {
+  std::size_t owner(const PointType& point,
+                    const PointType& lower,
+                    const PointType& upper) const {
     std::size_t rank = 0;
     std::size_t stride = 1;
     for (int d = 0; d < Dimension; ++d) {
-      POLY_VERIFY2(point[d] >= m_lower[d] && point[d] <= m_upper[d],
+      POLY_VERIFY2(point[d] >= lower[d] && point[d] <= upper[d],
                    "Generator is outside the lattice domain");
 
       const auto offset = static_cast<std::uint64_t>(point[d]) -
-                          static_cast<std::uint64_t>(m_lower[d]);
-      const auto extent = static_cast<std::uint64_t>(m_upper[d]) -
-                          static_cast<std::uint64_t>(m_lower[d]);
-      const auto tile = point[d] == m_upper[d] ?
+                          static_cast<std::uint64_t>(lower[d]);
+      const auto extent = static_cast<std::uint64_t>(upper[d]) -
+                          static_cast<std::uint64_t>(lower[d]);
+      const auto tile = point[d] == upper[d] ?
         m_ranksPerAxis[d] - 1 :
         std::min(static_cast<unsigned>((static_cast<unsigned __int128>(offset)*m_ranksPerAxis[d])/extent),
                  m_ranksPerAxis[d] - 1);
@@ -150,7 +160,6 @@ private:
     return rank;
   }
 
-  PointType m_lower, m_upper;
   RanksPerAxis m_ranksPerAxis;
 };
 

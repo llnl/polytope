@@ -2,7 +2,7 @@ import polytope
 
 def test_quantizer():
     q2 = polytope.Quantizer2d.instance()
-    q2.initPoints([(0.0, 0.0), (1.0, 1.0)])
+    q2.init([(0.0, 0.0), (1.0, 1.0)])
     assert q2.m_init
 
     point = polytope.Point2d(0.5, 0.5)
@@ -15,7 +15,7 @@ def test_quantizer():
     assert isinstance(ckey, int)
     uckey = q2.decode(ckey)
     assert (uckey.x, uckey.y) == (qpoint.x, qpoint.y)
-    rpoint = q2.decodeAndDequantize(h)
+    rpoint = q2.decodeAndDequantize(ckey)
     assert isinstance(rpoint.x, float)
 
 

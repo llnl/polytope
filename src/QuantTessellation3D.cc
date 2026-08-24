@@ -91,13 +91,14 @@ QuantTessellation<3>::fillTessellation(TessellationType& mesh) {
 // Extract the local visible generators
 //------------------------------------------------------------------------------
 template<>
-std::vector<MortonKey<3>>
-QuantTessellation<3>::visibleGenerators() {
+template<typename ExchangeType>
+std::vector<ExchangeType>
+QuantTessellation<3>::visibleGenerators(const std::vector<ExchangeType>& et) {
   auto N = points.size();
   if (!convexHull.m_convex) {
     makeConvexHull();
   }
-  std::vector<MortonKey<3>> result;
+  std::vector<ExchangeType> result;
   if (convexHull.isValid()) {
     result.reserve(N);
     auto plc_cell = convexHull.getCell();
@@ -108,7 +109,7 @@ QuantTessellation<3>::visibleGenerators() {
       // }
     }
   } else {
-    result = hashes;
+    result = et;
   }
   return result;
 }

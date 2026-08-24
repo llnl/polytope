@@ -42,9 +42,6 @@ install(TARGETS polytope
 
 include(PolytopePythonEnvironment)
 
-# Set the name of the polytope virutal python environment
-set(POLYTOPE_VIRT_DIR PolytopePy)
-
 polytope_add_python_environment(
   build
   "${CMAKE_BINARY_DIR}/${POLYTOPE_VIRT_DIR}"

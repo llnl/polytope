@@ -10,7 +10,9 @@ PYB11includes = ['"polytope.hh"',
                  '"Cell.hh"',
                  '"PLC.hh"',
                  '"Tessellation.hh"',
-                 '"Tessellator.hh"']
+                 '"Tessellator.hh"',
+                 '"Partitioner.hh"',
+                 '"DistributedTessellator.hh"']
 
 PYB11modulepreamble = """
 // Initialize MPI
@@ -60,6 +62,7 @@ vector_of_vector_of_vector_of_Point3d = PYB11_bind_vector("std::vector<std::vect
 from PLC import *
 from Tessellation import *
 from Tessellator import *
+from Partitioner import *
 from SerialTessellators import *
 from DistributedTessellator import *
 from SiloUtils import *

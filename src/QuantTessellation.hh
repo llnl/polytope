@@ -51,8 +51,14 @@ public:
     init(qgenpoints);
   }
 
+  // Construction used for parallel distribution using keys
   QuantTessellation(const std::vector<std::vector<MortonKey<Dimension>>>& rankHashes) {
     init(rankHashes);
+  }
+
+  // Construction used for parallel distribution using points directly
+  QuantTessellation(const std::vector<std::vector<QuantizedPoint<Dimension>>>& rankPoints) {
+    init(rankPoints);
   }
 
   void init(const std::vector<RealType>& genpoints) {
@@ -76,6 +82,7 @@ public:
       points.push_back(ip);
     }
     sortByHash();
+    verifyUniqueGenerators();
   }
 
   void init(const std::vector<QuantizedPoint<Dimension>>& qgenpoints) {
@@ -114,7 +121,7 @@ public:
     points.reserve(Ntotal);
     hashes.reserve(Ntotal);
     cellRank.reserve(Ntotal);
-    unsigned i = Ntotal;
+    unsigned i = points.size();
     for (auto source = 0u; source < nranks; ++source) {
       for (auto& ch : rankHashes[source]) {
         auto ip = Q.decode(ch);
@@ -125,6 +132,32 @@ public:
       }
     }
     sortByHash();
+  }
+
+  // Initialize or extend the generator points received directly from each rank.
+  void init(const std::vector<std::vector<QuantizedPoint<Dimension>>>& rankPoints) {
+    faces.clear();
+    nodes.clear();
+    cells.clear();
+    faceCells.clear();
+    const auto nranks = rankPoints.size();
+    auto Ntotal = points.size();
+    for (const auto& v : rankPoints) {
+      Ntotal += v.size();
+    }
+    if (cellRank.size() != points.size()) {
+      cellRank.assign(points.size(), Communicator::getRank());
+    }
+    points.reserve(Ntotal);
+    cellRank.reserve(Ntotal);
+    unsigned i = points.size();
+    for (auto source = 0u; source < nranks; ++source) {
+      for (auto ip : rankPoints[source]) {
+        ip.index = i++;
+        points.push_back(ip);
+        cellRank.push_back(source);
+      }
+    }
   }
 
   void clear() {
@@ -302,7 +335,18 @@ public:
   //------------------------------------------------------------------------------
 
   // Extract the visible generators
-  std::vector<MortonKey<Dimension>> visibleGenerators();
+  template<typename ExchangeType>
+  std::vector<ExchangeType> visibleGenerators(const std::vector<ExchangeType>& et);
+
+  // Specialize visible generator routine for hashes
+  std::vector<MortonKey<Dimension>> visibleGeneratorKeys() {
+    return visibleGenerators<MortonKey<Dimension>>(hashes);
+  }
+
+  // Specialize visible generator routine for points
+  std::vector<QuantizedPoint<Dimension>> visibleGeneratorPoints() {
+    return visibleGenerators<QuantizedPoint<Dimension>>(points);
+  }
 
   // Determine which ranks generators are neighbors
   std::set<int> neighboringRanks() {
@@ -399,6 +443,24 @@ public:
     }
     return s;
   }
+
+private:
+  // Morton encoding is reversible, so duplicate hashes are duplicate quantized
+  // generator coordinates. Check a sorted copy to preserve the caller's order.
+  void verifyUniqueGenerators() const {
+    // auto sortedHashes = hashes;
+    // std::sort(sortedHashes.begin(), sortedHashes.end());
+    const auto duplicate = std::adjacent_find(hashes.begin(), hashes.end());
+    if (duplicate != hashes.end()) {
+      if (Communicator::getRank() == Communicator::getRoot()) {
+        std::cout << "Degenerate quantized generator points have been provided: "
+                  << *(duplicate) << " " << *(duplicate+1) << std::endl;
+      }
+      Communicator::abort();
+    }
+  }
+
+public:
 
   //------------------------------------------------------------------------------
   // Member data

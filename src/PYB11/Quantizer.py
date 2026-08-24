@@ -22,7 +22,7 @@ class Quantizer:
                xhi="const RealPoint&"):
         return "void"
 
-    @PYB11cppname("init")
+    @PYB11pycppname("init")
     def initBounds(self,
                    xlo="const RealPoint&",
                    xhi="const RealPoint&",
@@ -30,6 +30,7 @@ class Quantizer:
                    pad=("const RealType&", "-1.0")):
         return "void"
 
+    @PYB11pycppname("init")
     @PYB11implementation("""[](QuantizerType& self,
                                const py::object& points,
                                const RealType& degeneracy,

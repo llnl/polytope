@@ -64,6 +64,8 @@ include(cmake/Compiler.cmake)
 if (POLYTOPE_ENABLE_PYTHON AND DEFINED python_DIR)
   set(Python_EXECUTABLE ${python_DIR}/bin/python3)
   set(Python3_EXECUTABLE ${python_DIR}/bin/python3)
+  # Set the name of the polytope virutal python environment
+  set(POLYTOPE_VIRT_DIR PolytopePy)
 endif()
 
 # Configure and include BLT

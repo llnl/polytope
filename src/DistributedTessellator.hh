@@ -54,6 +54,10 @@ public:
   DistributedTessellator(Base& serialTessellator);
   virtual ~DistributedTessellator() = default;
 
+  //! Select whether generator exchanges send quantized points instead of keys.
+  void setExchangePoints(const bool value) { m_exchangePoints = value; }
+  bool exchangePoints() const { return m_exchangePoints; }
+
   virtual void tessellate(const std::vector<RealType>& points,
                           TessellationType& mesh) override;
 
@@ -89,7 +93,11 @@ public:
   QuantizedTessellation generateVisibleMesh(QuantizedTessellation& qmesh);
 
 private:
+  //! Broadcast the root rank's requested exchange representation.
+  void synchronizeExchangePoints();
+
   Base& m_serialTessellator;
+  bool m_exchangePoints = false;
 
   // Forbidden methods.
   DistributedTessellator();

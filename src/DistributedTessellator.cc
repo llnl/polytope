@@ -18,6 +18,19 @@ DistributedTessellator(Base& serialTessellator):
 }
 
 //------------------------------------------------------------------------------
+// Synchronize generator exchange representation from the configured root rank.
+//------------------------------------------------------------------------------
+template<int Dimension>
+void
+DistributedTessellator<Dimension>::
+synchronizeExchangePoints() {
+  int value = m_exchangePoints ? 1 : 0;
+  MPI_Bcast(&value, 1, MPI_INT,
+            Communicator::getRoot(), Communicator::communicator());
+  m_exchangePoints = value != 0;
+}
+
+//------------------------------------------------------------------------------
 // Name
 //------------------------------------------------------------------------------
 template<int Dimension>
@@ -185,13 +198,21 @@ tessellateQuantizedImpl(QuantizedTessellation& qmesh) {
     }
   }
 
-  auto neighborGenerators =
-    exchangeNeighborGenerators<Dimension, MortonKey<Dimension>>(qmesh.hashes, neighborRanks);
-
-  // Extend the QuantTessellation by it's neighbor generators and retessellate
-  if (!qmesh.points.empty()) {
-    qmesh.init(neighborGenerators);
-    m_serialTessellator.tessellateQuantized(qmesh);
+  // Exchange complete neighbor generator sets using the selected representation.
+  if (m_exchangePoints) {
+    auto neighborGenerators =
+      exchangeNeighborGenerators<Dimension, QuantizedPoint<Dimension>>(qmesh.points, neighborRanks);
+    if (!qmesh.points.empty()) {
+      qmesh.init(neighborGenerators);
+      m_serialTessellator.tessellateQuantized(qmesh);
+    }
+  } else {
+    auto neighborGenerators =
+      exchangeNeighborGenerators<Dimension, MortonKey<Dimension>>(qmesh.hashes, neighborRanks);
+    if (!qmesh.points.empty()) {
+      qmesh.init(neighborGenerators);
+      m_serialTessellator.tessellateQuantized(qmesh);
+    }
   }
 }
 
@@ -205,16 +226,31 @@ generateVisibleMesh(QuantizedTessellation& qmesh) {
   if (!qmesh.points.empty()) {
     m_serialTessellator.tessellateQuantized(qmesh);
   }
-  auto visibleHashes = qmesh.visibleGenerators();
-  auto allVisibleRecords = allGatherGenerators<Dimension, MortonKey<Dimension>>(visibleHashes);
-  size_t nvisible = 0;
-  for (const auto& rankHashes : allVisibleRecords) {
-    nvisible += rankHashes.size();
-  }
   QuantizedTessellation visibleMesh;
-  if (nvisible > 0) {
-    visibleMesh.init(allVisibleRecords);
-    m_serialTessellator.tessellateQuantized(visibleMesh);
+  if (m_exchangePoints) {
+    const auto visiblePoints = qmesh.visibleGeneratorPoints();
+    auto allVisibleRecords =
+      allGatherGenerators<Dimension, QuantizedPoint<Dimension>>(visiblePoints);
+    size_t nvisible = 0;
+    for (const auto& rankPoints : allVisibleRecords) {
+      nvisible += rankPoints.size();
+    }
+    if (nvisible > 0) {
+      visibleMesh.init(allVisibleRecords);
+      m_serialTessellator.tessellateQuantized(visibleMesh);
+    }
+  } else {
+    const auto visibleHashes = qmesh.visibleGeneratorKeys();
+    auto allVisibleRecords =
+      allGatherGenerators<Dimension, MortonKey<Dimension>>(visibleHashes);
+    size_t nvisible = 0;
+    for (const auto& rankHashes : allVisibleRecords) {
+      nvisible += rankHashes.size();
+    }
+    if (nvisible > 0) {
+      visibleMesh.init(allVisibleRecords);
+      m_serialTessellator.tessellateQuantized(visibleMesh);
+    }
   }
   return visibleMesh;
 }

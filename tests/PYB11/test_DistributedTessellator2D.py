@@ -26,7 +26,7 @@ def test_parallel_2d_tessellators():
         assert tess_name
 
         mesh = polytope.Tessellation2d()
-        Q.initPoints(plc_points)
+        Q.init(plc_points)
         points = ptu.generate_random_points(N, seed)
         ptess = polytope.DistributedTessellator2d(tessellator)
         ptess.tessellate(points, mesh)

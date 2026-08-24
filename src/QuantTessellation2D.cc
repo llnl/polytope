@@ -227,7 +227,7 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
   // Keep track of any orphans
   std::vector<PolygonWithHoles> orphans;
   std::vector<PolygonWithHoles> cellPolygons;
-  std::vector<Point2<QuantizedCoordinate<2>>> localGenPoints;
+  std::vector<QuantizedPoint<2>> localGenPoints;
   std::vector<int> polyIndex;
   // Map between hashed vertices to associated polygons in cellPolygons
   std::unordered_map<MortonKey<2>, std::set<unsigned>, MortonKeyHasher<2>> vertexMap;
@@ -250,7 +250,7 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
   // Loop over each orphan, keep track of any newly created orphans
   std::vector<PolygonWithHoles> remainingOrphans;
   for (auto& orphan : orphans) {
-    std::vector<Point2<QuantizedCoordinate<2>>> genPoints;
+    std::vector<QuantizedPoint<2>> genPoints;
     std::set<unsigned> genIndex;
     // For converting between this smaller subset of generators to the larger one
     std::unordered_map<unsigned, unsigned> smallToLarge;
@@ -417,14 +417,15 @@ QuantTessellation<2>::fillTessellation(TessellationType& mesh) {
 }
 
 //------------------------------------------------------------------------------
-// Return the visible Keyes
+// Return the visible keys or points depending on the ExchangeType
 // TODO: Put this in header file since it should be Dimension agnostic
 //------------------------------------------------------------------------------
 template<>
-std::vector<MortonKey<2>>
-QuantTessellation<2>::visibleGenerators() {
+template<typename ExchangeType>
+std::vector<ExchangeType>
+QuantTessellation<2>::visibleGenerators(const std::vector<ExchangeType>& et) {
   auto N = points.size();
-  std::vector<MortonKey<2>> result;
+  std::vector<ExchangeType> result;
   if (!convexHull.m_convex) {
     makeConvexHull();
   }
@@ -435,11 +436,11 @@ QuantTessellation<2>::visibleGenerators() {
     for (auto i = 0u; i < N; ++i) {
       auto qcell = getCell(i);
       if (convexBoundaryIntersect<QuantizedCoordinate<2>>(qcell, plc_cell)) {
-        result.push_back(hashes[i]);
+        result.push_back(et[i]);
       }
     }
   } else {
-    result = hashes;
+    result = et;
   }
   return result;
 }
