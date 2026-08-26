@@ -148,11 +148,6 @@ tessellateQuantizedImpl(QuantizedTessellation& result) {
     int ia = out.trianglelist[3*i];
     int ib = out.trianglelist[3*i+1];
     int ic = out.trianglelist[3*i+2];
-    // std::array<int, 3> indexarr = {ia, ib, ic};
-    // std::sort(indexarr.begin(), indexarr.end());
-    // ia = indexarr[0];
-    // ib = indexarr[1];
-    // ic = indexarr[2];
     auto a = result.points[ia].template type_cast<double>();
     auto b = result.points[ib].template type_cast<double>();
     auto c = result.points[ic].template type_cast<double>();

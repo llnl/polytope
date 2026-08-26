@@ -39,21 +39,33 @@ set(POLYTOPE_TPL_DEPENDS )
 
 #option(POLYTOPE_ENABLE_HIP "Build with HIP enabled" OFF) # Currently unsupported
 set(POLYTOPE_ENABLE_MPI ${ENABLE_MPI})
+# 2D options
 option(POLYTOPE_ENABLE_BOOST "Enable Boost Voronoi tessellator" OFF)
-option(POLYTOPE_ENABLE_SILO "Enable Silo read/write features" OFF)
-option(POLYTOPE_ENABLE_PYTHON "Enable Python interface" OFF)
-option(POLYTOPE_ENABLE_QHULL "Enable QHull for 3D functionality" OFF)
 option(POLYTOPE_ENABLE_TRIANGLE "Enable Triangle Voronoi tessellator" OFF)
-option(POLYTOPE_ENABLE_TETGEN "Enable TetGen Voronoi tessellator" OFF)
-set(TESTING_PREREQS (POLYTOPE_ENABLE_BOOST AND POLYTOPE_ENABLE_SILO))
-option(POLYTOPE_ENABLE_TESTING "Enable testing" OFF)
-option(POLYTOPE_ENABLE_ASAN "Enable ASAN" OFF)
-option(POLYTOPE_ENABLE_UBSAN "Enable UBSAN" OFF)
 option(POLYTOPE_ENABLE_HIBIT2D "Enable using higher accuracy for 2D tessellation. Disables clipping" OFF)
-#option(POLYTOPE_ENABLE_TIMERS "Enable Caliper timers" OFF)
+if (NOT POLYTOPE_ENABLE_BOOST AND NOT POLYTOPE_ENABLE_TRIANGLE)
+  message(FATAL_ERROR
+    "Must enable at least one tessellator, Boost or Triangle.")
+endif()
+# Silo for IO
+option(POLYTOPE_ENABLE_SILO "Enable Silo read/write features" OFF)
+# Python wrappers
+option(POLYTOPE_ENABLE_PYTHON "Enable Python interface" OFF)
+# Testing and benchmarks
+option(POLYTOPE_ENABLE_TESTING "Enable testing" OFF)
+set(TESTING_PREREQS (POLYTOPE_ENABLE_BOOST AND POLYTOPE_ENABLE_SILO))
 if (POLYTOPE_ENABLE_TEST AND NOT TESTING_PREREQS)
   message(FATAL_ERROR "Testing relies on Boost and Silo. Must enable Boost and Silo to enable testing.")
 endif()
+option(POLYTOPE_ENABLE_BENCHMARKS "Build performance benchmarks" OFF)
+# ASAN and UBSAN
+option(POLYTOPE_ENABLE_ASAN "Enable ASAN" OFF)
+option(POLYTOPE_ENABLE_UBSAN "Enable UBSAN" OFF)
+# 3D options (currently unsupported)
+#option(POLYTOPE_ENABLE_TETGEN "Enable TetGen Voronoi tessellator" OFF)
+#option(POLYTOPE_ENABLE_QHULL "Enable QHull for 3D functionality" OFF)
+#option(POLYTOPE_ENABLE_TIMERS "Enable Caliper timers" OFF)
+# Install options
 option(POLYTOPE_ENABLE_APPLE "Enable Apple installation support" OFF)
 option(ENABLE_STATIC_TPLS "Used for libraries that require older HDF5 versions" OFF)
 option(BUILD_SHARED_LIBS "Build Polytope as shared library" OFF)
@@ -98,6 +110,10 @@ endif()
 include(cmake/InstallTPLs.cmake)
 
 add_subdirectory(src)
+
+if (POLYTOPE_ENABLE_BENCHMARKS)
+  add_subdirectory(benchmarks)
+endif()
 
 if (POLYTOPE_ENABLE_TESTING)
   enable_testing()

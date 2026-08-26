@@ -446,10 +446,8 @@ public:
 
 private:
   // Morton encoding is reversible, so duplicate hashes are duplicate quantized
-  // generator coordinates. Check a sorted copy to preserve the caller's order.
+  // generator coordinates. Ensure hashes have been sorted before.
   void verifyUniqueGenerators() const {
-    // auto sortedHashes = hashes;
-    // std::sort(sortedHashes.begin(), sortedHashes.end());
     const auto duplicate = std::adjacent_find(hashes.begin(), hashes.end());
     if (duplicate != hashes.end()) {
       if (Communicator::getRank() == Communicator::getRoot()) {

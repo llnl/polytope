@@ -37,7 +37,6 @@ SiloWriter<3, TessType>::write(const TessType& mesh,
   int coord_sys = DB_CARTESIAN;
   // Open a file in Silo/HDF5 format for writing.
 #ifdef POLYTOPE_ENABLE_MPI
-  int nproc = Communicator::getNProcs();
   int rank = Communicator::getRank();
   int root = Communicator::getRoot();
   auto& comm = Communicator::communicator();
@@ -48,7 +47,7 @@ SiloWriter<3, TessType>::write(const TessType& mesh,
     MPI_Bcast(&globalWriteProcs, 1, MPI_INT, root, comm);
     numFiles = globalWriteProcs;
   }
-  POLY_ASSERT(numFiles <= nproc);
+  POLY_ASSERT(numFiles <= Communicator::getNProcs());
 
   std::string masterDirName = getMasterDirName(directory, prefix, cycle);
   if (rank == root) {

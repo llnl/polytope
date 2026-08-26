@@ -116,9 +116,11 @@ partitionAndTessellate(const std::vector<RealType>& points,
     Q.init(globalMin, globalMax);
   }
 
-  QuantizedTessellation replicatedMesh(points);
-  QuantizedTessellation quantmesh(partitioner.computePartition(
-    replicatedMesh.getQuantizedPoints()));
+  QuantizedTessellation quantmesh;
+  {
+    QuantizedTessellation replicatedMesh(points);
+    quantmesh.init(partitioner.computePartition(replicatedMesh.getQuantizedPoints()));
+  }
   this->tessellateQuantized(quantmesh);
   quantmesh.filterToLocalGenerators();
   quantmesh.fillTessellation(mesh);
@@ -148,11 +150,13 @@ partitionAndTessellate(const std::vector<RealType>& points,
     Q.init(globalMin, globalMax);
   }
 
-  QuantizedTessellation replicatedMesh(points);
+  QuantizedTessellation quantmesh;
   QuantPLC<Dimension> qplc(geometry, PLCpoints);
-  replicatedMesh.cullExternalPoints(qplc);
-  QuantizedTessellation quantmesh(partitioner.computePartition(
-    replicatedMesh.getQuantizedPoints()));
+  {
+    QuantizedTessellation replicatedMesh(points);
+    replicatedMesh.cullExternalPoints(qplc);
+    quantmesh.init(partitioner.computePartition(replicatedMesh.getQuantizedPoints()));
+  }
   this->tessellateQuantized(quantmesh);
   quantmesh.clipTessellation(qplc, m_serialTessellator);
   quantmesh.filterToLocalGenerators();

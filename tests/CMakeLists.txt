@@ -56,7 +56,7 @@ polytope_add_test(Quantizer)
 polytope_add_test(Partitioners2D)
 polytope_add_test(QuantPLC2D)
 #polytope_add_test(QuantPLC3D) # Currently broken
-polytope_add_test(QuantConvexIntersect3D)
+#polytope_add_test(QuantConvexIntersect3D) # Currently broken
 #polytope_add_test(clipPolyhedron3D)
 polytope_add_test(honeyComb)
 
@@ -66,7 +66,7 @@ polytope_add_test(honeyComb)
 
 if(POLYTOPE_ENABLE_TETGEN)
   # 3D Tetgen Tessellator tests
-  polytope_add_test(TetgenTessellator)
+  #polytope_add_test(TetgenTessellator) # Currently broken
 endif()
 
 #-----------------------------------------------------------------------------

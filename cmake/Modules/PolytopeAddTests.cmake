@@ -24,7 +24,7 @@ macro(polytope_add_test target)
   get_property(POLYTOPE_TPL_DEPENDS GLOBAL PROPERTY POLYTOPE_TPL_DEPENDS)
   get_property(POLYTOPE_CXX_COMPILE_FLAGS GLOBAL PROPERTY POLYTOPE_CXX_COMPILE_FLAGS)
   blt_add_executable(NAME ${target}
-    SOURCES test_${target}.cc
+    SOURCES ${target}.cc
     DEPENDS_ON polytopeC ${POLYTOPE_TPL_DEPENDS}
     OUTPUT_DIR ${CMAKE_BINARY_DIR}/bin
     OUTPUT_NAME ${target}
@@ -64,7 +64,7 @@ macro(polytope_add_python_test target)
   endif()
 
   blt_add_test(NAME ${target_name}_test
-    COMMAND ${CMAKE_BINARY_DIR}/${POLYTOPE_VIRT_DIR}/bin/python ${CMAKE_CURRENT_SOURCE_DIR}/PYB11/test_${target}.py
+    COMMAND ${CMAKE_BINARY_DIR}/${POLYTOPE_VIRT_DIR}/bin/python ${CMAKE_CURRENT_SOURCE_DIR}/PythonTests/${target}.py
     NUM_MPI_TASKS ${arg_NUMTASKS}
   )
 
