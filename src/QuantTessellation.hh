@@ -33,7 +33,9 @@ public:
   using TessellationType = Tessellation<Dimension, RealType>;
   using QuantizedCell = Cell<Dimension, QuantizedCoordinate<Dimension>>;
 
-  QuantTessellation() = default;
+  // Default constructor
+  QuantTessellation() :
+    m_keyEncode(QuantizerType::instance().keyEncoding()) { }
   QuantTessellation& operator=(const QuantTessellation& other) = default;
   QuantTessellation(const QuantTessellation& other) = default;
   virtual ~QuantTessellation() {};

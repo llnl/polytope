@@ -48,9 +48,15 @@ timeTessellation(const std::vector<double> allPoints, Tessellator<2, double>& se
   for (unsigned encoding = 0; encoding < 2; ++encoding) {
     if (encoding == 0) Quantizer<2>::instance().useMortonEncoding();
     else Quantizer<2>::instance().usePackedEncoding();
+    if (rank == root) {
+      std::cout << "Encoding: " << Quantizer<2>::instance().keyName() << std::endl;
+    }
     for (unsigned exchangePoints = 0; exchangePoints < 2; ++exchangePoints) {
       if (exchangePoints == 0) distributed.setExchangePoints(false);
       else distributed.setExchangePoints(true);
+      if (rank == root) {
+        std::cout << "MPI Exchange: " << ((distributed.exchangePoints()) ? "points" : "hashes") << std::endl;
+      }
       for (const auto& partitioner : partitioners) {
         Tessellation<2, double> mesh;
         Communicator::Barrier();
@@ -62,10 +68,7 @@ timeTessellation(const std::vector<double> allPoints, Tessellator<2, double>& se
           std::chrono::steady_clock::now() - tessellationStart).count();
 
         if (rank == root) {
-          std::cout << "exchange points: " << distributed.exchangePoints()
-                    << ", " << partitioner->name()
-                    << ", " << Quantizer<2>::instance().keyName()
-                    << ": " << tessellationTime << " s\n";
+          std::cout << partitioner->name() << " " << tessellationTime << " s\n";
         }
         if (encoding == 0 && exchangePoints == 0) {
           std::string meshName = "Bench" + Quantizer<2>::instance().keyName() + "_" + partitioner->name();
