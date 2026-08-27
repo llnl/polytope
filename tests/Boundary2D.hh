@@ -1,7 +1,6 @@
 #ifndef POLYTOPE_BOUNDARY2D_HH
 #define POLYTOPE_BOUNDARY2D_HH
 
-//#include "within.hh"
 #include <iostream>
 #include "polytope_boost_utilities.hh"
 #include "QuantPLC.hh"

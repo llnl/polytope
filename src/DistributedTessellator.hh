@@ -92,12 +92,19 @@ public:
 
   QuantizedTessellation generateVisibleMesh(QuantizedTessellation& qmesh);
 
+  void checkEncoding() {
+    auto qkey = Quantizer<Dimension>::instance().keyEncoding();
+    POLY_CHECK2(qkey == m_keyEncode,
+                "Key encoding method has changed during tessellation");
+  }
+
 private:
   //! Broadcast the root rank's requested exchange representation.
   void synchronizeExchangePoints();
 
   Base& m_serialTessellator;
   bool m_exchangePoints = false;
+  KeyEncoding m_keyEncode;
 
   // Forbidden methods.
   DistributedTessellator();

@@ -37,7 +37,7 @@ boostIntersect(const PolygonWithHoles& first,
 
 // Clip a Polytope cell against a Boost polygon.
 inline std::vector<PolygonWithHoles>
-boostIntersect(const Cell<2, QuantizedCoordinate<2>>::CellType& cell,
+boostIntersect(const Cell<2, QuantizedCoordinate<2>>& cell,
                const PolygonWithHoles& boundary) {
   const auto boostCell = bp::polytopeToBoost(cell);
   std::vector<PolygonWithHoles> result;

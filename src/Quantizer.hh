@@ -7,7 +7,7 @@
 #define __Polytope_Quantizer__
 
 #include "Point.hh"
-#include "MortonKeyTraits.hh"
+#include "KeyCodec.hh"
 #include <mutex>
 
 namespace polytope {
@@ -16,7 +16,9 @@ template<int Dimension>
 class Quantizer {
 public:
   using RealType = double;
-  using Traits = MortonKeyTraits<Dimension>;
+  using Traits = QuantizedKeyTraits<Dimension>;
+  using Codec = KeyCodec<Dimension>;
+  using Key = typename Codec::Key;
   using RealPoint = Point<Dimension, RealType>;
 
   // Delete copy constructor and assignment operator
@@ -27,6 +29,14 @@ public:
   static Quantizer& instance() {
     static Quantizer instance;
     return instance;
+  }
+
+  KeyEncoding keyEncoding() const {
+    return m_codec.encoding();
+  }
+
+  const std::string keyName() const noexcept {
+    return m_codec.keyName();
   }
 
   // Shifted coordinates in physical space
@@ -65,28 +75,36 @@ public:
     return X.convertx(m_xlo_o, m_dx_o);
   }
 
-  MortonKey<Dimension> encode(const QuantizedPoint<Dimension>& X) const {
+  Key encode(const QuantizedPoint<Dimension>& X) const {
     POLY_CHECK2(m_init, "Must initialize quantizer before using it");
-    return Traits::encode(X);
+    return m_codec.encode(X);
   }
 
-  MortonKey<Dimension> quantizeAndEncode(const RealPoint& x) const {
+  Key quantizeAndEncode(const RealPoint& x) const {
     POLY_CHECK2(m_init, "Must initialize quantizer before using it");
-    return Traits::encode(quantize(x));
+    return m_codec.encode(quantize(x));
   }
 
-  QuantizedPoint<Dimension> decode(const MortonKey<Dimension>& h) const {
+  QuantizedPoint<Dimension> decode(const Key& h) const {
     POLY_CHECK2(m_init, "Must initialize quantizer before using it");
-    return Traits::decode(h);
+    return m_codec.decode(h);
   }
 
-  RealPoint decodeAndDequantize(const MortonKey<Dimension>& h) const {
+  RealPoint decodeAndDequantize(const Key& h) const {
     POLY_CHECK2(m_init, "Must initialize quantizer before using it");
     return dequantize(decode(h));
   }
 
   RealPoint degeneracy() const {
     return m_dx_o*m_lx_o;
+  }
+
+  void useMortonEncoding() {
+    m_codec.setEncoding(KeyEncoding::Morton);
+  }
+
+  void usePackedEncoding() {
+    m_codec.setEncoding(KeyEncoding::Packed);
   }
 
   void init(const RealPoint& xlo,
@@ -175,6 +193,7 @@ private:
   }
 
   // Mutex for thread-safe initialization
+  Codec m_codec;
   mutable std::mutex m_mutex;
 };
 

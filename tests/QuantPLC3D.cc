@@ -59,8 +59,6 @@ void testBasicConstruction(const int tnum) {
   // Check that all 8 vertices were quantized
   POLY_CHECK2(qplc.points.size() == 8,
               "Expected 8 vertices, got " << qplc.points.size());
-  POLY_CHECK2(qplc.hashes.size() == 8,
-              "Expected 8 hashes, got " << qplc.hashes.size());
 
   // Check that bounding box makes sense
   POLY_CHECK2(qplc.m_loBounds < qplc.m_hiBounds,
@@ -409,10 +407,10 @@ void testWithinHoles(const int tnum) {
 }
 
 //------------------------------------------------------------------------------
-// Test: Hash comparison utilities
+// Test: Point comparison utilities
 //------------------------------------------------------------------------------
-void testHashComparison(const int tnum) {
-  cout << "\n=== Test " << tnum << ": Hash Comparison Utilities ===" << endl;
+void testPointComparison(const int tnum) {
+  cout << "\n=== Test " << tnum << ": Point Comparison Utilities ===" << endl;
 
   RealPoint xlo(0.0, 0.0, 0.0);
   RealPoint xhi(1.0, 1.0, 1.0);
@@ -428,11 +426,8 @@ void testHashComparison(const int tnum) {
   // Create identical PLC with permuted vertex indices
   QuantPLC3D qplc2(plc2,  cube.flatNodes());
 
-  // Should have same hashes (order-independent comparison)
-  POLY_CHECK(QuantPLC3D::compareHashes(qplc1, qplc2));
-
-  // Should have same facets (order-independent)
-  POLY_CHECK(QuantPLC3D::compareFacets(qplc1, qplc2));
+  // Should be the same
+  POLY_CHECK(qplc1 == qplc2);
 
   cout << "  Hash comparison passed!" << endl;
 }
@@ -500,8 +495,7 @@ void testCoplanarFaceMerging(const int tnum) {
   POLY_CHECK2(qplc.facets.size() == 6,
               "After merging coplanar faces, should have 6 facets, got " << qplc.facets.size());
 
-  POLY_CHECK2(QuantPLC3D::compareHashes(qplc, refqplc), "Hashes are not consistent");
-  POLY_CHECK2(QuantPLC3D::compareFacets(qplc, refqplc), "Facets are not consistent");
+  POLY_CHECK2(qplc == refqplc, "QuantPLCs are not the same");
 
   cout << "  Coplanar face merging passed!" << endl;
 }
@@ -579,8 +573,7 @@ void testComplexCoplanarFaceMerging(const int tnum) {
   POLY_CHECK2(qplc.facets.size() == 6,
               "After merging coplanar faces, qplc should have 6 facets, got " << qplc.facets.size());
 
-  POLY_CHECK2(QuantPLC3D::compareHashes(qplc, refqplc), "qplc hashes are not consistent");
-  POLY_CHECK2(QuantPLC3D::compareFacets(qplc, refqplc), "qplc facets are not consistent");
+  POLY_CHECK2(qplc == refqplc, "QuantPLCs are not the same");
 
   // After merging, the 4 coplanar triangles on top should merge into 1 quad
   // Total should be 6 facets (1 bottom + 4 sides + 1 top)
@@ -673,7 +666,7 @@ int main(int argc, char** argv) {
     testWithinHoles(tnum++);
 
     // Utility tests
-    testHashComparison(tnum++);
+    testPointComparison(tnum++);
     testCoplanarFaceMerging(tnum++);
     testComplexCoplanarFaceMerging(tnum++);
 

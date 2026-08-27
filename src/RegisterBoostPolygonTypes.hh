@@ -14,7 +14,7 @@
 // Include Boost multiprecision types
 #include <boost/multiprecision/cpp_int.hpp>
 
-#include "MortonKeyTraits.hh"
+#include "QuantizedKeyTraits.hh"
 #include "Cell.hh"
 
 //------------------------------------------------------------------------
@@ -54,7 +54,7 @@ struct voronoi_ctype_traits<std::int64_t> {
 
 using QuantizedCoordinate2D = polytope::QuantizedCoordinate<2>;
 using QuantizedPoint2D = polytope::QuantizedPoint<2>;
-using QuantizedCell = polytope::Cell<2, QuantizedCoordinate2D>::CellType;
+using QuantizedCell = polytope::Cell<2, QuantizedCoordinate2D>;
 
 template <>
 struct geometry_concept<QuantizedPoint2D> { typedef point_concept type; };
@@ -142,7 +142,7 @@ inline std::vector<std::vector<QuantizedPoint2D>> innerPoints(const polygon_with
 inline polygon_with_holes_data<QuantizedCoordinate2D>
 polytopeToBoost(const QuantizedCell& cell) {
   polygon_with_holes_data<QuantizedCoordinate2D> polygon;
-  set_points(polygon, cell.begin(), cell.end());
+  set_points(polygon, cell.points().begin(), cell.points().end());
   return polygon;
 }
 

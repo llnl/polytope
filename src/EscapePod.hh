@@ -45,13 +45,9 @@ rebuildTessellationPointMetadata(TessellationType& tessellation) {
   const auto& Q = Quantizer<2>::instance();
   tessellation.hashes.clear();
   tessellation.hashes.reserve(tessellation.points.size());
-  tessellation.m_loBounds = Q.maxCoord;
-  tessellation.m_hiBounds = -tessellation.m_loBounds;
   for (unsigned i = 0; i < tessellation.points.size(); ++i) {
     auto& point = tessellation.points[i];
     point.index = i;
-    tessellation.m_loBounds = tessellation.m_loBounds.minElements(point);
-    tessellation.m_hiBounds = tessellation.m_hiBounds.maxElements(point);
     tessellation.hashes.push_back(Q.encode(point));
   }
 }
@@ -61,8 +57,6 @@ inline
 void
 rebuildQPLCPointMetadata(QPLCType& qplc) {
   const auto& Q = Quantizer<2>::instance();
-  qplc.hashes.clear();
-  qplc.hashes.reserve(qplc.points.size());
   qplc.m_loBounds = Q.maxCoord;
   qplc.m_hiBounds = -qplc.m_loBounds;
   for (unsigned i = 0; i < qplc.points.size(); ++i) {
@@ -70,7 +64,6 @@ rebuildQPLCPointMetadata(QPLCType& qplc) {
     point.index = i;
     qplc.m_loBounds = qplc.m_loBounds.minElements(point);
     qplc.m_hiBounds = qplc.m_hiBounds.maxElements(point);
-    qplc.hashes.push_back(Q.encode(point));
   }
 }
 

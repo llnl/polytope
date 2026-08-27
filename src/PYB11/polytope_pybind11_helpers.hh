@@ -4,7 +4,7 @@
 #ifndef __Polytope_PYB11_helpers__
 #define __Polytope_PYB11_helpers__
 
-#include "MortonKeyTraits.hh"
+#include "QuantizedKeyTraits.hh"
 #include "Point.hh"
 #include "polytope.hh"
 
@@ -145,7 +145,7 @@ pyToUInt128(const py::object& value) {
 
 template<int Dimension>
 py::object
-keyToPy(const MortonKey<Dimension>& value) {
+keyToPy(const QuantizedKey<Dimension>& value) {
 #ifdef POLYTOPE_ENABLE_HIBIT2D
   return int128ToPy(value);
 #else
@@ -158,7 +158,7 @@ keyToPy(const MortonKey<Dimension>& value) {
 }
 
 template<int Dimension>
-MortonKey<Dimension>
+QuantizedKey<Dimension>
 pyToKey(const py::object& value) {
 #ifdef POLYTOPE_ENABLE_HIBIT2D
   return pyToInt128(value);
@@ -166,7 +166,7 @@ pyToKey(const py::object& value) {
   if constexpr (Dimension == 3) {
     return pyToInt128(value);
   } else {
-    return value.cast<MortonKey<Dimension>>();
+    return value.cast<QuantizedKey<Dimension>>();
   }
 #endif
 }

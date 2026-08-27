@@ -149,7 +149,7 @@ QuantTessellation<2>::cullExternalPoints(const QuantPLC<2>& QPLC) {
   auto N = points.size();
   std::vector<QuantizedPoint<2>> newPoints;
   newPoints.reserve(N);
-  std::vector<MortonKey<2>> newHashes;
+  std::vector<QuantizedKey<2>> newHashes;
   newHashes.reserve(N);
   unsigned indx = 0;
   for (auto i = 0u; i < N; ++i) {
@@ -210,14 +210,14 @@ void
 QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
                                        Tessellator<2, double>& tessellator) {
   const auto& Q = Quantizer<2>::instance();
-  auto boundaryPoints = QPLC.getCell();
+  auto boundaryPoints = QPLC.getCell().points();
   PolygonWithHoles boundary;
   bp::set_points(boundary, boundaryPoints.begin(), boundaryPoints.end());
   auto holePoints = QPLC.getHolePoints();
   std::vector<Polygon> holes_vector;
   for (const auto& hole : holePoints) {
     Polygon holepoly;
-    bp::set_points(holepoly, hole.begin(), hole.end());
+    bp::set_points(holepoly, hole.points().begin(), hole.points().end());
     holes_vector.push_back(holepoly);
   }
   if (holePoints.size() > 0) {
@@ -230,7 +230,7 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
   std::vector<QuantizedPoint<2>> localGenPoints;
   std::vector<int> polyIndex;
   // Map between hashed vertices to associated polygons in cellPolygons
-  std::unordered_map<MortonKey<2>, std::set<unsigned>, MortonKeyHasher<2>> vertexMap;
+  std::unordered_map<QuantizedKey<2>, std::set<unsigned>, QuantizedKeyHasher<2>> vertexMap;
 
   // Loop over cells and intersect them with the boundary
   for (auto i = 0u; i < cells.size(); ++i) {
@@ -291,7 +291,7 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
 
   // Storage for generator points corresponding to surviving cells
   std::vector<QuantizedPoint<2>> newPoints;
-  std::vector<MortonKey<2>> newHashes;
+  std::vector<QuantizedKey<2>> newHashes;
   std::vector<int> newCellRank;
   bool updateCellRank = cellRank.size() == 0 ? false : true;
 

@@ -10,7 +10,7 @@
 // Type system:
 //   - CoordType: Input coordinate type (int for 2D, int64_t for 3D)
 //   - WideInt: Larger type for intermediate calculations (int64_t for 2D, __int128 for 3D)
-//   - WideInt is automatically deduced from dimension via MortonKeyTraits<Dim>
+//   - WideInt is automatically deduced from dimension via QuantizedKeyTraits<Dim>
 //
 // Strategy:
 //   - Cast to WideInt before multiplication to prevent overflow
@@ -50,7 +50,7 @@ bool pointInPolygon_convex(const std::vector<std::vector<unsigned>>& facets,
 }
 
 template<typename CoordType>
-bool pointInPolygon_convex(const typename Cell<2, CoordType>::CellType& vertices,
+bool pointInPolygon_convex(const Cell<2, CoordType>& vertices,
                            const std::vector<Point2<CoordType>>& points) {
   auto N = vertices.size();
   for (int i = 0; i < N; ++i) {
@@ -67,12 +67,12 @@ bool pointInPolygon_convex(const typename Cell<2, CoordType>::CellType& vertices
 // Tests if two convex hulls overlap.
 //------------------------------------------------------------------------------
 template<typename CoordType>
-bool convexIntersect(const typename Cell<2, CoordType>::CellType& pointsA,
-                     const typename Cell<2, CoordType>::CellType& pointsB) {
+bool convexIntersect(const Cell<2, CoordType>& pointsA,
+                     const Cell<2, CoordType>& pointsB) {
   if (pointsA.empty() || pointsB.empty()) return false;
 
   using Wide = WideInt<2>;
-  auto separated = [&pointsA, &pointsB](const typename Cell<2, CoordType>::CellType& axesFrom) {
+  auto separated = [&pointsA, &pointsB](const Cell<2, CoordType>& axesFrom) {
     const auto N = axesFrom.size();
     for (auto i = 0u; i < N; ++i) {
       const auto& pi = axesFrom[i];
@@ -80,7 +80,7 @@ bool convexIntersect(const typename Cell<2, CoordType>::CellType& pointsA,
       const Wide dx = static_cast<Wide>(pj.x) - static_cast<Wide>(pi.x);
       const Wide dy = static_cast<Wide>(pj.y) - static_cast<Wide>(pi.y);
       if (dx == 0 && dy == 0) continue;
-      if (SAT(pointsA, pointsB, Point2<Wide>(-dy, dx))) {
+      if (SAT(pointsA.points(), pointsB.points(), Point2<Wide>(-dy, dx))) {
         return true;
       }
     }
@@ -97,8 +97,8 @@ bool convexIntersect(const std::vector<Point2<CoordType>>& pointsA,
                      const std::vector<std::vector<unsigned>>& facetsA,
                      const std::vector<Point2<CoordType>>& pointsB,
                      const std::vector<std::vector<unsigned>>& facetsB) {
-  const auto cellA = Cell<2, CoordType>::extractCell(pointsA, facetsA);
-  const auto cellB = Cell<2, CoordType>::extractCell(pointsB, facetsB);
+  const auto cellA = Cell<2, CoordType>(pointsA, facetsA);
+  const auto cellB = Cell<2, CoordType>(pointsB, facetsB);
   return convexIntersect<CoordType>(cellA, cellB);
 }
 
@@ -119,8 +119,8 @@ bool convexIntersect(const std::vector<Point3<CoordType>>& /*pointsA*/,
 //------------------------------------------------------------------------------
 
 template<typename CoordType>
-bool convexBoundaryIntersect(const typename Cell<2, CoordType>::CellType& pointsA,
-                             const typename Cell<2, CoordType>::CellType& pointsB) {
+bool convexBoundaryIntersect(const Cell<2, CoordType>& pointsA,
+                             const Cell<2, CoordType>& pointsB) {
   Point2<CoordType> result;
   auto Na = pointsA.size();
   auto Nb = pointsB.size();
@@ -143,8 +143,8 @@ bool convexBoundaryIntersect(const typename Cell<2, CoordType>::CellType& points
 // in the other.
 //------------------------------------------------------------------------------
 template<typename CoordType>
-bool convexBoundaryIntersect(const typename Cell<3, CoordType>::CellType& /*pointsA*/,
-                             const typename Cell<3, CoordType>::CellType& /*pointsB*/) {
+bool convexBoundaryIntersect(const Cell<3, CoordType>& /*pointsA*/,
+                             const Cell<3, CoordType>& /*pointsB*/) {
   // Implement this
   return false;
 }

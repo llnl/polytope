@@ -166,7 +166,7 @@ int isWatertight(const Tessellation<2, double>& mesh) {
   MultiBGPolygon<double, 2> result;
   for (int i = 0; i < mesh.cells.size(); ++i) {
     auto cell = mesh.getCell(i);
-    BGPolygon<double, 2> polygon = makeBGPolygon(cell);
+    BGPolygon<double, 2> polygon = makeBGPolygon(cell.points());
     boost::geometry::correct(polygon);
     if (!boost::geometry::is_valid(polygon)) {
       return -1;

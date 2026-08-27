@@ -79,6 +79,20 @@ class Quantizer:
         return "RealPoint"
 
     @PYB11const
+    def keyEncoding(self):
+        return "KeyEncoding"
+
+    def useMortonEncoding(self):
+        return "void"
+
+    def usePackedEncoding(self):
+        return "void"
+
+    @PYB11const
+    def keyName(self):
+        return "const std::string"
+
+    @PYB11const
     def degeneracy(self):
         return "RealPoint"
 

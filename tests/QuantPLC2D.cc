@@ -2,13 +2,12 @@
 //
 // Tests the quantized PLC functionality for 2D including:
 //   - Construction from real-space coordinates
-//   - Quantization and deduplication
+//   - Quantization
 //   - Convex hull computation (2D)
 //   - Facet (edge) ordering
 //   - Point containment (within) tests
 //   - Intersection tests
 //   - Reduction (removing unused points)
-//   - Morton-key point comparison
 
 #include <iostream>
 #include <vector>
@@ -86,8 +85,6 @@ void testBasicConstruction(const int tnum) {
   // Check that all 4 vertices were quantized
   POLY_CHECK2(qplc.points.size() == 4,
               "Expected 4 vertices, got " << qplc.points.size());
-  POLY_CHECK2(qplc.hashes.size() == 4,
-              "Expected 4 hashes, got " << qplc.hashes.size());
 
   // Check that bounding box makes sense
   POLY_CHECK2(qplc.m_loBounds < qplc.m_hiBounds,
@@ -129,42 +126,6 @@ void testQuantizationAccuracy(const int tnum) {
   }
 
   cout << "  Quantization accuracy passed!" << endl;
-}
-
-//------------------------------------------------------------------------------
-// Test: Deduplication via hashing (removeDegeneracies)
-//------------------------------------------------------------------------------
-void testDeduplication(const int tnum) {
-  cout << "\n=== Test " << tnum << ": Hash-Based Deduplication ===" << endl;
-
-  RealPoint xlo(0.0, 0.0);
-  RealPoint xhi(1.0, 1.0);
-  auto& Q = Quantizer2D::instance();
-  Q.init(xlo, xhi);
-
-  // Create vertices with duplicates (vertices 0 and 4 are the same)
-  vector<RealType> vertices = {
-    0.0, 0.0,  // 0
-    1.0, 0.0,  // 1
-    1.0, 1.0,  // 2
-    0.0, 1.0,  // 3
-    0.0, 0.0,  // 4 (duplicate of 0)
-    1.0, 1.0   // 5 (duplicate of 2)
-  };
-
-  PLC plc;
-  plc.facets.resize(2);
-  plc.facets[0] = {0, 1};  // Uses 0
-  plc.facets[1] = {4, 2};  // Uses 4 (duplicate of 0)
-
-  // Constructor removes degeneracies
-  QuantPLC2D qplc(plc, vertices);
-
-  // After deduplication: 4 unique points (removed duplicates 4 and 5)
-  POLY_CHECK2(qplc.points.size() == 4,
-              "Expected 4 unique points after deduplication, got " << qplc.points.size());
-
-  cout << "  Deduplication passed!" << endl;
 }
 
 //------------------------------------------------------------------------------
@@ -380,10 +341,10 @@ void testWithinHoles(const int tnum) {
 }
 
 //------------------------------------------------------------------------------
-// Test: Hash comparison utilities
+// Test: Facet comparison utilities
 //------------------------------------------------------------------------------
-void testHashComparison(const int tnum) {
-  cout << "\n=== Test " << tnum << ": Hash Comparison Utilities ===" << endl;
+void testFacetComparison(const int tnum) {
+  cout << "\n=== Test " << tnum << ": Facet Comparison Utilities ===" << endl;
 
   RealPoint xlo(0.0, 0.0);
   RealPoint xhi(1.0, 1.0);
@@ -399,13 +360,10 @@ void testHashComparison(const int tnum) {
   auto vertices2 = createSquareVertices();
   QuantPLC2D qplc2(plc2,  vertices2);
 
-  // Should have same hashes (order-independent comparison)
-  POLY_CHECK(QuantPLC2D::compareHashes(qplc1, qplc2));
+  // Should be the same
+  POLY_CHECK(qplc1 == qplc2);
 
-  // Should have same facets (order-independent)
-  POLY_CHECK(QuantPLC2D::compareFacets(qplc1, qplc2));
-
-  cout << "  Hash comparison passed!" << endl;
+  cout << "  Facet comparison passed!" << endl;
 }
 
 //------------------------------------------------------------------------------
@@ -530,7 +488,6 @@ int main(int argc, char** argv) {
   // Quantization tests
   testBasicConstruction(tnum++);
   testQuantizationAccuracy(tnum++);
-  testDeduplication(tnum++);
   testReduction(tnum++);
 
   // Geometric tests
@@ -542,7 +499,7 @@ int main(int argc, char** argv) {
   testWithinHoles(tnum++);
 
   // Utility tests
-  testHashComparison(tnum++);
+  testFacetComparison(tnum++);
   testCellIntersectsHullEdgeOnly(tnum++);
 
   // Stress test

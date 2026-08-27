@@ -5,7 +5,7 @@ class Tessellation:
     "A topologically-consistent arbitrary polygonal/polyhedral mesh."
 
     PYB11typedefs = """
-  typedef typename Cell<%(Dimension)s, %(RealType)s>::CellType CellType;
+  typedef Cell<%(Dimension)s, %(RealType)s> CellType;
 """
 
     numDims = PYB11property(constexpr=True, static=True, doc="Number of dimensions")
@@ -29,9 +29,9 @@ class Tessellation:
     def computeFaceCells(self):
         return "void"
 
-    @PYB11const
-    def getCell(self, cellIndex="const unsigned"):
-        return "CellType"
+    # @PYB11const
+    # def getCell(self, cellIndex="const unsigned"):
+    #     return "CellType"
 
     @PYB11implementation("[](const Tessellation<%(Dimension)s, %(RealType)s>& self) { std::stringstream ss; ss << self; return ss.str(); }")
     def __str__(self):

@@ -3,15 +3,18 @@
 #ifndef POLYTOPE_GENERATORS_HH
 #define POLYTOPE_GENERATORS_HH
 
+#include <algorithm>
+#include <map>
+#include <vector>
+#include <random>
+
 #include "polytope_boost_utilities.hh"
 #include "Boundary2D.hh"
 #include "Cube.hh"
 #include "Communicator.hh"
 #include "GeomUtils.hh"
 
-#include <algorithm>
-#include <map>
-#include <vector>
+
 
 using namespace std;
 
@@ -55,7 +58,7 @@ public:
   }
 
   //------------------------------------------------------------------------
-  // Place random generators into spatial domain
+  // Place random generators into spatial domain. Should be a uniform distribution
   //------------------------------------------------------------------------
   void randomPoints(unsigned nGenerators, unsigned seed = 0) {
     mPoints.clear();
@@ -71,8 +74,39 @@ public:
       Point<Dimension, double> pos;
       bool inside = false;
       while( !inside ) {
-        for (unsigned n = 0; n < Dimension; ++n){
+        for (unsigned n = 0; n < Dimension; ++n) {
           pos[n] = (bHigh[n]-bLow[n]) * random01() + bLow[n];
+        }
+        inside = isInside(pos);
+      }
+      for (auto n = 0; n < Dimension; ++n) {
+        mPoints.push_back(pos[n]);
+      }
+    }
+    POLY_CHECK( mPoints.size()/Dimension == nGenerators );
+  }
+
+  //------------------------------------------------------------------------
+  // Place random generators into spatial domain using a normal distribution
+  // Focuses more points near the center of the domain
+  //------------------------------------------------------------------------
+  void randomNormalPoints(unsigned nGenerators, unsigned seed = 0) {
+    mPoints.clear();
+    nPoints = nGenerators;
+    double mean = 0.5;
+    double sigma = 1./5.152;
+    std::mt19937 gen(seed);
+    std::normal_distribution<double> distrib(mean, sigma);
+    auto& Q = Quantizer<Dimension>::instance();
+    auto bHigh = Q.m_xhi;
+    auto bLow = Q.m_xlo;
+
+    for (unsigned iter = 0; iter < nGenerators; ++iter ){
+      Point<Dimension, double> pos;
+      bool inside = false;
+      while( !inside ) {
+        for (unsigned n = 0; n < Dimension; ++n) {
+          pos[n] = (bHigh[n]-bLow[n]) * distrib(gen) + bLow[n];
         }
         inside = isInside(pos);
       }

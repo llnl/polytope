@@ -58,7 +58,6 @@ QuantPLC<Dimension>::init(const std::vector<RealType>& allpoints) {
   std::vector<RealPoint> rpoints = extractCoords<Dimension, RealType>(allpoints);
 
   auto N = rpoints.size();
-  hashes.reserve(N);
   points.reserve(N);
   size_t i = 0;
   for (const auto& rp : rpoints) {
@@ -66,13 +65,11 @@ QuantPLC<Dimension>::init(const std::vector<RealType>& allpoints) {
     ip.index = i++;
     m_loBounds = m_loBounds.minElements(ip);
     m_hiBounds = m_hiBounds.maxElements(ip);
-    hashes.push_back(Q.encode(ip));
     points.push_back(ip);
   }
   if (isValid()) {
     POLY_ASSERT2(m_loBounds < m_hiBounds,
                  "Provided coplanar or collinear or degenerate points to the QuantPLC");
-    removeDegeneracies();
     orderFacets();
   }
 }
@@ -94,7 +91,6 @@ QuantPLC<Dimension>::init(const std::vector<QuantizedPoint<Dimension>>& quantize
   m_hiBounds = -m_loBounds;
 
   auto N = quantizedPoints.size();
-  hashes.reserve(N);
   points.reserve(N);
   size_t i = 0;
   for (const auto& ip : quantizedPoints) {
@@ -102,61 +98,15 @@ QuantPLC<Dimension>::init(const std::vector<QuantizedPoint<Dimension>>& quantize
     nip.index = i++;
     m_loBounds = m_loBounds.minElements(nip);
     m_hiBounds = m_hiBounds.maxElements(nip);
-    hashes.push_back(Q.encode(nip));
     points.push_back(nip);
   }
   if (isValid()) {
     POLY_ASSERT2(m_loBounds < m_hiBounds,
                  "Provided coplanar or collinear or degenerate points to the QuantPLC");
-    removeDegeneracies();
     orderFacets();
   }
 }
 
-//------------------------------------------------------------------------------
-// Remove any degenerate points.
-//------------------------------------------------------------------------------
-template<int Dimension>
-void
-QuantPLC<Dimension>::removeDegeneracies() {
-  const auto N = hashes.size();
-  std::map<MortonKey<Dimension>, unsigned> seen;
-  std::vector<MortonKey<Dimension>> new_hashes;
-  std::vector<int> oldToNew(N, -1);
-  new_hashes.reserve(N);
-  unsigned newIndx = 0;
-  for (auto i = 0u; i < N; ++i) {
-    const auto& h = hashes[i];
-    auto it = seen.find(h);
-    if (it != seen.end()) {
-      oldToNew[i] = it->second;
-    } else {
-      seen.emplace(h, newIndx);
-      oldToNew[i] = newIndx;
-      new_hashes.push_back(h);
-      newIndx++;
-    }
-  }
-  hashes = std::move(new_hashes);
-  const auto& Q = Quantizer<Dimension>::instance();
-  points.clear();
-  points.reserve(hashes.size());
-  for (auto& h : hashes) {
-    points.push_back(Q.decode(h));
-  }
-  for (auto& f : facets) {
-    for (auto& idx : f) {
-      idx = oldToNew[idx];
-    }
-  }
-  for (auto& hole : holes) {
-    for (auto& f : hole) {
-      for (auto& idx : f) {
-        idx = oldToNew[idx];
-      }
-    }
-  }
-}
 //------------------------------------------------------------------------------
 // Remove any points not associated with a facet and order the facets.
 //------------------------------------------------------------------------------
@@ -169,12 +119,13 @@ QuantPLC<Dimension>::reduce() {
     std::copy(f.begin(), f.end(), std::inserter(indices, indices.end()));
   }
 
+  const auto& Q = Quantizer<Dimension>::instance();
   unsigned newIdx = 0;
   std::map<unsigned, unsigned> old2new;
-  std::map<MortonKey<Dimension>, unsigned> hashToIndex;
-  std::vector<MortonKey<Dimension>> newHashes;
+  std::map<QuantizedKey<Dimension>, unsigned> hashToIndex;
+  std::vector<QuantizedKey<Dimension>> newHashes;
   for(int oldIdx : indices) {
-    auto hash = hashes[oldIdx];
+    auto hash = Q.encode(points[oldIdx]);
     if (hashToIndex.find(hash) != hashToIndex.end()) {
       old2new[oldIdx] = hashToIndex[hash];
     } else {
@@ -184,12 +135,10 @@ QuantPLC<Dimension>::reduce() {
     }
   }
 
-  const auto& Q = Quantizer<Dimension>::instance();
   auto N = indices.size();
-  hashes = newHashes;
   points.clear();
   points.reserve(N);
-  for (auto h : hashes) {
+  for (auto h : newHashes) {
     points.push_back(Q.decode(h));
   }
 
@@ -233,6 +182,7 @@ QuantPLC<Dimension>::makeConvex2D() {
   const unsigned n = points.size();
   if (n == 0) return;
   m_convex = true;
+  // TODO: Replace this with QHull call instead
 
   // Unhash all points to integer coordinates and pair with original indices
   std::vector<std::pair<QuantizedPoint<Dimension>, unsigned>> sortedPoints;
@@ -423,10 +373,9 @@ QuantPLC<Dimension>::within(const QuantizedPoint<Dimension>& point) const {
   if (point < m_loBounds || point > m_hiBounds) {
     return false;
   }
-  MortonKey<Dimension> phash = MortonKeyTraits<Dimension>::encode(point);
   // Check if point is coincident with any vertices
-  for (const auto& h : hashes) {
-    if (h == phash) {
+  for (const auto& p : points) {
+    if (p == point) {
       return true;
     }
   }

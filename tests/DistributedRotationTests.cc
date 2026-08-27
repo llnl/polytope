@@ -141,7 +141,7 @@ void runTest(Tessellator<2, double>& tessellator,
   string testName = os.str();
 
   // Time stepping and point-resizing stuff
-  double dt, Tmax, scaleFactor=1.0;
+  double dt = 2.0, Tmax = 4.0, scaleFactor = 1.0;
   double dtfactor = 10.0;
   switch(flowType){
   case 1:

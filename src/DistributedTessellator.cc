@@ -14,7 +14,8 @@ namespace polytope {
 template<int Dimension>
 DistributedTessellator<Dimension>::
 DistributedTessellator(Base& serialTessellator):
-  m_serialTessellator(serialTessellator) {
+  m_serialTessellator(serialTessellator),
+  m_keyEncode(Quantizer<Dimension>::instance().keyEncoding()) {
 }
 
 //------------------------------------------------------------------------------
@@ -58,11 +59,13 @@ tessellate(const std::vector<RealType>& points,
     Q.init(globalMin, globalMax);
   }
 
+  m_keyEncode = Q.keyEncoding();
   QuantizedTessellation quantmesh(points);
   this->tessellateQuantized(quantmesh);
   quantmesh.filterToLocalGenerators();
   quantmesh.fillTessellation(mesh);
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
+  checkEncoding();
 }
 
 //------------------------------------------------------------------------------
@@ -87,6 +90,7 @@ tessellate(const std::vector<RealType>& points,
     Q.init(globalMin, globalMax);
   }
 
+  m_keyEncode = Q.keyEncoding();
   QuantizedTessellation qmesh(points);
   QuantPLC<Dimension> qplc(geometry, PLCpoints);
   qmesh.cullExternalPoints(qplc);
@@ -95,6 +99,7 @@ tessellate(const std::vector<RealType>& points,
   qmesh.filterToLocalGenerators();
   qmesh.fillTessellation(mesh);
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
+  checkEncoding();
 }
 
 //------------------------------------------------------------------------------
@@ -116,6 +121,7 @@ partitionAndTessellate(const std::vector<RealType>& points,
     Q.init(globalMin, globalMax);
   }
 
+  m_keyEncode = Q.keyEncoding();
   QuantizedTessellation quantmesh;
   {
     QuantizedTessellation replicatedMesh(points);
@@ -125,6 +131,7 @@ partitionAndTessellate(const std::vector<RealType>& points,
   quantmesh.filterToLocalGenerators();
   quantmesh.fillTessellation(mesh);
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
+  checkEncoding();
 }
 
 //------------------------------------------------------------------------------
@@ -150,6 +157,7 @@ partitionAndTessellate(const std::vector<RealType>& points,
     Q.init(globalMin, globalMax);
   }
 
+  m_keyEncode = Q.keyEncoding();
   QuantizedTessellation quantmesh;
   QuantPLC<Dimension> qplc(geometry, PLCpoints);
   {
@@ -162,6 +170,7 @@ partitionAndTessellate(const std::vector<RealType>& points,
   quantmesh.filterToLocalGenerators();
   quantmesh.fillTessellation(mesh);
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
+  checkEncoding();
 }
 
 //------------------------------------------------------------------------------
@@ -212,7 +221,7 @@ tessellateQuantizedImpl(QuantizedTessellation& qmesh) {
     }
   } else {
     auto neighborGenerators =
-      exchangeNeighborGenerators<Dimension, MortonKey<Dimension>>(qmesh.hashes, neighborRanks);
+      exchangeNeighborGenerators<Dimension, QuantizedKey<Dimension>>(qmesh.hashes, neighborRanks);
     if (!qmesh.points.empty()) {
       qmesh.init(neighborGenerators);
       m_serialTessellator.tessellateQuantized(qmesh);
@@ -246,7 +255,7 @@ generateVisibleMesh(QuantizedTessellation& qmesh) {
   } else {
     const auto visibleHashes = qmesh.visibleGeneratorKeys();
     auto allVisibleRecords =
-      allGatherGenerators<Dimension, MortonKey<Dimension>>(visibleHashes);
+      allGatherGenerators<Dimension, QuantizedKey<Dimension>>(visibleHashes);
     size_t nvisible = 0;
     for (const auto& rankHashes : allVisibleRecords) {
       nvisible += rankHashes.size();

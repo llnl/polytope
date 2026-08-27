@@ -16,7 +16,10 @@ set(polytope_headers
   EdgeUtils.hh
   EscapePod.hh
   GeomUtils.hh
+  KeyCodec.hh
   MortonKeyTraits.hh
+  PackedKeyTraits.hh
+  QuantizedKeyTraits.hh
   Intersections.hh
   Partitioner.hh
   PLC.hh

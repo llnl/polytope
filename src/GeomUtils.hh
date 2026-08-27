@@ -3,17 +3,17 @@
 
 #include "polytope.hh"
 #include "Point.hh"
-#include "MortonKeyTraits.hh"
+#include "QuantizedKeyTraits.hh"
 #include "EdgeUtils.hh"
 #include "Quantizer.hh"
 
 namespace polytope {
 
 template<int Dimension>
-using WideInt = typename MortonKeyTraits<Dimension>::Wide;
+using WideInt = typename QuantizedKeyTraits<Dimension>::Wide;
 
 template<int Dimension>
-using BigInt = typename MortonKeyTraits<Dimension>::Big;
+using BigInt = typename QuantizedKeyTraits<Dimension>::Big;
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // General helper routines
@@ -87,20 +87,26 @@ Point3<WideInt<3>> qcross(const Point3<CoordType>& a,
 }
 
 //------------------------------------------------------------------------------
-// Compare the magnitude of 2 points. Return true if p1 > p2
+// Compute the magnitude squared of a quantized point
+//------------------------------------------------------------------------------
+template<int Dimension, typename CoordType>
+WideInt<Dimension> qmagnitude2(const Point<Dimension, CoordType>& point) {
+  using Wide = WideInt<Dimension>;
+  auto wpoint = point.template type_cast<Wide>();
+  Wide mag2 = 0;
+  for (int d = 0; d < Dimension; ++d) {
+    mag2 += wpoint[d]*wpoint[d];
+  }
+  return mag2;
+}
+
+//------------------------------------------------------------------------------
+// Compare the magnitude squared of 2 points. Return true if p1 > p2
 //------------------------------------------------------------------------------
 template<int Dimension, typename CoordType>
 bool magComparison(const Point<Dimension, CoordType>& p1,
                    const Point<Dimension, CoordType>& p2) {
-  using Wide = WideInt<Dimension>;
-  auto p1w = p1.template type_cast<Wide>();
-  auto p2w = p2.template type_cast<Wide>();
-  Wide mag1 = 0, mag2 = 0;
-  for (int d = 0; d < Dimension; ++d) {
-    mag1 += p1w[d]*p1w[d];
-    mag2 += p2w[d]*p2w[d];
-  }
-  return (mag1 > mag2) ? true : false;
+  return (qmagnitude2(p1) > qmagnitude2(p2));
 }
 
 //------------------------------------------------------------------------------
@@ -115,7 +121,7 @@ Point2<CoordType> pointDirection(const Point2<double>& p1,
     return Point<2, CoordType>::Zero();
   }
   auto norm = diff/len;
-  const double SCALE = std::pow(2.0, MortonKeyTraits<2>::bitsPerCoordinate - 2);
+  const double SCALE = std::pow(2.0, QuantizedKeyTraits<2>::bitsPerCoordinate - 2);
   return (norm*SCALE).template type_cast<CoordType>();
 }
 
@@ -314,7 +320,7 @@ bool SAT(const std::vector<Point3<CoordType>>& pointsA,
          const std::vector<Point3<CoordType>>& pointsB,
          const Point3<CoordType>& axis) {
   using Wide = WideInt<3>;
-  Wide minA = MortonKeyTraits<3>::maxKey();
+  Wide minA = QuantizedKeyTraits<3>::maxKey();
   Wide minB = minA, maxA = -minA, maxB = maxA;
   for (const auto& p : pointsA) {
     auto ztest = qdot<3>(p, axis);

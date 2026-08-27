@@ -13,11 +13,13 @@
 #include <cstdint>
 #include <limits>
 #include <vector>
+#include <random>
 
 #include "Communicator.hh"
 #include "Point.hh"
 #include "Quantizer.hh"
 #include "polytope_internal.hh"
+#include "GeomUtils.hh"
 
 namespace polytope {
 
@@ -40,15 +42,18 @@ public:
 // RandomPartitioner
 //
 // Ownership is a deterministic hash of the seed, quantized coordinates, and
-// input ordinal.  Every rank must receive the same, identically ordered input.
+// input ordinal. Every rank must receive the same, identically ordered input.
 //----------------------------------------------------------------------------//
 template<int Dimension>
 class RandomPartitioner: public Partitioner<Dimension> {
 public:
   using PointType = typename Partitioner<Dimension>::PointType;
 
-  explicit RandomPartitioner(const std::uint64_t seed):
-    m_seed(seed) {
+  explicit RandomPartitioner(const std::uint64_t seed,
+                             const unsigned maxNRank = Communicator::getNProcs()):
+    m_seed(seed),
+    m_maxNRank(maxNRank) {
+    POLY_VERIFY(m_maxNRank > 0 && m_maxNRank <= Communicator::getNProcs());
   }
 
   virtual std::string name() const override { return "RandomPartitioner"; }
@@ -56,8 +61,7 @@ public:
   std::vector<PointType>
   computePartition(const std::vector<PointType>& globalPoints) const override {
     const auto rank = static_cast<std::uint64_t>(Communicator::getRank());
-    const auto nranks = static_cast<std::uint64_t>(Communicator::getNProcs());
-    POLY_VERIFY(nranks > 0);
+    const auto nranks = m_maxNRank;
 
     std::vector<PointType> result;
     result.reserve(globalPoints.size()/nranks + 1);
@@ -70,7 +74,7 @@ public:
     return result;
   }
 
-private:
+protected:
   static std::uint64_t mix(std::uint64_t value) {
     value += 0x9e3779b97f4a7c15ULL;
     value = (value ^ (value >> 30)) * 0xbf58476d1ce4e5b9ULL;
@@ -89,6 +93,73 @@ private:
   }
 
   std::uint64_t m_seed;
+  unsigned m_maxNRank; // Max number of ranks to use
+};
+
+//----------------------------------------------------------------------------//
+// LocalRandomPartitioner
+//
+// Assigns a random point to each rank and gathers spatially nearby points to
+// that rank.
+//----------------------------------------------------------------------------//
+template<int Dimension>
+class LocalRandomPartitioner: public Partitioner<Dimension> {
+public:
+  using PointType = typename RandomPartitioner<Dimension>::PointType;
+
+  explicit LocalRandomPartitioner(const std::uint64_t seed,
+                                  const unsigned maxNRank = Communicator::getNProcs()):
+    m_seed(seed),
+    m_maxNRank(maxNRank) {
+  }
+
+  virtual std::string name() const override { return "LocalRandomPartitioner"; }
+
+  std::vector<PointType>
+  computePartition(const std::vector<PointType>& globalPoints) const override {
+    const auto rank = Communicator::getRank();
+    const auto nranks = m_maxNRank;
+    POLY_VERIFY(nranks > 0);
+    std::mt19937 gen(m_seed);
+    const auto N = globalPoints.size();
+    std::uniform_int_distribution<unsigned> distrib(0, N);
+    std::set<unsigned> procPointIndices;
+    std::vector<PointType> procPoints;
+    procPoints.reserve(nranks);
+    // Assign each rank a random generator point
+    for (int rank = 0; rank < nranks; ++rank) {
+      auto i = distrib(gen);
+      while (procPointIndices.find(i) != procPointIndices.end()) {
+        i = distrib(gen);
+      }
+      procPointIndices.insert(i);
+      procPoints.push_back(globalPoints[i]);
+    }
+
+    std::vector<PointType> result;
+    result.reserve(globalPoints.size()/nranks + 1);
+    // Iterate over each point and determine which proc seed it closest
+    for (std::size_t i = 0; i < N; ++i) {
+      int proc_owner = 0;
+      const auto& point = globalPoints[i];
+      auto diff = point - procPoints[0];
+      auto minDist = qmagnitude2(diff);
+      for (int ip = 1; ip < nranks; ++ip) {
+        diff = point - procPoints[ip];
+        auto dist = qmagnitude2(diff);
+        if (dist < minDist) {
+          proc_owner = ip;
+          minDist = dist;
+        }
+      }
+      if (proc_owner == rank) {
+        result.push_back(point);
+      }
+    }
+    return result;
+  }
+  std::uint64_t m_seed;
+  unsigned m_maxNRank; // Max number of ranks to use
 };
 
 //----------------------------------------------------------------------------//

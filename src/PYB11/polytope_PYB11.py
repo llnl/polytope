@@ -4,7 +4,10 @@ from PYB11Generator import *
 
 PYB11includes = ['"polytope.hh"',
                  '"polytope_pybind11_helpers.hh"',
+                 '"KeyCodec.hh"',
                  '"MortonKeyTraits.hh"',
+                 '"PackedKeyTraits.hh"',
+                 '"QuantizedKeyTraits.hh"',
                  '"Quantizer.hh"',
                  '"Point.hh"',
                  '"Cell.hh"',
@@ -32,6 +35,11 @@ FieldCentering = PYB11enum(("Node", "Edge", "Face", "Cell"),
                            export_values=True,
                            doc="Centering locations for mesh fields.")
 
+KeyEncoding = PYB11enum(("Morton", "Packed"),
+                        namespace="polytope",
+                        export_values=True,
+                        doc="Encoding used to map quantized coordinates to keys.")
+
 vector_of_unsigned = PYB11_bind_vector("unsigned", opaque=True, local=True)
 vector_of_int = PYB11_bind_vector("int", opaque=True, local=True)
 vector_of_int64 = PYB11_bind_vector("int64_t", opaque=True, local=True)
@@ -45,7 +53,10 @@ vector_of_set_of_unsigned = PYB11_bind_vector("std::set<unsigned>", opaque=True,
 vector_of_vector_of_set_of_unsigned = PYB11_bind_vector("std::vector<std::set<unsigned>>", opaque=True, local=True)
 
 from Point import *
+from KeyCodec import *
 from MortonKeyTraits import *
+from PackedKeyTraits import *
+from QuantizedKeyTraits import *
 from Quantizer import *
 from Communicator import *
 
@@ -53,8 +64,8 @@ vector_of_Point2d = PYB11_bind_vector("Point<2, double>", opaque=True, local=Tru
 vector_of_Point3d = PYB11_bind_vector("Point<3, double>", opaque=True, local=True)
 vector_of_CoordinatePoint2d = PYB11_bind_vector("polytope::QuantizedPoint<2>", opaque=True, local=True)
 vector_of_CoordinatePoint3d = PYB11_bind_vector("polytope::QuantizedPoint<3>", opaque=True, local=True)
-vector_of_KeyPoint2d = PYB11_bind_vector("Point<2, polytope::MortonKey<2>>", opaque=True, local=True)
-vector_of_KeyPoint3d = PYB11_bind_vector("Point<3, polytope::MortonKey<3>>", opaque=True, local=True)
+vector_of_KeyPoint2d = PYB11_bind_vector("Point<2, polytope::QuantizedKey<2>>", opaque=True, local=True)
+vector_of_KeyPoint3d = PYB11_bind_vector("Point<3, polytope::QuantizedKey<3>>", opaque=True, local=True)
 vector_of_vector_of_Point2d = PYB11_bind_vector("std::vector<Point<2, double>>", opaque=True, local=True)
 vector_of_vector_of_Point3d = PYB11_bind_vector("std::vector<Point<3, double>>", opaque=True, local=True)
 vector_of_vector_of_vector_of_Point3d = PYB11_bind_vector("std::vector<std::vector<Point<3, double>>>", opaque=True, local=True)

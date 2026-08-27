@@ -29,6 +29,7 @@ void test(Tessellator<2,double>& tessellator, const std::string& outname, bool h
   std::vector<double> points;
   int cycle = 0;
   int numNodes = 0;
+  Quantizer<2>::instance().usePackedEncoding();
   if (honeyComb) {
     double dx = (xmax - xmin)/(nx + 1.);
     double dy = (ymax - ymin)/(ny + 1.);

@@ -6,7 +6,7 @@
 //------------------------------------------------------------------------------
 
 #include "Point.hh"
-#include "MortonKeyTraits.hh"
+#include "QuantizedKeyTraits.hh"
 #include "EdgeUtils.hh"
 
 namespace polytope {

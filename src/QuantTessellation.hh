@@ -31,8 +31,7 @@ public:
   using RealPoint = Point<Dimension, RealType>;
   using QuantizerType = Quantizer<Dimension>;
   using TessellationType = Tessellation<Dimension, RealType>;
-  using QuantizedCell = typename Cell<Dimension, QuantizedCoordinate<Dimension>>::CellType;
-  using RealCell = typename Cell<Dimension, RealType>::CellType;
+  using QuantizedCell = Cell<Dimension, QuantizedCoordinate<Dimension>>;
 
   QuantTessellation() = default;
   QuantTessellation& operator=(const QuantTessellation& other) = default;
@@ -43,31 +42,32 @@ public:
   // Constructor - common for all dimensions
   //------------------------------------------------------------------------------
   QuantTessellation(const std::vector<RealType>& genpoints) {
+    genInit();
     init(genpoints);
   }
 
   // Construct a smaller instance, useful during clipping
   QuantTessellation(const std::vector<QuantizedPoint<Dimension>>& qgenpoints) {
+    genInit();
     init(qgenpoints);
   }
 
   // Construction used for parallel distribution using keys
-  QuantTessellation(const std::vector<std::vector<MortonKey<Dimension>>>& rankHashes) {
+  QuantTessellation(const std::vector<std::vector<QuantizedKey<Dimension>>>& rankHashes) {
+    genInit();
     init(rankHashes);
   }
 
   // Construction used for parallel distribution using points directly
   QuantTessellation(const std::vector<std::vector<QuantizedPoint<Dimension>>>& rankPoints) {
+    genInit();
     init(rankPoints);
-  }
+  }    
 
   void init(const std::vector<RealType>& genpoints) {
     const auto& Q = QuantizerType::instance();
-    m_loBounds = Q.maxCoord;
-    m_hiBounds = -m_loBounds;
     // Extract the unrolled coordinates
     auto rpoints = extractCoords<Dimension, RealType>(genpoints);
-
     auto N = rpoints.size();
     hashes.reserve(N);
     points.reserve(N);
@@ -76,8 +76,6 @@ public:
       auto ip = Q.quantize(rp);
       POLY_ASSERT2(Q.inQBounds(ip), "Point provided that exceeds quantizer bounds: " << rp);
       ip.index = i++;
-      m_loBounds = m_loBounds.minElements(ip);
-      m_hiBounds = m_hiBounds.maxElements(ip);
       hashes.push_back(Q.encode(ip));
       points.push_back(ip);
     }
@@ -88,21 +86,18 @@ public:
   void init(const std::vector<QuantizedPoint<Dimension>>& qgenpoints) {
     points = qgenpoints;
     const auto& Q = QuantizerType::instance();
-    m_loBounds = Q.maxCoord;
-    m_hiBounds = -m_loBounds;
     auto N = points.size();
     hashes.reserve(N);
     unsigned i = 0;
     for (auto& ip : points) {
       ip.index = i++;
-      m_loBounds = m_loBounds.minElements(ip);
-      m_hiBounds = m_hiBounds.maxElements(ip);
       hashes.push_back(Q.encode(ip));
     }
   }
 
-  // Initialize or extend the generator points
-  void init(const std::vector<std::vector<MortonKey<Dimension>>>& rankHashes) {
+  // Initialize or extend the generator points from hashes.
+  // Used during communication
+  void init(const std::vector<std::vector<QuantizedKey<Dimension>>>& rankHashes) {
     faces.clear();
     nodes.clear();
     cells.clear();
@@ -135,6 +130,7 @@ public:
   }
 
   // Initialize or extend the generator points received directly from each rank.
+  // Used during communication. Does not bother computing the hashes.
   void init(const std::vector<std::vector<QuantizedPoint<Dimension>>>& rankPoints) {
     faces.clear();
     nodes.clear();
@@ -194,7 +190,7 @@ public:
   const std::vector<QuantizedPoint<Dimension>> getQuantizedPoints() const { return points; }
 
   virtual QuantizedCell getCell(const unsigned cellIndex) const override {
-    return Cell<Dimension, QuantizedCoordinate<Dimension>>::extractCell(nodes, cells[cellIndex], faces);
+    return QuantizedCell(nodes, cells[cellIndex], faces);
   }
 
   // Reorder points and cells based on sorted hashes for deterministic output
@@ -216,7 +212,7 @@ public:
 
     // Reorder points and hashes
     std::vector<QuantizedPoint<Dimension>> newPoints(numPoints);
-    std::vector<MortonKey<Dimension>> newHashes(numPoints);
+    std::vector<QuantizedKey<Dimension>> newHashes(numPoints);
     for (unsigned i = 0; i < numPoints; ++i) {
       newPoints[i] = points[sortedIndices[i]];
       newPoints[i].index = i;
@@ -339,8 +335,8 @@ public:
   std::vector<ExchangeType> visibleGenerators(const std::vector<ExchangeType>& et);
 
   // Specialize visible generator routine for hashes
-  std::vector<MortonKey<Dimension>> visibleGeneratorKeys() {
-    return visibleGenerators<MortonKey<Dimension>>(hashes);
+  std::vector<QuantizedKey<Dimension>> visibleGeneratorKeys() {
+    return visibleGenerators<QuantizedKey<Dimension>>(hashes);
   }
 
   // Specialize visible generator routine for points
@@ -369,7 +365,7 @@ public:
     const auto N = points.size();
     auto rank = Communicator::getRank();
     std::vector<QuantizedPoint<Dimension>> newPoints;
-    std::vector<MortonKey<Dimension>> newHashes;
+    std::vector<QuantizedKey<Dimension>> newHashes;
     std::vector<std::vector<int>> newCells;
     newPoints.reserve(N);
     newHashes.reserve(N);
@@ -434,6 +430,9 @@ public:
   // Remove any external generator points
   void cullExternalPoints(const QuantPLC<Dimension>& QPLC);
 
+  // Return the encoding scheme used for this instance
+  KeyEncoding keyEncoding() { return m_keyEncode; }
+
   //------------------------------------------------------------------------------
   // Output method
   //------------------------------------------------------------------------------
@@ -445,7 +444,13 @@ public:
   }
 
 private:
-  // Morton encoding is reversible, so duplicate hashes are duplicate quantized
+  // General initialization routines used inside other init calls
+  void genInit() {
+    const auto& Q = QuantizerType::instance();
+    m_keyEncode = Q.keyEncoding();
+  }
+
+  // Encoding is reversible, so duplicate hashes are duplicate quantized
   // generator coordinates. Ensure hashes have been sorted before.
   void verifyUniqueGenerators() const {
     const auto duplicate = std::adjacent_find(hashes.begin(), hashes.end());
@@ -464,10 +469,9 @@ public:
   // Member data
   //------------------------------------------------------------------------------
   bool m_isEscapePod = false;
-  std::vector<MortonKey<Dimension>> hashes;
-  // Local lower and upper bounding box coordinates
-  QuantizedPoint<Dimension> m_loBounds;
-  QuantizedPoint<Dimension> m_hiBounds;
+  // Store the key encode type to make sure it does not change during tessellation
+  KeyEncoding m_keyEncode;
+  std::vector<QuantizedKey<Dimension>> hashes;
   using Tessellation<Dimension, QuantizedCoordinate<Dimension>>::points; // Generator points
   using Tessellation<Dimension, QuantizedCoordinate<Dimension>>::nodes; // Nodes that make up the Voronoi
   using Tessellation<Dimension, QuantizedCoordinate<Dimension>>::faces; // Faces made up of indices into nodes

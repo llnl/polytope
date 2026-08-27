@@ -15,7 +15,7 @@ namespace polytope {
 template<int Dimension, typename CoordType>
 class Tessellation {
 public:
-  using RealCell = typename Cell<Dimension, CoordType>::CellType;
+  using CoordCell = Cell<Dimension, CoordType>;
 
   static constexpr int numDims() { return Dimension; }
 
@@ -154,8 +154,8 @@ public:
     return result;
   }
 
-  virtual RealCell getCell(const unsigned cellIndex) const {
-    return Cell<Dimension, CoordType>::extractCell(nodes, cells[cellIndex], faces);
+  virtual CoordCell getCell(const unsigned cellIndex) const {
+    return CoordCell(nodes, cells[cellIndex], faces);
   }
 
   //! output operator.

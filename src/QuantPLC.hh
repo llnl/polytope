@@ -2,15 +2,15 @@
 // QuantPLC
 //
 // A Piecewise Linear Complex that stores points in both quantized (integer)
-// and real coordinate spaces, using Morton curve hashing for efficient
-// spatial queries. Combines functionality from:
+// and real coordinate spaces, using encoded keys for efficient spatial
+// queries. Combines functionality from:
 //   - PLC: Stores only points used in facets with index remapping
 //   - convexHull_2d/3d: Can compute convex hulls using quantized coordinates
-//   - MortonKeyTraits/Quantizer: Uses Morton keys for deduplication
+//   - Quantizer: Uses the selected key encoding for deduplication
 //
 // Functionality provided:
 //   1. Automatic deduplication via hash-based comparison (no fuzzy tolerance)
-//   2. Efficient spatial queries via Morton curve ordering
+//   2. Efficient spatial queries via encoded-key ordering
 //   3. Unified interface for both hull construction and PLC reduction
 //-----------------------------------------------------------------------------//
 
@@ -20,7 +20,7 @@
 #include <type_traits>
 
 #include "PLC.hh"
-#include "MortonKeyTraits.hh"
+#include "QuantizedKeyTraits.hh"
 #include "Quantizer.hh"
 #include "Intersections.hh"
 #include "Cell.hh"
@@ -35,10 +35,10 @@ class QuantPLC : public PLC<Dimension> {
 public:
   using RealType = double;
   using RealPoint = Point<Dimension, RealType>;
-  using Wide = MortonKey<Dimension>;
+  using Wide = QuantizedKey<Dimension>;
   using WidePoint = Point<Dimension, Wide>;
   using Quant = Quantizer<Dimension>;
-  using QuantizedCell = typename Cell<Dimension, QuantizedCoordinate<Dimension>>::CellType;
+  using QuantizedCell = Cell<Dimension, QuantizedCoordinate<Dimension>>;
 
   QuantPLC() = default;
   virtual ~QuantPLC() = default;
@@ -60,9 +60,6 @@ public:
             const std::vector<QuantizedPoint<Dimension>>& quantizedPoints);
 
   void init(const std::vector<QuantizedPoint<Dimension>>& quantizedPoints);
-
-  // Remove any degenerate points
-  void removeDegeneracies();
 
   // Reduce to only the points used in the boundary facets, if they exist
   void reduce();
@@ -98,14 +95,14 @@ public:
   }
 
   QuantizedCell getCell() const {
-    return Cell<Dimension, QuantizedCoordinate<Dimension>>::extractCell(points, facets);
+    return QuantizedCell(points, facets);
   }
 
   std::vector<QuantizedCell> getHolePoints() const {
     std::vector<QuantizedCell> holePoints;
     holePoints.reserve(holes.size());
     for (const auto& hole : holes) {
-      holePoints.push_back(Cell<Dimension, QuantizedCoordinate<Dimension>>::extractCell(points, hole));
+      holePoints.push_back(QuantizedCell(points, hole));
     }
     return holePoints;
   }
@@ -132,54 +129,15 @@ public:
   //------------------------------------------------------------------------
   //! Functions used for testing
   //------------------------------------------------------------------------
-  std::vector<MortonKey<Dimension>> sortedHashes() const {
-    std::vector<MortonKey<Dimension>> sorted(hashes);
-    std::sort(sorted.begin(), sorted.end());
-    return sorted;
+  bool operator==(const QuantPLC<Dimension>& other) const {
+    return getCell() == other.getCell();
   }
 
-  static bool compareHashes(const QuantPLC<Dimension>& lhs,
-                            const QuantPLC<Dimension>& rhs) {
-    return lhs.sortedHashes() == rhs.sortedHashes();
-  }
-
-  std::vector<std::set<MortonKey<Dimension>>> facetHashSet() const {
-    std::vector<std::set<MortonKey<Dimension>>> facetSet;
-    for (const auto& f : facets) {
-      facetSet.push_back(std::set<MortonKey<Dimension>>());
-      for (const auto& idx : f) {
-        facetSet.back().insert(hashes[idx]);
-      }
-    }
-    return facetSet;
-  }
-
-  static bool compareFacets(const QuantPLC<Dimension>& lhs,
-                            const QuantPLC<Dimension>& rhs) {
-    auto set1 = lhs.facetHashSet();
-    auto set2 = rhs.facetHashSet();
-    if (set1.size() != set2.size()) {
-      return false;
-    }
-    for (const auto& s1 : set1) {
-      bool found = false;
-      for (const auto& s2 : set2) {
-        if (s1 == s2) {
-          found = true;
-          break;
-        }
-      }
-      if (!found) return false;
-    }
-    return true;
-  }
-
-  //------------------------------------------------------------------------------
+  //------------------------------------------------------------------------
   // Member data
-  //------------------------------------------------------------------------------
+  //------------------------------------------------------------------------
   using PLC<Dimension>::facets; // Facets as vertex index lists
   using PLC<Dimension>::holes; // Holes (each hole is a list of facets)
-  std::vector<MortonKey<Dimension>> hashes;
   std::vector<QuantizedPoint<Dimension>> points;
 
   // Precomputed geometric properties (3D only)
