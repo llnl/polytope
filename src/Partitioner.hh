@@ -97,23 +97,23 @@ protected:
 };
 
 //----------------------------------------------------------------------------//
-// LocalRandomPartitioner
+// QuasiVoronoiPartitioner
 //
 // Assigns a random point to each rank and gathers spatially nearby points to
 // that rank.
 //----------------------------------------------------------------------------//
 template<int Dimension>
-class LocalRandomPartitioner: public Partitioner<Dimension> {
+class QuasiVoronoiPartitioner: public Partitioner<Dimension> {
 public:
   using PointType = typename RandomPartitioner<Dimension>::PointType;
 
-  explicit LocalRandomPartitioner(const std::uint64_t seed,
-                                  const unsigned maxNRank = Communicator::getNProcs()):
+  explicit QuasiVoronoiPartitioner(const std::uint64_t seed,
+                                   const unsigned maxNRank = Communicator::getNProcs()):
     m_seed(seed),
     m_maxNRank(maxNRank) {
   }
 
-  virtual std::string name() const override { return "LocalRandomPartitioner"; }
+  virtual std::string name() const override { return "QuasiVoronoiPartitioner"; }
 
   std::vector<PointType>
   computePartition(const std::vector<PointType>& globalPoints) const override {
