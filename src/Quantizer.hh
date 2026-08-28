@@ -8,6 +8,7 @@
 
 #include "Point.hh"
 #include "KeyCodec.hh"
+#include "Communicator.hh"
 #include <mutex>
 
 namespace polytope {
@@ -57,12 +58,11 @@ public:
   RealPoint rminBound = minBound.template type_cast<RealType>();
   bool m_init = false;
 
-  void extend(const RealPoint& xlo,
-              const RealPoint& xhi) {
+  // Extend or reduce the padding on the boundary box by a certain percentage
+  void extend(const RealType extendPad) {
     std::lock_guard<std::mutex> lock(m_mutex);
-    m_xlo = m_xlo.minElements(xlo);
-    m_xhi = m_xhi.maxElements(xhi);
-    _init_impl(m_xlo, m_xhi, -1, m_pad);
+    POLY_CHECK2(m_init, "Must initialize quantizer before extending it");
+    _init_impl(m_xlo, m_xhi, -1, extendPad);
   }
 
   QuantizedPoint<Dimension> quantize(const RealPoint& x) const {
@@ -172,13 +172,23 @@ private:
   // Private initialization implementation
   void _init_impl(const RealPoint& xlo,
                   const RealPoint& xhi,
-                  const RealType& degeneracy,
-                  const RealType& pad) {
+                  const RealType degeneracy,
+                  const RealType pad) {
     if (pad >= 0.) {
       m_pad = pad;
     }
     m_xlo = xlo;
     m_xhi = xhi;
+#ifdef POLYTOPE_ENABLE_MPI
+    auto comm = Communicator::communicator();
+    auto localMin = xlo.toArray();
+    auto localMax = xhi.toArray();
+    std::array<RealType, Dimension> reducedMin, reducedMax;
+    MPI_Allreduce(localMin.data(), reducedMin.data(), Dimension, MPI_DOUBLE, MPI_MIN, comm);
+    MPI_Allreduce(localMax.data(), reducedMax.data(), Dimension, MPI_DOUBLE, MPI_MAX, comm);
+    m_xlo = RealPoint(reducedMin.data());
+    m_xhi = RealPoint(reducedMax.data());
+#endif
     m_lx_o = (xhi - xlo)*(1.0 + m_pad);
     m_xlo_o = xlo - 0.5*(xhi - xlo)*m_pad;
     if (degeneracy > 0.) {

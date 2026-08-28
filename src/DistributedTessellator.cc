@@ -54,9 +54,7 @@ tessellate(const std::vector<RealType>& points,
 
   auto& Q = Quantizer<Dimension>::instance();
   if (!Q.m_init) {
-    typename Quantizer<Dimension>::RealPoint globalMin, globalMax;
-    findGlobalBounds<Dimension>(points, globalMin, globalMax);
-    Q.init(globalMin, globalMax);
+    Q.init(points);
   }
 
   m_keyEncode = Q.keyEncoding();
@@ -85,9 +83,7 @@ tessellate(const std::vector<RealType>& points,
   auto& Q = Quantizer<Dimension>::instance();
   if (!Q.m_init) {
     const auto& boundsPoints = PLCpoints.empty() ? points : PLCpoints;
-    typename Quantizer<Dimension>::RealPoint globalMin, globalMax;
-    findGlobalBounds<Dimension>(boundsPoints, globalMin, globalMax);
-    Q.init(globalMin, globalMax);
+    Q.init(boundsPoints);
   }
 
   m_keyEncode = Q.keyEncoding();
@@ -116,9 +112,7 @@ partitionAndTessellate(const std::vector<RealType>& points,
 
   auto& Q = Quantizer<Dimension>::instance();
   if (!Q.m_init) {
-    typename Quantizer<Dimension>::RealPoint globalMin, globalMax;
-    findGlobalBounds<Dimension>(points, globalMin, globalMax);
-    Q.init(globalMin, globalMax);
+    Q.init(points);
   }
 
   m_keyEncode = Q.keyEncoding();
@@ -152,9 +146,7 @@ partitionAndTessellate(const std::vector<RealType>& points,
   auto& Q = Quantizer<Dimension>::instance();
   if (!Q.m_init) {
     const auto& boundsPoints = PLCpoints.empty() ? points : PLCpoints;
-    typename Quantizer<Dimension>::RealPoint globalMin, globalMax;
-    findGlobalBounds<Dimension>(boundsPoints, globalMin, globalMax);
-    Q.init(globalMin, globalMax);
+    Q.init(boundsPoints);
   }
 
   m_keyEncode = Q.keyEncoding();

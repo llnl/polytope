@@ -107,7 +107,7 @@ class QuasiVoronoiPartitioner: public Partitioner<Dimension> {
 public:
   using PointType = typename RandomPartitioner<Dimension>::PointType;
 
-  explicit QuasiVoronoiPartitioner(const std::uint64_t seed,
+  explicit QuasiVoronoiPartitioner(const unsigned seed,
                                    const unsigned maxNRank = Communicator::getNProcs()):
     m_seed(seed),
     m_maxNRank(maxNRank) {
@@ -129,6 +129,7 @@ public:
     // Assign each rank a random generator point
     for (int rank = 0; rank < nranks; ++rank) {
       auto i = distrib(gen);
+      // Ensure generator point is not assigned to another rank
       while (procPointIndices.find(i) != procPointIndices.end()) {
         i = distrib(gen);
       }
@@ -158,7 +159,7 @@ public:
     }
     return result;
   }
-  std::uint64_t m_seed;
+  unsigned m_seed;
   unsigned m_maxNRank; // Max number of ranks to use
 };
 

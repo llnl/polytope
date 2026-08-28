@@ -106,7 +106,7 @@ template<typename CoordType> struct Cell<2, CoordType> {
     auto lhs = m_points;
     auto rhs = other.m_points;
     std::sort(lhs.begin(), lhs.end());
-    std::sort(rhs.begin(), lhs.end());
+    std::sort(rhs.begin(), rhs.end());
     return lhs == rhs;
   }
 
@@ -218,7 +218,7 @@ template<typename CoordType> struct Cell<3, CoordType> {
     auto lhs = m_points;
     auto rhs = other.m_points;
     std::sort(lhs.begin(), lhs.end());
-    std::sort(rhs.begin(), lhs.end());
+    std::sort(rhs.begin(), rhs.end());
     return lhs == rhs;
   }
 

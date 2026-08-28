@@ -18,8 +18,8 @@ class Quantizer:
         return "QuantizerType&"
 
     def extend(self,
-               xlo="const RealPoint&",
-               xhi="const RealPoint&"):
+               extendPad="const RealType"):
+        "Modify the padding of the Quantizer by a certain percent of the domain length"
         return "void"
 
     @PYB11pycppname("init")

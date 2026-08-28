@@ -26,25 +26,13 @@
 
 using namespace polytope;
 
-struct TessTest {
-public:
-  std::string encodingType; // Type of key encoder used (Morton or Packed)
-  std::string distType; // Distribution used for creating generators (Normal or Uniform)
-  std::string exchangeType; // What gets exchanged between MPI ranks (hashes or points)
-  std::string partitionerType; // Type of partitioner used to distribute generators over ranks (Lattice or QuasiVoronoi)
-  std::string tessType; // Type of tessellator used (Boost or Triangle)
-  double degeneracy = 0.;
-  double tessTime; // Time needed to do tessellation
-};
-
-std::vector<TessTest>
+void
 timeTessellation(const std::vector<double> allPoints,
                  Tessellator<2, double>& serialTessellator,
                  std::string distType) {
   const auto rank = Communicator::getRank();
   const auto root = Communicator::getRoot();
   const auto nranks = static_cast<unsigned>(Communicator::getNProcs());
-  std::vector<TessTest> output;
 
   // Inputs for the LatticePartitioner
   const auto r0 = static_cast<unsigned>(std::sqrt(nranks));
@@ -57,6 +45,8 @@ timeTessellation(const std::vector<double> allPoints,
   std::vector<std::unique_ptr<Partitioner<2>>> partitioners;
   partitioners.push_back(std::make_unique<LatticePartitioner<2>>(rarray));
   partitioners.push_back(std::make_unique<QuasiVoronoiPartitioner<2>>(partseed));
+  double minTime = std::numeric_limits<double>::max();
+  std::vector<std::string> run_info;
   for (unsigned encoding = 0; encoding < 2; ++encoding) {
     if (encoding == 0) Quantizer<2>::instance().useMortonEncoding();
     else Quantizer<2>::instance().usePackedEncoding();
@@ -82,14 +72,13 @@ timeTessellation(const std::vector<double> allPoints,
         if (rank == root) {
           std::cout << partitioner->name() << " " << tessellationTime << " s\n";
         }
-        TessTest tt;
-        tt.distType = distType;
-        tt.encodingType = Quantizer<2>::instance().keyName();
-        tt.exchangeType = (distributed.exchangePoints()) ? "Points" : "Hashes";
-        tt.partitionerType = partitioner->name();
-        tt.tessType = serialTessellator.name();
-        tt.tessTime = tessellationTime;
-        output.push_back(tt);
+        if (tessellationTime < minTime) {
+          minTime = tessellationTime;
+          run_info.clear();
+          run_info.push_back(Quantizer<2>::instance().keyName());
+          run_info.push_back((distributed.exchangePoints()) ? "Points" : "Hashes");
+          run_info.push_back(partitioner->name());
+        }
         if (encoding == 0 && exchangePoints == 0) {
           std::string meshName = "Bench" + Quantizer<2>::instance().keyName() + "_" + partitioner->name();
           outputMesh(mesh, meshName);
@@ -97,7 +86,13 @@ timeTessellation(const std::vector<double> allPoints,
       } // Partitioner loop
     } // Exchange type loop
   } // Encoding type loop
-  return output;
+  if (rank == root) {
+    std::cout << "Fastest time for " << distType << " point distribution and " << serialTessellator.name() << "\n";
+    for (auto& st : run_info) {
+      std::cout << st << ", ";
+    }
+    std::cout << std::endl << minTime << std::endl;
+  }
 }
 
 int
@@ -106,7 +101,6 @@ main(int argc, char** argv) {
   communicator.init(argc, argv);
   unsigned n = 1000000;
   if (argc > 1) n = std::strtoul(argv[1], nullptr, 10);
-  std::vector<TessTest> test_vals;
 
   // Setup the quantizer
   Boundary2D boundary;
@@ -134,21 +128,20 @@ main(int argc, char** argv) {
       distType = "Normal";
     }
     if (rank == root) {
-      std::cout << distType << " point distribution\n"
-                << "-----------------------------------------\n"
-                << "Using Boost tessellator\n";
+      std::cout << distType << " point distribution\n";
     }
-    BoostTessellator boost;
-    auto btests = timeTessellation(generators.mPoints, boost, distType);
-    std::copy(btests.begin(), btests.end(), std::back_inserter(test_vals));
-
 #ifdef POLYTOPE_ENABLE_TRIANGLE
     if (rank == root) {
       std::cout << "Using Triangle tessellator\n";
     }
     TriangleTessellator triangle;
-    auto ttests = timeTessellation(generators.mPoints, triangle, distType);
-    std::copy(ttests.begin(), ttests.end(), std::back_inserter(test_vals));
+    timeTessellation(generators.mPoints, triangle, distType);
+#else
+    if (rank == root) {
+      std::cout << "Using Boost tessellator\n";
+    }
+    BoostTessellator boost;
+    timeTessellation(generators.mPoints, boost, distType);
 #endif
   }
   communicator.finalize();

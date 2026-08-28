@@ -72,7 +72,7 @@ endif()
 #-----------------------------------------------------------------------------
 # Distributed Tessellator Tests
 #-----------------------------------------------------------------------------
-if(POLYTOPE_ENABLE_MPI AND NOT POLYTOPE_ENABLE_HIBIT2D)
+if(POLYTOPE_ENABLE_MPI)
   if(NOT POLYTOPE_ENABLE_HIBIT2D)
     polytope_add_test(DistributedRandomPoints NUMTASKS 4)
     polytope_add_test(DistributedOrderedPoints NUMTASKS 4)
@@ -86,13 +86,15 @@ endif()
 #-----------------------------------------------------------------------------
 # Python Binding Tests
 #-----------------------------------------------------------------------------
-if(POLYTOPE_ENABLE_PYTHON AND NOT POLYTOPE_ENABLE_LEGACY_PYTHON)
+if(POLYTOPE_ENABLE_PYTHON)
+  if(NOT POLYTOPE_ENABLE_HIBIT2)
+    polytope_add_python_test(SerialTessellator2D)
+    if(POLYTOPE_ENABLE_MPI)
+      polytope_add_python_test(DistributedTessellator2D NUMTASKS 4)
+    endif()
+  endif()
   polytope_add_python_test(Quantizer)
   polytope_add_python_test(MortonKeyTraits)
   polytope_add_python_test(Partitioner)
-  polytope_add_python_test(SerialTessellator2D)
   polytope_add_python_test(PLC)
-  if(POLYTOPE_ENABLE_MPI)
-    polytope_add_python_test(DistributedTessellator2D NUMTASKS 4)
-  endif()
 endif()

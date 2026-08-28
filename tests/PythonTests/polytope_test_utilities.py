@@ -35,4 +35,23 @@ def generate_random_points(N, seed = -1, dim = 2):
         for d in range(dim):
             pout.append(xmin[d] + random.random()*L[d])
     return pout
-    
+
+def generate_normal_random_points(N, seed = -1,
+                                  mu = 0.5, sigma = 1./6.17737,
+                                  dim = 2):
+    if (dim == 2):
+        Q = polytope.Quantizer2d.instance()
+    else:
+        Q = polytope.Quantizer3d.instance()
+    xmin = Q.m_xlo
+    xmax = Q.m_xhi
+    if (seed >= 0):
+        random.seed(seed)
+    L = (xmax - xmin)
+    pout = []
+    for _ in range(N):
+        for d in range(dim):
+            rnum = random.normalvariate(mu, sigma)
+            if (rnum >= 0. and rnum <= 1.):
+                pout.append(xmin[d] + rnum*L[d])
+    return pout

@@ -160,8 +160,14 @@ struct Point<2, CoordType> {
     return Point(xOut, yOut);
   }
 
+  // Return dimension with largest value
   int maxAxis() const {
     return (x >= y) ? 0 : 1;
+  }
+
+  // Convert to an std::array
+  std::array<CoordType, 2> toArray() const {
+    return {x, y};
   }
 };
 
@@ -342,6 +348,7 @@ struct Point<3, CoordType> {
     return Point(xOut, yOut, zOut);
   }
 
+  // Return dimension with largest value
   int maxAxis() const {
     if (x >= y && x >= z) {
       return 0;
@@ -349,6 +356,11 @@ struct Point<3, CoordType> {
       return 1;
     }
     return 2;
+  }
+
+  // Convert to an std::array
+  std::array<CoordType, 3> toArray() const {
+    return {x, y, z};
   }
 };
 
@@ -409,6 +421,7 @@ struct Serializer<Point<3, CoordType> > {
 
 //------------------------------------------------------------------------------
 // Provide a special comparator for point types with some fuzz.
+// DEPRECATED
 //------------------------------------------------------------------------------
 template<typename CoordType>
 struct PointComparator {

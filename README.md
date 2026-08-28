@@ -1,5 +1,4 @@
 [![License: BSD](https://img.shields.io/badge/License-BSD%202.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
-[![Build Status](https://travis-ci.org/pbtoast/polytope.svg?branch=master)](https://travis-ci.org/pbtoast/polytope)
 
 # Polytope
 
@@ -41,9 +40,12 @@ If you want to build Python bindings, you also need the following:
 
 ### Building
 
+Before building Polytope, make sure the Git submodules are properly updated using
+```
+git submodule update --init --recursive
+```
 To build polytope on a UNIX-like system, open `bootstrap` and modify the
 variables as necessary. Then run the script using
-
 ```
 ./bootstrap build_dir
 ```
@@ -70,7 +72,6 @@ from your build directory.
 
 The build system generates a python virtual environment in both the build and install.
 The virtual environment is in the directory PolytopePy and can be activated by
-
 ```
 source PolytopePy/bin/activate
 ```
@@ -78,7 +79,10 @@ or
 ```
 source PolytopePy/bin/activate.csh
 ```
-depending on your terminal shell.
+depending on your terminal shell. After that, you can run a test case simply doing
+```
+python3 py_file_to_run.py
+```
 
 ## Other Considerations
 
@@ -100,6 +104,15 @@ To use Triangle, set `POLYTOPE_ENABLE_TRIANGLE=ON` and set
 This is different than other TPLs where you must point to an existing TPL
 install.
 
+In addition to the tessellators, Polytope also relies on:
+
++ [BLT](https://www.github.com/LLNL/blt) for improving use of CMake.
+  This library is a git submodule of this repo in `cmake/blt`.
++ [ac_types](https://www.github.com/hlslibs/ac_types) for retaining bit accuracy in quantized space.
+  This library is a git submodule of this repo in `extern/ac_types`.
++ [QHull](https://www.github.com/qhull/qhull) for creating convex hulls
++ [SILO](https://www.github.com/LLNL/silo) for writing file IO.
+
 ### Using Triangle and Tetgen
 
 If using Triangle or Tetgen, please note: **you must comply with the licenses for these tools**.
@@ -109,8 +122,28 @@ application, you must contact the author for permission.
 To keep things simple, we don't distribute the source for either of these
 tools. Only use these tools after you've made arrangements to comply with the license(s).
 
+### Status
+
+This library currently only works in 2D with either the Boost or Triangle tessellators.
+Currently, the Voronoi is clipped by a bounding box determined by the bounds provided to
+the Quantizer class, plus a padding on the top and bottom relative to the length (default is 4%).
+This bounding box can be extended by an additional percent. For example, to extend the padding to 8% in C++
+```
+Quantizer<Dimension>::instance().extend(0.08);
+```
+and in Python
+```
+polytope.Quantizer2d.instance().extend(0.08)
+```
+
+Future work:
+
++ Update documentation, including moving many things from here.
++ Implement 3D methods.
++ Extend clipping to work with higher bit accuracy in 2D.
++ Implement methods to reconstruct Voronoi that exceeds the quantized space bounding box.
+
 License
 =======
 
 Polytope is released under a BSD-stype 
-- [thirdparty_licenses.md](/thirdparty_licenses.md)

@@ -33,6 +33,14 @@ class RandomPartitioner(Partitioner):
                seed="const std::uint64_t"):
         "Construct with a deterministic ownership seed."
 
+@PYB11template("int Dimension")
+class QuasiVoronoiPartitioner(Partitioner):
+    "Assigns a random section of generators to each rank."
+
+    def pyinit(self,
+               seed="const unsigned",
+               maxNRank=("const unsigned", "Communicator::getNProcs()")):
+        "Construct with a seed and maximum number of ranks to use."
 
 @PYB11template("int Dimension")
 class LatticePartitioner(Partitioner):
@@ -49,5 +57,7 @@ Partitioner2d = PYB11TemplateClass(Partitioner, template_parameters="2")
 Partitioner3d = PYB11TemplateClass(Partitioner, template_parameters="3")
 RandomPartitioner2d = PYB11TemplateClass(RandomPartitioner, template_parameters="2")
 RandomPartitioner3d = PYB11TemplateClass(RandomPartitioner, template_parameters="3")
+QuasiVoronoiPartitioner2d = PYB11TemplateClass(QuasiVoronoiPartitioner, template_parameters="2")
+QuasiVoronoiPartitioner3d = PYB11TemplateClass(QuasiVoronoiPartitioner, template_parameters="3")
 LatticePartitioner2d = PYB11TemplateClass(LatticePartitioner, template_parameters="2")
 LatticePartitioner3d = PYB11TemplateClass(LatticePartitioner, template_parameters="3")

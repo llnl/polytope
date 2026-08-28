@@ -94,7 +94,7 @@ public:
     mPoints.clear();
     nPoints = nGenerators;
     double mean = 0.5;
-    double sigma = 1./5.152;
+    double sigma = 1./6.17737; // Provides a 99.9% confidence interval to fall between 0 and 1
     std::mt19937 gen(seed);
     std::normal_distribution<double> distrib(mean, sigma);
     auto& Q = Quantizer<Dimension>::instance();
