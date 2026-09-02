@@ -63,8 +63,7 @@ timeTessellation(const std::vector<double> allPoints,
         Tessellation<2, double> mesh;
         Communicator::Barrier();
         const auto tessellationStart = std::chrono::steady_clock::now();
-        distributed.partitionAndTessellate(allPoints, *(partitioner),
-                                           mesh);
+        distributed.partitionAndTessellate(allPoints, *(partitioner), mesh);
         Communicator::Barrier();
         const auto tessellationTime = std::chrono::duration<double>(
           std::chrono::steady_clock::now() - tessellationStart).count();

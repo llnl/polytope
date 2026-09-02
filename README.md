@@ -143,6 +143,7 @@ Future work:
 + Implement 3D methods.
 + Extend clipping to work with higher bit accuracy in 2D.
 + Implement methods to reconstruct Voronoi nodes that are clipped at the bounding quantized space.
++ Add Caliper timers for performance measurements.
 
 License
 =======

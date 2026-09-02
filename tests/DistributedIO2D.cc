@@ -149,7 +149,7 @@ int main(int argc, char** argv) {
      test(tessellator);
    }
    if (Communicator::getRank() == 0) {
-     std::cout << "=== DistributedVoronoi2D passed ===" << std::endl;
+     std::cout << "=== DistributedIO2D passed ===" << std::endl;
    }
   comm.finalize();
   return 0;

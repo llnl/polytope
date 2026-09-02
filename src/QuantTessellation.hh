@@ -23,7 +23,6 @@ namespace polytope {
 template<int Dimension, typename RealType>
 class Tessellator;
 
-// TODO: Make this inherit from Tessellation class
 template<int Dimension>
 class QuantTessellation : public Tessellation<Dimension, QuantizedCoordinate<Dimension>> {
 public:

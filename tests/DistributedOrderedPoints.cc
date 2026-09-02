@@ -115,7 +115,7 @@ int main(int argc, char** argv) {
      }
    }
    if (Communicator::getRank() == root) {
-     std::cout << "=== DistributedVoronoi2D passed ===" << std::endl;
+     std::cout << "=== DistributedOrderedPoints passed ===" << std::endl;
    }
   comm.finalize();
   return 0;

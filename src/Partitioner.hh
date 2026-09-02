@@ -29,7 +29,7 @@ class Partitioner {
 public:
   using PointType = QuantizedPoint<Dimension>;
 
-  Partitioner(const unsigned maxRank) :
+  Partitioner(const unsigned maxRank = Communicator::getNProcs()) :
     m_maxNRank(maxRank) {
     POLY_VERIFY(m_maxNRank > 0 && m_maxNRank <= Communicator::getNProcs());
   }
@@ -60,9 +60,8 @@ public:
   std::vector<PointType>
   computeLocalPartition(const std::vector<PointType>& globalPoints) const {
     const auto rank = Communicator::getRank();
-    const auto nranks = m_maxNRank;
     auto result = computePartition(globalPoints);
-    if (rank < nranks) {
+    if (rank < result.size()) {
       return result[rank];
     } else {
       return std::vector<PointType>();
@@ -73,9 +72,8 @@ public:
   std::vector<PointType>
   computeLocalPartition(const std::vector<double>& flatRealPoints) const {
     const auto rank = Communicator::getRank();
-    const auto nranks = m_maxNRank;
     auto result = computePartitionAndQuantize(flatRealPoints);
-    if (rank < nranks) {
+    if (rank < result.size()) {
       return result[rank];
     } else {
       return std::vector<PointType>();
@@ -158,11 +156,21 @@ public:
 
   std::vector<std::vector<PointType>>
   computePartition(const std::vector<PointType>& globalPoints) const override {
+    if (globalPoints.size() == 0) {
+      return std::vector<std::vector<PointType>>();
+    }
     const auto nranks = m_maxNRank;
-    POLY_VERIFY(nranks > 0);
     std::mt19937 gen(m_seed);
-    const auto N = globalPoints.size();
-    std::uniform_int_distribution<unsigned> distrib(0, N);
+    const auto N = static_cast<unsigned>(globalPoints.size());
+    std::uniform_int_distribution<unsigned> distrib(0, N-1);
+    const int Nmin = std::min(nranks, N);
+    std::vector<std::vector<PointType>> result(nranks);
+    if (N <= nranks) {
+      for (int i = 0; i < Nmin; ++i) {
+        result[i].push_back(globalPoints[i]);
+      }
+      return result;
+    }
     std::set<unsigned> procPointIndices;
     std::vector<PointType> procPoints;
     procPoints.reserve(nranks);
@@ -177,19 +185,21 @@ public:
       procPoints.push_back(globalPoints[i]);
     }
 
-    std::vector<std::vector<PointType>> result(nranks);
     // Iterate over each point and determine which proc seed it closest
     for (std::size_t i = 0; i < N; ++i) {
       const auto& point = globalPoints[i];
       auto diff = point - procPoints[0];
       auto minDist = qmagnitude2(diff);
+      int proc_owner = 0;
       for (int ip = 1; ip < nranks; ++ip) {
         diff = point - procPoints[ip];
         auto dist = qmagnitude2(diff);
         if (dist < minDist) {
+          proc_owner = ip;
           minDist = dist;
         }
       }
+      result[proc_owner].push_back(point);
     }
     return result;
   }
