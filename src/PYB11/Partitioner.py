@@ -22,8 +22,30 @@ class Partitioner:
     def computePartition(self,
                          points="const py::object&"):
         "Return this rank's subset of identically ordered quantized generators."
+        return "std::vector<std::vector<PointType>>"
+
+    @PYB11const
+    @PYB11implementation("""[](const Partitioner<%(Dimension)s>& self,
+                               const py::object& points) {
+                                 const auto generators = pybind11_helpers::copyPyToVector<PointType>(points, "points");
+                                 return self.computeLocalPartition(generators);
+                               }""")
+    def computeLocalPartition(self,
+                              points="const py::object&"):
+        "Return this rank's subset of identically ordered quantized generators."
         return "std::vector<PointType>"
 
+    @PYB11pycppname("computeLocalPartition")
+    @PYB11const
+    @PYB11implementation("""[](const Partitioner<%(Dimension)s>& self,
+                               const py::object& points) {
+                                 const auto generators = pybind11_helpers::copyPyToVector<double>(points, "points");
+                                 return self.computeLocalPartition(generators);
+                               }""")
+    def computeLocalPartition2(self,
+                              points="const py::object&"):
+        "Return this rank's subset of identically ordered quantized generators."
+        return "std::vector<PointType>"
 
 @PYB11template("int Dimension")
 class RandomPartitioner(Partitioner):

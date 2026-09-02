@@ -67,6 +67,8 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
   Tessellation<2, double> localMesh;
   distributed.tessellate(generators.mPoints, boundary.mPLCpoints,
                          boundary.mPLC, localMesh);
+  std::string outname = "DistributedOrdered_" + tessellator.name();
+  outputMesh(localMesh, outname, btype, static_cast<double>(btype));
 
   const auto localCells = static_cast<int>(localMesh.cells.size());
   int totalCells = 0;
@@ -75,20 +77,9 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
   POLY_CHECK2(totalCells == static_cast<int>(allPoints.size()/2),
               "Total number of cells " << totalCells
               << " is incorrect; expected " << allPoints.size()/2);
-  double localArea = computeTessellationArea(localMesh);
-  double distributedArea = 0.0;
-  MPI_Allreduce(&localArea, &distributedArea, 1, MPI_DOUBLE, MPI_SUM, Communicator::communicator());
 
-  std::string outname = "DistributedOrdered_" + tessellator.name();
-  outputMesh(localMesh, outname, btype, static_cast<double>(btype));
-  MPI_Bcast(&serialArea, 1, MPI_DOUBLE, 0, Communicator::communicator());
-  POLY_CHECK2(std::abs(boundary.mArea - serialArea)/boundary.mArea < 1.0e-8,
-              "Serial area does not match reference area, ref: " << boundary.mArea
-              << " serial: " << serialArea);
-
-  POLY_CHECK2(std::abs(distributedArea - serialArea) < 1.0e-8,
-              "Distributed area " << distributedArea
-              << " differs from serial area " << serialArea);
+  compareArea(boundary, serialArea, "Serial area failure");
+  compareArea(boundary, localMesh, "Distributed area failure");
   if (rank == root) {
     cout << "\nTest " << btype << " passed." << endl;
   }
@@ -99,6 +90,7 @@ int main(int argc, char** argv) {
   auto& comm = Communicator::instance();
   comm.init(argc, argv);
   const int root = Communicator::getRoot();
+  const int Nbstart = 0;
   const int Nbtype = 11;
 
 #ifdef POLYTOPE_ENABLE_TRIANGLE
@@ -107,7 +99,7 @@ int main(int argc, char** argv) {
        cout << "\nTriangle Tessellator:\n" << endl;
      }
      TriangleTessellator tessellator;
-     for (int btype = 0; btype < Nbtype; ++btype) {
+     for (int btype = Nbstart; btype < Nbtype; ++btype) {
        test(btype, tessellator);
      }
    }
@@ -118,7 +110,7 @@ int main(int argc, char** argv) {
        cout << "\nBoost Tessellator:\n" << endl;
      }
      BoostTessellator tessellator;
-     for (int btype = 0; btype < Nbtype; ++btype) {
+     for (int btype = Nbstart; btype < Nbtype; ++btype) {
        test(btype, tessellator);
      }
    }

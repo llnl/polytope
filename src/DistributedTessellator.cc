@@ -76,6 +76,7 @@ tessellate(const std::vector<RealType>& points,
            const std::vector<RealType>& PLCpoints,
            const PLC<Dimension>& geometry,
            TessellationType& mesh) {
+  m_clipping = true;
   POLY_ASSERT(mesh.empty());
   POLY_ASSERT(points.size() % Dimension == 0);
   POLY_ASSERT(PLCpoints.size() % Dimension == 0);
@@ -88,10 +89,10 @@ tessellate(const std::vector<RealType>& points,
 
   m_keyEncode = Q.keyEncoding();
   QuantizedTessellation qmesh(points);
-  QuantPLC<Dimension> qplc(geometry, PLCpoints);
-  qmesh.cullExternalPoints(qplc);
+  m_QPLC.init(geometry, PLCpoints);
+  qmesh.cullExternalPoints(m_QPLC);
   this->tessellateQuantized(qmesh);
-  qmesh.clipTessellation(qplc, m_serialTessellator);
+  qmesh.clipTessellation(m_QPLC, m_serialTessellator);
   qmesh.filterToLocalGenerators();
   qmesh.fillTessellation(mesh);
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
@@ -116,11 +117,7 @@ partitionAndTessellate(const std::vector<RealType>& points,
   }
 
   m_keyEncode = Q.keyEncoding();
-  QuantizedTessellation quantmesh;
-  {
-    QuantizedTessellation replicatedMesh(points);
-    quantmesh.init(partitioner.computePartition(replicatedMesh.getQuantizedPoints()));
-  }
+  QuantizedTessellation quantmesh(partitioner.computeLocalPartition(points));
   this->tessellateQuantized(quantmesh);
   quantmesh.filterToLocalGenerators();
   quantmesh.fillTessellation(mesh);
@@ -139,6 +136,7 @@ partitionAndTessellate(const std::vector<RealType>& points,
                        const PLC<Dimension>& geometry,
                        const Partitioner<Dimension>& partitioner,
                        TessellationType& mesh) {
+  m_clipping = true;
   POLY_ASSERT(mesh.empty());
   POLY_ASSERT(points.size() % Dimension == 0);
   POLY_ASSERT(PLCpoints.size() % Dimension == 0);
@@ -150,15 +148,11 @@ partitionAndTessellate(const std::vector<RealType>& points,
   }
 
   m_keyEncode = Q.keyEncoding();
-  QuantizedTessellation quantmesh;
-  QuantPLC<Dimension> qplc(geometry, PLCpoints);
-  {
-    QuantizedTessellation replicatedMesh(points);
-    replicatedMesh.cullExternalPoints(qplc);
-    quantmesh.init(partitioner.computePartition(replicatedMesh.getQuantizedPoints()));
-  }
+  m_QPLC.init(geometry, PLCpoints);
+  QuantizedTessellation quantmesh(partitioner.computeLocalPartition(points));
+  quantmesh.cullExternalPoints(m_QPLC);
   this->tessellateQuantized(quantmesh);
-  quantmesh.clipTessellation(qplc, m_serialTessellator);
+  quantmesh.clipTessellation(m_QPLC, m_serialTessellator);
   quantmesh.filterToLocalGenerators();
   quantmesh.fillTessellation(mesh);
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
@@ -180,6 +174,12 @@ tessellateQuantizedImpl(QuantizedTessellation& qmesh) {
   std::set<int> neighborRanks;
   if (visibleMesh.points.size() > 1) {
     neighborRanks = visibleMesh.neighboringRanks();
+    // If clipping, holes can modify which ranks are neighbors
+    if (m_clipping && m_QPLC.holes.size() > 0) {
+      visibleMesh.clipTessellation(m_QPLC, m_serialTessellator);
+      std::set<int> clipped_neighbors = visibleMesh.neighboringRanks();
+      neighborRanks.insert(clipped_neighbors.begin(), clipped_neighbors.end());
+    }
   }
 
   // Check if any there is any overlap with other convex hulls
@@ -208,14 +208,14 @@ tessellateQuantizedImpl(QuantizedTessellation& qmesh) {
     auto neighborGenerators =
       exchangeNeighborGenerators<Dimension, QuantizedPoint<Dimension>>(qmesh.points, neighborRanks);
     if (!qmesh.points.empty()) {
-      qmesh.init(neighborGenerators);
+      qmesh.extend(neighborGenerators);
       m_serialTessellator.tessellateQuantized(qmesh);
     }
   } else {
     auto neighborGenerators =
       exchangeNeighborGenerators<Dimension, QuantizedKey<Dimension>>(qmesh.hashes, neighborRanks);
     if (!qmesh.points.empty()) {
-      qmesh.init(neighborGenerators);
+      qmesh.extend(neighborGenerators);
       m_serialTessellator.tessellateQuantized(qmesh);
     }
   }
@@ -241,7 +241,7 @@ generateVisibleMesh(QuantizedTessellation& qmesh) {
       nvisible += rankPoints.size();
     }
     if (nvisible > 0) {
-      visibleMesh.init(allVisibleRecords);
+      visibleMesh.extend(allVisibleRecords);
       m_serialTessellator.tessellateQuantized(visibleMesh);
     }
   } else {
@@ -253,7 +253,7 @@ generateVisibleMesh(QuantizedTessellation& qmesh) {
       nvisible += rankHashes.size();
     }
     if (nvisible > 0) {
-      visibleMesh.init(allVisibleRecords);
+      visibleMesh.extend(allVisibleRecords);
       m_serialTessellator.tessellateQuantized(visibleMesh);
     }
   }

@@ -9,6 +9,7 @@ PYB11includes = ['"polytope.hh"',
                  '"PackedKeyTraits.hh"',
                  '"QuantizedKeyTraits.hh"',
                  '"Quantizer.hh"',
+                 '"QuantPLC.hh"',
                  '"Point.hh"',
                  '"Cell.hh"',
                  '"PLC.hh"',
@@ -71,6 +72,7 @@ vector_of_vector_of_Point3d = PYB11_bind_vector("std::vector<Point<3, double>>",
 vector_of_vector_of_vector_of_Point3d = PYB11_bind_vector("std::vector<std::vector<Point<3, double>>>", opaque=True, local=True)
 
 from PLC import *
+from QuantPLC import *
 from Tessellation import *
 from Tessellator import *
 from Partitioner import *

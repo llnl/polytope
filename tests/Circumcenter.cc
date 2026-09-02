@@ -89,7 +89,7 @@ int main(int argc, char** argv) {
     Point2<double> min(-0.5, -0.5);
     Point2<double> max(0.5, 0.5);
     auto& q = Quantizer<2>::instance();
-    q.init(min, max, -1., 0.1);
+    q.init(min, max, 0.1);
     double loval = -0.375;
     double hival = -0.25;
     std::array<Point2<double>, 3> tri1, tri2;
@@ -111,7 +111,7 @@ int main(int argc, char** argv) {
     Point3<double> min(-0.5, -0.5, -0.5);
     Point3<double> max(0.5, 0.5, 0.5);
     auto& q = Quantizer<3>::instance();
-    q.init(min, max, -1., 0.1);
+    q.init(min, max, 0.1);
     double loval = 0.;//-0.375;
     double hival = 0.25;//-0.25;
     double height = 0.9;

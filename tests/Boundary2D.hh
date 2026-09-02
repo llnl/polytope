@@ -74,7 +74,7 @@ public:
 
   void finalize() {
     auto& q = Quantizer<2>::instance();
-    q.init(mPLCpoints, -1., m_pad);
+    q.init(mPLCpoints, m_pad);
     mQPLC.init(mPLC, mPLCpoints);
     boostMyBoundary();
     mArea = boost::geometry::area(mBGboundary);

@@ -37,8 +37,8 @@ void testSerial() {
   const auto points = generators();
   RandomPartitioner<2> random(123456789ULL);
   LatticePartitioner<2> lattice({1, 1});
-  POLY_CHECK(random.computePartition(points) == points);
-  POLY_CHECK(lattice.computePartition(points) == points);
+  POLY_CHECK(random.computeLocalPartition(points) == points);
+  POLY_CHECK(lattice.computeLocalPartition(points) == points);
 }
 
 #ifdef POLYTOPE_ENABLE_MPI
@@ -51,7 +51,7 @@ void testDistributed() {
     {points[0], points[1]}, {points[2], points[3]},
     {points[4], points[5]}, {points[6], points[7]}
   };
-  const auto localLattice = lattice.computePartition(points);
+  const auto localLattice = lattice.computeLocalPartition(points);
   POLY_CHECK(localLattice == expected[rank]);
 
   int latticeCount = static_cast<int>(localLattice.size());
@@ -61,8 +61,8 @@ void testDistributed() {
   POLY_CHECK(globalLatticeCount == static_cast<int>(points.size()));
 
   RandomPartitioner<2> first(123456789ULL), second(987654321ULL);
-  const auto localFirst = first.computePartition(points);
-  POLY_CHECK(localFirst == first.computePartition(points));
+  const auto localFirst = first.computeLocalPartition(points);
+  POLY_CHECK(localFirst == first.computeLocalPartition(points));
 
   int randomCount = static_cast<int>(localFirst.size());
   int globalRandomCount = 0;
@@ -70,7 +70,7 @@ void testDistributed() {
                 Communicator::communicator());
   POLY_CHECK(globalRandomCount == static_cast<int>(points.size()));
 
-  const int locallyDifferent = localFirst != second.computePartition(points) ? 1 : 0;
+  const int locallyDifferent = localFirst != second.computeLocalPartition(points) ? 1 : 0;
   int anyDifferent = 0;
   MPI_Allreduce(&locallyDifferent, &anyDifferent, 1, MPI_INT, MPI_MAX,
                 Communicator::communicator());

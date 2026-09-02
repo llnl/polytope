@@ -44,10 +44,6 @@ void test(Tessellator<2, double>& tessellator) {
   int totalCells = 0;
   MPI_Allreduce(&localCells, &totalCells, 1, MPI_INT, MPI_SUM, Communicator::communicator());
 
-  double localArea = computeTessellationArea(localMesh);
-  double distributedArea = 0.0;
-  MPI_Allreduce(&localArea, &distributedArea, 1, MPI_DOUBLE, MPI_SUM, Communicator::communicator());
-
   double serialArea = 0.0;
   Tessellation<2, double> serialMesh;
   if (rank == root) {
@@ -63,13 +59,12 @@ void test(Tessellator<2, double>& tessellator) {
   std::string outname = "parallelVoronoi_" + tessellator.name();
   std::string serialoutname = "serialVoronoi_" + tessellator.name();
   outputMesh(serialMesh, serialoutname, 0, 0.);
-  MPI_Bcast(&serialArea, 1, MPI_DOUBLE, 0, Communicator::communicator());
-
-  POLY_CHECK2(std::abs(distributedArea - serialArea) < 1.0e-8,
-              "Distributed area " << distributedArea
-              << " differs from serial area " << serialArea);
-
   outputMesh(localMesh, outname, 0, 0.);
+  auto& Q = Quantizer<2>::instance();
+  const double refArea = Q.m_lx_o.x*Q.m_lx_o.y;
+  boundary.mArea = refArea;
+  compareArea(boundary, serialArea, "Serial area failure");
+  compareArea(boundary, localMesh, "Distributed area failure");
 }
 } // anonymous namespace
 

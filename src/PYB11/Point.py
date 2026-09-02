@@ -20,6 +20,10 @@ class Point2:
                 index=("const unsigned", "0")):
         "Construct from x and y."
 
+    def pyinit3(self,
+                rhs="const Point<2, %(CoordType)s>"):
+        "Copy constructor"
+
     @PYB11const
     def iszero(self):
         return "bool"
@@ -86,6 +90,12 @@ class Point2:
     @PYB11pycppname("__rmul__")
     def __rmul__f(self, rhs="%(CoordType)s()"):
         return
+    @PYB11pycppname("__truediv__")
+    def __truediv__f(self, rhs="%(CoordType)s()"):
+        return
+    @PYB11pycppname("__itruediv__")
+    def __itruediv__f(self, rhs="%(CoordType)s()"):
+        return
 
     x = PYB11readwrite()
     y = PYB11readwrite()
@@ -109,6 +119,10 @@ class Point3:
                 z="const %(CoordType)s",
                 index=("const unsigned", "0")):
         "Construct from x, y, and z."
+
+    def pyinit3(self,
+                rhs="const Point<3, %(CoordType)s>"):
+        "Copy constructor"
 
     @PYB11const
     def iszero(self):
@@ -175,6 +189,12 @@ class Point3:
         return
     @PYB11pycppname("__rmul__")
     def __rmul__f(self, rhs="%(CoordType)s()"):
+        return
+    @PYB11pycppname("__truediv__")
+    def __truediv__f(self, rhs="%(CoordType)s()"):
+        return
+    @PYB11pycppname("__itruediv__")
+    def __itruediv__f(self, rhs="%(CoordType)s()"):
         return
 
     x = PYB11readwrite()

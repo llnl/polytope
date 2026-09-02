@@ -20,6 +20,7 @@
 #include "Quantizer.hh"
 #include "polytope_internal.hh"
 #include "GeomUtils.hh"
+#include "QuantTessellation.hh"
 
 namespace polytope {
 
@@ -28,14 +29,61 @@ class Partitioner {
 public:
   using PointType = QuantizedPoint<Dimension>;
 
+  Partitioner(const unsigned maxRank) :
+    m_maxNRank(maxRank) {
+    POLY_VERIFY(m_maxNRank > 0 && m_maxNRank <= Communicator::getNProcs());
+  }
+
   virtual ~Partitioner() = default;
 
   virtual std::string name() const = 0;
 
-  //! Return the generators owned by this MPI rank.  Inputs must have been
-  //! quantized with a globally consistent Quantizer instance.
-  virtual std::vector<PointType>
+  void setMaxNRank(const unsigned maxRank) {
+    m_maxNRank = maxRank;
+    POLY_VERIFY(m_maxNRank > 0 && m_maxNRank <= Communicator::getNProcs());
+  }
+
+  //! Return a vector of vector of generators arranged by result[rank][point].
+  std::vector<std::vector<PointType>>
+  computePartitionAndQuantize(const std::vector<double>& flatRealPoints) const {
+    // Use a QuantTessellation to get points in quantized space
+    QuantTessellation<Dimension> qmesh(flatRealPoints);
+    return computePartition(qmesh.getQuantizedPoints());
+  }
+
+  //! Return a vector of vector of generators arranged by result[rank][point].
+  //! Inputs must have been quantized with a globally consistent Quantizer instance.
+  virtual std::vector<std::vector<PointType>>
   computePartition(const std::vector<PointType>& globalPoints) const = 0;
+
+  //! Return the generators owned by this MPI rank.
+  std::vector<PointType>
+  computeLocalPartition(const std::vector<PointType>& globalPoints) const {
+    const auto rank = Communicator::getRank();
+    const auto nranks = m_maxNRank;
+    auto result = computePartition(globalPoints);
+    if (rank < nranks) {
+      return result[rank];
+    } else {
+      return std::vector<PointType>();
+    }
+  }
+
+  //! Return the generators owned by this MPI rank.
+  std::vector<PointType>
+  computeLocalPartition(const std::vector<double>& flatRealPoints) const {
+    const auto rank = Communicator::getRank();
+    const auto nranks = m_maxNRank;
+    auto result = computePartitionAndQuantize(flatRealPoints);
+    if (rank < nranks) {
+      return result[rank];
+    } else {
+      return std::vector<PointType>();
+    }
+  }
+
+protected:
+  unsigned m_maxNRank; // Max number of ranks to use
 };
 
 //----------------------------------------------------------------------------//
@@ -51,25 +99,19 @@ public:
 
   explicit RandomPartitioner(const std::uint64_t seed,
                              const unsigned maxNRank = Communicator::getNProcs()):
-    m_seed(seed),
-    m_maxNRank(maxNRank) {
-    POLY_VERIFY(m_maxNRank > 0 && m_maxNRank <= Communicator::getNProcs());
-  }
+    Partitioner<Dimension>(maxNRank),
+    m_seed(seed){ }
 
   virtual std::string name() const override { return "RandomPartitioner"; }
 
-  std::vector<PointType>
+  std::vector<std::vector<PointType>>
   computePartition(const std::vector<PointType>& globalPoints) const override {
-    const auto rank = static_cast<std::uint64_t>(Communicator::getRank());
     const auto nranks = m_maxNRank;
-
-    std::vector<PointType> result;
-    result.reserve(globalPoints.size()/nranks + 1);
+    std::vector<std::vector<PointType>> result(nranks);
     for (std::size_t i = 0; i < globalPoints.size(); ++i) {
       const auto& point = globalPoints[i];
-      if (owner(point, i, nranks) == rank) {
-        result.push_back(point);
-      }
+      const auto irank = owner(point, i, nranks);
+      result[irank].push_back(point);
     }
     return result;
   }
@@ -93,7 +135,7 @@ protected:
   }
 
   std::uint64_t m_seed;
-  unsigned m_maxNRank; // Max number of ranks to use
+  using Partitioner<Dimension>::m_maxNRank; // Max number of ranks to use
 };
 
 //----------------------------------------------------------------------------//
@@ -109,15 +151,13 @@ public:
 
   explicit QuasiVoronoiPartitioner(const unsigned seed,
                                    const unsigned maxNRank = Communicator::getNProcs()):
-    m_seed(seed),
-    m_maxNRank(maxNRank) {
-  }
+    Partitioner<Dimension>(maxNRank),
+    m_seed(seed) { }
 
   virtual std::string name() const override { return "QuasiVoronoiPartitioner"; }
 
-  std::vector<PointType>
+  std::vector<std::vector<PointType>>
   computePartition(const std::vector<PointType>& globalPoints) const override {
-    const auto rank = Communicator::getRank();
     const auto nranks = m_maxNRank;
     POLY_VERIFY(nranks > 0);
     std::mt19937 gen(m_seed);
@@ -137,11 +177,9 @@ public:
       procPoints.push_back(globalPoints[i]);
     }
 
-    std::vector<PointType> result;
-    result.reserve(globalPoints.size()/nranks + 1);
+    std::vector<std::vector<PointType>> result(nranks);
     // Iterate over each point and determine which proc seed it closest
     for (std::size_t i = 0; i < N; ++i) {
-      int proc_owner = 0;
       const auto& point = globalPoints[i];
       auto diff = point - procPoints[0];
       auto minDist = qmagnitude2(diff);
@@ -149,18 +187,14 @@ public:
         diff = point - procPoints[ip];
         auto dist = qmagnitude2(diff);
         if (dist < minDist) {
-          proc_owner = ip;
           minDist = dist;
         }
-      }
-      if (proc_owner == rank) {
-        result.push_back(point);
       }
     }
     return result;
   }
   unsigned m_seed;
-  unsigned m_maxNRank; // Max number of ranks to use
+  using Partitioner<Dimension>::m_maxNRank; // Max number of ranks to use
 };
 
 //----------------------------------------------------------------------------//
@@ -180,7 +214,9 @@ public:
 
   virtual std::string name() const override { return "LatticePartitioner"; }
 
-  explicit LatticePartitioner(const RanksPerAxis& ranksPerAxis):
+  explicit LatticePartitioner(const RanksPerAxis& ranksPerAxis,
+                              const unsigned maxNRank = Communicator::getNProcs()):
+    Partitioner<Dimension>(maxNRank),
     m_ranksPerAxis(ranksPerAxis) {
     std::size_t expectedRanks = 1;
     for (int d = 0; d < Dimension; ++d) {
@@ -190,24 +226,24 @@ public:
                    "Lattice rank count overflow");
       expectedRanks *= m_ranksPerAxis[d];
     }
-    POLY_VERIFY2(expectedRanks <= static_cast<std::size_t>(Communicator::getNProcs()),
+    POLY_VERIFY2(expectedRanks <= static_cast<std::size_t>(m_maxNRank),
                  "Product of lattice ranks per axis must less than or equal the MPI rank count");
   }
 
-  std::vector<PointType>
+  std::vector<std::vector<PointType>>
   computePartition(const std::vector<PointType>& globalPoints) const override {
-    const auto rank = static_cast<std::size_t>(Communicator::getRank());
+    const auto nranks = m_maxNRank;
     const auto& Q = Quantizer<Dimension>::instance();
     POLY_VERIFY2(Q.m_init, "The Quantizer must be initialized before lattice partitioning");
-    std::vector<PointType> result;
+    std::vector<std::vector<PointType>> result(nranks);
     for (const auto& point : globalPoints) {
-      if (owner(point, Q.minBound, Q.maxBound) == rank) {
-        result.push_back(point);
-      }
+      const auto irank = owner(point, Q.minBound, Q.maxBound);
+      result[irank].push_back(point);
     }
     return result;
   }
-
+protected:
+  using Partitioner<Dimension>::m_maxNRank; // Max number of ranks to use
 private:
   std::size_t owner(const PointType& point,
                     const PointType& lower,

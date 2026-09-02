@@ -199,10 +199,30 @@ void testWatertight(const Tessellation<2, double>& mesh, const int refHoles) {
 // compareArea
 // -----------------------------------------------------------------------
 void compareArea(Boundary2D& boundary,
-                 Tessellation<2,double>& mesh) {
-  const double area = computeTessellationArea(mesh);
+                 double in_area,
+                 const std::string& test_str = "") {
+  double area = in_area;
+#ifdef POLYTOPE_ENABLE_MPI
+  const int nranks = Communicator::getNProcs();
+  if (nranks > 1) {
+    double distributedArea = 0.0;
+    MPI_Allreduce(&in_area, &distributedArea, 1, MPI_DOUBLE, MPI_SUM, Communicator::communicator());
+    area = distributedArea;
+  }
+#endif
   const double relErr = std::abs(boundary.mArea-area)/boundary.mArea;
-  POLY_CHECK2(relErr < 1.0E-8, "Error in area: ref " << boundary.mArea << " mesh " << area);
+  auto& Q = Quantizer<2>::instance();
+  const int maxAxis = Q.m_lx_o.maxAxis();
+  const double tol = 2.*Q.degeneracy()[maxAxis];
+  POLY_CHECK2(relErr < tol, "Error in area: error = " << relErr << " tolerance "
+              << tol << " " << test_str);
+}
+
+void compareArea(Boundary2D& boundary,
+                 Tessellation<2, double>& mesh,
+                 const std::string& test_str = "") {
+  double area = computeTessellationArea(mesh);
+  compareArea(boundary, area, test_str);
 }
 
 }

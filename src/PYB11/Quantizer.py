@@ -26,21 +26,18 @@ class Quantizer:
     def initBounds(self,
                    xlo="const RealPoint&",
                    xhi="const RealPoint&",
-                   degeneracy=("const RealType&", "-1.0"),
                    pad=("const RealType&", "-1.0")):
         return "void"
 
     @PYB11pycppname("init")
     @PYB11implementation("""[](QuantizerType& self,
                                const py::object& points,
-                               const RealType& degeneracy,
                                const RealType& pad) {
                                  const auto coords = pybind11_helpers::copyCoords<%(Dimension)s, RealType>(points);
-                                 self.init(coords, degeneracy, pad);
+                                 self.init(coords, pad);
                                }""")
     def initPoints(self,
                    points="const py::object&",
-                   degeneracy=("const RealType&", "-1.0"),
                    pad=("const RealType&", "-1.0")):
         return "void"
 

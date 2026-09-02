@@ -62,7 +62,7 @@ public:
   void extend(const RealType extendPad) {
     std::lock_guard<std::mutex> lock(m_mutex);
     POLY_CHECK2(m_init, "Must initialize quantizer before extending it");
-    _init_impl(m_xlo, m_xhi, -1, extendPad);
+    _init_impl(m_xlo, m_xhi, extendPad);
   }
 
   QuantizedPoint<Dimension> quantize(const RealPoint& x) const {
@@ -109,21 +109,19 @@ public:
 
   void init(const RealPoint& xlo,
             const RealPoint& xhi,
-            const RealType& degeneracy = -1.,
             const RealType& pad = -1.) {
     std::lock_guard<std::mutex> lock(m_mutex);
-    _init_impl(xlo, xhi, degeneracy, pad);
+    _init_impl(xlo, xhi, pad);
   }
 
   void init(const std::vector<RealType>& points,
-            const RealType& degeneracy = -1.,
             const RealType& pad = -1.) {
     std::lock_guard<std::mutex> lock(m_mutex);
     RealPoint minPoint(0.99*std::numeric_limits<RealType>::max());
     RealPoint maxPoint = -minPoint;
     std::vector<RealPoint> rpoints = extractCoords<Dimension, RealType>(points);
     findBoundingElements<Dimension, RealType>(rpoints, minPoint, maxPoint);
-    _init_impl(minPoint, maxPoint, degeneracy, pad);
+    _init_impl(minPoint, maxPoint, pad);
   }
 
   bool inBounds(const RealPoint& point) const {
@@ -172,7 +170,6 @@ private:
   // Private initialization implementation
   void _init_impl(const RealPoint& xlo,
                   const RealPoint& xhi,
-                  const RealType degeneracy,
                   const RealType pad) {
     if (pad >= 0.) {
       m_pad = pad;
@@ -191,14 +188,7 @@ private:
 #endif
     m_lx_o = (xhi - xlo)*(1.0 + m_pad);
     m_xlo_o = xlo - 0.5*(xhi - xlo)*m_pad;
-    if (degeneracy > 0.) {
-      m_dx_o = degeneracy*m_lx_o;
-      maxCoord = (m_lx_o/m_dx_o).template type_cast<QuantizedCoordinate<Dimension>>();
-      maxBound = maxCoord - 1;
-      rmaxBound = maxBound.template type_cast<RealType>();
-    } else {
-      m_dx_o = m_lx_o/static_cast<RealType>(m_maxCoordinate);
-    }
+    m_dx_o = m_lx_o/static_cast<RealType>(m_maxCoordinate);
     m_init = true;
   }
 

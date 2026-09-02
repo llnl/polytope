@@ -246,7 +246,7 @@ void test(Tessellator<2,double>& tessellator) {
       boundary.mPLC.facets[j][0] = j;
       boundary.mPLC.facets[j][1] = (j+1) % nSides;
     }
-    Q.init(PLCpoints, -1, 0.5);
+    Q.init(PLCpoints, 0.5);
     tessellator.tessellate(points, PLCpoints, boundary.mPLC, mesh);
     outputMesh(mesh, testName, i);
     const double trueArea = 8.74;
@@ -282,7 +282,7 @@ void test(Tessellator<2,double>& tessellator) {
     boundary.setDefaultBoundary(bType);
     const unsigned N = 100;
     seed = 10332520;
-    Q.init(boundary.mPLCpoints, -1., 0.1);
+    Q.init(boundary.mPLCpoints, 0.1);
     for (unsigned iter = 0; iter < N; ++iter) {
       Generators<2> generators(boundary);
       generators.randomPoints(50, seed);

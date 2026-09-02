@@ -48,10 +48,6 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
   int totalCells = 0;
   MPI_Allreduce(&localCells, &totalCells, 1, MPI_INT, MPI_SUM, Communicator::communicator());
 
-  double localArea = computeTessellationArea(localMesh);
-  double distributedArea = 0.0;
-  MPI_Allreduce(&localArea, &distributedArea, 1, MPI_DOUBLE, MPI_SUM, Communicator::communicator());
-
   // Run the same tessellation but in serial
   double serialArea = 0.0;
   if (rank == root) {
@@ -90,14 +86,8 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
   // Output the parallel mesh
   std::string outname = "DistributedRandom_" + tessellator.name();
   outputMesh(localMesh, outname, btype, 0.);
-  MPI_Bcast(&serialArea, 1, MPI_DOUBLE, 0, Communicator::communicator());
-  POLY_CHECK2(std::abs(boundary.mArea - serialArea)/boundary.mArea < 1.0e-8,
-              "Serial area does not match reference area, ref: " << boundary.mArea
-              << " serial: " << serialArea);
-
-  POLY_CHECK2(std::abs(distributedArea - serialArea) < 1.0e-8,
-              "Distributed area " << distributedArea
-              << " differs from serial area " << serialArea);
+  compareArea(boundary, serialArea, "Serial area failure");
+  compareArea(boundary, localMesh, "Distributed area failure");
 }
 } // anonymous namespace
 

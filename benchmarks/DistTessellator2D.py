@@ -4,9 +4,8 @@ sys.path.append(ptu_path)
 import polytope_test_utilities as ptu
 import polytope
 
-def _available_tessellators():
-    names = ("BoostTessellator", "TriangleTessellator")
-    return [getattr(polytope, name) for name in names if hasattr(polytope, name)]
+# Name of timer file to write
+timer_log = "timer.log"
 
 def time_tessellation(allpoints, tessellator):
     Q = polytope.Quantizer2d.instance()
@@ -65,6 +64,8 @@ if __name__ == "__main__":
     if (rank == root):
         print(f"Degeneracy {Q.degeneracy()}")
         print(f"Generating {N} random points")
+        with open(timer_log, "w") as ff:
+            ff.write(f"Degeneracy {Q.degeneracy()}, {N} points\n")
 
     for disttype in range(2):
         gen_begin = time.perf_counter()
@@ -76,6 +77,8 @@ if __name__ == "__main__":
             distname = "normal"
         if (rank == root):
             print(f"Generators distributed in a {distname} distribution")
+            with open(timer_log, "a") as ff:
+                ff.write(f"{distname} distribution\n")
         gen_time = time.perf_counter() - gen_begin
         if (hasattr(polytope, "TriangleTessellator")):
             tessellator = polytope.TriangleTessellator()
@@ -86,3 +89,8 @@ if __name__ == "__main__":
             smallest = min(time_dicts, key=lambda time_dict: time_dict["time"])
             print(f"The quickest used the following configuration for a time of {smallest['time']}")
             print(smallest)
+            with open(timer_log, "a") as ff:
+                for tt in time_dicts:
+                    for key, value in tt.items():
+                        ff.write(f"{key}: {value}, ")
+                    ff.write("\n")

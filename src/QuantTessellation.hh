@@ -54,18 +54,6 @@ public:
     init(qgenpoints);
   }
 
-  // Construction used for parallel distribution using keys
-  QuantTessellation(const std::vector<std::vector<QuantizedKey<Dimension>>>& rankHashes) {
-    genInit();
-    init(rankHashes);
-  }
-
-  // Construction used for parallel distribution using points directly
-  QuantTessellation(const std::vector<std::vector<QuantizedPoint<Dimension>>>& rankPoints) {
-    genInit();
-    init(rankPoints);
-  }    
-
   void init(const std::vector<RealType>& genpoints) {
     const auto& Q = QuantizerType::instance();
     // Extract the unrolled coordinates
@@ -97,9 +85,9 @@ public:
     }
   }
 
-  // Initialize or extend the generator points from hashes.
+  // Extend the generator points from hashes.
   // Used during communication
-  void init(const std::vector<std::vector<QuantizedKey<Dimension>>>& rankHashes) {
+  void extend(const std::vector<std::vector<QuantizedKey<Dimension>>>& rankHashes) {
     faces.clear();
     nodes.clear();
     cells.clear();
@@ -131,9 +119,9 @@ public:
     sortByHash();
   }
 
-  // Initialize or extend the generator points received directly from each rank.
+  // Extend the generator points received directly from each rank.
   // Used during communication. Does not bother computing the hashes.
-  void init(const std::vector<std::vector<QuantizedPoint<Dimension>>>& rankPoints) {
+  void extend(const std::vector<std::vector<QuantizedPoint<Dimension>>>& rankPoints) {
     faces.clear();
     nodes.clear();
     cells.clear();

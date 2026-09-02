@@ -108,11 +108,6 @@ struct Point<2, CoordType> {
   CoordType  operator[](const size_t i) const { POLY_ASSERT(i < 2); return *(&x + i); }
   CoordType& operator[](const size_t i)       { POLY_ASSERT(i < 2); return *(&x + i); }
 
-  void clipPoint(const Point& lorhs, const Point& hirhs) {
-    x = std::min(hirhs.x, std::max(lorhs.x, x));
-    y = std::min(hirhs.y, std::max(lorhs.y, y));
-  }
-
   bool iszero() const { return (x == 0 && y == 0) ? true : false; }
   void zero() { x = 0; y = 0; }
   void one() { x = 1; y = 1; }
@@ -126,8 +121,8 @@ struct Point<2, CoordType> {
     // Quantize: RealType -> Coordinate
     POLY_ASSERT(typeid(CoordType) == typeid(RealType));
     Coordinate xOut, yOut;
-    xOut = static_cast<Coordinate>((this->x - blo.x)/dx.x + 0.5);
-    yOut = static_cast<Coordinate>((this->y - blo.y)/dx.y + 0.5);
+    xOut = static_cast<Coordinate>((this->x - blo.x)/dx.x);
+    yOut = static_cast<Coordinate>((this->y - blo.y)/dx.y);
     return Point<2, Coordinate>(xOut, yOut);
   }
 
@@ -136,8 +131,8 @@ struct Point<2, CoordType> {
                               const Point<2, RealType>& dx) const {
     RealType xOut, yOut;
     // Dequantize: Coordinate -> RealType
-    xOut = dx.x*(static_cast<RealType>(this->x) - 0.5) + blo.x;
-    yOut = dx.y*(static_cast<RealType>(this->y) - 0.5) + blo.y;
+    xOut = dx.x*(static_cast<RealType>(this->x)) + blo.x;
+    yOut = dx.y*(static_cast<RealType>(this->y)) + blo.y;
     return Point<2, RealType>(xOut, yOut);
   }
 
@@ -271,9 +266,9 @@ struct Point<3, CoordType> {
         const RealType& xlow, const RealType& ylow, const RealType& zlow,
         const RealType& dx,
         const unsigned i = 0):
-    x(static_cast<CoordType>((xi - xlow)/dx + 0.5)),
-    y(static_cast<CoordType>((yi - ylow)/dx + 0.5)),
-    z(static_cast<CoordType>((zi - zlow)/dx + 0.5)),
+    x(static_cast<CoordType>((xi - xlow)/dx)),
+    y(static_cast<CoordType>((yi - ylow)/dx)),
+    z(static_cast<CoordType>((zi - zlow)/dx)),
     index(i) {}
 
   Point& operator+=(const Point& rhs) { x += rhs.x; y += rhs.y; z += rhs.z; return *this; }
@@ -291,12 +286,6 @@ struct Point<3, CoordType> {
   CoordType  operator[](const size_t i) const { POLY_ASSERT(i < 3); return *(&x + i); }
   CoordType& operator[](const size_t i)       { POLY_ASSERT(i < 3); return *(&x + i); }
 
-  void clipPoint(const Point& lorhs, const Point& hirhs) {
-    x = std::min(hirhs.x, std::max(lorhs.x, x));
-    y = std::min(hirhs.y, std::max(lorhs.y, y));
-    z = std::min(hirhs.z, std::max(lorhs.z, z));
-  }
-
   bool iszero() const { return (x == 0 && y == 0 && z == 0) ? true : false; }
   void zero() { x = 0; y = 0; z = 0; }
   void one() { x = 1; y = 1; z = 1; }
@@ -309,9 +298,9 @@ struct Point<3, CoordType> {
                                  const Point<3, RealType>& dx) const {
     // Quantize: RealType -> Coordinate
     Coordinate xOut, yOut, zOut;
-    xOut = static_cast<Coordinate>((this->x - blo.x)/dx.x + 0.5);
-    yOut = static_cast<Coordinate>((this->y - blo.y)/dx.y + 0.5);
-    zOut = static_cast<Coordinate>((this->z - blo.z)/dx.z + 0.5);
+    xOut = static_cast<Coordinate>((this->x - blo.x)/dx.x);
+    yOut = static_cast<Coordinate>((this->y - blo.y)/dx.y);
+    zOut = static_cast<Coordinate>((this->z - blo.z)/dx.z);
     return Point<3, Coordinate>(xOut, yOut, zOut, index);
   }
 
@@ -320,9 +309,9 @@ struct Point<3, CoordType> {
                               const Point<3, RealType>& dx) const {
     RealType xOut, yOut, zOut;
     // Dequantize: Coordinate -> RealType
-    xOut = dx.x*(static_cast<RealType>(this->x) - 0.5) + blo.x;
-    yOut = dx.y*(static_cast<RealType>(this->y) - 0.5) + blo.y;
-    zOut = dx.z*(static_cast<RealType>(this->z) - 0.5) + blo.z;
+    xOut = dx.x*(static_cast<RealType>(this->x)) + blo.x;
+    yOut = dx.y*(static_cast<RealType>(this->y)) + blo.y;
+    zOut = dx.z*(static_cast<RealType>(this->z)) + blo.z;
     return Point<3, RealType>(xOut, yOut, zOut, index);
   }
 
@@ -485,6 +474,8 @@ findBoundingElements(const std::vector<Point<Dimension, CoordType>>& allpoints,
   }
 }
 
+// This round should only be used when converting quantized coordinates
+// as doubles to quantized coordinates as int types
 template<int Dimension, typename CoordType>
 Point<Dimension, CoordType> round(const Point<Dimension, double>& point) {
   Point<Dimension, CoordType> out;

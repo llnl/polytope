@@ -17,8 +17,8 @@ def test_random_partitioner_is_deterministic():
     points = _quantized_generators()
     partitioner = polytope.RandomPartitioner2d(123456789)
 
-    first = partitioner.computePartition(points)
-    second = partitioner.computePartition(points)
+    first = partitioner.computeLocalPartition(points)
+    second = partitioner.computeLocalPartition(points)
     assert _coordinates(first) == _coordinates(second)
 
     if polytope.Communicator.getNProcs() == 1:
@@ -32,7 +32,7 @@ def test_lattice_partitioner_uses_quantizer_bounds():
     quantizer = polytope.Quantizer2d.instance()
 
     partitioner = polytope.LatticePartitioner2d([nranks, 1])
-    local_points = partitioner.computePartition(points)
+    local_points = partitioner.computeLocalPartition(points)
 
     lower = quantizer.minBound
     upper = quantizer.maxBound

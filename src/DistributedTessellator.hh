@@ -52,7 +52,10 @@ public:
   using TessellationType = Tessellation<Dimension, RealType>;
 
   DistributedTessellator(Base& serialTessellator);
-  virtual ~DistributedTessellator() = default;
+  virtual ~DistributedTessellator() {
+    m_QPLC.clear();
+    m_clipping = false;
+  }
 
   //! Select whether generator exchanges send quantized points instead of keys.
   void setExchangePoints(const bool value) { m_exchangePoints = value; }
@@ -103,8 +106,11 @@ private:
   void synchronizeExchangePoints();
 
   Base& m_serialTessellator;
+  // Whether to exchange points in parallel or exchange keys
   bool m_exchangePoints = false;
   KeyEncoding m_keyEncode;
+  bool m_clipping = false;
+  QuantPLC<Dimension> m_QPLC;
 
   // Forbidden methods.
   DistributedTessellator();

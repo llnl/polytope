@@ -139,9 +139,10 @@ polytope.Quantizer2d.instance().extend(0.08)
 Future work:
 
 + Update documentation, including moving many things from here.
++ Extend the python interface to allow use of python based tessellators.
 + Implement 3D methods.
 + Extend clipping to work with higher bit accuracy in 2D.
-+ Implement methods to reconstruct Voronoi that exceeds the quantized space bounding box.
++ Implement methods to reconstruct Voronoi nodes that are clipped at the bounding quantized space.
 
 License
 =======
