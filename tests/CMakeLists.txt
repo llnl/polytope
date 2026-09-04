@@ -6,89 +6,94 @@
 #
 # To add a test, the user must register the test <name> and a list of the
 # dependencies needed to build it:
-#      POLYTOPE_ADD_TEST( name dependency_list )
-#
-# The current set of dependencies is
-#      MPI           : MPI is used
-#      TETGEN        : Tetgen Tessellator is used
-#      BOOST         : Boost library is used
-#      TRIANGLE      : Triangle Tessellator is used
-#      BOOST_VORONOI : Boost v1.52 or greater is used having the
-#                      Boost.Polygon Voronoi library
-#
-# NOTES:
-# (1) An empty string in the dependency list means the test will always build
-# (2) If you need Boost and Triangle, you need only put "TRIANGLE"
-# (3) If a test has multiple dependencies, submit the dependency list
-#     as a single string, with individual entries separated by a semi-colon
-#     (EXAMPLE: if both TETGEN and MPI are needed, the dependency list
-#               should read "TETGEN;MPI"
-#-----------------------------------------------------------------------------
+#      polytope_add_test(name numtasks)
 
+# where numtasks defaults to 1 if no argument is provided.
+#
+#-----------------------------------------------------------------------------
 
 # The polytope_add_test macro
 include(PolytopeAddTests)
 
 #-----------------------------------------------------------------------------
+# Polytope Setup/Cleanup
+#-----------------------------------------------------------------------------
+
+# Directory to run tests in to make cleanup easier
+set(TEST_WORK_DIR ${CMAKE_BINARY_DIR}/tests/test_silo_files)
+
+# Setup tests
+blt_add_test(NAME setup_tests
+  COMMAND ${CMAKE_COMMAND} -E make_directory "${TEST_WORK_DIR}"
+)
+
+set_tests_properties(setup_tests PROPERTIES FIXTURES_SETUP "polytope_fixtures")
+
+# Cleanup test files
+blt_add_test(NAME cleanup_tests
+ COMMAND ${CMAKE_COMMAND} -E rm -rf "${TEST_WORK_DIR}"
+)
+
+set_tests_properties(cleanup_tests PROPERTIES FIXTURES_CLEANUP "polytope_fixture")
+
+#-----------------------------------------------------------------------------
 # Polytope Utility Tests
 #-----------------------------------------------------------------------------
-polytope_add_test( "serialize"       "" )
-polytope_add_test( "convexHull_2d"   "" )
-polytope_add_test( "convexHull_3d"   "" )
-polytope_add_test( "nearestPoint_2d" "" )
-polytope_add_test( "within_2d"       "" )
-polytope_add_test( "intersect_2d"    "" )
-polytope_add_test( "convexIntersect" "" )
-#polytope_add_test( "PLC_CSG"         "" )  #  <-- Suspending 'til we think it works
-polytope_add_test( "hash"            "" )
+# Cannot test any clipped geometries when hi bit 2D is enabled
+if(NOT POLYTOPE_ENABLE_HIBIT2D)
+  polytope_add_test(SimpleTess2D)
+  polytope_add_test(StarBoundary)
+  polytope_add_test(SolidRotationAroundHoles)
+  polytope_add_test(OrphanCases)
+  polytope_add_test(BoostTessellator)
+  polytope_add_test(RandomPoints)
+  polytope_add_test(RotationTests)
+  polytope_add_test(Circumcenter)
+endif()
+polytope_add_test(MortonKeyTraits2D)
+polytope_add_test(MortonKeyTraits3D)
+polytope_add_test(Quantizer)
+polytope_add_test(QuantPLC2D)
+#polytope_add_test(QuantPLC3D) # Currently broken
+#polytope_add_test(QuantConvexIntersect3D) # Currently broken
+#polytope_add_test(clipPolyhedron3D)
+polytope_add_test(honeyComb)
 
 #-----------------------------------------------------------------------------
-# Serial Tessellator Tests
+# Tetgen Tessellator Tests
 #-----------------------------------------------------------------------------
 
-# Voro++ Tessellator tests
-#
-# NOTE: Temporarily suspending their build until more work can be
-#       done making their output toplogically consistent
-#
-#polytope_add_test( "VoroPP_2d"                   ""              )
-#polytope_add_test( "VoroPP_3d"                   ""              )
+if(POLYTOPE_ENABLE_TETGEN)
+  # 3D Tetgen Tessellator tests
+  #polytope_add_test(TetgenTessellator) # Currently broken
+endif()
 
-# 2D Triangle and Boost Tessellator tests
-POLYTOPE_ADD_TEST( "UnitSquare"                  ""              )
-POLYTOPE_ADD_TEST( "MeshEditor"                 ""               )
-POLYTOPE_ADD_TEST( "Degenerate"                  ""              )
-POLYTOPE_ADD_TEST( "BoundaryJitter"              ""              )
-POLYTOPE_ADD_TEST( "RandomPoints"                ""              )
-POLYTOPE_ADD_TEST( "Area"                        ""              )
-POLYTOPE_ADD_TEST( "OrphanedCell"                ""              )
-POLYTOPE_ADD_TEST( "TwoGenerators"               ""              )
-POLYTOPE_ADD_TEST( "Centroidal"                  ""              )
-POLYTOPE_ADD_TEST( "Unbounded"                   ""              )
-POLYTOPE_ADD_TEST( "UnboundedToBounded"          ""              )
-POLYTOPE_ADD_TEST( "OrphanCases"                 ""              )
-POLYTOPE_ADD_TEST( "StarBoundary"                ""              )
-POLYTOPE_ADD_TEST( "Circumcenters"               ""              )
-POLYTOPE_ADD_TEST( "BoostTessellator"            "BOOST_VORONOI" )
-POLYTOPE_ADD_TEST( "RotationTests"               ""              )
-POLYTOPE_ADD_TEST( "SolidRotationAroundHoles"    ""              )
-POLYTOPE_ADD_TEST( "TiltedLattice"               ""              )
-POLYTOPE_ADD_TEST( "ProjectionIntersection"      ""              )
-POLYTOPE_ADD_TEST( "BoostGeometry"               "BOOST"         )
-#POLYTOPE_ADD_TEST( "plot"                        "TRIANGLE"      )
-#POLYTOPE_ADD_TEST( "AspectRatio"                 "TRIANGLE"      )
-
-# 3D Tetgen Tessellator tests
-polytope_add_test( "TetgenTessellator"           "TETGEN"        )
-
+#-----------------------------------------------------------------------------
 # Distributed Tessellator Tests
 #-----------------------------------------------------------------------------
-POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedUnitSquare"     ""         "4")
-POLYTOPE_ADD_DISTRIBUTED_TEST( "SerialDistributedTriangle" "TRIANGLE" "4")
-POLYTOPE_ADD_DISTRIBUTED_TEST( "FailedCommunication"       "TRIANGLE" "4")
-POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedRandomPoints"   ""         "4")
-POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedRotationTests"  ""         "4")
-POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedCentroidal"     ""         "4")
-POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedCollinear"      "TRIANGLE" "4")
-#POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedVoroPP_2d"      ""         "4")
-#POLYTOPE_ADD_DISTRIBUTED_TEST( "DistributedVoroPP_3d"      ""         "4")
+if(POLYTOPE_ENABLE_MPI)
+  if(NOT POLYTOPE_ENABLE_HIBIT2D)
+    polytope_add_test(DistributedRandomPoints NUMTASKS 4)
+    polytope_add_test(DistributedOrderedPoints NUMTASKS 4)
+    polytope_add_test(DistributedHoleTests NUMTASKS 8)
+  endif()
+  polytope_add_test(DistributedIO2D NUMTASKS 4)
+  polytope_add_test(DistributedVoronoi2D NUMTASKS 4)
+  polytope_add_test(DistributedVisible2D NUMTASKS 6)
+  polytope_add_test(DistributedRotationTests NUMTASKS 4)
+endif()
+
+#-----------------------------------------------------------------------------
+# Python Binding Tests
+#-----------------------------------------------------------------------------
+if(POLYTOPE_ENABLE_PYTHON)
+  if(NOT POLYTOPE_ENABLE_HIBIT2)
+    polytope_add_python_test(SerialTessellator2D)
+    if(POLYTOPE_ENABLE_MPI)
+      polytope_add_python_test(DistributedTessellator2D NUMTASKS 4)
+    endif()
+  endif()
+  polytope_add_python_test(Quantizer)
+  polytope_add_python_test(MortonKeyTraits)
+  polytope_add_python_test(PLC)
+endif()

@@ -1,0 +1,512 @@
+// Comprehensive unit tests for QuantPLC<2>
+//
+// Tests the quantized PLC functionality for 2D including:
+//   - Construction from real-space coordinates
+//   - Quantization
+//   - Convex hull computation (2D)
+//   - Facet (edge) ordering
+//   - Point containment (within) tests
+//   - Intersection tests
+//   - Reduction (removing unused points)
+
+#include <iostream>
+#include <vector>
+#include <set>
+#include <cmath>
+#include <cassert>
+
+#include "polytope.hh"
+#include "QuantPLC.hh"
+#include "Quantizer.hh"
+#include "Intersections.hh"
+#include "GeomUtils.hh"
+#include "Point.hh"
+#include "polytope_test_utilities.hh"
+#include "QuantTessellation.hh"
+
+#include "Communicator.hh" 
+
+using namespace polytope;
+
+namespace {
+
+using RealType = double;
+using RealPoint = Point2<RealType>;
+using PLC = PLC<2>;
+using QuantPLC2D = QuantPLC<2>;
+using Quantizer2D = Quantizer<2>;
+using PointType = QuantizedPoint<2>;
+
+//------------------------------------------------------------------------------
+// Helper: Create a square PLC from vertices
+//------------------------------------------------------------------------------
+PLC createSquarePLC() {
+  PLC plc;
+
+  // Square edges (4 edges forming a closed loop)
+  plc.facets.resize(4);
+  plc.facets[0] = {0, 1}; // bottom
+  plc.facets[1] = {1, 2}; // right
+  plc.facets[2] = {2, 3}; // top
+  plc.facets[3] = {3, 0}; // left
+
+  return plc;
+}
+
+//------------------------------------------------------------------------------
+// Helper: Create square vertices with specified bounds
+//------------------------------------------------------------------------------
+vector<RealType> createSquareVertices(const RealPoint& lo = RealPoint(0.0, 0.0),
+                                      const RealPoint& hi = RealPoint(1.0, 1.0)) {
+  return {
+    lo.x, lo.y,  // 0
+    hi.x, lo.y,  // 1
+    hi.x, hi.y,  // 2
+    lo.x, hi.y   // 3
+  };
+}
+
+//------------------------------------------------------------------------------
+// Test: Basic construction and quantization
+//------------------------------------------------------------------------------
+void testBasicConstruction(const int tnum) {
+  cout << "\n=== Test " << tnum << ": Basic Construction and Quantization ===" << endl;
+
+  RealPoint xlo(0.0, 0.0);
+  RealPoint xhi(1.0, 1.0);
+  auto& Q = Quantizer2D::instance();
+  Q.init(xlo, xhi);
+
+  auto plc = createSquarePLC();
+  auto vertices = createSquareVertices(xlo, xhi);
+
+  QuantPLC2D qplc(plc, vertices);
+
+  // Check that all 4 vertices were quantized
+  POLY_CHECK2(qplc.points.size() == 4,
+              "Expected 4 vertices, got " << qplc.points.size());
+
+  // Check that bounding box makes sense
+  POLY_CHECK2(qplc.m_loBounds < qplc.m_hiBounds,
+              "Invalid bounding box: lo >= hi");
+
+  cout << "  Basic construction passed!" << endl;
+}
+
+//------------------------------------------------------------------------------
+// Test: Quantization round-trip accuracy
+//------------------------------------------------------------------------------
+void testQuantizationAccuracy(const int tnum) {
+  cout << "\n=== Test " << tnum << ": Quantization Accuracy ===" << endl;
+
+  RealPoint xlo(-10.0, -10.0);
+  RealPoint xhi(10.0, 10.0);
+  auto& Q = Quantizer2D::instance();
+  Q.init(xlo, xhi);
+
+  vector<RealPoint> testPoints = {
+    RealPoint(0.0, 0.0),
+    RealPoint(5.0, 5.0),
+    RealPoint(-5.0, -5.0),
+    RealPoint(3.14, -2.71),
+    RealPoint(-9.9, 9.9)
+  };
+
+  RealType maxError = Q.m_dx_o.x * 2.0;  // Allow 2x grid spacing
+
+  for (const auto& p : testPoints) {
+    PointType quantized = Q.quantize(p);
+    RealPoint recovered = Q.dequantize(quantized);
+
+    RealType dx = abs(recovered.x - p.x);
+    RealType dy = abs(recovered.y - p.y);
+
+    POLY_CHECK2(dx < maxError && dy < maxError,
+                "Quantization error too large for point (" << p.x << ", " << p.y << ")");
+  }
+
+  cout << "  Quantization accuracy passed!" << endl;
+}
+
+//------------------------------------------------------------------------------
+// Test: Reduce to only points on facets
+//------------------------------------------------------------------------------
+void testReduction(const int tnum) {
+  cout << "\n=== Test " << tnum << ": Reduction (Unused Vertices) ===" << endl;
+
+  RealPoint xlo(0.0, 0.0);
+  RealPoint xhi(1.0, 1.0);
+  auto& Q = Quantizer2D::instance();
+  Q.init(xlo, xhi);
+
+  // Create vertices with some unused
+  vector<RealType> vertices = {
+    0.0, 0.0,  // 0 - used
+    1.0, 0.0,  // 1 - used
+    1.0, 1.0,  // 2 - used
+    0.5, 0.5,  // 3 - NOT used
+    0.2, 0.7   // 4 - NOT used
+  };
+
+  PLC plc;
+  plc.facets.resize(1);
+  plc.facets[0] = {0, 1};  // Only uses vertices 0 and 1
+
+  QuantPLC2D qplc(plc,  vertices);
+
+  // Before reduction, should have 5 points
+  POLY_CHECK2(qplc.points.size() == 5,
+              "Expected 5 points before reduction");
+
+  // Reduce: remove unused vertices
+  qplc.reduce();
+
+  // After reduction: 2 unique points (0, 1; removed unused 2, 3, 4)
+  POLY_CHECK2(qplc.points.size() == 2,
+              "Expected 2 unique points after reduction, got " << qplc.points.size());
+  POLY_CHECK2(qplc.m_reduced, "Should be marked as reduced");
+
+  cout << "  Reduction passed!" << endl;
+}
+
+//------------------------------------------------------------------------------
+// Test: Convex hull computation (2D)
+//------------------------------------------------------------------------------
+void testConvexHull(const int tnum) {
+  cout << "\n=== Test " << tnum << ": Convex Hull Computation ===" << endl;
+
+  RealPoint xlo(-1.0, -1.0);
+  RealPoint xhi(2.0, 2.0);
+  auto& Q = Quantizer2D::instance();
+  Q.init(xlo, xhi);
+
+  // Create a set of points including some interior points
+  vector<RealType> vertices = {
+    0.0, 0.0,   // 0 (corner - should be in hull)
+    1.0, 0.0,   // 1 (corner - should be in hull)
+    1.0, 1.0,   // 2 (corner - should be in hull)
+    0.0, 1.0,   // 3 (corner - should be in hull)
+    0.5, 0.5,   // 4 (interior - should NOT be in hull)
+    0.3, 0.7    // 5 (interior - should NOT be in hull)
+  };
+
+  PLC plc;  // Empty PLC, will compute hull
+  QuantPLC2D qplc(plc,  vertices);
+
+  qplc.makeConvex();
+
+  // Square hull should have 4 edges
+  POLY_CHECK2(qplc.facets.size() == 4,
+              "Square hull should have 4 edges, got " << qplc.facets.size());
+
+  // Each edge should have 2 vertices
+  for (size_t i = 0; i < qplc.facets.size(); ++i) {
+    POLY_CHECK2(qplc.facets[i].size() == 2,
+                "Edge " << i << " should have 2 vertices, got " << qplc.facets[i].size());
+  }
+
+  // After reduction, should only have 4 points (the hull vertices)
+  POLY_CHECK2(qplc.points.size() == 4,
+              "Convex hull should have 4 vertices, got " << qplc.points.size());
+
+  cout << "  Convex hull computation passed!" << endl;
+}
+
+//------------------------------------------------------------------------------
+// Test: Edge ordering (facets form a closed loop)
+//------------------------------------------------------------------------------
+void testEdgeOrdering(const int tnum) {
+  cout << "\n=== Test " << tnum << ": Edge Ordering ===" << endl;
+
+  RealPoint xlo(0.0, 0.0);
+  RealPoint xhi(1.0, 1.0);
+  auto& Q = Quantizer2D::instance();
+  Q.init(xlo, xhi);
+
+  auto plc = createSquarePLC();
+  auto vertices = createSquareVertices();
+
+  QuantPLC2D qplc(plc,  vertices);
+  qplc.reduce();  // This calls orderFacets
+
+  // Check that edges form a closed loop
+  for (size_t i = 0; i < qplc.facets.size(); ++i) {
+    size_t next = (i + 1) % qplc.facets.size();
+    POLY_CHECK2(qplc.facets[i][1] == qplc.facets[next][0],
+                "Edge " << i << " should connect to edge " << next);
+  }
+
+  cout << "  Edge ordering passed!" << endl;
+}
+
+//------------------------------------------------------------------------------
+// Test: Point containment (within) - basic cases
+//------------------------------------------------------------------------------
+void testWithinBasic(const int tnum) {
+  cout << "\n=== Test " << tnum << ": Point Containment (Basic) ===" << endl;
+
+  RealPoint xlo(0.0, 0.0);
+  RealPoint xhi(1.0, 1.0);
+  auto& Q = Quantizer2D::instance();
+  Q.init(xlo, xhi);
+
+  auto plc = createSquarePLC();
+  auto vertices = createSquareVertices(xlo, xhi);
+
+  QuantPLC2D qplc(plc,  vertices);
+  qplc.makeConvex();
+
+  // Test points inside
+  POLY_CHECK(qplc.within(RealPoint(0.5, 0.5)));  // Center
+  POLY_CHECK(qplc.within(RealPoint(0.1, 0.1)));  // Near corner
+  POLY_CHECK(qplc.within(RealPoint(0.9, 0.5)));  // Near edge
+
+  // Test points outside
+  POLY_CHECK(!qplc.within(RealPoint(-0.5, 0.5)));  // Left of square
+  POLY_CHECK(!qplc.within(RealPoint(1.5, 0.5)));   // Right of square
+  POLY_CHECK(!qplc.within(RealPoint(0.5, -0.5)));  // Below square
+  POLY_CHECK(!qplc.within(RealPoint(0.5, 1.5)));   // Above square
+
+  // Test points on boundary (should be inside)
+  POLY_CHECK(qplc.within(RealPoint(0.0, 0.5)));  // Left edge
+  POLY_CHECK(qplc.within(RealPoint(1.0, 0.5)));  // Right edge
+  POLY_CHECK(qplc.within(RealPoint(0.5, 0.0)));  // Bottom edge
+  POLY_CHECK(qplc.within(RealPoint(0.5, 1.0)));  // Top edge
+
+  // Test vertices (should be inside)
+  POLY_CHECK(qplc.within(RealPoint(0.0, 0.0)));
+  POLY_CHECK(qplc.within(RealPoint(1.0, 1.0)));
+
+  cout << "  Basic containment tests passed!" << endl;
+}
+
+//------------------------------------------------------------------------------
+// Test: Point containment with holes
+//------------------------------------------------------------------------------
+void testWithinHoles(const int tnum) {
+  cout << "\n=== Test " << tnum << ": Point Containment (With Holes) ===" << endl;
+
+  RealPoint xlo(-10.0, -10.0);
+  RealPoint xhi(10.0, 10.0);
+  auto& Q = Quantizer2D::instance();
+  Q.init(xlo, xhi);
+
+  // Outer square: [-5, 5]^2 with inner hole: [-1, 1]^2
+  vector<RealType> vertices = {
+    // Outer square (0-3)
+    -5.0, -5.0,  // 0
+     5.0, -5.0,  // 1
+     5.0,  5.0,  // 2
+    -5.0,  5.0,  // 3
+    // Inner square (4-7) - hole
+    -1.0, -1.0,  // 4
+     1.0, -1.0,  // 5
+     1.0,  1.0,  // 6
+    -1.0,  1.0   // 7
+  };
+
+  PLC plc;
+  plc.facets.resize(4);
+  plc.facets[0] = {0, 1};
+  plc.facets[1] = {1, 2};
+  plc.facets[2] = {2, 3};
+  plc.facets[3] = {3, 0};
+
+  plc.holes.resize(1);
+  plc.holes[0].resize(4);
+  plc.holes[0][0] = {4, 5};
+  plc.holes[0][1] = {5, 6};
+  plc.holes[0][2] = {6, 7};
+  plc.holes[0][3] = {7, 4};
+
+  QuantPLC2D qplc(plc,  vertices);
+
+  // Inside outer, outside hole
+  POLY_CHECK(qplc.within(RealPoint(-3.0, 0.0)));
+  POLY_CHECK(qplc.within(RealPoint(3.0, 3.0)));
+
+  // Inside hole (should be outside)
+  POLY_CHECK(!qplc.within(RealPoint(0.0, 0.0)));
+  POLY_CHECK(!qplc.within(RealPoint(0.5, 0.5)));
+
+  // Outside outer boundary
+  POLY_CHECK(!qplc.within(RealPoint(-6.0, 0.0)));
+  POLY_CHECK(!qplc.within(RealPoint(0.0, 6.0)));
+
+  // On hole boundary (should be inside by convention)
+  POLY_CHECK(qplc.within(RealPoint(-1.0, 0.0)));
+  POLY_CHECK(qplc.within(RealPoint(1.0, 0.0)));
+
+  cout << "  Containment with holes passed!" << endl;
+}
+
+//------------------------------------------------------------------------------
+// Test: Facet comparison utilities
+//------------------------------------------------------------------------------
+void testFacetComparison(const int tnum) {
+  cout << "\n=== Test " << tnum << ": Facet Comparison Utilities ===" << endl;
+
+  RealPoint xlo(0.0, 0.0);
+  RealPoint xhi(1.0, 1.0);
+  auto& Q = Quantizer2D::instance();
+  Q.init(xlo, xhi);
+
+  auto plc1 = createSquarePLC();
+  auto vertices1 = createSquareVertices();
+  QuantPLC2D qplc1(plc1,  vertices1);
+
+  // Create identical PLC
+  auto plc2 = createSquarePLC();
+  auto vertices2 = createSquareVertices();
+  QuantPLC2D qplc2(plc2,  vertices2);
+
+  // Should be the same
+  POLY_CHECK(qplc1 == qplc2);
+
+  cout << "  Facet comparison passed!" << endl;
+}
+
+//------------------------------------------------------------------------------
+// Test: QuantTessellation<2>::cellIntersectsHull checks edge intersections only
+//------------------------------------------------------------------------------
+void testCellIntersectsHullEdgeOnly(const int tnum) {
+  cout << "\n=== Test " << tnum << ": Cell Intersects Hull Edge-Only Semantics ===" << endl;
+
+  RealPoint xlo(-1.0, -1.0);
+  RealPoint xhi(13.0, 13.0);
+  auto& Q = Quantizer2D::instance();
+  Q.init(xlo, xhi);
+
+  // Large triangular hull with hypotenuse x + y = 10.
+  PLC hullPLC;
+  hullPLC.facets.resize(3);
+  hullPLC.facets[0] = {0, 1};
+  hullPLC.facets[1] = {1, 2};
+  hullPLC.facets[2] = {2, 0};
+  vector<RealType> hullVertices = {
+    0.0, 0.0,
+    10.0, 0.0,
+    0.0, 10.0
+  };
+  QuantPLC2D hull(hullPLC, hullVertices);
+
+  QuantTessellation<2> mesh;
+
+  // Cell 0 straddles the hull hypotenuse, so edges intersect.
+  mesh.nodes.push_back(Q.quantize(RealPoint(4.5, 4.5))); // 0
+  mesh.nodes.push_back(Q.quantize(RealPoint(5.5, 4.5))); // 1
+  mesh.nodes.push_back(Q.quantize(RealPoint(5.5, 5.5))); // 2
+  mesh.nodes.push_back(Q.quantize(RealPoint(4.5, 5.5))); // 3
+
+  // Cell 1 is strictly outside the hull, so no edges intersect.
+  mesh.nodes.push_back(Q.quantize(RealPoint(11.0, 11.0))); // 4
+  mesh.nodes.push_back(Q.quantize(RealPoint(12.0, 11.0))); // 5
+  mesh.nodes.push_back(Q.quantize(RealPoint(12.0, 12.0))); // 6
+  mesh.nodes.push_back(Q.quantize(RealPoint(11.0, 12.0))); // 7
+
+  // Cell 2 is strictly contained by the much larger hull, so no edges intersect.
+  mesh.nodes.push_back(Q.quantize(RealPoint(1.0, 1.0))); // 8
+  mesh.nodes.push_back(Q.quantize(RealPoint(2.0, 1.0))); // 9
+  mesh.nodes.push_back(Q.quantize(RealPoint(2.0, 2.0))); // 10
+  mesh.nodes.push_back(Q.quantize(RealPoint(1.0, 2.0))); // 11
+
+  mesh.faces = {
+    {0, 1}, {1, 2}, {2, 3}, {3, 0},
+    {4, 5}, {5, 6}, {6, 7}, {7, 4},
+    {8, 9}, {9, 10}, {10, 11}, {11, 8}
+  };
+
+  mesh.cells = {
+    {0, 1, 2, 3},
+    {4, 5, 6, 7},
+    {8, 9, 10, 11}
+  };
+
+  POLY_CHECK(mesh.cellIntersectsHull(hull, 0));
+  POLY_CHECK(!mesh.cellIntersectsHull(hull, 1));
+  POLY_CHECK(!mesh.cellIntersectsHull(hull, 2));
+
+  cout << "  Edge-only cell/hull intersection passed!" << endl;
+}
+
+//------------------------------------------------------------------------------
+// Test: Stress test with many points
+//------------------------------------------------------------------------------
+void testStress(const int tnum) {
+  cout << "\n=== Test " << tnum << ": Stress Test ===" << endl;
+
+  RealPoint xlo(-100.0, -100.0);
+  RealPoint xhi(100.0, 100.0);
+  auto& Q = Quantizer2D::instance();
+  Q.init(xlo, xhi);
+
+  // Generate random point cloud
+  const unsigned nPoints = 100;
+  vector<RealType> vertices;
+  vertices.reserve(nPoints * 2);
+
+  for (unsigned i = 0; i < nPoints; ++i) {
+    vertices.push_back((random01() - 0.5) * 200.0);  // x
+    vertices.push_back((random01() - 0.5) * 200.0);  // y
+  }
+
+  PLC plc;  // Empty PLC
+  QuantPLC2D qplc(plc, vertices);
+
+  // Compute convex hull
+  qplc.makeConvex();
+
+  // Hull should have at least 3 edges and at most n edges
+  POLY_CHECK2(qplc.facets.size() >= 3,
+              "Convex hull should have at least 3 edges");
+  POLY_CHECK2(qplc.facets.size() <= nPoints,
+              "Convex hull should have at most " << nPoints << " edges");
+
+  // All edges should have 2 vertices
+  for (size_t i = 0; i < qplc.facets.size(); ++i) {
+    POLY_CHECK2(qplc.facets[i].size() == 2,
+                "Edge " << i << " should have 2 vertices");
+  }
+
+  cout << "  Stress test passed! Hull has " << qplc.facets.size()
+       << " edges from " << qplc.points.size() << " vertices" << endl;
+}
+
+} // anonymous namespace
+
+//------------------------------------------------------------------------------
+// main
+//------------------------------------------------------------------------------
+int main(int argc, char** argv) {
+
+  auto& comm = Communicator::instance();
+  comm.init(argc, argv);
+
+  srand(42);  // Deterministic randomness for reproducibility
+  int tnum = 1;
+
+  // Quantization tests
+  testBasicConstruction(tnum++);
+  testQuantizationAccuracy(tnum++);
+  testReduction(tnum++);
+
+  // Geometric tests
+  testConvexHull(tnum++);
+  testEdgeOrdering(tnum++);
+
+  // Containment tests
+  testWithinBasic(tnum++);
+  testWithinHoles(tnum++);
+
+  // Utility tests
+  testFacetComparison(tnum++);
+  testCellIntersectsHullEdgeOnly(tnum++);
+
+  // Stress test
+  testStress(tnum++);
+
+  cout << "\n=== All QuantPLC2D tests passed! ===" << endl;
+
+  comm.finalize();
+  return 0;
+}

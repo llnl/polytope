@@ -2,82 +2,195 @@
 // 2D and 3D integral Point types used internally in polytope.  Not really
 // for external consumption!.
 //----------------------------------------------------------------------------//
-#ifndef __polytope_Point__
-#define __polytope_Point__
+#ifndef __Polytope_Point__
+#define __Polytope_Point__
+
+#include "Serializer.hh"
+#include "polytope_internal.hh"
+#include "ac_wrapper.hh"
 
 #include <iostream>
 #include <iterator>
-
-#include "polytope_serialize.hh"
-#include "polytope_internal.hh"
+#include <cmath>
 
 namespace polytope {
+
+namespace {
+inline std::ostream& operator<<(std::ostream& os, __int128 n) {
+  if (n == 0) return os << "0";
+  if (n < 0) {
+    os << "-";
+    n = -n;
+  }
+  std::string s;
+  while (n > 0) {
+    s += (char)('0' + (n % 10));
+    n /= 10;
+  }
+  std::reverse(s.begin(), s.end());
+  return os << s;
+}
+}
 
 //------------------------------------------------------------------------------
 // A integer version of the simple 2D point.
 //------------------------------------------------------------------------------
+
+template<int Dimension, typename CoordType> class Point {};
+
 template<typename CoordType>
-struct Point2 {
+using Point2 = Point<2, CoordType>;
+
+template<typename CoordType>
+using Point3 = Point<3, CoordType>;
+
+template<typename CoordType>
+struct Point<2, CoordType> {
   CoordType x, y;
   unsigned index;
-  Point2(): x(0), y(0), index(0) {}
-  Point2(const CoordType& xi, const CoordType& yi, const unsigned i = 0): x(xi), y(yi), index(i) {}
-  Point2& operator=(const Point2& rhs) { x = rhs.x; y = rhs.y; index = rhs.index; return *this; }
-  bool operator==(const Point2& rhs) const { return (x == rhs.x and y == rhs.y); }
-  bool operator!=(const Point2& rhs) const { return !(*this == rhs); }
-  bool operator<(const Point2& rhs) const {
-    return (x < rhs.x                ? true :
-            x == rhs.x and y < rhs.y ? true :
-            false);
+  // Constructors
+  Point(): x(0), y(0), index(0) {}
+
+  Point(const CoordType xy) :
+    x(xy), y(xy), index(0) {}
+
+  Point(const CoordType xi,
+        const CoordType yi,
+        const unsigned i = 0) :
+    x(xi), y(yi), index(i) {}
+
+  Point(const CoordType* ri,
+        const unsigned i = 0) :
+    x(ri[0]), y(ri[1]), index(i) {}
+
+  // Operators
+  bool operator==(const Point<2, CoordType>& rhs) const { return (x == rhs.x and y == rhs.y); }
+  bool operator!=(const Point<2, CoordType>& rhs) const { return !(*this == rhs); }
+  // Element-wise comparison operators
+  bool allLess(const Point& rhs) const {
+    return (x < rhs.x && y < rhs.y);
   }
-  template<typename RealType>
-  Point2(const RealType& xi, const RealType& yi, const RealType& dx, const unsigned i = 0): 
-    x(static_cast<CoordType>(xi/dx + 0.5)),
-    y(static_cast<CoordType>(yi/dx + 0.5)),
-    index(i) {}
-  template<typename RealType>
-  Point2(const RealType& xi, const RealType& yi, 
-         const RealType& xlow, const RealType& ylow,
-         const RealType& dx,
-         const unsigned i = 0): 
-    x(static_cast<CoordType>((xi - xlow)/dx + 0.5)),
-    y(static_cast<CoordType>((yi - ylow)/dx + 0.5)),
-    index(i) {}
-  template<typename RealType> RealType realx(const RealType& xmin, const RealType& dx) const { return static_cast<RealType>(x*dx) + xmin; }
-  template<typename RealType> RealType realy(const RealType& ymin, const RealType& dy) const { return static_cast<RealType>(y*dy) + ymin; }
-  Point2& operator+=(const Point2& rhs) { x += rhs.x; y += rhs.y; return *this; }
-  Point2& operator-=(const Point2& rhs) { x -= rhs.x; y -= rhs.y; return *this; }
-  Point2& operator*=(const CoordType& rhs) { x *= rhs; y *= rhs; return *this; }
-  Point2& operator/=(const CoordType& rhs) { x /= rhs; y /= rhs; return *this; }
-  Point2 operator+(const Point2& rhs) const { Point2 result(*this); result += rhs; return result; }
-  Point2 operator-(const Point2& rhs) const { Point2 result(*this); result -= rhs; return result; }
-  Point2 operator*(const CoordType& rhs) const { Point2 result(*this); result *= rhs; return result; }
-  Point2 operator/(const CoordType& rhs) const { Point2 result(*this); result /= rhs; return result; }
-  Point2 operator-() const { return Point2(-x, -y); }
+  bool allLessEqual(const Point& rhs) const {
+    return (x <= rhs.x && y <= rhs.y);
+  }
+  bool allGreater(const Point& rhs) const {
+    return (x > rhs.x && y > rhs.y);
+  }
+  bool allGreaterEqual(const Point& rhs) const {
+    return (x >= rhs.x && y >= rhs.y);
+  }
+  // NOTE: Comparison operators are lexicographic, not element-wise. Use above for element-wise.
+  bool operator<(const Point& rhs) const {
+    return (x < rhs.x || (x == rhs.x && y < rhs.y));
+  }
+  bool operator<=(const Point& rhs) const {
+    return (x < rhs.x || (x == rhs.x && y <= rhs.y));
+  }
+  bool operator>(const Point& rhs) const {
+    return (x > rhs.x || (x == rhs.x && y > rhs.y));
+  }
+  bool operator>=(const Point& rhs) const {
+    return (x > rhs.x || (x == rhs.x && y >= rhs.y));
+  }
+
+  Point& operator+=(const Point& rhs) { x += rhs.x; y += rhs.y; return *this; }
+  Point& operator-=(const Point& rhs) { x -= rhs.x; y -= rhs.y; return *this; }
+  Point& operator*=(const CoordType& rhs) { x *= rhs; y *= rhs; return *this; }
+  Point& operator/=(const CoordType& rhs) { x /= rhs; y /= rhs; return *this; }
+  Point& operator/=(const Point& rhs) { x /= rhs.x; y /= rhs.y; return *this; }
+  Point operator+(const Point& rhs) const { Point result(*this); result += rhs; return result; }
+  Point operator-(const Point& rhs) const { Point result(*this); result -= rhs; return result; }
+  Point operator*(const Point& rhs) const { return Point(x*rhs.x, y*rhs.y); }
+  Point operator*(const CoordType& rhs) const { Point result(*this); result *= rhs; return result; }
+  Point operator/(const CoordType& rhs) const { Point result(*this); result /= rhs; return result; }
+  Point operator/(const Point& rhs) const { return Point(x/rhs.x, y/rhs.y); }
+  Point operator-() const { return Point(-x, -y); }
   CoordType  operator[](const size_t i) const { POLY_ASSERT(i < 2); return *(&x + i); }
   CoordType& operator[](const size_t i)       { POLY_ASSERT(i < 2); return *(&x + i); }
+
+  bool iszero() const { return (x == 0 && y == 0) ? true : false; }
+
+  template<typename Coordinate, typename RealType>
+  Point<2, Coordinate> convertXi(const Point<2, RealType>& blo,
+                                 const Point<2, RealType>& dx) const {
+    // Quantize: RealType -> Coordinate
+    POLY_ASSERT(typeid(CoordType) == typeid(RealType));
+    Coordinate xOut, yOut;
+    xOut = static_cast<Coordinate>((this->x - blo.x)/dx.x);
+    yOut = static_cast<Coordinate>((this->y - blo.y)/dx.y);
+    return Point<2, Coordinate>(xOut, yOut);
+  }
+
+  template<typename RealType>
+  Point<2, RealType> convertx(const Point<2, RealType>& blo,
+                              const Point<2, RealType>& dx) const {
+    RealType xOut, yOut;
+    // Dequantize: Coordinate -> RealType
+    xOut = dx.x*(static_cast<RealType>(this->x)) + blo.x;
+    yOut = dx.y*(static_cast<RealType>(this->y)) + blo.y;
+    return Point<2, RealType>(xOut, yOut);
+  }
+
+  template<typename RealType>
+  Point<2, RealType> type_cast() const {
+    return Point<2, RealType>(ac_converter<CoordType, RealType>(x),
+                              ac_converter<CoordType, RealType>(y));
+  }
+
+  // Return the min and max elements in each direction
+  Point minElements(const Point& in) const {
+    CoordType xOut = (in.x < this->x) ? in.x : this->x;
+    CoordType yOut = (in.y < this->y) ? in.y : this->y;
+    return Point(xOut, yOut);
+  }
+
+  Point maxElements(const Point& in) const {
+    CoordType xOut = (in.x > this->x) ? in.x : this->x;
+    CoordType yOut = (in.y > this->y) ? in.y : this->y;
+    return Point(xOut, yOut);
+  }
+
+  // Return dimension with largest value
+  int maxAxis() const {
+    return (x >= y) ? 0 : 1;
+  }
+
+  // Convert to an std::array
+  std::array<CoordType, 2> toArray() const {
+    return {x, y};
+  }
 };
 
 // It's nice being able to print these things.
 template<typename CoordType>
 std::ostream&
-operator<<(std::ostream& os, const Point2<CoordType>& p) {
-  os << "(" << p.x << " " << p.y << ")(" << p.index << ")";
+operator<<(std::ostream& os, const Point<2, CoordType>& p) {
+  os << "[" << p.x << ", " << p.y << "]";
   return os;
+}
+
+template<typename CoordType>
+std::istream&
+operator>>(std::istream& is, Point<2, CoordType>& p) {
+  char open = 0, comma = 0, close = 0;
+  is >> open >> p.x >> comma >> p.y >> close;
+  if (open != '[' or comma != ',' or close != ']') is.setstate(std::ios::failbit);
+  p.index = 0;
+  return is;
 }
 
 // Serialization.
 template<typename CoordType>
-struct Serializer<Point2<CoordType> > {
+struct Serializer<Point<2, CoordType> > {
 
-  static void serializeImpl(const Point2<CoordType>& value,
+  static void serializeImpl(const Point<2, CoordType>& value,
                             std::vector<char>& buffer) {
     serialize(value.x, buffer);
     serialize(value.y, buffer);
     serialize(value.index, buffer);
   }
 
-  static void deserializeImpl(Point2<CoordType>& value,
+  static void deserializeImpl(Point<2, CoordType>& value,
                               std::vector<char>::const_iterator& bufItr,
                               const std::vector<char>::const_iterator endItr) {
     deserialize(value.x, bufItr, endItr);
@@ -90,64 +203,163 @@ struct Serializer<Point2<CoordType> > {
 // A integer version of the simple 3D point.
 //------------------------------------------------------------------------------
 template<typename CoordType>
-struct Point3 {
+struct Point<3, CoordType> {
   CoordType x, y, z;
   unsigned index;
-  Point3(): x(0), y(0), z(0), index(0) {}
-  Point3(const CoordType& xi, const CoordType& yi, const CoordType& zi, const unsigned i = 0): x(xi), y(yi), z(zi), index(i) {}
-  Point3& operator=(const Point3& rhs) { x = rhs.x; y = rhs.y; z = rhs.z; index = rhs.index; return *this; }
-  bool operator==(const Point3& rhs) const { return (x == rhs.x and y == rhs.y and z == rhs.z); }
-  bool operator!=(const Point3& rhs) const { return !(*this == rhs); }
-  bool operator<(const Point3& rhs) const {
-    return (x < rhs.x                               ? true :
-            x == rhs.x and y < rhs.y                ? true :
-            x == rhs.x and y == rhs.y and z < rhs.z ? true :
-            false);
+  // Constructors
+  Point(): x(0), y(0), z(0), index(0) {}
+  Point(const CoordType xyz) :
+    x(xyz), y(xyz), z(xyz), index(0) {}
+  Point(const CoordType xi,
+        const CoordType yi,
+        const CoordType zi,
+        const unsigned i = 0) :
+    x(xi), y(yi), z(zi), index(i) {}
+
+  Point(const CoordType* ri,
+        const unsigned i = 0) :
+    x(ri[0]), y(ri[1]), z(ri[2]), index(i) {}
+
+  // Operators
+  bool operator==(const Point& rhs) const { return (x == rhs.x and y == rhs.y and z == rhs.z); }
+  bool operator!=(const Point& rhs) const { return !(*this == rhs); }
+  // Element-wise comparison operators
+  bool allLess(const Point& rhs) const {
+    return (x < rhs.x && y < rhs.y && z < rhs.z);
   }
-  template<typename RealType>
-  Point3(const RealType& xi, const RealType& yi, const RealType& zi, const RealType& dx, const unsigned i = 0): 
-    x(static_cast<CoordType>(xi/dx + 0.5)),
-    y(static_cast<CoordType>(yi/dx + 0.5)),
-    z(static_cast<CoordType>(zi/dx + 0.5)),
-    index(i) {}
-  template<typename RealType>
-  Point3(const RealType& xi, const RealType& yi, const RealType& zi, 
-         const RealType& xlow, const RealType& ylow, const RealType& zlow, 
-         const RealType& dx, 
-         const unsigned i = 0): 
-    x(static_cast<CoordType>((xi - xlow)/dx + 0.5)),
-    y(static_cast<CoordType>((yi - ylow)/dx + 0.5)),
-    z(static_cast<CoordType>((zi - zlow)/dx + 0.5)),
-    index(i) {}
-  template<typename RealType> RealType realx(const RealType& xmin, const RealType& dx) const { return static_cast<RealType>(x*dx) + xmin; }
-  template<typename RealType> RealType realy(const RealType& ymin, const RealType& dy) const { return static_cast<RealType>(y*dy) + ymin; }
-  template<typename RealType> RealType realz(const RealType& zmin, const RealType& dz) const { return static_cast<RealType>(z*dz) + zmin; }
-  Point3& operator+=(const Point3& rhs) { x += rhs.x; y += rhs.y; z += rhs.z; return *this; }
-  Point3& operator-=(const Point3& rhs) { x -= rhs.x; y -= rhs.y; z -= rhs.z; return *this; }
-  Point3& operator*=(const CoordType& rhs) { x *= rhs; y *= rhs; z *= rhs; return *this; }
-  Point3& operator/=(const CoordType& rhs) { x /= rhs; y /= rhs; z /= rhs; return *this; }
-  Point3 operator+(const Point3& rhs) const { Point3 result(*this); result += rhs; return result; }
-  Point3 operator-(const Point3& rhs) const { Point3 result(*this); result -= rhs; return result; }
-  Point3 operator*(const CoordType& rhs) const { Point3 result(*this); result *= rhs; return result; }
-  Point3 operator/(const CoordType& rhs) const { Point3 result(*this); result /= rhs; return result; }
-  Point3 operator-() const { return Point3(-x, -y, -z); }
+  bool allLessEqual(const Point& rhs) const {
+    return (x <= rhs.x && y <= rhs.y && z <= rhs.z);
+  }
+  bool allGreater(const Point& rhs) const {
+    return (x > rhs.x && y > rhs.y && z > rhs.z);
+  }
+  bool allGreaterEqual(const Point& rhs) const {
+    return (x >= rhs.x && y >= rhs.y && z >= rhs.z);
+  }
+  // NOTE: Comparison operators are lexicographic, not element-wise. Use above for element-wise.
+  bool operator<(const Point& rhs) const {
+    return (x < rhs.x || (x == rhs.x && (y < rhs.y || (y == rhs.y && z < rhs.z))));
+  }
+  bool operator<=(const Point& rhs) const {
+    return (x < rhs.x || (x == rhs.x && (y < rhs.y || (y == rhs.y && z <= rhs.z))));
+  }
+  bool operator>(const Point& rhs) const {
+    return (x > rhs.x || (x == rhs.x && (y > rhs.y || (y == rhs.y && z > rhs.z))));
+  }
+  bool operator>=(const Point& rhs) const {
+    return (x >= rhs.x || (x == rhs.x && (y > rhs.y || (y == rhs.y && z >= rhs.z))));
+  }
+
+  Point& operator+=(const Point& rhs) { x += rhs.x; y += rhs.y; z += rhs.z; return *this; }
+  Point& operator-=(const Point& rhs) { x -= rhs.x; y -= rhs.y; z -= rhs.z; return *this; }
+  Point& operator*=(const CoordType& rhs) { x *= rhs; y *= rhs; z *= rhs; return *this; }
+  Point& operator/=(const CoordType& rhs) { x /= rhs; y /= rhs; z /= rhs; return *this; }
+  Point& operator/=(const Point& rhs) { x /= rhs.x; y /= rhs.y; z /= rhs.z; return *this; }
+  Point operator+(const Point& rhs) const { Point result(*this); result += rhs; return result; }
+  Point operator-(const Point& rhs) const { Point result(*this); result -= rhs; return result; }
+  Point operator*(const Point& rhs) const { return Point(x*rhs.x, y*rhs.y, z*rhs.z); }
+  Point operator*(const CoordType& rhs) const { Point result(*this); result *= rhs; return result; }
+  Point operator/(const CoordType& rhs) const { Point result(*this); result /= rhs; return result; }
+  Point operator/(const Point& rhs) const { return Point(x/rhs.x, y/rhs.y, z/rhs.z); }
+  Point operator-() const { return Point(-x, -y, -z); }
   CoordType  operator[](const size_t i) const { POLY_ASSERT(i < 3); return *(&x + i); }
   CoordType& operator[](const size_t i)       { POLY_ASSERT(i < 3); return *(&x + i); }
+
+  bool iszero() const { return (x == 0 && y == 0 && z == 0) ? true : false; }
+
+  template<typename Coordinate, typename RealType>
+  Point<3, Coordinate> convertXi(const Point<3, RealType>& blo,
+                                 const Point<3, RealType>& dx) const {
+    // Quantize: RealType -> Coordinate
+    Coordinate xOut, yOut, zOut;
+    xOut = static_cast<Coordinate>((this->x - blo.x)/dx.x);
+    yOut = static_cast<Coordinate>((this->y - blo.y)/dx.y);
+    zOut = static_cast<Coordinate>((this->z - blo.z)/dx.z);
+    return Point<3, Coordinate>(xOut, yOut, zOut, index);
+  }
+
+  template<typename RealType>
+  Point<3, RealType> convertx(const Point<3, RealType>& blo,
+                              const Point<3, RealType>& dx) const {
+    RealType xOut, yOut, zOut;
+    // Dequantize: Coordinate -> RealType
+    xOut = dx.x*(static_cast<RealType>(this->x)) + blo.x;
+    yOut = dx.y*(static_cast<RealType>(this->y)) + blo.y;
+    zOut = dx.z*(static_cast<RealType>(this->z)) + blo.z;
+    return Point<3, RealType>(xOut, yOut, zOut, index);
+  }
+
+  template<typename RealType>
+  Point<3, RealType> type_cast() const {
+    return Point<3, RealType>(ac_converter<CoordType, RealType>(x),
+                              ac_converter<CoordType, RealType>(y),
+                              ac_converter<CoordType, RealType>(z));
+  }
+
+  // Return the min and max elements in each direction
+  Point minElements(const Point& in) const {
+    CoordType xOut = (in.x < this->x) ? in.x : this->x;
+    CoordType yOut = (in.y < this->y) ? in.y : this->y;
+    CoordType zOut = (in.z < this->z) ? in.z : this->z;
+    return Point(xOut, yOut, zOut);
+  }
+
+  Point maxElements(const Point& in) const {
+    CoordType xOut = (in.x > this->x) ? in.x : this->x;
+    CoordType yOut = (in.y > this->y) ? in.y : this->y;
+    CoordType zOut = (in.z > this->z) ? in.z : this->z;
+    return Point(xOut, yOut, zOut);
+  }
+
+  // Return dimension with largest value
+  int maxAxis() const {
+    if (x >= y && x >= z) {
+      return 0;
+    } else if (y >= z) {
+      return 1;
+    }
+    return 2;
+  }
+
+  // Convert to an std::array
+  std::array<CoordType, 3> toArray() const {
+    return {x, y, z};
+  }
 };
 
-// It's nice being able to print these things.
 template<typename CoordType>
 std::ostream&
-operator<<(std::ostream& os, const Point3<CoordType>& p) {
-  os << "(" << p.x << " " << p.y << " " << p.z <<  ")(" << p.index << ")";
+operator<<(std::ostream& os, const Point<3, CoordType>& p) {
+  os << "[" << p.x << ", " << p.y << ", " << p.z << "]";
+  return os;
+}
+
+template<typename CoordType>
+std::istream&
+operator>>(std::istream& is, Point<3, CoordType>& p) {
+  char open = 0, comma0 = 0, comma1 = 0, close = 0;
+  is >> open >> p.x >> comma0 >> p.y >> comma1 >> p.z >> close;
+  if (open != '[' or comma0 != ',' or comma1 != ',' or close != ']') is.setstate(std::ios::failbit);
+  p.index = 0;
+  return is;
+}
+
+template<int Dimension, typename CoordType>
+std::ostream&
+operator<<(std::ostream& os, const std::vector<Point<Dimension, CoordType>>& pv) {
+  os << "v = [";
+  for (const auto& p : pv) {
+    os << p << ", ";
+  }
+  os << "]\n";
   return os;
 }
 
 // Serialization.
 template<typename CoordType>
-struct Serializer<Point3<CoordType> > {
+struct Serializer<Point<3, CoordType> > {
 
-  static void serializeImpl(const Point3<CoordType>& value,
+  static void serializeImpl(const Point<3, CoordType>& value,
                             std::vector<char>& buffer) {
     serialize(value.x, buffer);
     serialize(value.y, buffer);
@@ -155,7 +367,7 @@ struct Serializer<Point3<CoordType> > {
     serialize(value.index, buffer);
   }
 
-  static void deserializeImpl(Point3<CoordType>& value,
+  static void deserializeImpl(Point<3, CoordType>& value,
                               std::vector<char>::const_iterator& bufItr,
                               const std::vector<char>::const_iterator endItr) {
     deserialize(value.x, bufItr, endItr);
@@ -165,26 +377,61 @@ struct Serializer<Point3<CoordType> > {
   }
 };
 
-//------------------------------------------------------------------------------
-// Provide a special comparator for point types with some fuzz.
-//------------------------------------------------------------------------------
-template<typename CoordType>
-struct PointComparator {
-  CoordType mfuzz;
-  PointComparator(const CoordType fuzz): mfuzz(fuzz) {}
-  bool operator()(const Point2<CoordType>& lhs, const Point2<CoordType>& rhs) const {
-    return (rhs.x - lhs.x > mfuzz                                      ? true :
-            std::abs(rhs.x - lhs.x) <= mfuzz and rhs.y - lhs.y > mfuzz ? true :
-            false);
-  }
-  bool operator()(const Point3<CoordType>& lhs, const Point3<CoordType>& rhs) const {
-    return (rhs.x - lhs.x > mfuzz                                                                           ? true :
-            std::abs(rhs.x - lhs.x) <= mfuzz and rhs.y - lhs.y > mfuzz                                      ? true :
-            std::abs(rhs.x - lhs.x) <= mfuzz and std::abs(rhs.y - lhs.y) <= mfuzz and rhs.z - lhs.z > mfuzz ? true :
-            false);
-  }
-};
-
+// General functions
+template<int Dimension, typename CoordType>
+inline
+Point<Dimension, CoordType>
+operator*(const CoordType val, const Point<Dimension, CoordType>& vec) {
+  return vec*val;
 }
 
+// Roll flattened coordinates into Points
+template<int Dimension, typename CoordType>
+std::vector<Point<Dimension, CoordType>>
+extractCoords(const std::vector<CoordType>& allpoints) {
+  auto n = allpoints.size()/Dimension;
+  std::vector<Point<Dimension, CoordType>> result(n);
+  for(auto i = 0u; i < n; ++i) {
+    result[i] = Point<Dimension, CoordType>(&(allpoints[Dimension*i]), i);
+  }
+  return result;
+}
+
+template<int Dimension, typename CoordType>
+std::vector<CoordType>
+flattenCoords(const std::vector<Point<Dimension, CoordType>>& allpoints) {
+  auto n = allpoints.size();
+  auto n2 = Dimension*n;
+  std::vector<CoordType> result(n2);
+  for(auto i = 0u; i < n; ++i) {
+    for(auto d = 0; d < Dimension; ++d) {
+      result[Dimension*i+d] = allpoints[i][d];
+    }
+  }
+  return result;
+}
+
+template<int Dimension, typename CoordType>
+void
+findBoundingElements(const std::vector<Point<Dimension, CoordType>>& allpoints,
+                     Point<Dimension, CoordType>& minPoint,
+                     Point<Dimension, CoordType>& maxPoint) {
+  for (const auto& p : allpoints) {
+    minPoint = minPoint.minElements(p);
+    maxPoint = maxPoint.maxElements(p);
+  }
+}
+
+// This round should only be used when converting quantized coordinates
+// as doubles to quantized coordinates as int types
+template<int Dimension, typename CoordType>
+Point<Dimension, CoordType> round(const Point<Dimension, double>& point) {
+  Point<Dimension, CoordType> out;
+  for (int d = 0; d < Dimension; ++d) {
+    out[d] = static_cast<CoordType>(std::round(point[d]));
+  }
+  return out;
+}
+
+} // namespace polytope
 #endif

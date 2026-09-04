@@ -1,0 +1,6 @@
+from PYB11Generator import *
+
+serialTessellators = "@SERIAL_TESSELLATORS@".split(";")
+for name in serialTessellators:
+    if name:
+        exec("from %s import *" % name)
