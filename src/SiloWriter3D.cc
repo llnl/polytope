@@ -47,7 +47,7 @@ SiloWriter<3, TessType>::write(const TessType& mesh,
     MPI_Bcast(&globalWriteProcs, 1, MPI_INT, root, comm);
     numFiles = globalWriteProcs;
   }
-  POLY_ASSERT(numFiles <= Communicator::getNProcs());
+  POLY_ASSERT(numFiles <= Communicator::getNRanks());
 
   std::string masterDirName = getMasterDirName(directory, prefix, cycle);
   if (rank == root) {

@@ -30,6 +30,8 @@ public:
   // Ranges of bounding box
   double mCenter[3] = {0.0, 0.0, 0.0};
   double mArea;
+  // Disable if clipping is disabled
+  bool mClipping = true;
 
   BGPolygon<double, 2> mBGboundary;
 
@@ -52,7 +54,7 @@ public:
   // Boundary type
   mutable BoundaryType mType;
 
-  double m_pad = 0.1;
+  double mPad = 0.1;
   QuantPLC<2> mQPLC;
 
   //------------------------------------------------------------------------
@@ -73,11 +75,15 @@ public:
   }
 
   void finalize() {
-    auto& q = Quantizer<2>::instance();
-    q.init(mPLCpoints, m_pad);
+    auto& Q = Quantizer<2>::instance();
+    Q.init(mPLCpoints, mPad);
     mQPLC.init(mPLC, mPLCpoints);
     boostMyBoundary();
-    mArea = boost::geometry::area(mBGboundary);
+    if (mClipping) {
+      mArea = boost::geometry::area(mBGboundary);
+    } else {
+      mArea = Q.m_lx_o.x*Q.m_lx_o.y;
+    }
   }
 
   //------------------------------------------------------------------------
@@ -486,20 +492,6 @@ public:
     }
     POLY_CHECK(mPLCpoints.size()/2 == nSides);
 
-//     const unsigned nHolePoints = 3;
-//     const double holePoints[6] = {15.0, 14.0, 15.3, 14.4, 15.6, 14.0};
-
-//     mPLC.holes[0].resize(nHolePoints);
-//     for (unsigned i = 0; i != nHolePoints; ++i) {
-//       mPLCpoints.push_back(holePoints[2*i  ]);
-//       mPLCpoints.push_back(holePoints[2*i+1]);
-//       unsigned iBegin = mPLCpoints.size()/2 - nHolePoints + i;
-//       unsigned iEnd   = mPLCpoints.size()/2 - nHolePoints + ((i + 1) % nHolePoints);
-//       mPLC.holes[0][i].resize(2);
-//       mPLC.holes[0][i][0] = iBegin;
-//       mPLC.holes[0][i][1] = iEnd;
-//     }
-
     mType = trogdor2;
   }
 
@@ -581,7 +573,6 @@ public:
     return mQPLC.within(p);
   }
 
-
   //------------------------------------------------------------------------
   // inside
   // Tests if (x,y) is inside the nSide-sided polygon defined by the ordered
@@ -609,50 +600,12 @@ public:
   }
 
   //------------------------------------------------------------------------
-  // getBoundingCircle
-  // Get the maximal L-2 norm of the boundary generator set about center pt
-  // NOTE: method is general to 2D or 3D. Dimension is set to 2 here
-  //------------------------------------------------------------------------
-  void getBoundingRadius(double& radius) {
-    POLY_CHECK( mCenter != 0 );
-    radius = 0;
-    for (unsigned i = 0; i < mPLCpoints.size()/2; ++i ){
-      double distance = 0;
-      for (unsigned n = 0; n < 2; ++n ) {
-	distance += (mPLCpoints[2*i+n] - mCenter[n]) *
-	  (mPLCpoints[2*i+n] - mCenter[n]);
-      }
-      radius = max( radius, sqrt( distance ) );
-    }
-  }
-
-  //------------------------------------------------------------------------
   // BoostMyBoundary
   // Store the boundary info as a Boost.Geometry polygon
   //------------------------------------------------------------------------
   void boostMyBoundary() {
     boost::geometry::clear(mBGboundary);
     mBGboundary = makeBGPolygon<double>(mPLC, mPLCpoints);
-  }
-
-  //------------------------------------------------------------------------
-  // getPointInside
-  // Computes a random point
-  //------------------------------------------------------------------------
-  void getPointInside(double* point) {
-    auto& Q = Quantizer<2>::instance();
-    using Coordinate = QuantizedCoordinate<2>;
-    using PointType = QuantizedPoint<2>;
-    bool inside = false;
-    PointType p;
-    while( !inside ){
-      p.x = Q.minBound.x + static_cast<Coordinate>(random01())*Q.maxBound.x;
-      p.y = Q.minBound.y + static_cast<Coordinate>(random01())*Q.maxBound.y;
-      inside = mQPLC.within(p);
-    }
-    Point<2, double> pd = Q.dequantize(p);
-    point[0] = pd.x;
-    point[1] = pd.y;
   }
 };
 }

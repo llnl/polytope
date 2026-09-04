@@ -21,7 +21,6 @@ tessellate(const std::vector<Point<Dimension, RealType>>& points,
   // Pre-conditions
   POLY_ASSERT(mesh.empty());
   POLY_ASSERT(points.size() > 0);
-  POLY_ASSERT(points.size() % Dimension == 0);
 
   // Invoke the descendant method to fill the quant mesh.
   QuantTessellation<Dimension> quantmesh(points);
@@ -55,7 +54,6 @@ tessellate(const std::vector<Point<Dimension, RealType>>& points,
   // Pre-conditions
   POLY_ASSERT(mesh.empty());
   POLY_ASSERT(points.size() > 0);
-  POLY_ASSERT(points.size() % Dimension == 0);
 
   // Invoke the descendant method to fill the quant mesh.
   QuantTessellation<Dimension> quantmesh(points);

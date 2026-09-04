@@ -78,7 +78,7 @@ void tests(const int tnum, bool boostTess) {
     break;
   case 7: // Mod pad obtuse with star
     testname = "Mod pad obtuse triangle clipped by star";
-    boundary.m_pad = 0.5;
+    boundary.mPad = 0.5;
     boundary.setDefaultBoundary(10);
     points = {0.67, -0.14, 0.91, 0.3, 0.49, -0.4};
     numNodes = 20;

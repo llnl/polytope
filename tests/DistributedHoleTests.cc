@@ -3,6 +3,7 @@
 // Stress test of changing where points are and
 // how they are distributed across ranks.
 // Running with 8 ranks demonstrates issues with distributed clipping
+// Particularly at test 79 (Gseed = 7, Dseed = 9)
 
 #include <cmath>
 #include <exception>
@@ -28,7 +29,6 @@ namespace {
 void test(Tessellator<2, double>& tessellator) {
   int rank = Communicator::getRank();
   int root = Communicator::getRoot();
-  int nranks = Communicator::getNProcs();
 
   const int Ngen = 32;
   // Test case is square with a star hole
@@ -92,16 +92,16 @@ int main(int argc, char** argv) {
   comm.init(argc, argv);
   const int root = Communicator::getRoot();
 
-   {
-     if (Communicator::getRank() == root) {
-       cout << "\nBoost Tessellator:\n" << endl;
-     }
-     BoostTessellator tessellator;
-     test(tessellator);
-   }
-   if (Communicator::getRank() == root) {
-     std::cout << "=== DistributedHoleTests passed ===" << std::endl;
-   }
+  {
+    if (Communicator::getRank() == root) {
+      cout << "\nBoost Tessellator:\n" << endl;
+    }
+    BoostTessellator tessellator;
+    test(tessellator);
+  }
+  if (Communicator::getRank() == root) {
+    std::cout << "=== DistributedHoleTests passed ===" << std::endl;
+  }
   comm.finalize();
   return 0;
 }

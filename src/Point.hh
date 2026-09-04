@@ -109,11 +109,6 @@ struct Point<2, CoordType> {
   CoordType& operator[](const size_t i)       { POLY_ASSERT(i < 2); return *(&x + i); }
 
   bool iszero() const { return (x == 0 && y == 0) ? true : false; }
-  void zero() { x = 0; y = 0; }
-  void one() { x = 1; y = 1; }
-  static Point<2, CoordType> Zero() {
-    return Point<2, int>(0, 0).template type_cast<CoordType>();
-  }
 
   template<typename Coordinate, typename RealType>
   Point<2, Coordinate> convertXi(const Point<2, RealType>& blo,
@@ -182,12 +177,6 @@ operator>>(std::istream& is, Point<2, CoordType>& p) {
   if (open != '[' or comma != ',' or close != ']') is.setstate(std::ios::failbit);
   p.index = 0;
   return is;
-}
-
-template<typename CoordType, typename Key>
-Key dot(const Point2<CoordType>& a,
-        const Point2<CoordType>& b) {
-  return (a.x*b.x) + (a.y*b.y);
 }
 
 // Serialization.
@@ -261,16 +250,6 @@ struct Point<3, CoordType> {
     return (x >= rhs.x || (x == rhs.x && (y > rhs.y || (y == rhs.y && z >= rhs.z))));
   }
 
-  template<typename RealType>
-  Point(const RealType& xi, const RealType& yi, const RealType& zi,
-        const RealType& xlow, const RealType& ylow, const RealType& zlow,
-        const RealType& dx,
-        const unsigned i = 0):
-    x(static_cast<CoordType>((xi - xlow)/dx)),
-    y(static_cast<CoordType>((yi - ylow)/dx)),
-    z(static_cast<CoordType>((zi - zlow)/dx)),
-    index(i) {}
-
   Point& operator+=(const Point& rhs) { x += rhs.x; y += rhs.y; z += rhs.z; return *this; }
   Point& operator-=(const Point& rhs) { x -= rhs.x; y -= rhs.y; z -= rhs.z; return *this; }
   Point& operator*=(const CoordType& rhs) { x *= rhs; y *= rhs; z *= rhs; return *this; }
@@ -287,11 +266,6 @@ struct Point<3, CoordType> {
   CoordType& operator[](const size_t i)       { POLY_ASSERT(i < 3); return *(&x + i); }
 
   bool iszero() const { return (x == 0 && y == 0 && z == 0) ? true : false; }
-  void zero() { x = 0; y = 0; z = 0; }
-  void one() { x = 1; y = 1; z = 1; }
-  static Point<3, CoordType> Zero() {
-    return Point<3, int>(0, 0, 0).template type_cast<CoordType>();
-  }
 
   template<typename Coordinate, typename RealType>
   Point<3, Coordinate> convertXi(const Point<3, RealType>& blo,
@@ -353,11 +327,6 @@ struct Point<3, CoordType> {
   }
 };
 
-template<typename CoordType, typename Key>
-Key dot(const Point3<CoordType>& a, const Point3<CoordType>& b) {
-  return (a.x*b.x) + (a.y*b.y);
-}
-
 template<typename CoordType>
 std::ostream&
 operator<<(std::ostream& os, const Point<3, CoordType>& p) {
@@ -405,27 +374,6 @@ struct Serializer<Point<3, CoordType> > {
     deserialize(value.y, bufItr, endItr);
     deserialize(value.z, bufItr, endItr);
     deserialize(value.index, bufItr, endItr);
-  }
-};
-
-//------------------------------------------------------------------------------
-// Provide a special comparator for point types with some fuzz.
-// DEPRECATED
-//------------------------------------------------------------------------------
-template<typename CoordType>
-struct PointComparator {
-  CoordType mfuzz;
-  PointComparator(const CoordType fuzz): mfuzz(fuzz) {}
-  bool operator()(const Point<2, CoordType>& lhs, const Point<2, CoordType>& rhs) const {
-    return (rhs.x - lhs.x > mfuzz                                      ? true :
-            std::abs(rhs.x - lhs.x) <= mfuzz and rhs.y - lhs.y > mfuzz ? true :
-            false);
-  }
-  bool operator()(const Point<3, CoordType>& lhs, const Point<3, CoordType>& rhs) const {
-    return (rhs.x - lhs.x > mfuzz                                                                           ? true :
-            std::abs(rhs.x - lhs.x) <= mfuzz and rhs.y - lhs.y > mfuzz                                      ? true :
-            std::abs(rhs.x - lhs.x) <= mfuzz and std::abs(rhs.y - lhs.y) <= mfuzz and rhs.z - lhs.z > mfuzz ? true :
-            false);
   }
 };
 

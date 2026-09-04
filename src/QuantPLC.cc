@@ -51,7 +51,7 @@ template<int Dimension>
 void
 QuantPLC<Dimension>::init(const std::vector<RealType>& allpoints) {
   const auto& Q = Quantizer<Dimension>::instance();
-  m_loBounds = Q.maxCoord;
+  m_loBounds = Q.maxBound;
   m_hiBounds = -m_loBounds;
 
   // Extract the unrolled coordinates
@@ -87,7 +87,7 @@ template<int Dimension>
 void
 QuantPLC<Dimension>::init(const std::vector<QuantizedPoint<Dimension>>& quantizedPoints) {
   const auto& Q = Quantizer<Dimension>::instance();
-  m_loBounds = Q.maxCoord;
+  m_loBounds = Q.maxBound;
   m_hiBounds = -m_loBounds;
 
   auto N = quantizedPoints.size();
@@ -268,20 +268,11 @@ template<int D>
 std::enable_if_t<D == 3, void>
 QuantPLC<Dimension>::makeConvex3D() {
 #ifdef POLYTOPE_ENABLE_QHULL
-  using RealPoint = Point<Dimension, double>;
   const unsigned n = points.size();
   if (n == 0) return;
   m_convex = true;
 
-  std::vector<double> q_points;
-  q_points.reserve(n*3);
-  for (auto i = 0u; i < n; ++i) {
-    QuantizedPoint<Dimension> ps = points[i];
-    RealPoint rpoint = ps.template type_cast<double>();
-    q_points.push_back(rpoint.x);
-    q_points.push_back(rpoint.y);
-    q_points.push_back(rpoint.z);
-  }
+  std::vector<double> q_points = flattenCoords<3, double>(getRealQPoints());
   orgQhull::Qhull qh;
   qh.runQhull("", Dimension, n, q_points.data(), "Qt");
 

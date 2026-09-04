@@ -14,8 +14,6 @@
 #include "Communicator.hh"
 #include "GeomUtils.hh"
 
-
-
 using namespace std;
 
 namespace polytope {
@@ -133,37 +131,6 @@ public:
   }
 
   //------------------------------------------------------------------------
-  // Place radial generators about the center specified in Boundary2D
-  //------------------------------------------------------------------------
-  void radialPoints(const unsigned nr) {
-    mPoints.clear();
-    POLY_CHECK( Dimension == 2 );
-    double maxDistance;
-    mBoundary.getBoundingRadius( maxDistance );
-    POLY_CHECK( maxDistance > 0 );
-
-    double dRadius = maxDistance/nr;
-    for( unsigned i = 0; i != nr; ++i ) {
-      double rad = (i+0.5)*dRadius;
-
-      // This is supposed to befloor(2*pi*i), however 2*floor(pi)*i=6*i
-      // is found to work better
-      unsigned nArcs = 6*i;
-      std::vector<double> pos(2,0);
-      for( unsigned j = 0; j != nArcs; ++j ){
-        double theta = 2*M_PI*j/nArcs;
-        pos[0] = mBoundary.mCenter[0] + rad*cos(theta);
-        pos[1] = mBoundary.mCenter[1] + rad*sin(theta);
-        if( boost::geometry::within( makeBGPoint(pos), mBoundary.mBGboundary) ){
-          mPoints.push_back( pos[0] );
-          mPoints.push_back( pos[1] );
-        }
-      }
-    }
-    nPoints = mPoints.size()/Dimension;
-  }
-
-  //------------------------------------------------------------------------
   // add a point to the generator set
   //------------------------------------------------------------------------
   void addGenerator(double* pos) {
@@ -261,7 +228,7 @@ public:
     srand(seed);
     nPoints = mPoints.size()/Dimension;
     // Figure out parallel configuration
-    int numProcs = Communicator::getNProcs();
+    int numProcs = Communicator::getNRanks();
 
     if (maxProc >= 0) {
       numProcs = maxProc;

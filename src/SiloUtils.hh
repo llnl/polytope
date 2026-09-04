@@ -158,13 +158,13 @@ std::string getMasterFilename(const std::string& prefix,
 // Gather all ranks that have valid tessellation data on them
 inline
 std::vector<int> gatherValidRanks(int hasData) {
-  int nproc = Communicator::getNProcs();
+  int nranks = Communicator::getNRanks();
   int rank = Communicator::getRank();
   int root = Communicator::getRoot();
   auto& comm = Communicator::communicator();
   std::vector<int> flags;
   if (rank == root) {
-    flags.resize(nproc);
+    flags.resize(nranks);
   }
   MPI_Gather(&hasData, 1, MPI_INT,
              rank == root ? flags.data() : nullptr,

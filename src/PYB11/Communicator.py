@@ -17,7 +17,7 @@ The init and finalize are called in the polytope module itself and are not provi
         return "int"
 
     @PYB11static
-    def getNProcs(self):
+    def getNRanks(self):
         return "int"
 
     @PYB11static

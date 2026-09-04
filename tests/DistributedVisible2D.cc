@@ -31,7 +31,7 @@ namespace {
 void test(int testNum, Tessellator<2, double>& tessellator) {
   int rank = Communicator::getRank();
   int root = Communicator::getRoot();
-  int nranks = Communicator::getNProcs();
+  int nranks = Communicator::getNRanks();
 
   const int Ngen = 16;
   const int activeRanks = 6;
@@ -88,7 +88,7 @@ void test(int testNum, Tessellator<2, double>& tessellator) {
   // Now get the current mesh including all it's neighbor generators
   QuantTessellation<2> qmesh(generators.mPoints);
   distributed.tessellateQuantized(qmesh);
-  if (rank < activeRanks) {
+  if (rank < activeRanks && nranks == 6) {
     Tessellation<2, double> procMesh;
     qmesh.fillTessellation(procMesh);
     SiloWriter<2, Tessellation<2, double>>::write(procMesh, "ProcMesh" + tessellator.name(), 1, rank);

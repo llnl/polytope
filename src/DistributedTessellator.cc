@@ -108,7 +108,7 @@ partitionAndTessellate(const std::vector<Point<Dimension, RealType>>& points,
                        const Partitioner<Dimension>& partitioner,
                        TessellationType& mesh) {
   POLY_ASSERT(mesh.empty());
-  POLY_VERIFY2(partitioner.numPartitions() <= Communicator::getNProcs(),
+  POLY_VERIFY2(partitioner.numPartitions() <= Communicator::getNRanks(),
                "Distributed partition count must not exceed the MPI rank count");
 
   auto& Q = Quantizer<Dimension>::instance();
@@ -140,7 +140,7 @@ partitionAndTessellate(const std::vector<Point<Dimension, RealType>>& points,
   m_clipping = true;
   POLY_ASSERT(mesh.empty());
   POLY_ASSERT(PLCpoints.size() % Dimension == 0);
-  POLY_VERIFY2(partitioner.numPartitions() <= Communicator::getNProcs(),
+  POLY_VERIFY2(partitioner.numPartitions() <= Communicator::getNRanks(),
                "Distributed partition count must not exceed the MPI rank count");
 
   auto& Q = Quantizer<Dimension>::instance();
@@ -173,7 +173,7 @@ void
 DistributedTessellator<Dimension>::
 tessellateQuantizedImpl(QuantizedTessellation& qmesh) {
   int rank = Communicator::getRank();
-  int nranks = Communicator::getNProcs();
+  int nranks = Communicator::getNRanks();
 
   // Get the local visible generators and gather them on all processors
   auto visibleMesh = generateVisibleMesh(qmesh);
@@ -282,7 +282,7 @@ addVisibleMesh(const QuantizedTessellation& visibleMesh,
                const std::set<int>& neighborRanks,
                QuantizedTessellation& qmesh) {
   int rank = Communicator::getRank();
-  int nranks = Communicator::getNProcs();
+  int nranks = Communicator::getNRanks();
   if (m_exchangePoints) {
     std::vector<std::vector<QuantizedPoint<Dimension>>> visibleGenerators(nranks);
     const auto& vpoints = visibleMesh.points;

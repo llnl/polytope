@@ -140,7 +140,7 @@ Point2<CoordType> pointDirection(const Point2<double>& p1,
   auto diff = p2 - p1;
   double len = std::hypot(diff[0], diff[1]);
   if (len == 0.) {
-    return Point<2, CoordType>::Zero();
+    return Point<2, CoordType>();
   }
   auto norm = diff/len;
   const double SCALE = std::pow(2.0, QuantizedKeyTraits<2>::bitsPerCoordinate - 2);

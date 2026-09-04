@@ -32,18 +32,12 @@ timeTessellation(const std::vector<double> allPoints,
                  std::string distType) {
   const auto rank = Communicator::getRank();
   const auto root = Communicator::getRoot();
-  const auto nranks = static_cast<unsigned>(Communicator::getNProcs());
-
-  // Inputs for the LatticePartitioner
-  const auto r0 = static_cast<unsigned>(std::sqrt(nranks));
-  const auto r1 = static_cast<unsigned>(nranks/r0);
-  std::array<unsigned, 2> rarray = {r0, r1};
   const int partseed = 1042390;
 
   DistributedTessellator<2> distributed(serialTessellator);
   // Add other partitioners as they are implemented
   std::vector<std::unique_ptr<Partitioner<2>>> partitioners;
-  partitioners.push_back(std::make_unique<LatticePartitioner<2>>(rarray));
+  partitioners.push_back(std::make_unique<LatticePartitioner<2>>());
   partitioners.push_back(std::make_unique<QuasiVoronoiPartitioner<2>>(partseed));
   double minTime = std::numeric_limits<double>::max();
   std::vector<std::string> run_info;
@@ -110,7 +104,7 @@ main(int argc, char** argv) {
                                 Point<2, double>(1.0, 1.0));
   const auto rank = Communicator::getRank();
   const auto root = Communicator::getRoot();
-  const auto nranks = Communicator::getNProcs();
+  const auto nranks = Communicator::getNRanks();
   for (int dist_type = 0; dist_type < 2; ++dist_type) {
     if (rank == root) {
       std::cout << "Degeneracy " << Quantizer<2>::instance().degeneracy()

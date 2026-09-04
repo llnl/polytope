@@ -20,7 +20,7 @@ inline
 std::vector<std::vector<char>>
 allGatherBuffers(const std::vector<char>& localBuffer) {
   auto& comm = Communicator::communicator();
-  auto size = Communicator::getNProcs();
+  auto size = Communicator::getNRanks();
   const auto localSize = static_cast<int>(localBuffer.size());
   std::vector<int> recvSizes(size, 0);
   MPI_Allgather(&localSize, 1, MPI_INT,
@@ -52,7 +52,7 @@ allGatherBuffers(const std::vector<char>& localBuffer) {
 template<int Dimension, typename Generator>
 std::vector<std::vector<Generator>>
 allGatherGenerators(const std::vector<Generator>& localGenerators) {
-  auto size = Communicator::getNProcs();
+  auto size = Communicator::getNRanks();
   std::vector<char> localBuffer;
   serialize(localGenerators, localBuffer);
   auto buffers = allGatherBuffers(localBuffer);
@@ -75,7 +75,7 @@ exchangeNeighborGenerators(const std::vector<Generator>& localGenerators,
                            const std::set<int>& neighbors) {
   auto& comm = Communicator::communicator();
   auto rank = Communicator::getRank();
-  auto size = Communicator::getNProcs();
+  auto size = Communicator::getNRanks();
   std::vector<char> localBuffer;
   serialize(localGenerators, localBuffer);
 
@@ -126,7 +126,7 @@ template<int Dimension>
 std::vector<std::pair<bool, QuantPLC<Dimension>>>
 allGatherHulls(const bool localValid,
                const QuantPLC<Dimension>& localHull) {
-  auto size = Communicator::getNProcs();
+  auto size = Communicator::getNRanks();
   std::vector<char> localBuffer;
   serialize(localValid, localBuffer);
   if (localValid) {

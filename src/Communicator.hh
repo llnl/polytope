@@ -31,7 +31,7 @@ public:
   static void communicator(MPI_Comm& comm) { instance().mCommunicator = comm; }
   static MPI_Comm* comm_ptr();
   static int getRank();
-  static int getNProcs();
+  static int getNRanks();
   static void Barrier();
   static void abort();
   static int getRoot();

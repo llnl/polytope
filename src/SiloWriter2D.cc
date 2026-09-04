@@ -63,7 +63,7 @@ SiloWriter<2, TessType>::write(const TessType& mesh,
                                int cycle,
                                double time,
                                int numFiles) {
-  int nproc = Communicator::getNProcs();
+  int nranks = Communicator::getNRanks();
   int rank = Communicator::getRank();
   int root = Communicator::getRoot();
   auto& comm = Communicator::communicator();
@@ -84,7 +84,7 @@ SiloWriter<2, TessType>::write(const TessType& mesh,
   bool doParallel = false;
   std::string masterDirName = "";
   std::vector<int> ranksWithData;
-  if (nproc == 1) {
+  if (nranks == 1) {
     numFiles = 1;
   }
   if (numFiles == -1 || numFiles > 1) {
@@ -96,7 +96,7 @@ SiloWriter<2, TessType>::write(const TessType& mesh,
       MPI_Bcast(&globalWriteProcs, 1, MPI_INT, root, comm);
       numFiles = globalWriteProcs;
     }
-    POLY_ASSERT(numFiles <= nproc);
+    POLY_ASSERT(numFiles <= nranks);
 
     masterDirName = getMasterDirName(directory, prefix, cycle);
     if (rank == root) {

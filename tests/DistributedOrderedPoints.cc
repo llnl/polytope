@@ -32,10 +32,10 @@ namespace {
 
 void test(const int btype, Tessellator<2, double>& tessellator) {
   int rank = Communicator::getRank();
-  int nprocs = Communicator::getNProcs();
+  int nranks = Communicator::getNRanks();
   int root = Communicator::getRoot();
 
-  const int Ngen = 4*nprocs;
+  const int Ngen = 4*nranks;
   int seed = 1049600;
   Boundary2D boundary;
   boundary.setDefaultBoundary(btype);

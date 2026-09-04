@@ -57,7 +57,7 @@ inline
 void
 rebuildQPLCPointMetadata(QPLCType& qplc) {
   const auto& Q = Quantizer<2>::instance();
-  qplc.m_loBounds = Q.maxCoord;
+  qplc.m_loBounds = Q.maxBound;
   qplc.m_hiBounds = -qplc.m_loBounds;
   for (unsigned i = 0; i < qplc.points.size(); ++i) {
     auto& point = qplc.points[i];

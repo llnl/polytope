@@ -89,7 +89,7 @@ SiloReader<2, TessType>::read(TessType& mesh,
   // Open a file in Silo/HDF5 format for reading.
 #ifdef POLYTOPE_ENABLE_MPI
   auto& comm = Communicator::communicator();
-  int nproc = Communicator::getNProcs();
+  int nranks = Communicator::getNRanks();
   rank = Communicator::getRank();
   int root = Communicator::getRoot();
   int NBlocks = 0;
@@ -119,7 +119,7 @@ SiloReader<2, TessType>::read(TessType& mesh,
 
   for (int i = 0; i < NBlocks; ++i) {
     auto& cpath = block_paths[i];
-    if (i % nproc == rank) {
+    if (i % nranks == rank) {
       inputFiles.push_back(cpath);
     }
   }
@@ -288,15 +288,11 @@ namespace Silo {
 //-------------------------------------------------------------------
 vector<int> findAvailableCycles(const string& prefix,
                                 const string& directory) {
-#ifdef POLYTOPE_ENABLE_MPI
-  const int nproc = Communicator::getNProcs();
-#endif
-
   // If the directory is not given, infer it from the prefix.
   string dir = directory;
   if (dir.empty()) {
 #ifdef POLYTOPE_ENABLE_MPI
-    dir = prefix + "-" + std::to_string(nproc);
+    dir = prefix + "-" + std::to_string(Communicator::getNRanks());
 #else
     dir = ".";
 #endif

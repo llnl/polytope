@@ -211,7 +211,7 @@ void compareArea(Boundary2D& boundary,
                  const std::string& test_str = "") {
   double area = in_area;
 #ifdef POLYTOPE_ENABLE_MPI
-  const int nranks = Communicator::getNProcs();
+  const int nranks = Communicator::getNRanks();
   if (nranks > 1) {
     double distributedArea = 0.0;
     MPI_Allreduce(&in_area, &distributedArea, 1, MPI_DOUBLE, MPI_SUM, Communicator::communicator());

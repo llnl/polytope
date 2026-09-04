@@ -92,7 +92,7 @@ int Communicator::getRank() {
   return sRank;
 }
 
-int Communicator::getNProcs() {
+int Communicator::getNRanks() {
   int nRanks = 1;
 #ifdef POLYTOPE_ENABLE_MPI
   int isInit;

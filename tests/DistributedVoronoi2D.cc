@@ -24,13 +24,14 @@ namespace {
 
 void test(Tessellator<2, double>& tessellator) {
   int rank = Communicator::getRank();
-  int nprocs = Communicator::getNProcs();
+  int nranks = Communicator::getNRanks();
   int root = Communicator::getRoot();
 
   const int Ngen = 100;
   int oseed = 1049600;
   int seed = oseed + rank;
   Boundary2D boundary;
+  boundary.mClipping = false;
   boundary.setDefaultBoundary(0);
   Generators<2> generators(boundary);
   generators.randomPoints(Ngen, seed);
@@ -48,7 +49,7 @@ void test(Tessellator<2, double>& tessellator) {
   Tessellation<2, double> serialMesh;
   if (rank == root) {
     std::vector<double> allPoints;
-    for (int p = 0; p < nprocs; ++p) {
+    for (int p = 0; p < nranks; ++p) {
       int cseed = oseed + p;
       generators.randomPoints(Ngen, cseed);
       std::copy(generators.mPoints.begin(), generators.mPoints.end(), std::back_inserter(allPoints));
@@ -60,9 +61,6 @@ void test(Tessellator<2, double>& tessellator) {
   std::string serialoutname = "serialVoronoi_" + tessellator.name();
   outputMesh(serialMesh, serialoutname, 0, 0.);
   outputMesh(localMesh, outname, 0, 0.);
-  auto& Q = Quantizer<2>::instance();
-  const double refArea = Q.m_lx_o.x*Q.m_lx_o.y;
-  boundary.mArea = refArea;
   compareArea(boundary, serialArea, "Serial area failure");
   compareArea(boundary, localMesh, "Distributed area failure");
 }

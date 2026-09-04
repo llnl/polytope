@@ -12,16 +12,13 @@ def time_tessellation(allpoints, tessellator):
     comm = polytope.Communicator.instance()
     rank = comm.getRank()
     root = comm.getRoot()
-    nranks = comm.getNProcs()
+    nranks = comm.getNRanks()
     seed = 1049600
     partseed = 1042390
     ptess = polytope.DistributedTessellator2d(tessellator)
-    # Determine how to load balance the generators for Lattice partitioner
-    r0 = int(nranks**0.5)
-    r1 = int(nranks/r0)
     if (rank == root):
         print(f"Using {tessellator.name()}")
-    parts = [polytope.LatticePartitioner2d([r0, r1]),
+    parts = [polytope.LatticePartitioner2d(),
              polytope.QuasiVoronoiPartitioner2d(partseed)]
     time_dicts = []
     for exchangetype in range(2):
@@ -56,7 +53,7 @@ if __name__ == "__main__":
     comm = polytope.Communicator.instance()
     rank = comm.getRank()
     root = comm.getRoot()
-    nranks = comm.getNProcs()
+    nranks = comm.getNRanks()
     seed = 1049600
 
     plc_points = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]

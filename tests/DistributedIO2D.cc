@@ -22,21 +22,6 @@ using namespace polytope;
 
 namespace {
 
-PLC<2>
-unitSquarePLC() {
-  PLC<2> result;
-  result.facets = {{0, 1}, {1, 2}, {2, 3}, {3, 0}};
-  return result;
-}
-
-std::vector<double>
-unitSquarePoints() {
-  return {0.0, 0.0,
-          1.0, 0.0,
-          1.0, 1.0,
-          0.0, 1.0};
-}
-
 std::vector<double>
 generatorPoints() {
   return {0.20, 0.20,
@@ -70,15 +55,17 @@ rankLocalPoints(const std::vector<double>& allPoints,
 
 void test(Tessellator<2, double>& tessellator) {
   int rank = Communicator::getRank();
-  int size = Communicator::getNProcs();
+  int nranks = Communicator::getNRanks();
 
   const auto allPoints = generatorPoints();
-  const auto localPoints = rankLocalPoints(allPoints, rank, size);
-  const auto boundaryPoints = unitSquarePoints();
-  const auto boundary = unitSquarePLC();
+  const auto localPoints = rankLocalPoints(allPoints, rank, nranks);
+  Boundary2D boundary;
+  boundary.mPad = 0.04;
+  boundary.mCenter[0] = 0.5;
+  boundary.mCenter[1] = 0.5;
+  boundary.setDefaultBoundary(0);
 
   DistributedTessellator<2> distributed(tessellator);
-
   Tessellation<2, double> localMesh;
   distributed.tessellate(localPoints, localMesh);
 
@@ -99,7 +86,7 @@ void test(Tessellator<2, double>& tessellator) {
   MPI_Allreduce(&localArea, &distributedArea, 1, MPI_DOUBLE, MPI_SUM, Communicator::communicator());
 
   double serialArea = 0.0;
-  if (rank == 0) {
+  if (rank == Communicator::getRoot()) {
     Tessellation<2, double> serialMesh;
     tessellator.tessellate(allPoints, serialMesh);
     serialArea = computeTessellationArea(serialMesh);
@@ -124,6 +111,7 @@ void test(Tessellator<2, double>& tessellator) {
   POLY_CHECK2(totalCells == expectedCells,
               "Read in mesh has " << totalCells
               << " cells but expected " << expectedCells);
+  
 }
 } // anonymous namespace
 

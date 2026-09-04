@@ -217,18 +217,6 @@ class Boundary2d:
     def testInside(self, x, y):
         return self.QPLC.within((x, y))
 
-    def getBoundingRadius(self):
-        return max(sqrt((x - self.mCenter[0])**2 + (y - self.mCenter[1])**2)
-                   for x, y in zip(self.PLCpoints[::2], self.PLCpoints[1::2]))
-
-    def getPointInside(self):
-        if self.low is None:
-            raise ValueError("Finalize the boundary before sampling it")
-        while True:
-            point = uniform(self.low[0], self.high[0]), uniform(self.low[1], self.high[1])
-            if self.testInside(*point):
-                return point
-
     # Legacy construction spellings retained for existing Python callers.
     def initBox(self, low=(0., 0.), high=(1., 1.)):
         self.mCenter = [.5*(low[0] + high[0]), .5*(low[1] + high[1])]

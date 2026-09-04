@@ -50,10 +50,8 @@ public:
   // Not necessarily the max for this instance
   constexpr static QuantizedCoordinate<Dimension> m_maxCoordinate = Traits::maxCoordinate();
   // Current maximum coordinate in a single direction
-  QuantizedPoint<Dimension> maxCoord = QuantizedPoint<Dimension>(m_maxCoordinate);
-  QuantizedPoint<Dimension> minCoord = QuantizedPoint<Dimension>();
-  QuantizedPoint<Dimension> maxBound = maxCoord - 1000;
-  QuantizedPoint<Dimension> minBound = minCoord + 1000;
+  QuantizedPoint<Dimension> maxBound = QuantizedPoint<Dimension>(m_maxCoordinate);
+  QuantizedPoint<Dimension> minBound = QuantizedPoint<Dimension>();
   RealPoint rmaxBound = maxBound.template type_cast<RealType>();
   RealPoint rminBound = minBound.template type_cast<RealType>();
   bool m_init = false;
@@ -156,7 +154,6 @@ public:
   // -1: Outside lower side
   Point<Dimension, int> externalSides(const RealPoint& point) const {
     Point<Dimension, int> out;
-    out.zero();
     for (int dir = 0; dir < Dimension; ++dir) {
       if (point[dir] > rmaxBound[dir] - 10.) {
         out[dir] = 1;

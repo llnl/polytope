@@ -73,7 +73,7 @@ class RandomPartitioner(Partitioner):
 
     def pyinit(self,
                seed="const std::uint64_t",
-               numPartitions=("const unsigned", "Communicator::getNProcs()")):
+               numPartitions=("const unsigned", "Communicator::getNRanks()")):
         "Construct with a deterministic ownership seed."
 
 @PYB11template("int Dimension")
@@ -82,7 +82,7 @@ class QuasiVoronoiPartitioner(Partitioner):
 
     def pyinit(self,
                seed="const unsigned",
-               numPartitions=("const unsigned", "Communicator::getNProcs()")):
+               numPartitions=("const unsigned", "Communicator::getNRanks()")):
         "Construct with a seed and number of logical partitions."
 
 @PYB11template("int Dimension")
@@ -93,8 +93,12 @@ class LatticePartitioner(Partitioner):
 
     def pyinit(self,
                ranksPerAxis="const RanksPerAxis&",
-               numPartitions=("const unsigned", "Communicator::getNProcs()")):
+               numPartitions=("const unsigned", "Communicator::getNRanks()")):
         "Construct from ranks per axis; bounds come from the initialized Quantizer."
+
+    def pyinit2(self,
+                numPartitions=("const unsigned", "Communicator::getNRanks()")):
+        "Compute an optimal number of ranks per axis."
 
 
 Partitioner2d = PYB11TemplateClass(Partitioner, template_parameters="2")

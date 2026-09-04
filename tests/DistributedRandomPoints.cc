@@ -25,7 +25,7 @@ namespace {
 
 void test(const int btype, Tessellator<2, double>& tessellator) {
   int rank = Communicator::getRank();
-  int nprocs = Communicator::getNProcs();
+  int nranks = Communicator::getNRanks();
   int root = Communicator::getRoot();
 
   // Generate Ngen random nodes per rank
@@ -54,7 +54,7 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
     auto& Q = Quantizer<2>::instance();
     std::map<Point<2, double>, int> finalRanks;
     std::vector<double> allPoints;
-    for (int proc = 0; proc < nprocs; ++proc) {
+    for (int proc = 0; proc < nranks; ++proc) {
       int cseed = oseed + proc;
       generators.randomPoints(Ngen, cseed);
       std::copy(generators.mPoints.begin(), generators.mPoints.end(), std::back_inserter(allPoints));

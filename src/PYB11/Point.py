@@ -28,12 +28,6 @@ class Point2:
     def iszero(self):
         return "bool"
 
-    def zero(self):
-        return "void"
-
-    def one(self):
-        return "void"
-
     @PYB11const
     def maxAxis(self):
         return "int"
@@ -66,9 +60,17 @@ class Point2:
     def __str__(self):
         return "std::string"
 
+    @PYB11implementation("[](const Point2<%(CoordType)s>& self) { std::stringstream ss; ss << self; return ss.str(); }")
+    def __repr__(self):
+        return
+
     @PYB11implementation("[](const Point2<%(CoordType)s>& self, size_t i) { if (i >= 2) throw py::index_error(); return self[i]; }")
-    def __getitem__(self, i="size_t"):
+    def __getitem__(self):
         return "%(CoordType)s"
+
+    @PYB11implementation("[](Point2<%(CoordType)s>& self, size_t i, const %(CoordType)s& v) { if (i >= 2) throw py::index_error(); self[i] = v; }")
+    def __setitem__(self):
+        return "void"
 
     # Operators
     def __neg__(self):
@@ -128,12 +130,6 @@ class Point3:
     def iszero(self):
         return "bool"
 
-    def zero(self):
-        return "void"
-
-    def one(self):
-        return "void"
-
     @PYB11const
     def maxAxis(self):
         return "int"
@@ -166,9 +162,17 @@ class Point3:
     def __str__(self):
         return "std::string"
 
+    @PYB11implementation("[](const Point3<%(CoordType)s>& self) { std::stringstream ss; ss << self; return ss.str(); }")
+    def __repr__(self):
+        return
+
     @PYB11implementation("[](const Point3<%(CoordType)s>& self, size_t i) { if (i >= 3) throw py::index_error(); return self[i]; }")
-    def __getitem__(self, i="size_t"):
+    def __getitem__(self):
         return "%(CoordType)s"
+
+    @PYB11implementation("[](Point3<%(CoordType)s>& self, size_t i, const %(CoordType)s& v) { if (i >= 3) throw py::index_error(); self[i] = v; }")
+    def __setitem__(self):
+        return "void"
 
     # Operators
     def __neg__(self):

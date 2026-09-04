@@ -42,7 +42,7 @@ public:
 
   //! The number of logical partitions.  These are MPI ranks only when used
   //! by DistributedTessellator.
-  Partitioner(const unsigned numPartitions = Communicator::getNProcs()) :
+  Partitioner(const unsigned numPartitions = Communicator::getNRanks()) :
     m_numPartitions(numPartitions) {
     POLY_VERIFY(m_numPartitions > 0);
   }
@@ -182,7 +182,7 @@ public:
   using Partitioner<Dimension>::computeOwners;
 
   explicit RandomPartitioner(const std::uint64_t seed,
-                             const unsigned numPartitions = Communicator::getNProcs()):
+                             const unsigned numPartitions = Communicator::getNRanks()):
     Partitioner<Dimension>(numPartitions),
     m_seed(seed){ }
 
@@ -260,7 +260,7 @@ public:
   using Partitioner<Dimension>::computeOwners;
 
   explicit QuasiVoronoiPartitioner(const unsigned seed,
-                                   const unsigned numPartitions = Communicator::getNProcs()):
+                                   const unsigned numPartitions = Communicator::getNRanks()):
     Partitioner<Dimension>(numPartitions),
     m_seed(seed) { }
 
@@ -338,7 +338,7 @@ private:
 // Quantizer<Dimension>::maxBound, inclusive. The Quantizer must be initialized
 // before computePartition is called. This domain is divided uniformly into
 // ranksPerAxis[d] tiles along each axis; a point on the global upper bound
-// belongs to the final tile on that axis.
+// belongs to the final tile on that axis. Default distribution is 
 //----------------------------------------------------------------------------//
 template<int Dimension>
 class LatticePartitioner: public Partitioner<Dimension> {
@@ -350,12 +350,33 @@ public:
   using Partitioner<Dimension>::computeOwners;
   using RanksPerAxis = std::array<unsigned, Dimension>;
 
-  virtual std::string name() const override { return "LatticePartitioner"; }
+  virtual std::string name() const override {
+    std::string dist = " [";
+    for (int d = 0; d < Dimension; ++d) {
+      dist += std::to_string(m_ranksPerAxis[d]) + ", ";
+    }
+    return "LatticePartitioner" + dist + "]";
+  }
+
+  explicit LatticePartitioner(const unsigned numPartitions = Communicator::getNRanks()):
+    Partitioner<Dimension>(numPartitions) {
+    // Try to distribute evenly across each dimension
+    if constexpr (Dimension == 2) {
+      optimalLattice2D();
+    } else {
+      optimalLattice3D();
+    }
+    init();
+  }
 
   explicit LatticePartitioner(const RanksPerAxis& ranksPerAxis,
-                              const unsigned numPartitions = Communicator::getNProcs()):
+                              const unsigned numPartitions = Communicator::getNRanks()):
     Partitioner<Dimension>(numPartitions),
     m_ranksPerAxis(ranksPerAxis) {
+    init();
+  }
+
+  void init() {
     std::size_t expectedRanks = 1;
     for (int d = 0; d < Dimension; ++d) {
       POLY_VERIFY2(m_ranksPerAxis[d] > 0,
@@ -389,8 +410,7 @@ public:
     }
     return result;
   }
-protected:
-  using Partitioner<Dimension>::m_numPartitions;
+
 private:
   std::size_t owner(const PointType& point,
                     const PointType& lower,
@@ -415,7 +435,49 @@ private:
     return rank;
   }
 
+  // Determine the optimal ranks per axis for a given number of partitions
+  // without exceeding the number of partitions
+  void optimalLattice2D() {
+    unsigned bestx = 1;
+    unsigned besty = m_numPartitions;
+    for (unsigned x = 1; x <= std::sqrt(m_numPartitions); ++x) {
+      unsigned y = m_numPartitions/x;
+      unsigned bestTotal = bestx*besty;
+      if (x*y > bestTotal ||
+          (x*y == bestTotal && (y - x) < (besty - bestx))) {
+        bestx = x;
+        besty = y;
+      }
+    }
+    m_ranksPerAxis = {bestx, besty};
+  }
+
+  void optimalLattice3D() {
+    unsigned bestx = 1;
+    unsigned besty = 1;
+    unsigned bestz = m_numPartitions;
+    for (unsigned x = 1; x*x*x <= m_numPartitions + x*x; ++x) {
+      for (unsigned y = x; x*y*y <= m_numPartitions; ++y) {
+        unsigned z = unsigned(m_numPartitions/(x*y));
+        if (z < y) {
+          continue;
+        }
+        unsigned total = x*y*z;
+        unsigned bestTotal = bestx*besty*bestz;
+        if (total > bestTotal ||
+            (total == bestTotal && (z - x) < (bestz - bestx))) {
+          bestx = x;
+          besty = y;
+          bestz = z;
+        }
+      }
+    }
+    m_ranksPerAxis = {bestx, besty, bestz};
+  }
+
   RanksPerAxis m_ranksPerAxis;
+protected:
+  using Partitioner<Dimension>::m_numPartitions;
 };
 
 } // namespace polytope
