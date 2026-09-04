@@ -102,11 +102,10 @@ public:
   // setDefaultBoundary
   //------------------------------------------------------------------------
   void setDefaultBoundary(const int bType) {
-
+    clear();
     switch(bType){
     case square:
       this->setUnitSquare();
-      this->finalize();
       break;
     case circle:
       this->setUnitCircle();
@@ -142,13 +141,13 @@ public:
       this->setSquareWithTriHole();
       break;
     }
+    finalize();
    }
 
   //------------------------------------------------------------------------
   // setUnitSquare
   //------------------------------------------------------------------------
   void setUnitSquare() {
-    this->clear();
     const double x1 = mCenter[0] - mDiff;
     const double x2 = mCenter[0] + mDiff;
     const double y1 = mCenter[1] - mDiff;
@@ -165,7 +164,6 @@ public:
   // setUnitCircle
   //------------------------------------------------------------------------
   void setUnitCircle() {
-    this->clear();
     // Boundary generators.
     unsigned Nb = 90; // 4-degree resolution.
     for (unsigned b = 0; b < Nb; ++b) {
@@ -186,7 +184,6 @@ public:
       mPLC.facets[f][1] = fEnd;
     }
     mType = circle;
-    this->finalize();
   }
 
   //------------------------------------------------------------------------
@@ -198,7 +195,6 @@ public:
     POLY_CHECK2( innerRadius < 1, "Inner radius may not exceed outer (unit) radius" );
 
     // The outer circle
-    this->clear();
     this->setUnitCircle();
 
     // Inner circle.
@@ -223,7 +219,6 @@ public:
       mPLC.holes[0][f][1] = fEnd;
     }
     mType = donut;
-    this->finalize();
   }
 
   //------------------------------------------------------------------------
@@ -231,7 +226,6 @@ public:
   // M-shaped domain with two square holes
   //------------------------------------------------------------------------
   void setMWithHoles() {
-    this->clear();
     // Outer boundary of the M-shape
     mPLCpoints.push_back(0.0); mPLCpoints.push_back(0.0);
     mPLCpoints.push_back(2.0); mPLCpoints.push_back(0.0);
@@ -268,7 +262,6 @@ public:
       mPLC.holes[1][i][1] = nSides + 4 + ((i+1) % 4);
     }
     mType = mwithholes;
-    this->finalize();
   }
 
   //------------------------------------------------------------------------
@@ -276,7 +269,6 @@ public:
   // Star-shaped(-ish) region from Misha Shashkov's Voronoi test suite
   //------------------------------------------------------------------------
   void setFunkyStar() {
-    this->clear();
     // Get the boundary points, organized counterclockwise
     int Nsides = 10;
     for (int i = Nsides-1; i >= 0; --i ) {
@@ -295,7 +287,6 @@ public:
       mPLC.facets[f][1] = (f+1) % Nsides;
     }
     mType = funkystar;
-    this->finalize();
   }
 
   //------------------------------------------------------------------------
@@ -303,7 +294,6 @@ public:
   // Unit circle with a hole shaped like a regular n-pointed star
   //------------------------------------------------------------------------
   void setCircleWithStarHole( int nPoints = 5 ) {
-    this->clear();
     // The outer boundary
     this->setUnitCircle();
 
@@ -336,7 +326,6 @@ public:
     }
 
     mType = circlewithstarhole;
-    this->finalize();
   }
 
   //------------------------------------------------------------------------
@@ -352,7 +341,6 @@ public:
   //------------------------------------------------------------------------
   void setCardioid( double z = 2 ) {
     POLY_CHECK2( z > 0, "Must provide a positive coefficient for the cardioid" );
-    this->clear();
 
     // Boundary generators.
     unsigned Nb = 90; // 4-degree resolution.
@@ -374,7 +362,6 @@ public:
       mPLC.facets[f][1] = fEnd;
     }
     mType = cardioid;
-    this->finalize();
   }
 
   //------------------------------------------------------------------------
@@ -382,7 +369,6 @@ public:
   // No explanation necessary
   //------------------------------------------------------------------------
   void setTrogdor() {
-    this->clear();
     const unsigned nSides = 30;
     const double points[60] = {2.0, 9.0, 4.0, 8.9, 5.0, 9.2, 6.5, 8.8,
 				 7.0, 8.0, 6.5, 7.0, 5.0, 6.3, 4.0, 5.5,
@@ -403,7 +389,6 @@ public:
     }
 
     mType = trogdor;
-    this->finalize();
   }
 
   //------------------------------------------------------------------------
@@ -411,7 +396,6 @@ public:
   // 5-pt star with hole in center from Misha Shashkov's Voronoi test suite
   //------------------------------------------------------------------------
   void setStarWithHole() {
-    this->clear();
     const unsigned nPoints = 5;
     const double theta0 = 2*M_PI/nPoints;
     const double outerRadius = 1.0;
@@ -462,7 +446,6 @@ public:
     }
 
     mType = starwithhole;
-    this->finalize();
   }
 
   //------------------------------------------------------------------------
@@ -470,7 +453,6 @@ public:
   // No explanation necessary
   //------------------------------------------------------------------------
   void setTrogdor2() {
-    this->clear();
     const unsigned nSides = 82;
     const double points[164]= {5.2, 2.0, 7.0, 1.5, 7.2, 2.7, 8.0, 1.2,
 				 8.5, 1.2, 8.5, 3.0, 9.5, 1.6, 10.4, 2.0,
@@ -519,7 +501,6 @@ public:
 //     }
 
     mType = trogdor2;
-    this->finalize();
   }
 
   //------------------------------------------------------------------------
@@ -527,9 +508,10 @@ public:
   // Unit square with a hole shaped like a regular n-pointed star
   //------------------------------------------------------------------------
   void setSquareWithStarHole( int nPoints = 5 ) {
-    this->clear();
-    // The outer boundary
-    mDiff = 1.0;
+    // The outer boundary, overwrite if it is the default
+    if (mDiff == 0.5) {
+      mDiff = 1.0;
+    }
     this->setUnitSquare();
     double theta0 = 2*M_PI/nPoints;
     double outerRadius = 0.75;
@@ -558,7 +540,6 @@ public:
     }
 
     mType = squarewithstarhole;
-    this->finalize();
   }
 
   //------------------------------------------------------------------------
@@ -566,7 +547,6 @@ public:
   // Unit square with a hole shaped like off-centered right triangle
   //------------------------------------------------------------------------
   void setSquareWithTriHole() {
-    this->clear();
     // The outer boundary
     mDiff = 1.0;
     this->setUnitSquare();
@@ -584,7 +564,6 @@ public:
       mPLC.holes[0][i][1] = fend;
     }
     mType = squarewithtrihole;
-    this->finalize();
   }
 
   //------------------------------------------------------------------------
@@ -600,14 +579,6 @@ public:
   bool testInside( double* pos ) {
     Point<2, double> p(pos[0], pos[1]);
     return mQPLC.within(p);
-    // POLY_CHECK( mPLCpoints.size() > 0 );
-    // const unsigned nSides = mPLC.facets.size();
-    // bool isInside = inside(x,y,nSides,offset);
-
-    // for (unsigned hIt = 0; hIt != mPLC.holes.size(); ++hIt ) {
-    //   isInside ^= inside(x,y,mPLC.holes[hIt].size(),offset);
-    // }
-    // return isInside;
   }
 
 

@@ -42,34 +42,52 @@ public:
   //------------------------------------------------------------------------------
   // Constructor - common for all dimensions
   //------------------------------------------------------------------------------
-  QuantTessellation(const std::vector<RealType>& genpoints) {
+  // Construct from flattened points
+  QuantTessellation(const std::vector<RealType>& genpoints,
+                    bool doSort = true) :
+    m_doSort(doSort) {
+    genInit();
+    init(genpoints);
+  }
+
+  // Construct from vector of points
+  QuantTessellation(const std::vector<RealPoint>& genpoints,
+                    bool doSort = true) :
+    m_doSort(doSort) {
     genInit();
     init(genpoints);
   }
 
   // Construct a smaller instance, useful during clipping
-  QuantTessellation(const std::vector<QuantizedPoint<Dimension>>& qgenpoints) {
+  QuantTessellation(const std::vector<QuantizedPoint<Dimension>>& qgenpoints,
+                    bool doSort = true) :
+    m_doSort(doSort) {
     genInit();
     init(qgenpoints);
   }
 
   void init(const std::vector<RealType>& genpoints) {
+    init(extractCoords<Dimension, RealType>(genpoints));
+  }
+
+  void init(const std::vector<RealPoint>& genpoints) {
     const auto& Q = QuantizerType::instance();
     // Extract the unrolled coordinates
-    auto rpoints = extractCoords<Dimension, RealType>(genpoints);
-    auto N = rpoints.size();
+    auto N = genpoints.size();
     hashes.reserve(N);
     points.reserve(N);
     size_t i = 0;
-    for (const auto& rp : rpoints) {
+    for (const auto& rp : genpoints) {
       auto ip = Q.quantize(rp);
-      POLY_ASSERT2(Q.inQBounds(ip), "Point provided that exceeds quantizer bounds: " << rp);
+      POLY_CHECK2(Q.inQBounds(ip), "Point provided that exceeds quantizer bounds: " << rp);
       ip.index = i++;
       hashes.push_back(Q.encode(ip));
       points.push_back(ip);
     }
-    sortByHash();
-    verifyUniqueGenerators();
+    if (m_doSort) {
+      sortByHash();
+      verifyUniqueGenerators();
+    }
   }
 
   void init(const std::vector<QuantizedPoint<Dimension>>& qgenpoints) {
@@ -84,17 +102,16 @@ public:
     }
   }
 
-  // Extend the generator points from hashes.
-  // Used during communication
-  void extend(const std::vector<std::vector<QuantizedKey<Dimension>>>& rankHashes) {
+  // Extend the generator points from points or hashes
+  // Inner index is the rank. Used during communication
+  template<typename ExType>
+  void extend(const std::vector<std::vector<ExType>>& rankInps) {
     faces.clear();
     nodes.clear();
     cells.clear();
     faceCells.clear();
-    const auto& Q = Quantizer<Dimension>::instance();
-    auto nranks = rankHashes.size();
     auto Ntotal = points.size();
-    for (auto& v : rankHashes) {
+    for (auto& v : rankInps) {
       Ntotal += v.size();
     }
     // This implies the cell ranks were not filled initially
@@ -105,43 +122,14 @@ public:
     points.reserve(Ntotal);
     hashes.reserve(Ntotal);
     cellRank.reserve(Ntotal);
-    unsigned i = points.size();
-    for (auto source = 0u; source < nranks; ++source) {
-      for (auto& ch : rankHashes[source]) {
-        auto ip = Q.decode(ch);
-        ip.index = i++;
-        hashes.push_back(ch);
-        points.push_back(ip);
-        cellRank.push_back(source);
+    if constexpr (std::is_same_v<ExType, QuantizedKey<Dimension>>) {
+      extendHashes(rankInps);
+      if (m_doSort) {
+        sortByHash();
+        verifyUniqueGenerators();
       }
-    }
-    sortByHash();
-  }
-
-  // Extend the generator points received directly from each rank.
-  // Used during communication. Does not bother computing the hashes.
-  void extend(const std::vector<std::vector<QuantizedPoint<Dimension>>>& rankPoints) {
-    faces.clear();
-    nodes.clear();
-    cells.clear();
-    faceCells.clear();
-    const auto nranks = rankPoints.size();
-    auto Ntotal = points.size();
-    for (const auto& v : rankPoints) {
-      Ntotal += v.size();
-    }
-    if (cellRank.size() != points.size()) {
-      cellRank.assign(points.size(), Communicator::getRank());
-    }
-    points.reserve(Ntotal);
-    cellRank.reserve(Ntotal);
-    unsigned i = points.size();
-    for (auto source = 0u; source < nranks; ++source) {
-      for (auto ip : rankPoints[source]) {
-        ip.index = i++;
-        points.push_back(ip);
-        cellRank.push_back(source);
-      }
+    } else {
+      extendPoints(rankInps);
     }
   }
 
@@ -154,8 +142,14 @@ public:
   // Common methods
   //------------------------------------------------------------------------------
 
+  void disableSort() { m_doSort = false; }
+  void enableSort() { m_doSort = true; }
+  bool sortEnabled() const { return m_doSort; }
+
   // Returns quantized points cast as doubles to give to the tessellator
-  std::vector<RealPoint> getRealPoints() const {
+  // IMPORTANT: This returns points still in quantized space cast as
+  // doubles. This does not dequantize the points back to real space.
+  std::vector<RealPoint> getRealQPoints() const {
     std::vector<RealPoint> realPoints;
     realPoints.reserve(points.size());
     for (const auto& p : points) {
@@ -164,15 +158,15 @@ public:
     return realPoints;
   }
 
-  // Returns dequantized points cast as a flattened vector of reals
-  std::vector<RealType> getRealCoords() const {
+  // Returns dequantized points
+  std::vector<RealPoint> getRealPoints() const {
     const auto& Q = QuantizerType::instance();
     std::vector<RealPoint> realPoints;
     realPoints.reserve(points.size());
     for (const auto& p : points) {
       realPoints.push_back(Q.dequantize(p));
     }
-    return flattenCoords(realPoints);
+    return realPoints;
   }
 
   // Returns quantized points
@@ -452,6 +446,35 @@ private:
     }
   }
 
+  // Extend the generator points from rank hashes communicated from ranks
+  void extendHashes(const std::vector<std::vector<QuantizedKey<Dimension>>>& rankHashes) {
+    const auto& Q = Quantizer<Dimension>::instance();
+    POLY_CHECK2(points.size() == hashes.size(), "Points and hashes no longer align");
+    unsigned i = points.size();
+    for (auto source = 0u; source < rankHashes.size(); ++source) {
+      for (auto& ch : rankHashes[source]) {
+        auto ip = Q.decode(ch);
+        ip.index = i++;
+        hashes.push_back(ch);
+        points.push_back(ip);
+        cellRank.push_back(source);
+      }
+    }
+  }
+
+  // Extend the generator points received directly from each rank.
+  // Used during communication. Does not bother recomputing the hashes
+  void extendPoints(const std::vector<std::vector<QuantizedPoint<Dimension>>>& rankPoints) {
+    unsigned i = points.size();
+    for (auto source = 0u; source < rankPoints.size(); ++source) {
+      for (auto ip : rankPoints[source]) {
+        ip.index = i++;
+        points.push_back(ip);
+        cellRank.push_back(source);
+      }
+    }
+  }
+
 public:
 
   //------------------------------------------------------------------------------
@@ -468,6 +491,8 @@ public:
   using Tessellation<Dimension, QuantizedCoordinate<Dimension>>::faceCells;
   using Tessellation<Dimension, QuantizedCoordinate<Dimension>>::cellRank;
   QuantPLC<Dimension> convexHull;
+  // Disable to keep points in the same order
+  bool m_doSort = true;
 };
 
 } // namespace polytope

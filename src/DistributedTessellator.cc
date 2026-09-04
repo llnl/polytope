@@ -47,11 +47,9 @@ name() const {
 template<int Dimension>
 void
 DistributedTessellator<Dimension>::
-tessellate(const std::vector<RealType>& points,
+tessellate(const std::vector<Point<Dimension, RealType>>& points,
            TessellationType& mesh) {
   POLY_ASSERT(mesh.empty());
-  POLY_ASSERT(points.size() % Dimension == 0);
-
   auto& Q = Quantizer<Dimension>::instance();
   if (!Q.m_init) {
     Q.init(points);
@@ -72,19 +70,20 @@ tessellate(const std::vector<RealType>& points,
 template<int Dimension>
 void
 DistributedTessellator<Dimension>::
-tessellate(const std::vector<RealType>& points,
+tessellate(const std::vector<Point<Dimension, RealType>>& points,
            const std::vector<RealType>& PLCpoints,
            const PLC<Dimension>& geometry,
            TessellationType& mesh) {
   m_clipping = true;
   POLY_ASSERT(mesh.empty());
-  POLY_ASSERT(points.size() % Dimension == 0);
   POLY_ASSERT(PLCpoints.size() % Dimension == 0);
-
   auto& Q = Quantizer<Dimension>::instance();
   if (!Q.m_init) {
-    const auto& boundsPoints = PLCpoints.empty() ? points : PLCpoints;
-    Q.init(boundsPoints);
+    if (PLCpoints.empty()) {
+      Q.init(points);
+    } else {
+      Q.init(PLCpoints);
+    }
   }
 
   m_keyEncode = Q.keyEncoding();
@@ -105,11 +104,12 @@ tessellate(const std::vector<RealType>& points,
 template<int Dimension>
 void
 DistributedTessellator<Dimension>::
-partitionAndTessellate(const std::vector<RealType>& points,
+partitionAndTessellate(const std::vector<Point<Dimension, RealType>>& points,
                        const Partitioner<Dimension>& partitioner,
                        TessellationType& mesh) {
   POLY_ASSERT(mesh.empty());
-  POLY_ASSERT(points.size() % Dimension == 0);
+  POLY_VERIFY2(partitioner.numPartitions() <= Communicator::getNProcs(),
+               "Distributed partition count must not exceed the MPI rank count");
 
   auto& Q = Quantizer<Dimension>::instance();
   if (!Q.m_init) {
@@ -117,7 +117,8 @@ partitionAndTessellate(const std::vector<RealType>& points,
   }
 
   m_keyEncode = Q.keyEncoding();
-  QuantizedTessellation quantmesh(partitioner.computeLocalPartition(points));
+  const auto localPoints = partitioner.computeLocalPartition(points);
+  QuantizedTessellation quantmesh(localPoints);
   this->tessellateQuantized(quantmesh);
   quantmesh.filterToLocalGenerators();
   quantmesh.fillTessellation(mesh);
@@ -131,25 +132,30 @@ partitionAndTessellate(const std::vector<RealType>& points,
 template<int Dimension>
 void
 DistributedTessellator<Dimension>::
-partitionAndTessellate(const std::vector<RealType>& points,
+partitionAndTessellate(const std::vector<Point<Dimension, RealType>>& points,
                        const std::vector<RealType>& PLCpoints,
                        const PLC<Dimension>& geometry,
                        const Partitioner<Dimension>& partitioner,
                        TessellationType& mesh) {
   m_clipping = true;
   POLY_ASSERT(mesh.empty());
-  POLY_ASSERT(points.size() % Dimension == 0);
   POLY_ASSERT(PLCpoints.size() % Dimension == 0);
+  POLY_VERIFY2(partitioner.numPartitions() <= Communicator::getNProcs(),
+               "Distributed partition count must not exceed the MPI rank count");
 
   auto& Q = Quantizer<Dimension>::instance();
   if (!Q.m_init) {
-    const auto& boundsPoints = PLCpoints.empty() ? points : PLCpoints;
-    Q.init(boundsPoints);
+    if (PLCpoints.empty()) {
+      Q.init(points);
+    } else {
+      Q.init(PLCpoints);
+    }
   }
 
   m_keyEncode = Q.keyEncoding();
   m_QPLC.init(geometry, PLCpoints);
-  QuantizedTessellation quantmesh(partitioner.computeLocalPartition(points));
+  const auto localPoints = partitioner.computeLocalPartition(points);
+  QuantizedTessellation quantmesh(localPoints);
   quantmesh.cullExternalPoints(m_QPLC);
   this->tessellateQuantized(quantmesh);
   quantmesh.clipTessellation(m_QPLC, m_serialTessellator);
@@ -175,7 +181,7 @@ tessellateQuantizedImpl(QuantizedTessellation& qmesh) {
   if (visibleMesh.points.size() > 1) {
     neighborRanks = visibleMesh.neighboringRanks();
     // If clipping, holes can modify which ranks are neighbors
-    if (m_clipping && m_QPLC.holes.size() > 0) {
+    if (m_clipping) {
       visibleMesh.clipTessellation(m_QPLC, m_serialTessellator);
       std::set<int> clipped_neighbors = visibleMesh.neighboringRanks();
       neighborRanks.insert(clipped_neighbors.begin(), clipped_neighbors.end());
@@ -209,16 +215,20 @@ tessellateQuantizedImpl(QuantizedTessellation& qmesh) {
       exchangeNeighborGenerators<Dimension, QuantizedPoint<Dimension>>(qmesh.points, neighborRanks);
     if (!qmesh.points.empty()) {
       qmesh.extend(neighborGenerators);
-      m_serialTessellator.tessellateQuantized(qmesh);
     }
   } else {
     auto neighborGenerators =
       exchangeNeighborGenerators<Dimension, QuantizedKey<Dimension>>(qmesh.hashes, neighborRanks);
     if (!qmesh.points.empty()) {
       qmesh.extend(neighborGenerators);
-      m_serialTessellator.tessellateQuantized(qmesh);
     }
   }
+  // If we are clipping, we must include all visible generator points to avoid issues
+  // See the DistributedHoleTests.cc for examples why this is needed
+  if (m_clipping) {
+    addVisibleMesh(visibleMesh, neighborRanks, qmesh);
+  }
+  m_serialTessellator.tessellateQuantized(qmesh);
 }
 
 //------------------------------------------------------------------------------
@@ -258,6 +268,46 @@ generateVisibleMesh(QuantizedTessellation& qmesh) {
     }
   }
   return visibleMesh;
+}
+
+//------------------------------------------------------------------------------
+// Add visible generator points to quantized mesh
+// TODO: This might be overkill. It might be sufficient to only use the visible
+// generators from neighbors of neighbors
+//------------------------------------------------------------------------------
+template<int Dimension>
+void
+DistributedTessellator<Dimension>::
+addVisibleMesh(const QuantizedTessellation& visibleMesh,
+               const std::set<int>& neighborRanks,
+               QuantizedTessellation& qmesh) {
+  int rank = Communicator::getRank();
+  int nranks = Communicator::getNProcs();
+  if (m_exchangePoints) {
+    std::vector<std::vector<QuantizedPoint<Dimension>>> visibleGenerators(nranks);
+    const auto& vpoints = visibleMesh.points;
+    POLY_ASSERT2(vpoints.size() == visibleMesh.cellRank.size(), "Incorrect cell ranks in visible mesh");
+    for (auto i = 0u; i < vpoints.size(); ++i) {
+      auto source = visibleMesh.cellRank[i];
+      // Make sure the points are not part of the current or neighbor mesh to avoid repeats
+      if (source != rank && neighborRanks.find(source) == neighborRanks.end()) {
+        visibleGenerators[source].push_back(vpoints[i]);
+      }
+    }
+    qmesh.extend(visibleGenerators);
+  } else {
+    std::vector<std::vector<QuantizedKey<Dimension>>> visibleGenerators(nranks);
+    const auto& vhashes = visibleMesh.hashes;
+    POLY_ASSERT2(vhashes.size() == visibleMesh.cellRank.size(), "Incorrect cell ranks in visible mesh");
+    for (auto i = 0u; i < vhashes.size(); ++i) {
+      auto source = visibleMesh.cellRank[i];
+      // Make sure the points are not part of the current or neighbor mesh to avoid repeats
+      if (source != rank && neighborRanks.find(source) == neighborRanks.end()) {
+        visibleGenerators[source].push_back(vhashes[i]);
+      }
+    }
+    qmesh.extend(visibleGenerators);
+  }
 }
 
 template class DistributedTessellator<2>;

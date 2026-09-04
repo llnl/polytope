@@ -1,6 +1,8 @@
 #ifndef __Polytope_GeomUtils__
 #define __Polytope_GeomUtils__
 
+#include <type_traits>
+
 #include "polytope.hh"
 #include "Point.hh"
 #include "QuantizedKeyTraits.hh"
@@ -14,6 +16,25 @@ using WideInt = typename QuantizedKeyTraits<Dimension>::Wide;
 
 template<int Dimension>
 using BigInt = typename QuantizedKeyTraits<Dimension>::Big;
+
+//------------------------------------------------------------------------------
+// Type alias for wide integer type used in overflow-safe arithmetic
+// Based on CoordType size to ensure safety when 2D methods are called from 3D
+// - 32-bit or smaller coords → int64_t (safe for products)
+// - 64-bit coords → __int128 (safe for products)
+// - Floating-point types → same type (no widening needed)
+//------------------------------------------------------------------------------
+template<int Dimension, typename CoordType>
+struct WideIntHelper {
+  using type = typename std::conditional<
+      std::is_floating_point_v<CoordType>,
+      CoordType,
+    typename std::conditional<
+      std::is_same_v<CoordType, WideInt<Dimension>>,
+      BigInt<Dimension>,
+      WideInt<Dimension>>::type
+  >::type;
+};
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // General helper routines
@@ -87,13 +108,14 @@ Point3<WideInt<3>> qcross(const Point3<CoordType>& a,
 }
 
 //------------------------------------------------------------------------------
-// Compute the magnitude squared of a quantized point
+// Compute the magnitude squared. Works for either both quantized/non-quantized
 //------------------------------------------------------------------------------
 template<int Dimension, typename CoordType>
-WideInt<Dimension> qmagnitude2(const Point<Dimension, CoordType>& point) {
-  using Wide = WideInt<Dimension>;
+typename WideIntHelper<Dimension, CoordType>::type
+magnitude2(const Point<Dimension, CoordType>& point) {
+  using Wide = typename WideIntHelper<Dimension, CoordType>::type;
+  Wide mag2 = static_cast<Wide>(0);
   auto wpoint = point.template type_cast<Wide>();
-  Wide mag2 = 0;
   for (int d = 0; d < Dimension; ++d) {
     mag2 += wpoint[d]*wpoint[d];
   }
@@ -106,7 +128,7 @@ WideInt<Dimension> qmagnitude2(const Point<Dimension, CoordType>& point) {
 template<int Dimension, typename CoordType>
 bool magComparison(const Point<Dimension, CoordType>& p1,
                    const Point<Dimension, CoordType>& p2) {
-  return (qmagnitude2(p1) > qmagnitude2(p2));
+  return (magnitude2(p1) > magnitude2(p2));
 }
 
 //------------------------------------------------------------------------------

@@ -76,8 +76,7 @@ void test(int testNum, Tessellator<2, double>& tessellator) {
   Communicator::Barrier();
   DistributedTessellator<2> distributed(tessellator);
   Tessellation<2, double> localMesh;
-  distributed.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC,
-                         localMesh);
+  distributed.tessellate(generators.mPoints, localMesh);
 
   const auto localCells = static_cast<int>(localMesh.cells.size());
   int totalCells = 0;
@@ -88,10 +87,8 @@ void test(int testNum, Tessellator<2, double>& tessellator) {
 
   // Now get the current mesh including all it's neighbor generators
   QuantTessellation<2> qmesh(generators.mPoints);
-  QuantPLC<2> qplc(boundary.mPLC, boundary.mPLCpoints);
   distributed.tessellateQuantized(qmesh);
   if (rank < activeRanks) {
-    qmesh.clipTessellation(qplc, tessellator);
     Tessellation<2, double> procMesh;
     qmesh.fillTessellation(procMesh);
     SiloWriter<2, Tessellation<2, double>>::write(procMesh, "ProcMesh" + tessellator.name(), 1, rank);

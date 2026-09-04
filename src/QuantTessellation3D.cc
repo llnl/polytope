@@ -59,6 +59,7 @@ QuantTessellation<3>::fillTessellation(TessellationType& mesh) {
   // In 3D: nodes are stored as [x0, y0, z0, x1, y1, z1, ...]
   mesh.nodes.resize(numNodes);
   mesh.faces.resize(numFaces);
+  mesh.points.resize(numCells);
   mesh.cells = cells;
   POLY_ASSERT2(cells.size() == numCells, "Differing number of cells and generator points");
 
@@ -85,6 +86,9 @@ QuantTessellation<3>::fillTessellation(TessellationType& mesh) {
     }
   }
   mesh.computeFaceCells();
+  if (cellRank.size() == numCells) {
+    mesh.cellRank = cellRank;
+  }
 }
 
 //------------------------------------------------------------------------------

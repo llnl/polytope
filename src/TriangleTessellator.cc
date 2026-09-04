@@ -69,8 +69,8 @@ TriangleTessellator::
 tessellateQuantizedImpl(QuantizedTessellation& result) {
   // Type aliases
   const auto& Q = Quantizer<2>::instance();
-  // Get the generators
-  std::vector<double> generators = flattenCoords(result.getRealPoints());
+  // Get quantized generators cast as doubles and flattened
+  std::vector<double> generators = flattenCoords(result.getRealQPoints());
   const auto N = generators.size()/2;
 
   // Build tessellation data structures (common for both cases)

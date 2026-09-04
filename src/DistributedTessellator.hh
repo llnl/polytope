@@ -48,6 +48,7 @@ class DistributedTessellator: public Tessellator<Dimension, double> {
 public:
   using RealType = double;
   using Base = Tessellator<Dimension, RealType>;
+  using Base::tessellate;
   using QuantizedTessellation = QuantTessellation<Dimension>;
   using TessellationType = Tessellation<Dimension, RealType>;
 
@@ -57,32 +58,56 @@ public:
     m_clipping = false;
   }
 
+  DistributedTessellator() = delete;
+
   //! Select whether generator exchanges send quantized points instead of keys.
   void setExchangePoints(const bool value) { m_exchangePoints = value; }
   bool exchangePoints() const { return m_exchangePoints; }
 
-  virtual void tessellate(const std::vector<RealType>& points,
+  virtual void tessellate(const std::vector<Point<Dimension, RealType>>& points,
                           TessellationType& mesh) override;
 
-  virtual void tessellate(const std::vector<RealType>& points,
+  virtual void tessellate(const std::vector<Point<Dimension, RealType>>& points,
                           const std::vector<RealType>& PLCpoints,
                           const PLC<Dimension>& geometry,
                           TessellationType& mesh) override;
 
   //! Partition a replicated generator set, then tessellate the local result.
   //! Every rank must pass the same points in the same order.
-  void partitionAndTessellate(const std::vector<RealType>& points,
+  void partitionAndTessellate(const std::vector<Point<Dimension, RealType>>& points,
                               const Partitioner<Dimension>& partitioner,
                               TessellationType& mesh);
+
+  //! Wrapper for point input routine.
+  void partitionAndTessellate(const std::vector<RealType>& points,
+                              const Partitioner<Dimension>& partitioner,
+                              TessellationType& mesh) {
+    this->partitionAndTessellate(extractCoords<Dimension, RealType>(points),
+                                 partitioner,
+                                 mesh);
+  }
 
   //! Partition a replicated generator set inside a bounding PLC, then
   //! tessellate the local result. Every rank must pass the same points in the
   //! same order.
-  void partitionAndTessellate(const std::vector<RealType>& points,
+  void partitionAndTessellate(const std::vector<Point<Dimension, RealType>>& points,
                               const std::vector<RealType>& PLCpoints,
                               const PLC<Dimension>& geometry,
                               const Partitioner<Dimension>& partitioner,
                               TessellationType& mesh);
+
+  //! Wrapper for point input routine.
+  void partitionAndTessellate(const std::vector<RealType>& points,
+                              const std::vector<RealType>& PLCpoints,
+                              const PLC<Dimension>& geometry,
+                              const Partitioner<Dimension>& partitioner,
+                              TessellationType& mesh) {
+    this->partitionAndTessellate(extractCoords<Dimension, RealType>(points),
+                                 PLCpoints,
+                                 geometry,
+                                 partitioner,
+                                 mesh);
+  }
 
   //! Simply becomes a wrapper for the Impl
   virtual void tessellateQuantized(QuantizedTessellation& qmesh) override {
@@ -101,6 +126,13 @@ public:
                 "Key encoding method has changed during tessellation");
   }
 
+  //! When clipping, we must include all visible generators for all ranks
+  //! when making the final Voronoi.
+  void addVisibleMesh(const QuantizedTessellation& visibleMesh,
+                      const std::set<int>& neighborRanks,
+                      QuantizedTessellation& qmesh);
+    
+
 private:
   //! Broadcast the root rank's requested exchange representation.
   void synchronizeExchangePoints();
@@ -113,7 +145,6 @@ private:
   QuantPLC<Dimension> m_QPLC;
 
   // Forbidden methods.
-  DistributedTessellator();
   DistributedTessellator(const DistributedTessellator&);
   DistributedTessellator& operator=(const DistributedTessellator&);
 };

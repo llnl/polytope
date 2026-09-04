@@ -9,7 +9,7 @@ template<int Dimension, typename RealType>
 inline
 void
 Tessellator<Dimension, RealType>::
-tessellate(const std::vector<RealType>& points,
+tessellate(const std::vector<Point<Dimension, RealType>>& points,
            Tessellation<Dimension, RealType>& mesh) {
   if (points.size() == 0) {
     return;
@@ -41,7 +41,7 @@ template<int Dimension, typename RealType>
 inline
 void
 Tessellator<Dimension, RealType>::
-tessellate(const std::vector<RealType>& points,
+tessellate(const std::vector<Point<Dimension, RealType>>& points,
            const std::vector<RealType>& PLCpoints,
            const PLC<Dimension>& geometry,
            Tessellation<Dimension, RealType>& mesh) {

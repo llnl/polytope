@@ -1,3 +1,9 @@
 *~
 *.pyc
 __pycache__
+AGENTS.md
+CLAUDE.md
+slirp.out
+sandbox.config.yaml
+.codex
+.claude

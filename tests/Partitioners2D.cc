@@ -4,7 +4,9 @@
 
 #include "Communicator.hh"
 #include "Partitioner.hh"
+#include "QuantTessellation.hh"
 #include "Quantizer.hh"
+#include "Tessellation.hh"
 #include "polytope_internal.hh"
 
 using namespace polytope;
@@ -41,6 +43,44 @@ void testSerial() {
   POLY_CHECK(random.computeLocalPartition(points) == points);
   POLY_CHECK(quasiVoronoi.computeLocalPartition(points) == points);
   POLY_CHECK(lattice.computeLocalPartition(points) == points);
+  std::vector<Point<2, double>> realGeneratorPoints;
+  realGeneratorPoints.reserve(points.size());
+  const auto& Q = Quantizer<2>::instance();
+  for (const auto& point : points) realGeneratorPoints.push_back(Q.dequantize(point));
+  POLY_CHECK(lattice.computeLocalPartition(realGeneratorPoints) == realGeneratorPoints);
+
+  const auto randomResult = random.computePartitionResult(points);
+  POLY_CHECK(randomResult.ownerByInput.size() == points.size());
+  POLY_CHECK(randomResult.generatorsByPartition.size() == 1u);
+  POLY_CHECK(randomResult.generatorsByPartition[0] == points);
+
+  // Serial output can label cells using an arbitrary number of logical
+  // partitions, independent of the number of MPI ranks.
+  QuasiVoronoiPartitioner<2> virtualRanks(123456789U, 4);
+  const auto virtualResult = virtualRanks.computePartitionResult(points);
+  POLY_CHECK(virtualResult.generatorsByPartition.size() == 4u);
+  POLY_CHECK(virtualResult.ownerByInput.size() == points.size());
+  for (const auto owner : virtualResult.ownerByInput) {
+    POLY_CHECK(owner < 4u);
+  }
+  QuantTessellation<2> quantmesh(points);
+  virtualRanks.assignCellRanks(quantmesh);
+  const auto meshOwners = virtualRanks.computeOwners(quantmesh.points);
+  POLY_CHECK(quantmesh.cellRank.size() == meshOwners.size());
+  for (std::size_t i = 0; i < meshOwners.size(); ++i) {
+    POLY_CHECK(quantmesh.cellRank[i] == static_cast<int>(meshOwners[i]));
+  }
+  Tessellation<2, double> serialMesh;
+  serialMesh.points.resize(quantmesh.points.size());
+  for (std::size_t i = 0; i < quantmesh.points.size(); ++i) {
+    serialMesh.points[i] = Q.dequantize(quantmesh.points[i]);
+  }
+  virtualRanks.assignCellRanks(serialMesh);//, points);
+  POLY_CHECK(serialMesh.cellRank == quantmesh.cellRank);
+  Tessellation<2, double> clippedMesh;
+  clippedMesh.points = {serialMesh.points[0]};
+  virtualRanks.assignCellRanks(clippedMesh);//, points);
+  POLY_CHECK(clippedMesh.cellRank == std::vector<int>{serialMesh.cellRank[0]});
 
   // Exercise the real-valued convenience interface as well as the quantized
   // one above.  With one rank, all generators must remain local.
@@ -91,6 +131,9 @@ void testDistributed() {
   POLY_CHECK(allQuasiVoronoi.size() == static_cast<std::size_t>(Communicator::getNProcs()));
   const auto localQuasiVoronoi = quasiVoronoi.computeLocalPartition(points);
   POLY_CHECK(localQuasiVoronoi == allQuasiVoronoi[rank]);
+  const auto quasiVoronoiResult = quasiVoronoi.computePartitionResult(points);
+  POLY_CHECK(quasiVoronoiResult.generatorsByPartition == allQuasiVoronoi);
+  POLY_CHECK(quasiVoronoiResult.ownerByInput.size() == points.size());
   int quasiVoronoiCount = static_cast<int>(localQuasiVoronoi.size());
   int globalQuasiVoronoiCount = 0;
   MPI_Allreduce(&quasiVoronoiCount, &globalQuasiVoronoiCount, 1, MPI_INT, MPI_SUM,
@@ -112,6 +155,8 @@ void testDistributed() {
 
   // Empty input must be safe for every local rank.
   const std::vector<PointType> noPoints;
+  POLY_CHECK(quasiVoronoi.computePartition(noPoints).size() ==
+             static_cast<std::size_t>(Communicator::getNProcs()));
   POLY_CHECK(quasiVoronoi.computeLocalPartition(noPoints).empty());
 }
 #endif

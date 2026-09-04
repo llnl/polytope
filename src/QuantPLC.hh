@@ -73,8 +73,10 @@ public:
 
   bool within(const RealPoint& point) const;
 
-  // Returns quantized points cast as reals to give to the tessellator
-  std::vector<RealPoint> getRealPoints() const {
+  // Returns quantized points cast as doubles to give to the tessellator
+  // IMPORTANT: This returns points still in quantized space cast as
+  // doubles. This does not dequantize the points back to real space.
+  std::vector<RealPoint> getRealQPoints() const {
     std::vector<RealPoint> realPoints;
     realPoints.reserve(points.size());
     for (const auto& p : points) {
@@ -83,15 +85,15 @@ public:
     return realPoints;
   }
 
-  // Returns dequantized points cast as a flattened vector of reals
-  std::vector<RealType> getRealCoords() const {
+  // Returns dequantized points
+  std::vector<RealPoint> getRealPoints() const {
     const auto& Q = Quant::instance();
     std::vector<RealPoint> realPoints;
     realPoints.reserve(points.size());
     for (const auto& p : points) {
       realPoints.push_back(Q.dequantize(p));
     }
-    return flattenCoords(realPoints);
+    return realPoints;
   }
 
   QuantizedCell getCell() const {

@@ -104,14 +104,14 @@ class QuantPLC(PLC):
         return "bool"
 
     @PYB11const
-    def getRealPoints(self):
+    def getRealQPoints(self):
         "Return quantized vertices as real-valued point objects."
         return "std::vector<RealPoint>"
 
     @PYB11const
-    def getRealCoords(self):
-        "Return the dequantized vertices as flattened coordinates."
-        return "std::vector<double>"
+    def getRealPoints(self):
+        "Return the dequantized vertices."
+        return "std::vector<RealPoint>"
 
     @PYB11static
     def convexPLCIntersection(a="const QuantPLC<%(Dimension)s>&",

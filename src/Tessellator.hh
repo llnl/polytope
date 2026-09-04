@@ -25,8 +25,14 @@ public:
   //! the 0th component of the ith point appears in points[Dimension*i].
   //! \param points A (Dimension*numPoints) array containing point coordinates.
   //! \param mesh This will store the resulting tessellation.
-  virtual void tessellate(const std::vector<RealType>& points,
+  virtual void tessellate(const std::vector<Point<Dimension, RealType>>& points,
                           Tessellation<Dimension, RealType>& mesh);
+
+  //! Wrapper for above virtual function
+  void tessellate(const std::vector<RealType>& points,
+                  Tessellation<Dimension, RealType>& mesh) {
+    this->tessellate(extractCoords<Dimension, RealType>(points), mesh);
+  }
 
   //! Generate a Voronoi-like tessellation for the given set of generator 
   //! points and a description of the geometry in which they exist.
@@ -38,10 +44,18 @@ public:
   //! \param PLCpoints A (Dimension*n) array containing point coordinates for the PLC.
   //! \param geometry A description of the geometry in Piecewise Linear Complex form.
   //! \param mesh This will store the resulting tessellation.
-  virtual void tessellate(const std::vector<RealType>& points,
+  virtual void tessellate(const std::vector<Point<Dimension, RealType>>& points,
                           const std::vector<RealType>& PLCpoints,
                           const PLC<Dimension>& geometry,
                           Tessellation<Dimension, RealType>& mesh);
+
+  //! Wrapper for above virtual function
+  void tessellate(const std::vector<RealType>& points,
+                  const std::vector<RealType>& PLCpoints,
+                  const PLC<Dimension>& geometry,
+                  Tessellation<Dimension, RealType>& mesh) {
+    this->tessellate(extractCoords<Dimension, RealType>(points), PLCpoints, geometry, mesh);
+  }
 
   //! Required for all tessellators:
   //! Compute the quantized tessellation.  This is the basic method all
@@ -72,7 +86,7 @@ public:
   //! delta in x.
   Point<Dimension, double> degeneracy() const {
     const auto& Q = Quantizer<Dimension>::instance();
-    return Q.m_dx_o / Q.m_lx_o;
+    return Q.degeneracy();
   }
 
   void singleNodeTessellate(QuantTessellation<Dimension>& quantmesh);

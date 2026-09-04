@@ -116,11 +116,15 @@ public:
 
   void init(const std::vector<RealType>& points,
             const RealType& pad = -1.) {
+    init(extractCoords<Dimension, RealType>(points), pad);
+  }
+
+  void init(const std::vector<Point<Dimension, RealType>>& points,
+            const RealType& pad = -1.) {
     std::lock_guard<std::mutex> lock(m_mutex);
     RealPoint minPoint(0.99*std::numeric_limits<RealType>::max());
     RealPoint maxPoint = -minPoint;
-    std::vector<RealPoint> rpoints = extractCoords<Dimension, RealType>(points);
-    findBoundingElements<Dimension, RealType>(rpoints, minPoint, maxPoint);
+    findBoundingElements<Dimension, RealType>(points, minPoint, maxPoint);
     _init_impl(minPoint, maxPoint, pad);
   }
 

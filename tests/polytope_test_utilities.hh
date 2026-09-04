@@ -23,7 +23,8 @@ namespace polytope {
 void outputMesh(const Tessellation<2, double>& mesh,
 		std::string prefix,
 		const unsigned testCycle = 1,
-		const double time = 0.0) {
+		const double time = 0.0,
+                const int numFiles = -1) {
 #ifdef POLYTOPE_ENABLE_SILO
   using FieldMap = SiloWriter<2, Tessellation<2, double>>::FieldMap;
   using FieldTypeMap = SiloWriter<2, Tessellation<2, double>>::FieldTypeMap;
@@ -47,13 +48,18 @@ void outputMesh(const Tessellation<2, double>& mesh,
 #endif
   FieldTypeMap fields;
   fields[FieldCentering::Cell] = cellFields;
-  SiloWriter<2, Tessellation<2, double>>::write(mesh, fields, prefix, testCycle, time);
+  if (numFiles < 0) {
+    SiloWriter<2, Tessellation<2, double>>::write(mesh, fields, prefix, testCycle, time);
+  } else {
+    SiloWriter<2, Tessellation<2, double>>::write(mesh, fields, prefix, testCycle, time, numFiles);
+  }
 #endif
 }
 
+template<typename FieldType>
 void outputMesh(const Tessellation<2, double>& mesh,
 		std::string prefix,
-                std::vector<double>& cellFieldVec,
+                std::vector<FieldType>& cellFieldVec,
                 std::string cellFieldName,
 		const unsigned testCycle = 1,
 		const double time = 0.0,
@@ -67,15 +73,17 @@ void outputMesh(const Tessellation<2, double>& mesh,
   std::vector<double> index(meshSize);
   std::vector<double> genx (meshSize);
   std::vector<double> geny (meshSize);
+  std::vector<double> fieldDouble(meshSize);
   for (int i = 0; i < meshSize; ++i) {
     index[i] = double(i);
     genx[i] = mesh.points[i].x;
     geny[i] = mesh.points[i].y;
+    fieldDouble[i] = static_cast<double>(cellFieldVec[i]);
   }
   cellFields["cell_index"] = index;
   cellFields["gen_x"     ] = genx;
   cellFields["gen_y"     ] = geny;
-  cellFields[cellFieldName] = cellFieldVec;
+  cellFields[cellFieldName] = fieldDouble;
   FieldTypeMap fields;
   fields[FieldCentering::Cell] = cellFields;
   SiloWriter<2, Tessellation<2, double>>::write(mesh, fields, prefix, testCycle, time, numFiles);
