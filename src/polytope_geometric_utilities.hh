@@ -11,6 +11,7 @@
 
 #include "Tessellation.hh"
 #include "ReducedPLC.hh"
+#include "KeyTraits.hh"
 
 #ifdef HAVE_MPI
 #include <mpi.h>
