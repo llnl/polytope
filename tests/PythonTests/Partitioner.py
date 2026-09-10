@@ -26,13 +26,8 @@ def test_partitioner(Ngen):
         partitioner.niter = i
         rank_points = partitioner.computeLocalPartition(all_points)
         mesh = polytope.Tessellation2d()
-        comm.Barrier()
-        tstart = time.perf_counter()
-        tessellator.tessellate(rank_points, mesh)
-        comm.Barrier()
-        ttime = time.perf_counter() - tstart
-        if (rank == root):
-            print(f"Iterations {i}: time {ttime}")
+        with ptu.timer("Tessellate"):
+            tessellator.tessellate(rank_points, mesh)
         locfields = ptu.make_test_fields(mesh)
         polytope.writeSilo(mesh=mesh,
                            filePrefix="PartitionerTest",

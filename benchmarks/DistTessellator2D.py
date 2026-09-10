@@ -1,4 +1,4 @@
-import sys, time, os
+import sys, os
 ptu_path = os.path.join(os.path.dirname(__file__), "../tests/PythonTests")
 sys.path.append(ptu_path)
 import polytope_test_utilities as ptu

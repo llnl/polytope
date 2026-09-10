@@ -1,6 +1,7 @@
 
 # Build a configuration header file from our options.
 include_directories(.)
+include_directories(Partitioners)
 include_directories(${PROJECT_BINARY_DIR}/src)
 configure_file(
   "${PROJECT_SOURCE_DIR}/src/polytope.hh.in"
@@ -21,7 +22,6 @@ set(polytope_headers
   PackedKeyTraits.hh
   QuantizedKeyTraits.hh
   Intersections.hh
-  Partitioner.hh
   PLC.hh
   Point.hh
   QuantTessellation.hh
@@ -35,6 +35,10 @@ set(polytope_headers
   Serializer.hh
   polytope_internal.hh
   findBoundaryElements.hh
+  Partitioners/DistributedLloydPartitioner.hh
+  Partitioners/LatticePartitioner.hh
+  Partitioners/QuasiVoronoiPartitioner.hh
+  Partitioners/Partitioner.hh
 )
 
 set(polytope_sources

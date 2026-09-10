@@ -36,7 +36,7 @@
 #include <string>
 
 #include "polytope.hh"
-#include "Partitioner.hh"
+#include "Partitioners/Partitioner.hh"
 #include "Tessellator.hh"
 
 namespace polytope {

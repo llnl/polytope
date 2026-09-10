@@ -6,6 +6,7 @@
 #ifndef __Polytope_ParallelUtils__
 #define __Polytope_ParallelUtils__
 
+#include <limits>
 #include <utility>
 
 #include "Communicator.hh"
@@ -118,6 +119,67 @@ exchangeNeighborGenerators(const std::vector<Generator>& localGenerators,
       deserialize<std::vector<Generator>>(received, itr, recvBuffers[source].end());
     }
     result[source] = std::move(received);
+  }
+  return result;
+}
+
+// Redistribute generator records to their destination ranks.  Every rank must
+// provide one record vector for every rank in the communicator; the returned
+// vector contains all records sent to this rank, grouped by source rank.
+// Unlike exchangeNeighborGenerators, each destination can receive a different
+// subset of the local generators.
+template<int Dimension, typename Generator>
+std::vector<Generator>
+redistributeGenerators(const std::vector<std::vector<Generator>>& generatorsByDestination) {
+  auto& comm = Communicator::communicator();
+  const auto nranks = Communicator::getNRanks();
+  POLY_VERIFY2(generatorsByDestination.size() == static_cast<std::size_t>(nranks),
+               "Expected one generator list per MPI rank");
+
+  std::vector<std::vector<char>> sendBuffers(nranks);
+  std::vector<int> sendSizes(nranks, 0), recvSizes(nranks, 0);
+  for (int destination = 0; destination < nranks; ++destination) {
+    const auto& generators = generatorsByDestination[destination];
+    if (!generators.empty()) {
+      serialize(generators, sendBuffers[destination]);
+      POLY_VERIFY2(sendBuffers[destination].size() <=
+                     static_cast<std::size_t>(std::numeric_limits<int>::max()),
+                   "Generator redistribution message exceeds MPI int count limit");
+      sendSizes[destination] = static_cast<int>(sendBuffers[destination].size());
+    }
+  }
+
+  MPI_Alltoall(sendSizes.data(), 1, MPI_INT,
+               recvSizes.data(), 1, MPI_INT,
+               comm);
+
+  std::vector<std::vector<char>> recvBuffers(nranks);
+  std::vector<MPI_Request> requests;
+  for (int source = 0; source < nranks; ++source) {
+    if (recvSizes[source] > 0) {
+      recvBuffers[source].resize(recvSizes[source]);
+      requests.push_back(MPI_REQUEST_NULL);
+      MPI_Irecv(recvBuffers[source].data(), recvSizes[source], MPI_BYTE,
+                source, 9722, comm, &requests.back());
+    }
+  }
+  for (int destination = 0; destination < nranks; ++destination) {
+    if (sendSizes[destination] > 0) {
+      requests.push_back(MPI_REQUEST_NULL);
+      MPI_Isend(sendBuffers[destination].data(), sendSizes[destination], MPI_BYTE,
+                destination, 9722, comm, &requests.back());
+    }
+  }
+  if (!requests.empty()) {
+    MPI_Waitall(static_cast<int>(requests.size()), requests.data(), MPI_STATUSES_IGNORE);
+  }
+
+  std::vector<Generator> result;
+  for (int source = 0; source < nranks; ++source) {
+    if (!recvBuffers[source].empty()) {
+      auto itr = recvBuffers[source].cbegin();
+      deserialize(result, itr, recvBuffers[source].cend());
+    }
   }
   return result;
 }

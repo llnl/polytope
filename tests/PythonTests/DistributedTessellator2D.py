@@ -1,7 +1,7 @@
 import polytope_test_utilities as ptu
 from Boundary2d import Boundary2d
 import polytope
-import sys, time
+import sys
 
 
 def _available_tessellators():
@@ -41,37 +41,26 @@ def test_distributed_2d_tessellators(Ngen):
             print(f"Testing unbounded {tess_name}")
         mesh = polytope.Tessellation2d()
         tessellator = polytope.DistributedTessellator2d(serial_tessellator)
-        comm.Barrier()
-        tstart = time.perf_counter()
-        tessellator.tessellate(points, mesh)
-        comm.Barrier()
-        ttime = time.perf_counter() - tstart
+        with ptu.timer("Unbounded tessellate"):
+            tessellator.tessellate(points, mesh)
         locfields = ptu.make_test_fields(mesh)
         polytope.writeSilo(mesh=mesh,
                            filePrefix=f"PyDist{tess_name}",
                            fields=locfields,
                            cycle=0,
                            time=0.)
-        if (rank == root):
-            print(f"Unbounded time: {ttime}")
 
         if (rank == root):
             print(f"Testing clipped {tess_name}")
         clipped_mesh = polytope.Tessellation2d()
-        comm.Barrier()
-        tstart = time.perf_counter()
-        tessellator.tessellate(points, boundary.PLCpoints, boundary.PLC, clipped_mesh)
-        comm.Barrier()
-        ttime = time.perf_counter() - tstart
+        with ptu.timer("Clipped tessellation"):
+            tessellator.tessellate(points, boundary.PLCpoints, boundary.PLC, clipped_mesh)
         locfields = ptu.make_test_fields(clipped_mesh)
         polytope.writeSilo(mesh=clipped_mesh,
                            filePrefix=f"PyDist{tess_name}",
                            fields=locfields,
                            cycle=1,
                            time=1.)
-        if (rank == root):
-            print(f"Clipped time: {ttime}")
-
 
 if __name__ == "__main__":
     # Provide the number of generators per rank

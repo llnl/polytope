@@ -18,6 +18,8 @@
 #include "DistributedTessellator.hh"
 #include "Generators.hh"
 #include "Partitioner.hh"
+#include "LatticePartitioner.hh"
+#include "QuasiVoronoiPartitioner.hh"
 #include "Tessellation.hh"
 
 #ifdef POLYTOPE_ENABLE_TRIANGLE

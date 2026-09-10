@@ -77,6 +77,34 @@ class LatticePartitioner(Partitioner):
                 numPartitions=("const unsigned", "Communicator::getNRanks()")):
         "Compute an optimal number of ranks per axis."
 
+@PYB11template("int Dimension")
+class DistributedLloydPartitioner:
+    "Collectively redistribute rank-local generators using lattice-seeded Lloyd iterations."
+
+    PYB11typedefs = "using PointType = Point<%(Dimension)s, double>;"
+
+    def pyinit(self,
+               Niter=("const unsigned", "100")):
+        "Construct with a number of Lloyd iterations."
+
+    @PYB11const
+    def name(self):
+        return "std::string"
+
+    @PYB11const
+    @PYB11implementation("""[](const DistributedLloydPartitioner<%(Dimension)s>& self,
+                               const py::object& points) {
+                                 const auto generators = pybind11_helpers::copyCoords<%(Dimension)s, double>(points);
+                                 return pybind11_helpers::pointsAsTuples<%(Dimension)s, double>(self.partition(generators));
+                               }""")
+    def partition(self,
+                  points="const py::object&"):
+        "Collectively redistribute this rank's generators."
+        return "py::list"
+
+    niter = PYB11property(getter="getNumIter", setter="setNumIter",
+                          doc="Number of lattice-seeded Lloyd iterations")
+
 
 Partitioner2d = PYB11TemplateClass(Partitioner, template_parameters="2")
 Partitioner3d = PYB11TemplateClass(Partitioner, template_parameters="3")
@@ -84,3 +112,5 @@ QuasiVoronoiPartitioner2d = PYB11TemplateClass(QuasiVoronoiPartitioner, template
 QuasiVoronoiPartitioner3d = PYB11TemplateClass(QuasiVoronoiPartitioner, template_parameters="3")
 LatticePartitioner2d = PYB11TemplateClass(LatticePartitioner, template_parameters="2")
 LatticePartitioner3d = PYB11TemplateClass(LatticePartitioner, template_parameters="3")
+DistributedLloydPartitioner2d = PYB11TemplateClass(DistributedLloydPartitioner, template_parameters="2")
+DistributedLloydPartitioner3d = PYB11TemplateClass(DistributedLloydPartitioner, template_parameters="3")

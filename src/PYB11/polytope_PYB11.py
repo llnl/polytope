@@ -15,7 +15,10 @@ PYB11includes = ['"polytope.hh"',
                  '"PLC.hh"',
                  '"Tessellation.hh"',
                  '"Tessellator.hh"',
-                 '"Partitioner.hh"']
+                 '"Partitioners/Partitioner.hh"',
+                 '"Partitioners/LatticePartitioner.hh"',
+                 '"Partitioners/QuasiVoronoiPartitioner.hh"',
+                 '"Partitioners/DistributedLloydPartitioner.hh"']
 
 PYB11modulepreamble = """
 // Initialize MPI

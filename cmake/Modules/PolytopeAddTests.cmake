@@ -34,6 +34,7 @@ macro(polytope_add_test target)
   target_include_directories(${target} SYSTEM PRIVATE
     ${POLYTOPE_ROOT_DIR}/tests
     ${POLYTOPE_ROOT_DIR}/src
+    ${POLYTOPE_ROOT_DIR}/src/Partitioners
     ${PROJECT_BINARY_DIR}/src
   )
 

@@ -47,6 +47,7 @@ PYB11Generator_add_module(polytope
   MODULE   polytope
   SOURCE   polytope_PYB11.py
   INCLUDES ${PROJECT_SOURCE_DIR}/src
+           ${PROJECT_SOURCE_DIR}/src/Partitioners
            ${PROJECT_BINARY_DIR}/src
            ${CMAKE_CURRENT_SOURCE_DIR}
   LINKS    polytopeC

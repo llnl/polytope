@@ -20,7 +20,7 @@
 #include "Tessellation.hh"
 #include "polytope_test_utilities.hh"
 #include "Generators.hh"
-#include "Partitioner.hh"
+#include "QuasiVoronoiPartitioner.hh"
 
 using namespace polytope;
 

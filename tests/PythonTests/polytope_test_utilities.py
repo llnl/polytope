@@ -1,6 +1,9 @@
 import polytope
 import random
+from time import perf_counter
+from contextlib import contextmanager
 import Boundary2d
+
 
 def make_test_fields(tessellation):
     "Create a zone centered field dictionary of the generator locations"
@@ -65,3 +68,26 @@ def generate_normal_random_points(N, seed = -1,
                 if (rnum >= 0. and rnum <= 1.):
                     pout.append(xmin[d] + rnum*L[d])
     return pout
+
+@contextmanager
+def timer(name):
+    """
+    Time a code section. Run as:
+
+    with timer("my_functions"):
+        function_one()
+        function_two()
+    """
+    comm = polytope.Communicator.instance()
+    rank = comm.getRank()
+    root = comm.getRoot()
+    comm.Barrier()
+    tstart = perf_counter()
+
+    try:
+        yield
+    finally:
+        comm.Barrier()
+        elapsed = perf_counter() - tstart
+        if (rank == root):
+            print(f"{name}: {elapsed:.6f} seconds")

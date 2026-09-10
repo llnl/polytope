@@ -14,6 +14,7 @@ target_link_options(DistTessellator2D PUBLIC
 target_include_directories(DistTessellator2D SYSTEM PRIVATE
   ${POLYTOPE_ROOT_DIR}/tests
   ${POLYTOPE_ROOT_DIR}/src
+  ${POLYTOPE_ROOT_DIR}/src/Partitioners
   ${PROJECT_BINARY_DIR}/src
 )
 
@@ -26,5 +27,10 @@ blt_add_benchmark(NAME DistTessellator2DCXX
 # Add the Python benchmarks
 blt_add_benchmark(NAME DistTessellator2DPY
   COMMAND ${CMAKE_BINARY_DIR}/${POLYTOPE_VIRT_DIR}/bin/python -u ${CMAKE_CURRENT_SOURCE_DIR}/DistTessellator2D.py 1000000
+  NUM_MPI_TASKS 36
+)
+
+blt_add_benchmark(NAME DistLloydTessellator2DPY
+  COMMAND ${CMAKE_BINARY_DIR}/${POLYTOPE_VIRT_DIR}/bin/python -u ${CMAKE_CURRENT_SOURCE_DIR}/DistLloydTessellator2D.py 100000
   NUM_MPI_TASKS 36
 )

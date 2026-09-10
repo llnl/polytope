@@ -187,8 +187,8 @@ private:
     m_xlo = RealPoint(reducedMin.data());
     m_xhi = RealPoint(reducedMax.data());
 #endif
-    m_lx_o = (xhi - xlo)*(1.0 + m_pad);
-    m_xlo_o = xlo - 0.5*(xhi - xlo)*m_pad;
+    m_lx_o = (m_xhi - m_xlo)*(1.0 + m_pad);
+    m_xlo_o = m_xlo - 0.5*(m_xhi - m_xlo)*m_pad;
     m_dx_o = m_lx_o/static_cast<RealType>(m_maxCoordinate);
     m_init = true;
   }
