@@ -170,7 +170,7 @@ void tests(const int tnum, bool boostTess) {
   } else {
     quantMesh.init(points);
   }
-  QuantPLC<2> QPLC(boundary.mPLC, boundary.mPLCpoints);
+  QuantPLC<2> QPLC(boundary.mPLCpoints, boundary.mPLC);
   quantMesh.cullExternalPoints(QPLC);
   if (boostTess) {
     BoostTessellator boost;

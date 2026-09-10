@@ -34,7 +34,7 @@ public:
   virtual void tessellateQuantizedImpl(QuantizedTessellation& result) override;
 
   // The name of the tessellator
-  std::string name() const { return "BoostTessellator"; }
+  virtual std::string name() const override { return "BoostTessellator"; }
 
 };
 

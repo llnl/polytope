@@ -1,0 +1,6 @@
+from PYB11Generator import *
+
+tessellators = "@ALL_TESSELLATORS@".split(";")
+for name in tessellators:
+    if name:
+        exec("from %s import *" % name)

@@ -80,7 +80,7 @@ void testBasicConstruction(const int tnum) {
   auto plc = createSquarePLC();
   auto vertices = createSquareVertices(xlo, xhi);
 
-  QuantPLC2D qplc(plc, vertices);
+  QuantPLC2D qplc(vertices, plc);
 
   // Check that all 4 vertices were quantized
   POLY_CHECK2(qplc.points.size() == 4,
@@ -152,7 +152,7 @@ void testReduction(const int tnum) {
   plc.facets.resize(1);
   plc.facets[0] = {0, 1};  // Only uses vertices 0 and 1
 
-  QuantPLC2D qplc(plc,  vertices);
+  QuantPLC2D qplc(vertices, plc);
 
   // Before reduction, should have 5 points
   POLY_CHECK2(qplc.points.size() == 5,
@@ -191,7 +191,7 @@ void testConvexHull(const int tnum) {
   };
 
   PLC plc;  // Empty PLC, will compute hull
-  QuantPLC2D qplc(plc,  vertices);
+  QuantPLC2D qplc(vertices, plc);
 
   qplc.makeConvex();
 
@@ -226,7 +226,7 @@ void testEdgeOrdering(const int tnum) {
   auto plc = createSquarePLC();
   auto vertices = createSquareVertices();
 
-  QuantPLC2D qplc(plc,  vertices);
+  QuantPLC2D qplc(vertices, plc);
   qplc.reduce();  // This calls orderFacets
 
   // Check that edges form a closed loop
@@ -253,7 +253,7 @@ void testWithinBasic(const int tnum) {
   auto plc = createSquarePLC();
   auto vertices = createSquareVertices(xlo, xhi);
 
-  QuantPLC2D qplc(plc,  vertices);
+  QuantPLC2D qplc(vertices, plc);
   qplc.makeConvex();
 
   // Test points inside
@@ -319,7 +319,7 @@ void testWithinHoles(const int tnum) {
   plc.holes[0][2] = {6, 7};
   plc.holes[0][3] = {7, 4};
 
-  QuantPLC2D qplc(plc,  vertices);
+  QuantPLC2D qplc(vertices, plc);
 
   // Inside outer, outside hole
   POLY_CHECK(qplc.within(RealPoint(-3.0, 0.0)));
@@ -353,12 +353,12 @@ void testFacetComparison(const int tnum) {
 
   auto plc1 = createSquarePLC();
   auto vertices1 = createSquareVertices();
-  QuantPLC2D qplc1(plc1,  vertices1);
+  QuantPLC2D qplc1(vertices1, plc1);
 
   // Create identical PLC
   auto plc2 = createSquarePLC();
   auto vertices2 = createSquareVertices();
-  QuantPLC2D qplc2(plc2,  vertices2);
+  QuantPLC2D qplc2(vertices2, plc2);
 
   // Should be the same
   POLY_CHECK(qplc1 == qplc2);
@@ -388,7 +388,7 @@ void testCellIntersectsHullEdgeOnly(const int tnum) {
     10.0, 0.0,
     0.0, 10.0
   };
-  QuantPLC2D hull(hullPLC, hullVertices);
+  QuantPLC2D hull(hullVertices, hullPLC);
 
   QuantTessellation<2> mesh;
 
@@ -451,7 +451,7 @@ void testStress(const int tnum) {
   }
 
   PLC plc;  // Empty PLC
-  QuantPLC2D qplc(plc, vertices);
+  QuantPLC2D qplc(vertices, plc);
 
   // Compute convex hull
   qplc.makeConvex();

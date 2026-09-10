@@ -20,28 +20,16 @@
 namespace polytope {
 
 template<int Dimension>
-QuantPLC<Dimension>::QuantPLC(const PLC<Dimension>& plc,
-                              const std::vector<RealType>& allpoints) :
+QuantPLC<Dimension>::QuantPLC(const std::vector<Point<Dimension, RealType>>& allpoints,
+                              const PLC<Dimension>& plc) :
   PLC<Dimension>(plc) {
   init(allpoints);
 }
 
 template<int Dimension>
-QuantPLC<Dimension>::QuantPLC(const PLC<Dimension>& plc,
-                              const std::vector<QuantizedPoint<Dimension>>& quantizedPoints) :
-  PLC<Dimension>(plc) {
-  init(quantizedPoints);
-}
-
-template<int Dimension>
-QuantPLC<Dimension>::
-QuantPLC(const std::vector<RealType>& allpoints) :
-  QuantPLC(PLC<Dimension>(), allpoints) { }
-
-template<int Dimension>
 void
-QuantPLC<Dimension>::init(const PLC<Dimension>& plc,
-                          const std::vector<RealType>& allpoints) {
+QuantPLC<Dimension>::init(const std::vector<Point<Dimension, RealType>>& allpoints,
+                          const PLC<Dimension>& plc) {
   facets = plc.facets;
   holes = plc.holes;
   init(allpoints);
@@ -49,18 +37,15 @@ QuantPLC<Dimension>::init(const PLC<Dimension>& plc,
 
 template<int Dimension>
 void
-QuantPLC<Dimension>::init(const std::vector<RealType>& allpoints) {
+QuantPLC<Dimension>::init(const std::vector<Point<Dimension, RealType>>& allpoints) {
   const auto& Q = Quantizer<Dimension>::instance();
   m_loBounds = Q.maxBound;
   m_hiBounds = -m_loBounds;
 
-  // Extract the unrolled coordinates
-  std::vector<RealPoint> rpoints = extractCoords<Dimension, RealType>(allpoints);
-
-  auto N = rpoints.size();
+  auto N = allpoints.size();
   points.reserve(N);
   size_t i = 0;
-  for (const auto& rp : rpoints) {
+  for (const auto& rp : allpoints) {
     auto ip = Q.quantize(rp);
     ip.index = i++;
     m_loBounds = m_loBounds.minElements(ip);
@@ -72,15 +57,6 @@ QuantPLC<Dimension>::init(const std::vector<RealType>& allpoints) {
                  "Provided coplanar or collinear or degenerate points to the QuantPLC");
     orderFacets();
   }
-}
-
-template<int Dimension>
-void
-QuantPLC<Dimension>::init(const PLC<Dimension>& plc,
-                          const std::vector<QuantizedPoint<Dimension>>& quantizedPoints) {
-  facets = plc.facets;
-  holes = plc.holes;
-  init(quantizedPoints);
 }
 
 template<int Dimension>

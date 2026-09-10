@@ -67,7 +67,7 @@ void test(Tessellator<2, double>& tessellator) {
       outputMesh(localMesh, outname, btype, static_cast<double>(btype));
       // Uncomment this section to output the mesh for each rank
       // QuantTessellation<2> qmesh(localPoints);
-      // QuantPLC<2> qplc(boundary.mPLC, boundary.mPLCpoints);
+      // QuantPLC<2> qplc(boundary.mPLCpoints, boundary.mPLC);
       // distributed.tessellateQuantized(qmesh);
       // if (qmesh.points.size() > 0) {
       //   qmesh.clipTessellation(qplc, tessellator);

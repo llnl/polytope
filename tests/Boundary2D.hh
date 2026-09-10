@@ -77,7 +77,7 @@ public:
   void finalize() {
     auto& Q = Quantizer<2>::instance();
     Q.init(mPLCpoints, mPad);
-    mQPLC.init(mPLC, mPLCpoints);
+    mQPLC.init(mPLCpoints, mPLC);
     boostMyBoundary();
     if (mClipping) {
       mArea = boost::geometry::area(mBGboundary);

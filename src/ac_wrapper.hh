@@ -27,6 +27,8 @@ To ac_converter(const From& in) {
   if constexpr (is_ac_int_v<From>) {
     if constexpr (std::is_same_v<To, double>) {
       return in.to_double();
+    } else if constexpr (std::is_same_v<To, long double>) {
+      return in.to_long_double();
     } else if constexpr (std::is_same_v<To, int>) {
       return in.to_int();
     } else if constexpr (std::is_same_v<To, long int>) {

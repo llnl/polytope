@@ -42,7 +42,7 @@ void computeConstantVorticityFlow(const vector<double>& points,
 // -----------------------------------------------------------------------
 // test
 // -----------------------------------------------------------------------
-void test(Tessellator<2,double>& tessellator) {
+void test(const int N_time, Tessellator<2,double>& tessellator) {
   // Initialize star-hole boundary, tessellator, and generator set
   Boundary2D boundary;
   boundary.setDefaultBoundary(5);
@@ -52,8 +52,8 @@ void test(Tessellator<2,double>& tessellator) {
   string testName = "SolidRotationAroundHoles_" + tessellator.name();
 
   // Timestepping parameters
-  const double dt = 3.14;
   const double Tmax = 628.0/2;
+  const double dt = Tmax/double(N_time);
 
   // Boundary parameters
   const double boundRadius = 1.0;
@@ -76,7 +76,6 @@ void test(Tessellator<2,double>& tessellator) {
   const double dr = (boundRadius - outerRadius) / numRows;
   for (unsigned i = 0; i != numRows; ++i) {
     double r = outerRadius + (i+0.5)*dr;
-    // unsigned nArcs = 6*i;
     for (unsigned j = 0; j != maxArc; ++j) {
       int direction = 1;
       if (alternateFlowDirection) direction -= 2*(i%2);
@@ -152,12 +151,14 @@ int main(int argc, char** argv)
 {
   auto& comm = Communicator::instance();
   comm.init(argc, argv);
+  unsigned N_time = 100;
+  if (argc > 1) N_time = std::strtoul(argv[1], nullptr, 10);
 
 #ifdef POLYTOPE_ENABLE_BOOST
   {
     cout << "\nBoost Tessellator:\n" << endl;
     BoostTessellator tessellator;
-    test(tessellator);
+    test(N_time, tessellator);
   }
 #endif
 
@@ -165,7 +166,7 @@ int main(int argc, char** argv)
   {
     cout << "\nTriangle Tessellator:\n" << endl;
     TriangleTessellator tessellator;
-    test(tessellator);
+    test(N_time, tessellator);
   }
 #endif
 

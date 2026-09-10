@@ -1,5 +1,7 @@
 import polytope_test_utilities as ptu
+from Boundary2d import Boundary2d
 import polytope
+import sys
 
 
 def _available_tessellators():
@@ -18,21 +20,22 @@ def _assert_mesh_populated(mesh):
     assert len(mesh.zoneNodes) == len(mesh.cells)
 
 
-def test_serial_2d_tessellators():
+def test_serial_2d_tessellators(Ngen):
     tessellator_types = _available_tessellators()
     assert tessellator_types
     Q = polytope.Quantizer2d.instance()
 
-    points = [(0.25, 0.25), (0.75, 0.25), (0.5, 0.75)]
-    plc_points = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]
+    seed = 19001
+    boundary = Boundary2d(10)
+    points = ptu.generate_random_points(Ngen, seed, boundary)
 
     for tessellator_type in tessellator_types:
         tessellator = tessellator_type()
         tess_name = tessellator.name()
         assert tess_name
 
+        print(f"Testing unbounded {tess_name}")
         mesh = polytope.Tessellation2d()
-        Q.init(points)
         tessellator.tessellate(points, mesh)
         _assert_mesh_populated(mesh)
         locfields = ptu.make_test_fields(mesh)
@@ -43,14 +46,12 @@ def test_serial_2d_tessellators():
                            time=0.,
                            numFiles=1)
 
-        plc_mesh = polytope.Tessellation2d()
-        plc = polytope.PLC2d()
-        plc.facets = ptu.make_square_facets()
-        Q.init(plc_points)
-        tessellator.tessellate(points, plc_points, plc, plc_mesh)
-        _assert_mesh_populated(plc_mesh)
-        locfields = ptu.make_test_fields(plc_mesh)
-        polytope.writeSilo(mesh=plc_mesh,
+        print(f"Testing clipped {tess_name}")
+        clipped_mesh = polytope.Tessellation2d()
+        tessellator.tessellate(points, boundary.PLCpoints, boundary.PLC, clipped_mesh)
+        _assert_mesh_populated(clipped_mesh)
+        locfields = ptu.make_test_fields(clipped_mesh)
+        polytope.writeSilo(mesh=clipped_mesh,
                            filePrefix=f"PySerial{tess_name}",
                            fields=locfields,
                            cycle=1,
@@ -59,4 +60,7 @@ def test_serial_2d_tessellators():
 
 
 if __name__ == "__main__":
-    test_serial_2d_tessellators()
+    N = int(50000)
+    if (len(sys.argv) > 1):
+        N = int(sys.argv[1])
+    test_serial_2d_tessellators(N)

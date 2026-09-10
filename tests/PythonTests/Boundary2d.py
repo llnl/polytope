@@ -33,7 +33,7 @@ class Boundary2d:
         if not self.PLCpoints:
             raise ValueError("Cannot finalize an empty boundary")
         polytope.Quantizer2d.instance().init(self.PLCpoints, self.m_pad)
-        self.QPLC.init(self.PLC, self.PLCpoints)
+        self.QPLC.init(self.PLCpoints, self.PLC)
         self.low = [min(self.PLCpoints[0::2]), min(self.PLCpoints[1::2])]
         self.high = [max(self.PLCpoints[0::2]), max(self.PLCpoints[1::2])]
 
@@ -121,10 +121,14 @@ class Boundary2d:
         self.mType = boundaryType
         self.finalize()
 
-    def setUnitSquare(self):
+    def makeUnitSquare(self):
         x1, y1 = self.mCenter[0] - self.mDiff, self.mCenter[1] - self.mDiff
         x2, y2 = self.mCenter[0] + self.mDiff, self.mCenter[1] + self.mDiff
-        self._setOuter([x1, y1, x2, y1, x2, y2, x1, y2], BoundaryType.square)
+        return [x1, y1, x2, y1, x2, y2, x1, y2]
+
+    def setUnitSquare(self):
+        vertices = self.makeUnitSquare()
+        self._setOuter(vertices, BoundaryType.square)
 
     def setUnitCircle(self):
         self._setOuter(self._circleVertices(2.0*self.mDiff), BoundaryType.circle)
@@ -202,20 +206,22 @@ class Boundary2d:
 
     def setSquareWithStarHole(self, nPoints=5):
         self.mDiff = 1.0
-        self.setOuterBoundary([self.mCenter[0] - 1., self.mCenter[1] - 1., self.mCenter[0] + 1., self.mCenter[1] - 1., self.mCenter[0] + 1., self.mCenter[1] + 1., self.mCenter[0] - 1., self.mCenter[1] + 1.])
+        vertices = self.makeUnitSquare()
+        self.setOuterBoundary(vertices)
         self.addHole(self._starVertices(nPoints, .75, clockwise=True))
         self.mType = BoundaryType.squarewithstarhole
         self.finalize()
 
     def setSquareWithTriHole(self):
         self.mDiff = 1.0
-        self.setOuterBoundary([self.mCenter[0] - 1., self.mCenter[1] - 1., self.mCenter[0] + 1., self.mCenter[1] - 1., self.mCenter[0] + 1., self.mCenter[1] + 1., self.mCenter[0] - 1., self.mCenter[1] + 1.])
+        vertices = self.makeUnitSquare()
+        self.setOuterBoundary(vertices)
         self.addHole([.6, -.8, .4, -.8, .4, .8])
         self.mType = BoundaryType.squarewithtrihole
         self.finalize()
 
-    def testInside(self, x, y):
-        return self.QPLC.within((x, y))
+    def testInside(self, point):
+        return self.QPLC.within(point)
 
     # Legacy construction spellings retained for existing Python callers.
     def initBox(self, low=(0., 0.), high=(1., 1.)):

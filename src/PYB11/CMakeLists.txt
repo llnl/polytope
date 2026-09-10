@@ -2,23 +2,43 @@
 # Python bindings for the renovated Polytope C++ implementation using PYB11Generator.
 # ----------------------------------------------------------------------------------
 
-set(SERIAL_TESSELLATORS "")
+set(ALL_TESSELLATORS "")
 if(POLYTOPE_ENABLE_BOOST)
-  list(APPEND SERIAL_TESSELLATORS "BoostTessellator")
+  list(APPEND ALL_TESSELLATORS "BoostTessellator")
 endif()
 if(POLYTOPE_ENABLE_TRIANGLE)
-  list(APPEND SERIAL_TESSELLATORS "TriangleTessellator")
+  list(APPEND ALL_TESSELLATORS "TriangleTessellator")
+endif()
+if(POLYTOPE_ENABLE_MPI)
+  list(APPEND ALL_TESSELLATORS "DistributedTessellator")
 endif()
 
 configure_file(
-  SerialTessellators.py.in
-  ${PROJECT_BINARY_DIR}/src/PYB11/SerialTessellators.py
+  Tessellators.py.in
+  ${PROJECT_BINARY_DIR}/src/PYB11/Tessellators.py
 )
 
-set(DISTRIBUTED_TESSELLATORS "")
-if(POLYTOPE_ENABLE_MPI)
-  list(APPEND DISTRIBUTED_TESSELLATORS "DistributedTessellator")
-endif()
+set(POLYTOPE_PYTHON_SRC_FILES
+  BoostTessellator.py
+  Communicator.py
+  DistributedTessellator.py
+  KeyCodec.py
+  MortonKeyTraits.py
+  PackedKeyTraits.py
+  Partitioner.py
+  PLC.py
+  Point.py
+  polytope_PYB11.py
+  polytope_pybind11_helpers.hh
+  QuantizedKeyTraits.py
+  Quantizer.py
+  QuantPLC.py
+  Tessellators.py.in
+  SiloUtils.py
+  Tessellation.py
+  Tessellator.py
+  TriangleTessellator.py
+)
 
 get_property(POLYTOPE_TPL_DEPENDS GLOBAL PROPERTY POLYTOPE_TPL_DEPENDS)
 get_property(POLYTOPE_CXX_COMPILE_FLAGS GLOBAL PROPERTY POLYTOPE_CXX_COMPILE_FLAGS)
@@ -42,21 +62,24 @@ install(TARGETS polytope
 
 include(PolytopePythonEnvironment)
 
-polytope_add_python_environment(
-  build
-  "${CMAKE_BINARY_DIR}/${POLYTOPE_VIRT_DIR}"
-  "${LIBRARY_OUTPUT_PATH}"
-  ALL
-  TARGET_NAME polytope_build_virt_env
-  DEPENDS Python3::Python polytopeC polytope
-)
+# If testing is enabled, create a virtual python environment in the build
+if(POLYTOPE_ENABLE_TESTING)
+  polytope_add_python_environment(
+    build
+    "${CMAKE_BINARY_DIR}/${POLYTOPE_VIRT_DIR}"
+    "${LIBRARY_OUTPUT_PATH}"
+    ALL
+    TARGET_NAME polytope_build_virt_env
+    DEPENDS Python3::Python polytopeC polytope "${POLYTOPE_PYTHON_SRC_FILES}"
+  )
+endif()
 
 polytope_add_python_environment(
   install
   "${CMAKE_INSTALL_PREFIX}/${POLYTOPE_VIRT_DIR}"
   "${CMAKE_INSTALL_PREFIX}/${POLYTOPE_SITE_PACKAGES_PATH}"
   TARGET_NAME polytope_install_virt_env
-  DEPENDS Python3::Python polytopeC polytope
+  DEPENDS Python3::Python polytopeC polytope "${POLYTOPE_PYTHON_SRC_FILES}"
 )
 
 # Add the virtual env target run to the install

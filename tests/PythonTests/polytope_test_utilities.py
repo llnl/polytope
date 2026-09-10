@@ -1,13 +1,11 @@
 import polytope
 import random
-
-def make_square_facets():
-    return [(0, 1), (1, 2), (2, 3), (3, 0)]
+import Boundary2d
 
 def make_test_fields(tessellation):
     "Create a zone centered field dictionary of the generator locations"
     comm = polytope.Communicator.instance()
-    nranks = comm.getNProcs()
+    nranks = comm.getNRanks()
     fieldnames = ["x", "y", "z"]
     centering = polytope.FieldCentering.Cell
     points = tessellation.pointsAsTuples
@@ -20,7 +18,7 @@ def make_test_fields(tessellation):
         result[centering.name]["ranks"] = [rank for _ in points]
     return result
 
-def generate_random_points(N, seed = -1, dim = 2):
+def generate_random_points(N, seed = -1, boundary2d = None, dim = 2):
     if (dim == 2):
         Q = polytope.Quantizer2d.instance()
     else:
@@ -31,13 +29,19 @@ def generate_random_points(N, seed = -1, dim = 2):
         random.seed(seed)
     L = (xmax - xmin)
     pout = []
-    for _ in range(N):
-        for d in range(dim):
-            pout.append(xmin[d] + random.random()*L[d])
+    if (boundary2d):
+        while (len(pout)/dim < N):
+            point = [xmin[d] + random.random()*L[d] for d in range(dim)]
+            if (boundary2d.testInside(point)):
+                pout.extend(point)
+    else:
+        for _ in range(N):
+            pout.extend([xmin[d] + random.random()*L[d] for d in range(dim)])
     return pout
 
 def generate_normal_random_points(N, seed = -1,
                                   mu = 0.5, sigma = 1./6.17737,
+                                  boundary2d = None,
                                   dim = 2):
     if (dim == 2):
         Q = polytope.Quantizer2d.instance()
@@ -49,9 +53,15 @@ def generate_normal_random_points(N, seed = -1,
         random.seed(seed)
     L = (xmax - xmin)
     pout = []
-    for _ in range(N):
-        for d in range(dim):
-            rnum = random.normalvariate(mu, sigma)
-            if (rnum >= 0. and rnum <= 1.):
-                pout.append(xmin[d] + rnum*L[d])
+    if (boundary2d):
+        while(len(pout)/dim < N):
+            point = [xmin[d] + random.normalvariate(mu, sigma)*L[d] for d in range(dim)]
+            if (boundary2d.testInside(point)):
+                pout.extend(point)
+    else:
+        for _ in range(N):
+            for d in range(dim):
+                rnum = random.normalvariate(mu, sigma)
+                if (rnum >= 0. and rnum <= 1.):
+                    pout.append(xmin[d] + rnum*L[d])
     return pout

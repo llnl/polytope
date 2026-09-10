@@ -389,6 +389,7 @@ operator*(const CoordType val, const Point<Dimension, CoordType>& vec) {
 template<int Dimension, typename CoordType>
 std::vector<Point<Dimension, CoordType>>
 extractCoords(const std::vector<CoordType>& allpoints) {
+  POLY_ASSERT(allpoints.size() % Dimension == 0);
   auto n = allpoints.size()/Dimension;
   std::vector<Point<Dimension, CoordType>> result(n);
   for(auto i = 0u; i < n; ++i) {

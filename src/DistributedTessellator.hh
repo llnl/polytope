@@ -68,7 +68,7 @@ public:
                           TessellationType& mesh) override;
 
   virtual void tessellate(const std::vector<Point<Dimension, RealType>>& points,
-                          const std::vector<RealType>& PLCpoints,
+                          const std::vector<Point<Dimension, RealType>>& PLCpoints,
                           const PLC<Dimension>& geometry,
                           TessellationType& mesh) override;
 
@@ -91,7 +91,7 @@ public:
   //! tessellate the local result. Every rank must pass the same points in the
   //! same order.
   void partitionAndTessellate(const std::vector<Point<Dimension, RealType>>& points,
-                              const std::vector<RealType>& PLCpoints,
+                              const std::vector<Point<Dimension, RealType>>& PLCpoints,
                               const PLC<Dimension>& geometry,
                               const Partitioner<Dimension>& partitioner,
                               TessellationType& mesh);
@@ -103,7 +103,7 @@ public:
                               const Partitioner<Dimension>& partitioner,
                               TessellationType& mesh) {
     this->partitionAndTessellate(extractCoords<Dimension, RealType>(points),
-                                 PLCpoints,
+                                 extractCoords<Dimension, RealType>(PLCpoints),
                                  geometry,
                                  partitioner,
                                  mesh);

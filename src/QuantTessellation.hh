@@ -303,9 +303,8 @@ public:
     if (convexHull.m_convex) {
       return;
     }
-    PLC<Dimension> emptyPLC;
     // Check if hull will be valid
-    convexHull.init(emptyPLC, points);
+    convexHull.init(points);
     convexHull.makeConvex();
   }
 

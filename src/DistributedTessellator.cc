@@ -71,12 +71,11 @@ template<int Dimension>
 void
 DistributedTessellator<Dimension>::
 tessellate(const std::vector<Point<Dimension, RealType>>& points,
-           const std::vector<RealType>& PLCpoints,
+           const std::vector<Point<Dimension, RealType>>& PLCpoints,
            const PLC<Dimension>& geometry,
            TessellationType& mesh) {
   m_clipping = true;
   POLY_ASSERT(mesh.empty());
-  POLY_ASSERT(PLCpoints.size() % Dimension == 0);
   auto& Q = Quantizer<Dimension>::instance();
   if (!Q.m_init) {
     if (PLCpoints.empty()) {
@@ -88,7 +87,7 @@ tessellate(const std::vector<Point<Dimension, RealType>>& points,
 
   m_keyEncode = Q.keyEncoding();
   QuantizedTessellation qmesh(points);
-  m_QPLC.init(geometry, PLCpoints);
+  m_QPLC.init(PLCpoints, geometry);
   qmesh.cullExternalPoints(m_QPLC);
   this->tessellateQuantized(qmesh);
   qmesh.clipTessellation(m_QPLC, m_serialTessellator);
@@ -108,7 +107,7 @@ partitionAndTessellate(const std::vector<Point<Dimension, RealType>>& points,
                        const Partitioner<Dimension>& partitioner,
                        TessellationType& mesh) {
   POLY_ASSERT(mesh.empty());
-  POLY_VERIFY2(partitioner.numPartitions() <= Communicator::getNRanks(),
+  POLY_VERIFY2(partitioner.getNumPartitions() <= Communicator::getNRanks(),
                "Distributed partition count must not exceed the MPI rank count");
 
   auto& Q = Quantizer<Dimension>::instance();
@@ -133,14 +132,13 @@ template<int Dimension>
 void
 DistributedTessellator<Dimension>::
 partitionAndTessellate(const std::vector<Point<Dimension, RealType>>& points,
-                       const std::vector<RealType>& PLCpoints,
+                       const std::vector<Point<Dimension, RealType>>& PLCpoints,
                        const PLC<Dimension>& geometry,
                        const Partitioner<Dimension>& partitioner,
                        TessellationType& mesh) {
   m_clipping = true;
   POLY_ASSERT(mesh.empty());
-  POLY_ASSERT(PLCpoints.size() % Dimension == 0);
-  POLY_VERIFY2(partitioner.numPartitions() <= Communicator::getNRanks(),
+  POLY_VERIFY2(partitioner.getNumPartitions() <= Communicator::getNRanks(),
                "Distributed partition count must not exceed the MPI rank count");
 
   auto& Q = Quantizer<Dimension>::instance();
@@ -153,7 +151,7 @@ partitionAndTessellate(const std::vector<Point<Dimension, RealType>>& points,
   }
 
   m_keyEncode = Q.keyEncoding();
-  m_QPLC.init(geometry, PLCpoints);
+  m_QPLC.init(PLCpoints, geometry);
   const auto localPoints = partitioner.computeLocalPartition(points);
   QuantizedTessellation quantmesh(localPoints);
   quantmesh.cullExternalPoints(m_QPLC);

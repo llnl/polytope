@@ -171,52 +171,23 @@ pyToKey(const py::object& value) {
 #endif
 }
 
-#ifdef POLYTOPE_ENABLE_MPI
-template<int Dimension>
-class PyDistributedTessellator: public DistributedTessellator<Dimension> {
-public:
-  using Base = Tessellator<Dimension, double>;
-
-  explicit PyDistributedTessellator(py::object serialTessellator):
-    DistributedTessellator<Dimension>(serialTessellator.cast<Base&>()),
-    m_serialTessellator(std::move(serialTessellator)) {
+template<int Dimension, typename CoordType>
+Point<Dimension, CoordType>
+pyToPoint(const py::object& value) {
+  Point<Dimension, CoordType> out;
+  const auto seq = py::reinterpret_borrow<py::sequence>(value);
+  if (seq.size() != Dimension) {
+    throw py::value_error("Point is wrong dimension");
   }
-
-private:
-  py::object m_serialTessellator;
-};
-#endif
-
-// Accept either [(x, y), ...] / [(x, y, z), ...] or a flat coordinate list.
-template<int Dimension, typename RealType>
-std::vector<RealType>
-copyCoords(const py::object& coords) {
-  std::vector<RealType> result;
-  if (py::isinstance<py::list>(coords) || py::isinstance<py::tuple>(coords)) {
-    const auto seq = coords.cast<py::sequence>();
-    if (seq.size() == 0) return result;
-
-    const auto first = seq[0];
-    if (py::isinstance<py::list>(first) || py::isinstance<py::tuple>(first)) {
-      for (const auto item: seq) {
-        const auto point = py::reinterpret_borrow<py::sequence>(item);
-        if (point.size() != Dimension) {
-          throw py::value_error("Coordinate tuple has the wrong dimension");
-        }
-        for (const auto value: point) result.push_back(value.cast<RealType>());
-      }
-    } else {
-      for (const auto value: seq) result.push_back(value.cast<RealType>());
-    }
-  } else {
-    result = coords.cast<std::vector<RealType>>();
+  int d = 0;
+  for (const py::handle item : seq) {
+    out[d++] = item.cast<CoordType>();
   }
-  if (result.size() % Dimension != 0) {
-    throw py::value_error("Coordinate list length is not divisible by dimension");
-  }
-  return result;
+  return out;
 }
 
+// Helper routine to convert flattened or nested python sequences to
+// vector of points
 inline
 bool
 isPythonSequence(const py::handle& value) {
@@ -225,6 +196,35 @@ isPythonSequence(const py::handle& value) {
          not py::isinstance<py::bytes>(value);
 }
 
+// Accept either [(x, y), ...] / [(x, y, z), ...] or a flat coordinate list.
+template<int Dimension, typename CoordType>
+std::vector<Point<Dimension, CoordType>>
+copyCoords(const py::object& coords) {
+  POLY_ASSERT2(isPythonSequence(coords), "Must pass a sequence to copyCoords");
+  std::vector<Point<Dimension, CoordType>> result;
+  const auto seq = coords.cast<py::sequence>();
+  if (seq.size() == 0) return result;
+  const auto first = seq[0];
+  // If it is a nested list
+  if (py::isinstance<py::list>(first) || py::isinstance<py::tuple>(first)) {
+    result.reserve(seq.size());
+    for (const py::handle item : seq) {
+      const auto pypoint = py::reinterpret_borrow<py::object>(item);
+      auto point = pyToPoint<Dimension, CoordType>(pypoint);
+      result.push_back(point);
+    }
+    return result;
+  }
+  std::vector<CoordType> svec;
+  svec.reserve(seq.size());
+  for (const py::handle value : seq) {
+    svec.push_back(value.cast<CoordType>());
+  }
+  result = extractCoords<Dimension, CoordType>(svec);
+  return result;
+}
+
+// Helper routines for converting facet and hole lists
 template<typename ValueType>
 std::vector<ValueType>
 copyPyToVector(const py::handle& values,
@@ -282,6 +282,22 @@ pointsAsTuples(const std::vector<Point<Dimension, CoordType>>& points) {
     py::tuple tup(Dimension);
     for (auto i = 0; i < Dimension; ++i) tup[i] = point[i];
     result.append(tup);
+  }
+  return result;
+}
+
+template<int Dimension, typename CoordType>
+py::list
+nestedPointsAsTuples(const std::vector<std::vector<Point<Dimension, CoordType>>>& pointvec) {
+  py::list result;
+  for (const auto& points : pointvec) {
+    py::list r2;
+    for (const auto& point: points) {
+      py::tuple tup(Dimension);
+      for (auto i = 0; i < Dimension; ++i) tup[i] = point[i];
+      r2.append(tup);
+    }
+    result.append(r2);
   }
   return result;
 }

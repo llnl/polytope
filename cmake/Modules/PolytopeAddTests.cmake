@@ -64,7 +64,7 @@ macro(polytope_add_python_test target)
   endif()
 
   blt_add_test(NAME ${target_name}_test
-    COMMAND ${CMAKE_BINARY_DIR}/${POLYTOPE_VIRT_DIR}/bin/python ${CMAKE_CURRENT_SOURCE_DIR}/PythonTests/${target}.py
+    COMMAND ${CMAKE_BINARY_DIR}/${POLYTOPE_VIRT_DIR}/bin/python ${CMAKE_CURRENT_SOURCE_DIR}/${target}.py
     NUM_MPI_TASKS ${arg_NUMTASKS}
   )
 

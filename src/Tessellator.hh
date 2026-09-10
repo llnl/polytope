@@ -21,9 +21,7 @@ public:
   virtual ~Tessellator() {}
 
   //! Generate a Voronoi tessellation for the given set of generator points.
-  //! The coordinates of these points are stored in point-major order and 
-  //! the 0th component of the ith point appears in points[Dimension*i].
-  //! \param points A (Dimension*numPoints) array containing point coordinates.
+  //! \param points A (numPoints) array containing point coordinates.
   //! \param mesh This will store the resulting tessellation.
   virtual void tessellate(const std::vector<Point<Dimension, RealType>>& points,
                           Tessellation<Dimension, RealType>& mesh);
@@ -36,16 +34,12 @@ public:
 
   //! Generate a Voronoi-like tessellation for the given set of generator 
   //! points and a description of the geometry in which they exist.
-  //! The coordinates of these points are stored in point-major order and 
-  //! the 0th component of the ith point appears in points[Dimension*i].
-  //! This default implementation issues an error explaining that the 
-  //! Tessellator does not support PLCs.
-  //! \param points A (Dimension*numPoints) array containing point coordinates.
-  //! \param PLCpoints A (Dimension*n) array containing point coordinates for the PLC.
+  //! \param points A (numPoints) array containing point coordinates.
+  //! \param PLCpoints A (n) array containing point coordinates for the PLC.
   //! \param geometry A description of the geometry in Piecewise Linear Complex form.
   //! \param mesh This will store the resulting tessellation.
   virtual void tessellate(const std::vector<Point<Dimension, RealType>>& points,
-                          const std::vector<RealType>& PLCpoints,
+                          const std::vector<Point<Dimension, RealType>>& PLCpoints,
                           const PLC<Dimension>& geometry,
                           Tessellation<Dimension, RealType>& mesh);
 
@@ -54,7 +48,18 @@ public:
                   const std::vector<RealType>& PLCpoints,
                   const PLC<Dimension>& geometry,
                   Tessellation<Dimension, RealType>& mesh) {
-    this->tessellate(extractCoords<Dimension, RealType>(points), PLCpoints, geometry, mesh);
+    this->tessellate(extractCoords<Dimension, RealType>(points),
+                     extractCoords<Dimension, RealType>(PLCpoints),
+                     geometry, mesh);
+  }
+
+  //! Wrapper for above virtual function
+  void tessellate(const std::vector<Point<Dimension, RealType>>& points,
+                  const std::vector<RealType>& PLCpoints,
+                  const PLC<Dimension>& geometry,
+                  Tessellation<Dimension, RealType>& mesh) {
+    this->tessellate(points, extractCoords<Dimension, RealType>(PLCpoints),
+                     geometry, mesh);
   }
 
   //! Required for all tessellators:

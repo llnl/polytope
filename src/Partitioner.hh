@@ -56,7 +56,7 @@ public:
     POLY_VERIFY(m_numPartitions > 0);
   }
 
-  unsigned numPartitions() const { return m_numPartitions; }
+  unsigned getNumPartitions() const { return m_numPartitions; }
 
   //! Determine a logical owner for every real-valued input generator.  The
   //! returned vector is in the same order as globalPoints.
@@ -149,6 +149,7 @@ public:
     return computeLocalPartition(globalPoints);
   }
 
+  unsigned m_numPartitions;
 protected:
   template<typename CoordType>
   static std::vector<RealPoint>
@@ -163,93 +164,13 @@ protected:
     }
     return result;
   }
-
-  unsigned m_numPartitions;
-};
-
-//----------------------------------------------------------------------------//
-// RandomPartitioner
-//
-// Ownership is a deterministic hash of the seed, generator coordinates, and
-// input ordinal. Every rank must receive the same, identically ordered input.
-//----------------------------------------------------------------------------//
-template<int Dimension>
-class RandomPartitioner: public Partitioner<Dimension> {
-public:
-  using OwnerType = typename Partitioner<Dimension>::OwnerType;
-  using RealPoint = typename Partitioner<Dimension>::RealPoint;
-  using QuantPoint = typename Partitioner<Dimension>::QuantPoint;
-  using Partitioner<Dimension>::computeOwners;
-
-  explicit RandomPartitioner(const std::uint64_t seed,
-                             const unsigned numPartitions = Communicator::getNRanks()):
-    Partitioner<Dimension>(numPartitions),
-    m_seed(seed){ }
-
-  virtual std::string name() const override { return "RandomPartitioner"; }
-
-  std::vector<OwnerType>
-  computeOwners(const std::vector<RealPoint>& globalPoints) const override {
-    return computeOwnersImpl(globalPoints);
-  }
-
-  std::vector<OwnerType>
-  computeOwners(const std::vector<QuantPoint>& globalPoints) const override {
-    return computeOwnersImpl(globalPoints);
-  }
-
-protected:
-  template<typename CoordType>
-  std::vector<OwnerType>
-  computeOwnersImpl(const std::vector<Point<Dimension, CoordType>>& globalPoints) const {
-    const auto nranks = m_numPartitions;
-    std::vector<OwnerType> result(globalPoints.size());
-    for (std::size_t i = 0; i < globalPoints.size(); ++i) {
-      const auto& point = globalPoints[i];
-      result[i] = owner(point, i, nranks);
-    }
-    return result;
-  }
-
-  static std::uint64_t mix(std::uint64_t value) {
-    value += 0x9e3779b97f4a7c15ULL;
-    value = (value ^ (value >> 30)) * 0xbf58476d1ce4e5b9ULL;
-    value = (value ^ (value >> 27)) * 0x94d049bb133111ebULL;
-    return value ^ (value >> 31);
-  }
-
-  template<typename CoordType>
-  std::uint64_t owner(const Point<Dimension, CoordType>& point,
-                      const std::size_t ordinal,
-                      const std::uint64_t nranks) const {
-    auto hash = mix(m_seed);
-    for (int d = 0; d < Dimension; ++d) {
-      hash = mix(hash ^ mix(coordinateHash(point[d])));
-    }
-    return mix(hash ^ mix(static_cast<std::uint64_t>(ordinal))) % nranks;
-  }
-
-  template<typename CoordType>
-  static std::uint64_t coordinateHash(const CoordType coordinate) {
-    if constexpr (std::is_floating_point_v<CoordType>) {
-      static_assert(sizeof(CoordType) <= sizeof(std::uint64_t));
-      std::uint64_t result = 0;
-      std::memcpy(&result, &coordinate, sizeof(CoordType));
-      return result;
-    } else {
-      return static_cast<std::uint64_t>(coordinate);
-    }
-  }
-
-  std::uint64_t m_seed;
-  using Partitioner<Dimension>::m_numPartitions;
 };
 
 //----------------------------------------------------------------------------//
 // QuasiVoronoiPartitioner
 //
 // Assigns a random point to each rank and gathers spatially nearby points to
-// that rank.
+// that rank. It also uses Lloyd's algorithm to improve load balancing.
 //----------------------------------------------------------------------------//
 template<int Dimension>
 class QuasiVoronoiPartitioner: public Partitioner<Dimension> {
@@ -260,9 +181,11 @@ public:
   using Partitioner<Dimension>::computeOwners;
 
   explicit QuasiVoronoiPartitioner(const unsigned seed,
-                                   const unsigned numPartitions = Communicator::getNRanks()):
+                                   const unsigned numPartitions = Communicator::getNRanks(),
+                                   const unsigned Niter = 100):
     Partitioner<Dimension>(numPartitions),
-    m_seed(seed) { }
+    m_seed(seed),
+    m_Niter(Niter) { }
 
   virtual std::string name() const override { return "QuasiVoronoiPartitioner"; }
 
@@ -276,7 +199,13 @@ public:
     return computeOwnersImpl(globalPoints);
   }
 
-private:
+  void setNumIter(const unsigned Niter) { m_Niter = Niter; }
+  unsigned getNumIter() { return m_Niter; }
+
+  unsigned m_seed;
+  using Partitioner<Dimension>::m_numPartitions;
+  unsigned m_Niter; // Number of Lloyd's iterations to run
+
   template<typename CoordType>
   std::vector<OwnerType>
   computeOwnersImpl(const std::vector<Point<Dimension, CoordType>>& globalPoints) const {
@@ -295,9 +224,10 @@ private:
       }
       return result;
     }
+    // Set of which generator point indices are assigned to a rank
     std::set<unsigned> procPointIndices;
-    std::vector<Point<Dimension, CoordType>> procPoints;
-    procPoints.reserve(nranks);
+    std::vector<Point<Dimension, CoordType>> rankOrigins;
+    rankOrigins.reserve(nranks);
     // Assign each rank a random generator point
     for (int rank = 0; rank < nranks; ++rank) {
       auto i = distrib(gen);
@@ -306,17 +236,21 @@ private:
         i = distrib(gen);
       }
       procPointIndices.insert(i);
-      procPoints.push_back(globalPoints[i]);
+      rankOrigins.push_back(globalPoints[i]);
+    }
+
+    for (int i = 0; i < m_Niter; ++i) {
+      updateRankSites(globalPoints, rankOrigins);
     }
 
     // Iterate over each point and determine which proc seed is closest
     for (std::size_t i = 0; i < N; ++i) {
       const auto& point = globalPoints[i];
-      auto diff = point - procPoints[0];
+      auto diff = point - rankOrigins[0];
       auto minDist = magnitude2(diff);
       int proc_owner = 0;
       for (int ip = 1; ip < nranks; ++ip) {
-        diff = point - procPoints[ip];
+        diff = point - rankOrigins[ip];
         auto dist = magnitude2(diff);
         if (dist < minDist) {
           proc_owner = ip;
@@ -327,8 +261,38 @@ private:
     }
     return result;
   }
-  unsigned m_seed;
-  using Partitioner<Dimension>::m_numPartitions;
+
+  // Update the rank sites based the centroid of its point cloud
+  template<typename CoordType>
+  void
+  updateRankSites(const std::vector<Point<Dimension, CoordType>>& globalPoints,
+                  std::vector<Point<Dimension, CoordType>>& rankOrigins) const {
+    using Wide = typename WideIntHelper<Dimension, CoordType>::type;
+    const auto nranks = m_numPartitions;
+    const auto N = globalPoints.size();
+    std::vector<std::vector<Point<Dimension, CoordType>>> procPoints(nranks);
+    std::vector<std::vector<unsigned>> rankGens(nranks);
+    // Gather generators closest to each rank seed site
+    for (std::size_t i = 0; i < N; ++i) {
+      const auto& point = globalPoints[i];
+      auto diff = point - rankOrigins[0];
+      auto minDist = magnitude2(diff);
+      int proc_owner = 0;
+      for (int ip = 1; ip < nranks; ++ip) {
+        diff = point - rankOrigins[ip];
+        auto dist = magnitude2(diff);
+        if (dist < minDist) {
+          proc_owner = ip;
+          minDist = dist;
+        }
+      }
+      procPoints[proc_owner].push_back(point);
+      rankGens[proc_owner].push_back(i);
+    }
+    for (std::size_t i = 0; i < nranks; ++i) {
+      rankOrigins[i] = pointCentroid(procPoints[i]);
+    }
+  }
 };
 
 //----------------------------------------------------------------------------//
@@ -338,7 +302,7 @@ private:
 // Quantizer<Dimension>::maxBound, inclusive. The Quantizer must be initialized
 // before computePartition is called. This domain is divided uniformly into
 // ranksPerAxis[d] tiles along each axis; a point on the global upper bound
-// belongs to the final tile on that axis. Default distribution is 
+// belongs to the final tile on that axis.
 //----------------------------------------------------------------------------//
 template<int Dimension>
 class LatticePartitioner: public Partitioner<Dimension> {
@@ -411,6 +375,8 @@ public:
     return result;
   }
 
+  RanksPerAxis m_ranksPerAxis;
+  using Partitioner<Dimension>::m_numPartitions;
 private:
   std::size_t owner(const PointType& point,
                     const PointType& lower,
@@ -474,10 +440,6 @@ private:
     }
     m_ranksPerAxis = {bestx, besty, bestz};
   }
-
-  RanksPerAxis m_ranksPerAxis;
-protected:
-  using Partitioner<Dimension>::m_numPartitions;
 };
 
 } // namespace polytope

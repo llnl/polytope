@@ -54,7 +54,7 @@ void testBasicConstruction(const int tnum) {
   Cube<double> cube(xlo, xhi);
   PLC plc;
   plc.facets = cube.createCubeFaces();
-  QuantPLC3D qplc(plc, cube.flatNodes());
+  QuantPLC3D qplc(cube.flatNodes(), plc);
 
   // Check that all 8 vertices were quantized
   POLY_CHECK2(qplc.points.size() == 8,
@@ -133,7 +133,7 @@ void testDeduplication(const int tnum) {
   plc.facets[0] = {0, 1, 2, 8};  // Uses both 0 and 8 (same point)
 
   // Calls removeDegeneracies() in constructor
-  QuantPLC3D qplc(plc,  vertices);
+  QuantPLC3D qplc(vertices, plc);
 
   // After deduplication: 8 unique points (removed duplicates 8 and 9)
   POLY_CHECK2(qplc.points.size() == 8,
@@ -173,7 +173,7 @@ void testReduction(const int tnum) {
   plc.facets.resize(1);
   plc.facets[0] = {0, 1, 2, 8};  // Uses 0, 1, 2, and 8 (8 is duplicate of 0)
 
-  QuantPLC3D qplc(plc,  vertices);
+  QuantPLC3D qplc(vertices, plc);
 
   // Before reduction, should have 9 points
   POLY_CHECK2(qplc.points.size() == 8,
@@ -211,7 +211,7 @@ void testConvexHull(const int tnum) {
   };
 
   PLC plc;  // Empty PLC, will compute hull
-  QuantPLC3D qplc(plc,  vertices);
+  QuantPLC3D qplc(vertices, plc);
 
   qplc.makeConvex();
 
@@ -246,7 +246,7 @@ void testFacetOrientation(const int tnum) {
   Cube<double> cube(xlo, xhi);
   PLC plc;
   plc.facets = cube.createCubeFaces();
-  QuantPLC3D qplc(plc, cube.flatNodes());
+  QuantPLC3D qplc(cube.flatNodes(), plc);
   qplc.reduce();
 
   // Compute centroid in floating-point (no need for exact integer math here)
@@ -303,7 +303,7 @@ void testWithinBasic(const int tnum) {
   Cube<double> cube(xlo, xhi);
   PLC plc;
   plc.facets = cube.createCubeFaces();
-  QuantPLC3D qplc(plc, cube.flatNodes());
+  QuantPLC3D qplc(cube.flatNodes(), plc);
   qplc.makeConvex();
 
   // Test points inside
@@ -385,7 +385,7 @@ void testWithinHoles(const int tnum) {
   plc.holes[0][4] = {8, 11, 15, 12};
   plc.holes[0][5] = {9, 13, 14, 10};
 
-  QuantPLC3D qplc(plc,  vertices);
+  QuantPLC3D qplc(vertices, plc);
 
   // Inside outer, outside hole
   POLY_CHECK(qplc.within(RealPoint(-3.0, 0.0, 0.0)));
@@ -421,10 +421,10 @@ void testPointComparison(const int tnum) {
   PLC plc1, plc2;
   plc1.facets = cube.createCubeFaces();
   plc2.facets = cube.createCubeFaces();
-  QuantPLC3D qplc1(plc1, cube.flatNodes());
+  QuantPLC3D qplc1(cube.flatNodes(), plc1);
 
   // Create identical PLC with permuted vertex indices
-  QuantPLC3D qplc2(plc2,  cube.flatNodes());
+  QuantPLC3D qplc2(cube.flatNodes(), plc2);
 
   // Should be the same
   POLY_CHECK(qplc1 == qplc2);
@@ -486,9 +486,9 @@ void testCoplanarFaceMerging(const int tnum) {
   refplc.facets[5] = {4, 5, 6, 7};
 
   // Calls orderFacets in constructor
-  QuantPLC3D qplc(plc,  vertices);
+  QuantPLC3D qplc(vertices, plc);
 
-  QuantPLC3D refqplc(refplc,  vertices);
+  QuantPLC3D refqplc(vertices, refplc);
 
   // After merging, the 4 coplanar triangles on top should merge into 1 quad
   // Total should be 6 facets (1 bottom + 4 sides + 1 top)
@@ -549,7 +549,7 @@ void testComplexCoplanarFaceMerging(const int tnum) {
   plc.facets[6] = {8, 11, 7, 4, 5, 9};
   plc.facets[7] = {10, 9, 5, 6, 7, 11};
   // Calls orderFacets in constructor
-  QuantPLC3D qplc(plc,  vertices);
+  QuantPLC3D qplc(vertices, plc);
 
   // Make a PLC that swaps order of the top face
   PLC plc2(plc);
@@ -564,9 +564,9 @@ void testComplexCoplanarFaceMerging(const int tnum) {
   refplc.facets[5] = {4, 5, 6, 7};
 
   // Calls orderFacets in constructor
-  QuantPLC3D qplc2(plc2,  vertices);
+  QuantPLC3D qplc2(vertices, plc2);
 
-  QuantPLC3D refqplc(refplc,  vertices);
+  QuantPLC3D refqplc(vertices, refplc);
 
   // After merging, the 3 coplanar shapes on top should merge into 1 quad
   // Total should be 6 facets (1 bottom + 4 sides + 1 top)
@@ -610,7 +610,7 @@ void testStress(const int tnum) {
   }
 
   PLC plc;  // Empty PLC
-  QuantPLC3D qplc(plc, vertices);
+  QuantPLC3D qplc(vertices, plc);
 
   // Compute convex hull
   qplc.makeConvex();

@@ -28,7 +28,7 @@ template<int Dimension, typename CoordType>
 struct WideIntHelper {
   using type = typename std::conditional<
       std::is_floating_point_v<CoordType>,
-      CoordType,
+      long double,
     typename std::conditional<
       std::is_same_v<CoordType, WideInt<Dimension>>,
       BigInt<Dimension>,
@@ -488,6 +488,22 @@ circumcenter(const Point3<double>& p0,
 #endif
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// Lloyd's algorithm
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+// Compute the centroid of a set of points
+template<int Dimension, typename CoordType>
+Point<Dimension, CoordType>
+pointCentroid(const std::vector<Point<Dimension, CoordType>>& points) {
+  const auto N = points.size();
+  Point<Dimension, CoordType> centroid;
+  for (const auto& point : points) {
+    centroid += point/static_cast<CoordType>(N);
+  }
+  return centroid;
+}
+
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Double and pointer operations
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -552,6 +568,7 @@ long double magnitude(const Point<Dimension, long double>& a) {
   return dis;
 }
 
+// Compute the centroid of a triangle for points in doubles
 template<int Dimension>
 Point<Dimension, double> triangleCentroid(const Point<Dimension, double>& a,
                                           const Point<Dimension, double>& b,

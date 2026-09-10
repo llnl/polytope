@@ -16,18 +16,18 @@ class Partitioner:
     @PYB11const
     @PYB11implementation("""[](const Partitioner<%(Dimension)s>& self,
                                const py::object& points) {
-                                 const auto generators = pybind11_helpers::copyPyToVector<PointType>(points, "points");
-                                 return self.computePartition(generators);
+                                 const auto generators = pybind11_helpers::copyCoords<%(Dimension)s, double>(points);
+                                 return pybind11_helpers::nestedPointsAsTuples<%(Dimension)s, double>(self.computePartition(generators));
                                }""")
     def computePartition(self,
                          points="const py::object&"):
         "Return generators grouped by logical partition."
-        return "std::vector<std::vector<PointType>>"
+        return "py::list"
 
     @PYB11const
     @PYB11implementation("""[](const Partitioner<%(Dimension)s>& self,
                                const py::object& points) {
-                                 const auto generators = pybind11_helpers::copyPyToVector<PointType>(points, "points");
+                                 const auto generators = pybind11_helpers::copyCoords<%(Dimension)s, double>(points);
                                  return self.computeOwners(generators);
                                }""")
     def computeOwners(self,
@@ -36,45 +36,18 @@ class Partitioner:
         return "std::vector<unsigned>"
 
     @PYB11const
-    def numPartitions(self):
-        "Return the number of logical partitions."
-        return "unsigned"
-
-    def setNumPartitions(self,
-                         numPartitions="const unsigned"):
-        "Set the number of logical partitions."
-
-    @PYB11const
     @PYB11implementation("""[](const Partitioner<%(Dimension)s>& self,
                                const py::object& points) {
-                                 const auto generators = pybind11_helpers::copyPyToVector<PointType>(points, "points");
-                                 return self.computeLocalPartition(generators);
+                                 const auto generators = pybind11_helpers::copyCoords<%(Dimension)s, double>(points);
+                                 return pybind11_helpers::pointsAsTuples<%(Dimension)s, double>(self.computeLocalPartition(generators));
                                }""")
     def computeLocalPartition(self,
                               points="const py::object&"):
         "Return this rank's subset of identically ordered generators."
-        return "std::vector<PointType>"
+        return "py::list"
 
-    @PYB11pycppname("computeLocalPartition")
-    @PYB11const
-    @PYB11implementation("""[](const Partitioner<%(Dimension)s>& self,
-                               const py::object& points) {
-                                 const auto generators = pybind11_helpers::copyPyToVector<double>(points, "points");
-                                 return self.computeLocalPartition(generators);
-                               }""")
-    def computeLocalPartition2(self,
-                              points="const py::object&"):
-        "Return this rank's subset of identically ordered generators."
-        return "std::vector<PointType>"
-
-@PYB11template("int Dimension")
-class RandomPartitioner(Partitioner):
-    "Deterministically assign generators to logical partitions using a seed."
-
-    def pyinit(self,
-               seed="const std::uint64_t",
-               numPartitions=("const unsigned", "Communicator::getNRanks()")):
-        "Construct with a deterministic ownership seed."
+    nparts = PYB11property(getter="getNumPartitions", setter="setNumPartitions",
+                           doc="Number of partitions to distribute points over")
 
 @PYB11template("int Dimension")
 class QuasiVoronoiPartitioner(Partitioner):
@@ -82,8 +55,12 @@ class QuasiVoronoiPartitioner(Partitioner):
 
     def pyinit(self,
                seed="const unsigned",
-               numPartitions=("const unsigned", "Communicator::getNRanks()")):
+               numPartitions=("const unsigned", "Communicator::getNRanks()"),
+               Niter=("const unsigned", "100")):
         "Construct with a seed and number of logical partitions."
+
+    niter = PYB11property(getter="getNumIter", setter="setNumIter",
+                          doc="Maximum number of iterations to run Lloyd's algorithm")
 
 @PYB11template("int Dimension")
 class LatticePartitioner(Partitioner):
@@ -103,8 +80,6 @@ class LatticePartitioner(Partitioner):
 
 Partitioner2d = PYB11TemplateClass(Partitioner, template_parameters="2")
 Partitioner3d = PYB11TemplateClass(Partitioner, template_parameters="3")
-RandomPartitioner2d = PYB11TemplateClass(RandomPartitioner, template_parameters="2")
-RandomPartitioner3d = PYB11TemplateClass(RandomPartitioner, template_parameters="3")
 QuasiVoronoiPartitioner2d = PYB11TemplateClass(QuasiVoronoiPartitioner, template_parameters="2")
 QuasiVoronoiPartitioner3d = PYB11TemplateClass(QuasiVoronoiPartitioner, template_parameters="3")
 LatticePartitioner2d = PYB11TemplateClass(LatticePartitioner, template_parameters="2")

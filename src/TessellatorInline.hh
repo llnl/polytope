@@ -41,7 +41,7 @@ inline
 void
 Tessellator<Dimension, RealType>::
 tessellate(const std::vector<Point<Dimension, RealType>>& points,
-           const std::vector<RealType>& PLCpoints,
+           const std::vector<Point<Dimension, RealType>>& PLCpoints,
            const PLC<Dimension>& geometry,
            Tessellation<Dimension, RealType>& mesh) {
   if (points.size() == 0) {
@@ -57,7 +57,7 @@ tessellate(const std::vector<Point<Dimension, RealType>>& points,
 
   // Invoke the descendant method to fill the quant mesh.
   QuantTessellation<Dimension> quantmesh(points);
-  QuantPLC<Dimension> qplc(geometry, PLCpoints);
+  QuantPLC<Dimension> qplc(PLCpoints, geometry);
   // Remove any external points
   quantmesh.cullExternalPoints(qplc);
   this->tessellateQuantized(quantmesh);

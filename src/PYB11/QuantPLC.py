@@ -20,15 +20,15 @@ class QuantPLC(PLC):
     def pyinit(self):
         "Default constructor."
 
-    @PYB11implementation("""[](const PLC<%(Dimension)s>& plc,
-                               const py::object& points) {
+    @PYB11implementation("""[](const py::object& points,
+                               const PLC<%(Dimension)s>& plc) {
                                  return QuantPLC<%(Dimension)s>(
-                                   plc,
-                                   pybind11_helpers::copyCoords<%(Dimension)s, double>(points));
+                                   pybind11_helpers::copyCoords<%(Dimension)s, double>(points),
+                                   plc);
                                }""")
     def pyinitFromPLC(self,
-                      plc="const PLC<%(Dimension)s>&",
-                      points="const py::object&"):
+                      points="const py::object&",
+                      plc="const PLC<%(Dimension)s>&"):
         "Construct from a PLC and flattened coordinates or coordinate tuples."
 
     @PYB11implementation("""[](const py::object& points) {
@@ -40,15 +40,16 @@ class QuantPLC(PLC):
         "Construct a convex PLC from flattened coordinates or coordinate tuples."
 
     @PYB11implementation("""[](QuantPLC<%(Dimension)s>& self,
-                               const PLC<%(Dimension)s>& plc,
-                               const py::object& points) {
-                                 self.init(plc,
-                                   pybind11_helpers::copyCoords<%(Dimension)s, double>(points));
+                               const py::object& points,
+                               const PLC<%(Dimension)s>& plc) {
+                                 self.init(
+                                   pybind11_helpers::copyCoords<%(Dimension)s, double>(points),
+                                   plc);
                                }""")
     @PYB11pycppname("init")
     def initFromPLC(self,
-                    plc="const PLC<%(Dimension)s>&",
-                    points="const py::object&"):
+                    points="const py::object&",
+                    plc="const PLC<%(Dimension)s>&"):
         "Initialize from a PLC and flattened coordinates or coordinate tuples."
         return "void"
 
@@ -82,14 +83,7 @@ class QuantPLC(PLC):
     @PYB11const
     @PYB11implementation("""[](const QuantPLC<%(Dimension)s>& self,
                                const py::object& point) {
-                                 const auto coords =
-                                   pybind11_helpers::copyCoords<%(Dimension)s, double>(point);
-                                 if (coords.size() != %(Dimension)s) {
-                                   throw py::value_error("Expected exactly one point");
-                                 }
-                                 RealPoint realPoint;
-                                 for (auto i = 0; i < %(Dimension)s; ++i) realPoint[i] = coords[i];
-                                 return self.within(realPoint);
+                                 return self.within(pybind11_helpers::pyToPoint<%(Dimension)s, double>(point));
                                }""")
     def within(self,
                point="const py::object&"):

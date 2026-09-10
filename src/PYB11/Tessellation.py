@@ -29,10 +29,6 @@ class Tessellation:
     def computeFaceCells(self):
         return "void"
 
-    # @PYB11const
-    # def getCell(self, cellIndex="const unsigned"):
-    #     return "CellType"
-
     @PYB11implementation("[](const Tessellation<%(Dimension)s, %(RealType)s>& self) { std::stringstream ss; ss << self; return ss.str(); }")
     def __str__(self):
         return "std::string"

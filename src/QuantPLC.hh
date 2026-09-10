@@ -43,23 +43,33 @@ public:
   QuantPLC() = default;
   virtual ~QuantPLC() = default;
 
-  QuantPLC(const PLC<Dimension>& plc,
-           const std::vector<RealType>& allpoints);
+  QuantPLC(const std::vector<RealPoint>& allpoints,
+           const PLC<Dimension>& plc = PLC<Dimension>());
 
-  explicit QuantPLC(const std::vector<RealType>& allpoints);
+  void init(const std::vector<RealPoint>& allpoints,
+            const PLC<Dimension>& plc);
 
-  QuantPLC(const PLC<Dimension>& plc,
-           const std::vector<QuantizedPoint<Dimension>>& quantizedPoints);
+  void init(const std::vector<RealPoint>& allpoints);
 
-  void init(const PLC<Dimension>& plc,
-            const std::vector<RealType>& allpoints);
-
-  void init(const std::vector<RealType>& allpoints);
-
-  void init(const PLC<Dimension>& plc,
-            const std::vector<QuantizedPoint<Dimension>>& quantizedPoints);
+  void init(const std::vector<QuantizedPoint<Dimension>>& quantizedPoints,
+            const PLC<Dimension>& plc);
 
   void init(const std::vector<QuantizedPoint<Dimension>>& quantizedPoints);
+
+  // Wrappers for when flattened vectors are provided
+  QuantPLC(const std::vector<RealType>& allpoints,
+           const PLC<Dimension>& plc = PLC<Dimension>()) :
+    QuantPLC(extractCoords<Dimension, RealType>(allpoints), plc) {
+  }
+
+  void init(const std::vector<RealType>& allpoints) {
+    init(extractCoords<Dimension, RealType>(allpoints));
+  }
+
+  void init(const std::vector<RealType>& allpoints,
+            const PLC<Dimension>& plc) {
+    init(extractCoords<Dimension, RealType>(allpoints), plc);
+  }
 
   // Reduce to only the points used in the boundary facets, if they exist
   void reduce();

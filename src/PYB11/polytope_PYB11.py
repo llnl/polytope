@@ -15,8 +15,7 @@ PYB11includes = ['"polytope.hh"',
                  '"PLC.hh"',
                  '"Tessellation.hh"',
                  '"Tessellator.hh"',
-                 '"Partitioner.hh"',
-                 '"DistributedTessellator.hh"']
+                 '"Partitioner.hh"']
 
 PYB11modulepreamble = """
 // Initialize MPI
@@ -76,6 +75,6 @@ from QuantPLC import *
 from Tessellation import *
 from Tessellator import *
 from Partitioner import *
-from SerialTessellators import *
-from DistributedTessellator import *
+# Import any serial tessellators and the distributed tessellator
+from Tessellators import *
 from SiloUtils import *

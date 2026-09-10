@@ -194,8 +194,8 @@ private:
   }
 
   // Mutex for thread-safe initialization
-  Codec m_codec;
   mutable std::mutex m_mutex;
+  Codec m_codec;
 };
 
 } // namespace polytope

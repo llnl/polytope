@@ -118,13 +118,16 @@ void runTest(Tessellator<2, double>& tessellator,
   // Figure out parallel configuration
   int rank = Communicator::getRank();
   int root = Communicator::getRoot();
+  const int seed = 10489592;
 
   Boundary2D boundary;
   boundary.mCenter[0] = 0.5;
   boundary.mCenter[1] = 0.5;
   boundary.setDefaultBoundary(0);
   Generators<2> generators(boundary);
-  generators.cartesian2D(nx, nx);
+  const int Ngen = nx*nx;
+  generators.randomPoints(Ngen, seed);
+  //generators.cartesian2D(nx, nx);
   auto procIndex = generators.assignRandomPointToRank();
   auto finalRanks = generators.distributePointsAmongRanks(procIndex);
   POLY_CONTRACT_VAR(finalRanks);
@@ -180,7 +183,7 @@ void runTest(Tessellator<2, double>& tessellator,
   unsigned step = 0;
   double time = 0.0;
   Tessellation<2,double> mesh;
-  tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC, mesh);
+  tessellator.tessellate(generators.mPoints, mesh);
   outputMesh(mesh, testName, step, time);
 
   // Update the point positions and generate the mesh
@@ -201,7 +204,7 @@ void runTest(Tessellator<2, double>& tessellator,
     }
     time += dt;
     ++step;
-    tessellator.tessellate(generators.mPoints, mesh);//boundary.mPLCpoints, boundary.mPLC, mesh);
+    tessellator.tessellate(generators.mPoints, mesh);
     outputMesh(mesh, testName, step, time);
 
     // Check the correctness of the parallel data structures
@@ -227,8 +230,6 @@ int main(int argc, char** argv) {
 
 #ifdef POLYTOPE_ENABLE_TRIANGLE
   {
-    // Seed the random number generator the same on all processes.
-    srand(10489592);
     if (rank == root) cout << "\nTriangle Tessellator:\n" << endl;
     TriangleTessellator serialTessellator;
     DistributedTessellator<2> tessellator(serialTessellator);
@@ -237,7 +238,6 @@ int main(int argc, char** argv) {
 #endif
 
   {
-    srand(10489592);
     if (rank == root) cout << "\nBoost Tessellator:\n" << endl;
     BoostTessellator serialTessellator;
     DistributedTessellator<2> tessellator(serialTessellator);
