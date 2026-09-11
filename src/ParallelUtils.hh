@@ -48,6 +48,57 @@ allGatherBuffers(const std::vector<char>& localBuffer) {
   return result;
 }
 
+// Exchange rank-indexed byte buffers.  A null send-buffer pointer denotes an
+// empty message for that rank; this permits multiple destinations to share a
+// single serialized buffer without copying it.
+inline
+std::vector<std::vector<char>>
+exchangeBuffersByRank(const std::vector<const std::vector<char>*>& sendBuffers,
+                      const int mpiTag) {
+  auto& comm = Communicator::communicator();
+  const auto nranks = Communicator::getNRanks();
+  POLY_VERIFY2(sendBuffers.size() == static_cast<std::size_t>(nranks),
+               "Expected one send buffer per MPI rank");
+
+  std::vector<int> sendSizes(nranks, 0), recvSizes(nranks, 0);
+  for (int destination = 0; destination < nranks; ++destination) {
+    const auto* sendBuffer = sendBuffers[destination];
+    if (sendBuffer != nullptr) {
+      POLY_VERIFY2(sendBuffer->size() <=
+                     static_cast<std::size_t>(std::numeric_limits<int>::max()),
+                   "Generator exchange message exceeds MPI int count limit");
+      sendSizes[destination] = static_cast<int>(sendBuffer->size());
+    }
+  }
+
+  MPI_Alltoall(sendSizes.data(), 1, MPI_INT,
+               recvSizes.data(), 1, MPI_INT,
+               comm);
+
+  std::vector<std::vector<char>> recvBuffers(nranks);
+  std::vector<MPI_Request> requests;
+  for (int source = 0; source < nranks; ++source) {
+    if (recvSizes[source] > 0) {
+      recvBuffers[source].resize(recvSizes[source]);
+      requests.push_back(MPI_REQUEST_NULL);
+      MPI_Irecv(recvBuffers[source].data(), recvSizes[source], MPI_BYTE,
+                source, mpiTag, comm, &requests.back());
+    }
+  }
+  for (int destination = 0; destination < nranks; ++destination) {
+    if (sendSizes[destination] > 0) {
+      const auto& sendBuffer = *sendBuffers[destination];
+      requests.push_back(MPI_REQUEST_NULL);
+      MPI_Isend(sendBuffer.data(), sendSizes[destination], MPI_BYTE,
+                destination, mpiTag, comm, &requests.back());
+    }
+  }
+  if (!requests.empty()) {
+    MPI_Waitall(static_cast<int>(requests.size()), requests.data(), MPI_STATUSES_IGNORE);
+  }
+  return recvBuffers;
+}
+
 // Gather serialized generator records, ordered result[rank][point index].
 // Records may be Morton keys or quantized points.
 template<int Dimension, typename Generator>
@@ -74,42 +125,18 @@ template<int Dimension, typename Generator>
 std::vector<std::vector<Generator>>
 exchangeNeighborGenerators(const std::vector<Generator>& localGenerators,
                            const std::set<int>& neighbors) {
-  auto& comm = Communicator::communicator();
   auto rank = Communicator::getRank();
   auto size = Communicator::getNRanks();
   std::vector<char> localBuffer;
   serialize(localGenerators, localBuffer);
 
-  std::vector<int> sendSizes(size, 0), recvSizes(size, 0);
+  std::vector<const std::vector<char>*> sendBuffers(size, nullptr);
   for (const auto neighbor : neighbors) {
     if (neighbor != rank) {
-      sendSizes[neighbor] = static_cast<int>(localBuffer.size());
+      sendBuffers[neighbor] = &localBuffer;
     }
   }
-  MPI_Alltoall(sendSizes.data(), 1, MPI_INT,
-               recvSizes.data(), 1, MPI_INT,
-               comm);
-
-  std::vector<std::vector<char>> recvBuffers(size);
-  std::vector<MPI_Request> requests;
-  for (int r = 0; r < size; ++r) {
-    if (recvSizes[r] > 0) {
-      recvBuffers[r].resize(recvSizes[r]);
-      requests.push_back(MPI_REQUEST_NULL);
-      MPI_Irecv(recvBuffers[r].data(), recvSizes[r], MPI_BYTE,
-                r, 9721, comm, &requests.back());
-    }
-  }
-  for (int r = 0; r < size; ++r) {
-    if (sendSizes[r] > 0) {
-      requests.push_back(MPI_REQUEST_NULL);
-      MPI_Isend(localBuffer.data(), sendSizes[r], MPI_BYTE,
-                r, 9721, comm, &requests.back());
-    }
-  }
-  if (!requests.empty()) {
-    MPI_Waitall(static_cast<int>(requests.size()), requests.data(), MPI_STATUSES_IGNORE);
-  }
+  auto recvBuffers = exchangeBuffersByRank(sendBuffers, 9721);
 
   std::vector<std::vector<Generator>> result(size);
   for (int source = 0; source < size; ++source) {
@@ -131,48 +158,23 @@ exchangeNeighborGenerators(const std::vector<Generator>& localGenerators,
 template<int Dimension, typename Generator>
 std::vector<Generator>
 redistributeGenerators(const std::vector<std::vector<Generator>>& generatorsByDestination) {
-  auto& comm = Communicator::communicator();
   const auto nranks = Communicator::getNRanks();
   POLY_VERIFY2(generatorsByDestination.size() == static_cast<std::size_t>(nranks),
                "Expected one generator list per MPI rank");
 
   std::vector<std::vector<char>> sendBuffers(nranks);
-  std::vector<int> sendSizes(nranks, 0), recvSizes(nranks, 0);
   for (int destination = 0; destination < nranks; ++destination) {
     const auto& generators = generatorsByDestination[destination];
     if (!generators.empty()) {
       serialize(generators, sendBuffers[destination]);
-      POLY_VERIFY2(sendBuffers[destination].size() <=
-                     static_cast<std::size_t>(std::numeric_limits<int>::max()),
-                   "Generator redistribution message exceeds MPI int count limit");
-      sendSizes[destination] = static_cast<int>(sendBuffers[destination].size());
     }
   }
 
-  MPI_Alltoall(sendSizes.data(), 1, MPI_INT,
-               recvSizes.data(), 1, MPI_INT,
-               comm);
-
-  std::vector<std::vector<char>> recvBuffers(nranks);
-  std::vector<MPI_Request> requests;
-  for (int source = 0; source < nranks; ++source) {
-    if (recvSizes[source] > 0) {
-      recvBuffers[source].resize(recvSizes[source]);
-      requests.push_back(MPI_REQUEST_NULL);
-      MPI_Irecv(recvBuffers[source].data(), recvSizes[source], MPI_BYTE,
-                source, 9722, comm, &requests.back());
-    }
-  }
+  std::vector<const std::vector<char>*> sendBufferPointers(nranks);
   for (int destination = 0; destination < nranks; ++destination) {
-    if (sendSizes[destination] > 0) {
-      requests.push_back(MPI_REQUEST_NULL);
-      MPI_Isend(sendBuffers[destination].data(), sendSizes[destination], MPI_BYTE,
-                destination, 9722, comm, &requests.back());
-    }
+    sendBufferPointers[destination] = &sendBuffers[destination];
   }
-  if (!requests.empty()) {
-    MPI_Waitall(static_cast<int>(requests.size()), requests.data(), MPI_STATUSES_IGNORE);
-  }
+  auto recvBuffers = exchangeBuffersByRank(sendBufferPointers, 9722);
 
   std::vector<Generator> result;
   for (int source = 0; source < nranks; ++source) {

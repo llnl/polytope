@@ -6,7 +6,6 @@ import sys, time
 def test_partitioner(Ngen):
     comm = polytope.Communicator.instance()
     rank = comm.getRank()
-    root = comm.getRoot()
     nranks = comm.getNRanks()
     # Seed for generating points randomly
     seed = 19001
@@ -20,8 +19,7 @@ def test_partitioner(Ngen):
     tessellator = polytope.DistributedTessellator2d(serial_tessellator)
     # Make a partitioner
     partitioner = polytope.QuasiVoronoiPartitioner2d(partseed)
-    if (rank == root):
-        print(f"Tessellating {Ntotal} generators")
+    ptu.rootprint(f"Tessellating {Ntotal} generators")
     for k, i in enumerate([0, 1, 10, 100]):
         partitioner.niter = i
         rank_points = partitioner.computeLocalPartition(all_points)

@@ -12,7 +12,6 @@ def _available_tessellators():
 def test_distributed_2d_tessellators(Ngen):
     comm = polytope.Communicator.instance()
     rank = comm.getRank()
-    root = comm.getRoot()
     nranks = comm.getNRanks()
     tessellator_types = _available_tessellators()
     #assert tessellator_types
@@ -28,8 +27,7 @@ def test_distributed_2d_tessellators(Ngen):
     all_points = ptu.generate_random_points(Ntotal, seed=seed, boundary2d=boundary)
     # Make a partitioner
     partitioner = polytope.QuasiVoronoiPartitioner2d(partseed)
-    if (rank == root):
-        print(f"Tessellating {Ntotal} generators")
+    ptu.rootprint(f"Tessellating {Ntotal} generators")
     points = partitioner.computeLocalPartition(all_points)
 
     for tessellator_type in tessellator_types:
@@ -37,8 +35,7 @@ def test_distributed_2d_tessellators(Ngen):
         tess_name = serial_tessellator.name()
         assert tess_name
 
-        if (rank == root):
-            print(f"Testing unbounded {tess_name}")
+        ptu.rootprint(f"Testing unbounded {tess_name}")
         mesh = polytope.Tessellation2d()
         tessellator = polytope.DistributedTessellator2d(serial_tessellator)
         with ptu.timer("Unbounded tessellate"):
@@ -50,8 +47,7 @@ def test_distributed_2d_tessellators(Ngen):
                            cycle=0,
                            time=0.)
 
-        if (rank == root):
-            print(f"Testing clipped {tess_name}")
+        ptu.rootprint(f"Testing clipped {tess_name}")
         clipped_mesh = polytope.Tessellation2d()
         with ptu.timer("Clipped tessellation"):
             tessellator.tessellate(points, boundary.PLCpoints, boundary.PLC, clipped_mesh)

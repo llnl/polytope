@@ -1,9 +1,14 @@
 import polytope
-import random
+import random, builtins
 from time import perf_counter
 from contextlib import contextmanager
 import Boundary2d
 
+# Print statement wrapper for printing only on the root rank
+def rootprint(string):
+    comm = polytope.Communicator.instance()
+    if (comm.getRank() == comm.getRoot()):
+        print(string)
 
 def make_test_fields(tessellation):
     "Create a zone centered field dictionary of the generator locations"
@@ -89,5 +94,4 @@ def timer(name):
     finally:
         comm.Barrier()
         elapsed = perf_counter() - tstart
-        if (rank == root):
-            print(f"{name}: {elapsed:.6f} seconds")
+        rootprint(f"{name}: {elapsed:.6f} seconds")

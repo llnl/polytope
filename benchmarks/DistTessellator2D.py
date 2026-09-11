@@ -16,8 +16,7 @@ def time_tessellation(allpoints, tessellator):
     seed = 1049600
     partseed = 1042390
     ptess = polytope.DistributedTessellator2d(tessellator)
-    if (rank == root):
-        print(f"Using {tessellator.name()}")
+    ptu.rootprint(f"Using {tessellator.name()}")
     parts = [polytope.LatticePartitioner2d(),
              polytope.QuasiVoronoiPartitioner2d(partseed)]
     time_dicts = []
@@ -58,9 +57,9 @@ if __name__ == "__main__":
 
     plc_points = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]
     Q.init(plc_points)
+    ptu.rootprint(f"Degeneracy {Q.degeneracy()}")
+    ptu.rootprint(f"Generating {N} random points")
     if (rank == root):
-        print(f"Degeneracy {Q.degeneracy()}")
-        print(f"Generating {N} random points")
         with open(timer_log, "w") as ff:
             ff.write(f"Degeneracy {Q.degeneracy()}, {N} points\n")
 
@@ -72,8 +71,8 @@ if __name__ == "__main__":
         else:
             points = ptu.generate_normal_random_points(N, seed=seed)
             distname = "normal"
+        ptu.rootprint(f"Generators distributed in a {distname} distribution")
         if (rank == root):
-            print(f"Generators distributed in a {distname} distribution")
             with open(timer_log, "a") as ff:
                 ff.write(f"{distname} distribution\n")
         gen_time = time.perf_counter() - gen_begin
