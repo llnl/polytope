@@ -33,7 +33,7 @@ def test_distributed_2d_tessellators(Ngen):
     ptu.rootprint(f"Testing unbounded {tess_name}")
     tessellator = polytope.DistributedTessellator2d(serial_tessellator)
 
-    for k, i in enumerate([0, 10, 100, 150]):
+    for k, i in enumerate(part_iters):
         partitioner.niter = i
         with ptu.timer(f"partition_{i}_iter"):
             points = partitioner.partition(local_points)
