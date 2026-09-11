@@ -31,7 +31,7 @@ void TetgenTessellator::tessellateQuantizedImpl(QT& result) {
 // Create Tetgen class
 tetgenio TetgenTessellator::createTetgenPoints(const QT& result) const {
   tetgenio in;
-  auto generators = flattenCoords(result.getRealPoints());
+  auto generators = flattenCoords(result.getRealQPoints());
   const auto N = result.points.size();
   in.pointlist = new REAL[N*3];
   in.numberofpoints = N;

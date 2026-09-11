@@ -15,9 +15,9 @@ namespace polytope {
 namespace bp = boost::polygon;
 using namespace boost::polygon::operators;
 
-using Polygon = bp::polygon_data<QuantizedCoordinate<2>>;
-using PolygonWithHoles = bp::polygon_with_holes_data<QuantizedCoordinate<2>>;
-using PolygonSet = bp::polygon_set_data<QuantizedCoordinate<2>>;
+using Polygon = bp::polygon_data<bp::BoostCoordinate2D>;
+using PolygonWithHoles = bp::polygon_with_holes_data<bp::BoostCoordinate2D>;
+using PolygonSet = bp::polygon_set_data<bp::BoostCoordinate2D>;
 
 inline std::vector<PolygonWithHoles>
 boostUnion(const PolygonWithHoles& first,

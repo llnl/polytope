@@ -176,16 +176,18 @@ cellPolygonIntersect(const QuantTessellation<2>::QuantizedCell& currentCell,
                      const QuantizedPoint<2>& genPointP,
                      const PolygonWithHoles boundary,
                      std::vector<PolygonWithHoles>& orphans) {
-  bp::point_data<QuantizedCoordinate<2>> genPoint =
-    bp::construct<QuantizedPoint<2>>(genPointP.x, genPointP.y);
+  bp::point_data<bp::BoostCoordinate2D> genPoint = bp::polytopeToBoost(genPointP);
   std::vector<PolygonWithHoles> cellSet = boostIntersect(currentCell, boundary);
   unsigned fragIndex = 0;
   auto NFrag = cellSet.size();
   if (NFrag == 0) return PolygonWithHoles(); // Cell was completely outside boundary
+  // Find the fragment that owns the generator.
+  while (fragIndex < NFrag and
+         not bp::contains(cellSet[fragIndex], genPoint)) ++fragIndex;
+  POLY_ASSERT2(fragIndex < NFrag,
+               "No clipped fragment contains generator " << genPointP
+               << " (" << NFrag << " fragments)");
   if (NFrag > 1) {
-    // Find which part owns the generator
-    while (fragIndex < NFrag and
-           not bp::contains(cellSet[fragIndex], genPoint)) ++fragIndex;
     for (unsigned iPoly = 0; iPoly < NFrag; ++iPoly) {
       if (iPoly != fragIndex) {
         // Check if orphan can be added to other orphans
@@ -210,14 +212,15 @@ void
 QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
                                        Tessellator<2, double>& tessellator) {
   const auto& Q = Quantizer<2>::instance();
-  auto boundaryPoints = QPLC.getCell().points();
+  const auto boundaryPoints = bp::polytopeToBoostPoints(QPLC.getCell());
   PolygonWithHoles boundary;
   bp::set_points(boundary, boundaryPoints.begin(), boundaryPoints.end());
   auto holePoints = QPLC.getHolePoints();
   std::vector<Polygon> holes_vector;
   for (const auto& hole : holePoints) {
     Polygon holepoly;
-    bp::set_points(holepoly, hole.points().begin(), hole.points().end());
+    const auto holeBoostPoints = bp::polytopeToBoostPoints(hole);
+    bp::set_points(holepoly, holeBoostPoints.begin(), holeBoostPoints.end());
     holes_vector.push_back(holepoly);
   }
   if (holePoints.size() > 0) {
@@ -318,6 +321,9 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
     std::vector<QuantizedPoint<2>> keptVertices = bp::BoostToPolytope(cellPoly);
     removeCollinear(keptVertices);
     auto nv = keptVertices.size();
+    POLY_ASSERT2(nv >= 3,
+                 "Clipped cell " << i << " has only " << nv
+                 << " vertices after conversion to quantized coordinates");
     std::vector<int> localCellIndex;
     localCellIndex.reserve(nv);
     // Gather cell indices from the node2id and update newNodes
@@ -355,6 +361,11 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
     std::cerr << "Rank " << Communicator::getRank() << ": Outstanding orphan remains" << std::endl;
     Communicator::abort();
   }
+  POLY_ASSERT2(newCells.size() == newPoints.size(),
+               "Clipped cell and generator counts differ: "
+               << newCells.size() << " cells, " << newPoints.size() << " generators");
+  POLY_ASSERT2(newCells.empty() or !newNodes.empty(),
+               "Clipped tessellation has cells but no nodes");
   nodes = std::move(newNodes);
   faces = std::move(newFaces);
   cells = std::move(newCells);
@@ -387,12 +398,18 @@ QuantTessellation<2>::fillTessellation(TessellationType& mesh) {
   const unsigned numFaces = faces.size();
   const unsigned numCells = points.size();  // Number of generators
 
+  POLY_ASSERT2(numCells == 0 or numNodes > 0,
+               "Tessellation has " << numCells << " cells but no nodes");
   // Allocate space for mesh data
   mesh.nodes.resize(numNodes);
   mesh.faces.resize(numFaces, std::vector<unsigned>(2));
   mesh.points.resize(numCells);
   mesh.cells = cells;
   POLY_ASSERT2(cells.size() == numCells, "Differing number of cells and generator points");
+  for (auto cellIndex = 0u; cellIndex < cells.size(); ++cellIndex) {
+    POLY_ASSERT2(cells[cellIndex].size() >= 3,
+                 "Cell " << cellIndex << " has fewer than three faces");
+  }
 
   for (unsigned i = 0; i < numCells; ++i) {
     mesh.points[i] = Q.dequantize(points[i]);
@@ -407,6 +424,9 @@ QuantTessellation<2>::fillTessellation(TessellationType& mesh) {
   for (unsigned i = 0; i < numFaces; ++i) {
     POLY_ASSERT(faces[i].size() == 2);
     POLY_ASSERT(mesh.faces[i].size() == 2);
+    POLY_ASSERT2(faces[i][0] < numNodes and faces[i][1] < numNodes and
+                 faces[i][0] != faces[i][1],
+                 "Face " << i << " has invalid node indices");
     mesh.faces[i][0] = faces[i][0];
     mesh.faces[i][1] = faces[i][1];
   }

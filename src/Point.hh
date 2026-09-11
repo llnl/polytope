@@ -431,6 +431,7 @@ Point<Dimension, CoordType> round(const Point<Dimension, double>& point) {
   for (int d = 0; d < Dimension; ++d) {
     out[d] = static_cast<CoordType>(std::round(point[d]));
   }
+  out.index = point.index;
   return out;
 }
 

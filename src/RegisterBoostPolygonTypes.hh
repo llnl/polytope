@@ -5,6 +5,7 @@
 #ifndef __polytope_RegisterBoostPolygonType__
 #define __polytope_RegisterBoostPolygonType__
 
+#include <cmath>
 #include <cstdint>
 
 #include <boost/polygon/polygon.hpp>
@@ -56,6 +57,13 @@ using QuantizedCoordinate2D = polytope::QuantizedCoordinate<2>;
 using QuantizedPoint2D = polytope::QuantizedPoint<2>;
 using QuantizedCell = polytope::Cell<2, QuantizedCoordinate2D>;
 
+// Clipping does not work with hibit enabled but this was one attempt to fix that
+#ifdef POLYTOPE_ENABLE_HIBIT2D
+using BoostCoordinate2D = double;
+#else
+using BoostCoordinate2D = QuantizedCoordinate2D;
+#endif
+
 template <>
 struct geometry_concept<QuantizedPoint2D> { typedef point_concept type; };
 
@@ -85,11 +93,19 @@ struct point_mutable_traits<QuantizedPoint2D> {
   }
 };
 
-inline QuantizedPoint2D BoostToPolytope(const point_data<QuantizedCoordinate2D>& point, const int index = 0) {
+inline QuantizedPoint2D BoostToPolytope(const point_data<BoostCoordinate2D>& point,
+                                        const int index = 0) {
+#ifdef POLYTOPE_ENABLE_HIBIT2D
+  polytope::Point<2, double> rpoint(point.x(), point.y(), index);
+  return polytope::round<2, QuantizedCoordinate2D>(polytope::Point<2, double>(point.x(),
+                                                                              point.y(),
+                                                                              index));
+#else
   return QuantizedPoint2D(point.x(), point.y(), index);
+#endif
 }
 
-inline std::vector<QuantizedPoint2D> BoostToPolytope(const polygon_data<QuantizedCoordinate2D>& polygon) {
+inline std::vector<QuantizedPoint2D> BoostToPolytope(const polygon_data<BoostCoordinate2D>& polygon) {
   const auto N = polygon.size();
   std::vector<QuantizedPoint2D> points;
   points.reserve(N);
@@ -103,7 +119,7 @@ inline std::vector<QuantizedPoint2D> BoostToPolytope(const polygon_data<Quantize
   return points;
 }
 
-inline std::vector<QuantizedPoint2D> BoostToPolytope(const polygon_with_holes_data<QuantizedCoordinate2D>& polygon) {
+inline std::vector<QuantizedPoint2D> BoostToPolytope(const polygon_with_holes_data<BoostCoordinate2D>& polygon) {
   const auto N = polygon.size();
   std::vector<QuantizedPoint2D> points;
   points.reserve(N);
@@ -117,7 +133,7 @@ inline std::vector<QuantizedPoint2D> BoostToPolytope(const polygon_with_holes_da
   return points;
 }
 
-inline std::vector<QuantizedPoint2D> outerPoints(const polygon_with_holes_data<QuantizedCoordinate2D>& polygon) {
+inline std::vector<QuantizedPoint2D> outerPoints(const polygon_with_holes_data<BoostCoordinate2D>& polygon) {
   std::vector<QuantizedPoint2D> out;
   for(auto it = begin_points(polygon); it != end_points(polygon); ++it) {
     out.push_back(BoostToPolytope(*it));
@@ -125,7 +141,7 @@ inline std::vector<QuantizedPoint2D> outerPoints(const polygon_with_holes_data<Q
   return out;
 }
 
-inline std::vector<std::vector<QuantizedPoint2D>> innerPoints(const polygon_with_holes_data<QuantizedCoordinate2D>& polygon) {
+inline std::vector<std::vector<QuantizedPoint2D>> innerPoints(const polygon_with_holes_data<BoostCoordinate2D>& polygon) {
   std::vector<std::vector<QuantizedPoint2D>> out;
   auto hole_it = begin_holes(polygon);
   auto hole_end = end_holes(polygon);
@@ -139,10 +155,26 @@ inline std::vector<std::vector<QuantizedPoint2D>> innerPoints(const polygon_with
   return out;
 }
 
-inline polygon_with_holes_data<QuantizedCoordinate2D>
+inline point_data<BoostCoordinate2D>
+polytopeToBoost(const QuantizedPoint2D& point) {
+  return point_data<BoostCoordinate2D>(point.x, point.y);
+}
+
+inline std::vector<point_data<BoostCoordinate2D>>
+polytopeToBoostPoints(const QuantizedCell& cell) {
+  std::vector<point_data<BoostCoordinate2D>> points;
+  points.reserve(cell.points().size());
+  for (const auto& point : cell.points()) {
+    points.push_back(polytopeToBoost(point));
+  }
+  return points;
+}
+
+inline polygon_with_holes_data<BoostCoordinate2D>
 polytopeToBoost(const QuantizedCell& cell) {
-  polygon_with_holes_data<QuantizedCoordinate2D> polygon;
-  set_points(polygon, cell.points().begin(), cell.points().end());
+  polygon_with_holes_data<BoostCoordinate2D> polygon;
+  const auto points = polytopeToBoostPoints(cell);
+  set_points(polygon, points.begin(), points.end());
   return polygon;
 }
 
