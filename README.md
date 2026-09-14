@@ -1,11 +1,11 @@
 [![License: BSD](https://img.shields.io/badge/License-BSD%202.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
-[![Build Status](https://travis-ci.org/pbtoast/polytope.svg?branch=master)](https://travis-ci.org/pbtoast/polytope)
 
 # Polytope
 
-Copyright (c) 2013, Lawrence Livermore National Security, LLC.
+Copyright (c) 2026, Lawrence Livermore National Security, LLC.
 Produced at the Lawrence Livermore National Laboratory
 Written by Mike Owen, David Starinshak, and Jeffrey Johnson.
+Updated by Landon Owen.
 LLNL-CODE-647432
 All rights reserved.
 
@@ -14,8 +14,7 @@ It makes use of various 2D and 3D tessellation techniques, but provides a
 single representation for these tessellations, and a simple interface for
 generating them.
 
-Polytope has a simple C interface for use with other languages. It also
-includes bindings for Python. These bindings allow you to easily incorporate
+It includes bindings for Python. These bindings allow you to easily incorporate
 Polytope into your own mesh generation tools.
 
 ## Installation
@@ -24,14 +23,14 @@ Polytope works on most Linux and Mac systems.
 
 ### Software Requirements
 
-+ A C++11 compiler (and a C compiler if you want the C interface).
++ A C++17 compiler
 + MPI for parallelism
 + The Bourne Again SHell (bash), for bootstrapping
-+ CMake 3.1+, for configuring and generating build files
++ CMake 3.21+, for configuring and generating build files
 + GNU Make or Ninja, for performing the actual build
 
 If you want to build Python bindings, you also need the following:
-+ A [Python 2](https://www.python.org/downloads) interpreter
++ A [Python 3](https://www.python.org/downloads) interpreter
 + [pybind11](https://github.com/pybind/pybind11), a Python/C++11
   interoperability layer
 + [PYB11Generator](https://github.com/jmikeowen/PYB11Generator), a code
@@ -41,9 +40,12 @@ If you want to build Python bindings, you also need the following:
 
 ### Building
 
-To build polytope on a UNIX-like system, change to your `polytope` source
-directory and type the following:
-
+Before building Polytope, make sure the Git submodules are properly updated using
+```
+git submodule update --init --recursive
+```
+To build polytope on a UNIX-like system, open `bootstrap` and modify the
+variables as necessary. Then run the script using
 ```
 ./bootstrap build_dir
 ```
@@ -53,8 +55,7 @@ where `build_dir` is the directory in which you want to build.
 Then just follow the onscreen directions: you change to that build directory,
 edit `config.sh` to define your build, run it with `sh config.sh`, and start
 the build using your generator's build process. For the default generator
-(UNIX makefiles), this is just `make`. For Ninja (recommended if you have it),
-it's `ninja`.
+(UNIX makefiles), this is just `make`.
 
 ### Installing
 
@@ -67,20 +68,26 @@ make install [-j #threads]
 
 from your build directory.
 
-### Other Targets
+## Python Interface
 
-These targets all work with Make and Ninja.
-
-+ `test` - Runs all unit tests for the library. Use `ctest -j #threads`
-   instead, though, to run the tests in parallel.
-+ `clean` - Removes all build assets but retains configuration options.
-+ `distclean` - Performs clean and completely removes the build directory.
+The build system generates a python virtual environment in both the build and install.
+The virtual environment is in the directory PolytopePy and can be activated by
+```
+source PolytopePy/bin/activate
+```
+or
+```
+source PolytopePy/bin/activate.csh
+```
+depending on your terminal shell. After that, you can run a test case simply doing
+```
+python3 py_file_to_run.py
+```
 
 ## Other Considerations
 
 Polytope provides interfaces for a number of geometry-related tools:
 
-+ [Voro++](http://math.lbl.gov/voro++) by Chris Rycroft (now at Harvard)
 + [Triangle](http://www.cs.cmu.edu/~quake/triangle.html) by Jonathan Shewchuk
   at Berkeley
 + [Tetgen](http://www.wias-berlin.de/software/index.jsp?id=TetGen&lang=1) by
@@ -88,19 +95,57 @@ Polytope provides interfaces for a number of geometry-related tools:
 + [Boost.Polygon.Voronoi](https://www.boost.org/doc/libs/1_61_0/libs/polygon/doc/voronoi_main.htm),
   part of the Boost C++ Library
 
+To use these tools, adjust the related CMake variables in
+the config.sh that bootstrap creates. Specifically, `POLYTOPE_ENABLE_{TOOLNAME}=ON`
+and `{toolname}_DIR=/path/to/tool/install`.
+
+To use Triangle, set `POLYTOPE_ENABLE_TRIANGLE=ON` and set
+`triangle_SRC_DIR` to point to the **SOURCE** of a local Triangle repo.
+This is different than other TPLs where you must point to an existing TPL
+install.
+
+In addition to the tessellators, Polytope also relies on:
+
++ [BLT](https://www.github.com/LLNL/blt) for improving use of CMake.
+  This library is a git submodule of this repo in `cmake/blt`.
++ [ac_types](https://www.github.com/hlslibs/ac_types) for retaining bit accuracy in quantized space.
+  This library is a git submodule of this repo in `extern/ac_types`.
++ [QHull](https://www.github.com/qhull/qhull) for creating convex hulls
++ [SILO](https://www.github.com/LLNL/silo) for writing file IO.
+
 ### Using Triangle and Tetgen
 
-It's easy to use Triangle and Tetgen to generate tessellations. There's only
-one complication: **you must comply with the licenses for these tools**.
+If using Triangle or Tetgen, please note: **you must comply with the licenses for these tools**.
 Briefly, this means that if you want to use Triangle or Tetgen in a commercial
 application, you must contact the author for permission.
 
 To keep things simple, we don't distribute the source for either of these
-tools. Once you've made arrangements to comply with the license(s), you can
-copy the source for the tool(s) into place:
+tools. Only use these tools after you've made arrangements to comply with the license(s).
 
-+ For Triangle, copy `triangle.h` and `triangle.c` to the `src` directory.
-+ For Tetgen, copy `tetgen.h` and `tetgen.cxx` to the `src` directory.
+### Status
 
-Then (re)configure and build.
+This library currently only works in 2D with either the Boost or Triangle tessellators.
+Currently, the Voronoi is clipped by a bounding box determined by the bounds provided to
+the Quantizer class, plus a padding on the top and bottom relative to the length (default is 4%).
+This bounding box can be extended by an additional percent. For example, to extend the padding to 8% in C++
+```
+Quantizer<Dimension>::instance().extend(0.08);
+```
+and in Python
+```
+polytope.Quantizer2d.instance().extend(0.08)
+```
 
+Future work:
+
++ Update documentation, including moving many things from here.
++ Extend the python interface to allow use of python based tessellators.
++ Implement 3D methods.
++ Extend clipping to work with higher bit accuracy in 2D.
++ Implement methods to reconstruct Voronoi nodes that are clipped at the bounding quantized space.
++ Add Caliper timers for performance measurements.
+
+License
+=======
+
+Polytope is released under a BSD-stype 

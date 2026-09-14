@@ -1,0 +1,96 @@
+import polytope
+import random, builtins
+from time import perf_counter
+from contextlib import contextmanager
+import Boundary2d
+
+# Print statement wrapper for printing only on the root rank
+def rootprint(string):
+    comm = polytope.Communicator.instance()
+    if (comm.getRank() == comm.getRoot()):
+        print(string)
+
+def outputMesh2d(mesh,
+                 filePrefix,
+                 fields=None,
+                 cycle=0,
+                 time=0.,
+                 numFiles=-1):
+    writer = polytope.SiloWriter2d(mesh)
+    writer.generateTestVars()
+    if (fields):
+        for key, vals in fields.item():
+            writer.addField(polytope.FieldCentering.Cell,
+                            key,
+                            vals)
+    writer.write(filePrefix, cycle, time, numFiles)
+
+def generate_random_points(N, seed = -1, boundary2d = None, dim = 2):
+    if (dim == 2):
+        Q = polytope.Quantizer2d.instance()
+    else:
+        Q = polytope.Quantizer3d.instance()
+    xmin = Q.m_xlo
+    xmax = Q.m_xhi
+    if (seed >= 0):
+        random.seed(seed)
+    L = (xmax - xmin)
+    pout = []
+    if (boundary2d):
+        while (len(pout)/dim < N):
+            point = [xmin[d] + random.random()*L[d] for d in range(dim)]
+            if (boundary2d.testInside(point)):
+                pout.extend(point)
+    else:
+        for _ in range(N):
+            pout.extend([xmin[d] + random.random()*L[d] for d in range(dim)])
+    return pout
+
+def generate_normal_random_points(N, seed = -1,
+                                  mu = 0.5, sigma = 1./6.17737,
+                                  boundary2d = None,
+                                  dim = 2):
+    if (dim == 2):
+        Q = polytope.Quantizer2d.instance()
+    else:
+        Q = polytope.Quantizer3d.instance()
+    xmin = Q.m_xlo
+    xmax = Q.m_xhi
+    if (seed >= 0):
+        random.seed(seed)
+    L = (xmax - xmin)
+    pout = []
+    if (boundary2d):
+        while(len(pout)/dim < N):
+            point = [xmin[d] + random.normalvariate(mu, sigma)*L[d] for d in range(dim)]
+            if (boundary2d.testInside(point)):
+                pout.extend(point)
+    else:
+        for _ in range(N):
+            for d in range(dim):
+                rnum = random.normalvariate(mu, sigma)
+                if (rnum >= 0. and rnum <= 1.):
+                    pout.append(xmin[d] + rnum*L[d])
+    return pout
+
+@contextmanager
+def timer(name):
+    """
+    Time a code section. Run as:
+
+    with timer("my_functions"):
+        function_one()
+        function_two()
+    """
+    comm = polytope.Communicator.instance()
+    rank = comm.getRank()
+    root = comm.getRoot()
+    comm.Barrier()
+    tstart = perf_counter()
+
+    try:
+        yield
+    finally:
+        comm.Barrier()
+        elapsed = perf_counter() - tstart
+        rootprint(f"{name}: {elapsed:.6f} seconds")
