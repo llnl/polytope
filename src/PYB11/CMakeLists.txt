@@ -34,7 +34,7 @@ set(POLYTOPE_PYTHON_SRC_FILES
   Quantizer.py
   QuantPLC.py
   Tessellators.py.in
-  SiloUtils.py
+  SiloWriter.py
   Tessellation.py
   Tessellator.py
   TriangleTessellator.py

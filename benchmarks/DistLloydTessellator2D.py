@@ -40,12 +40,10 @@ def test_distributed_2d_tessellators(Ngen):
         mesh = polytope.Tessellation2d()
         with ptu.timer(f"tessellate_{i}_iter"):
             tessellator.tessellate(points, mesh)
-        locfields = ptu.make_test_fields(mesh)
-        polytope.writeSilo(mesh=mesh,
-                           filePrefix="PyDistLloyd",
-                           fields=locfields,
-                           cycle=k,
-                           time=float(k))
+        ptu.outputMesh2d(mesh=mesh,
+                         filePrefix="PyDistLloyd",
+                         cycle=k,
+                         time=float(k))
 
 if __name__ == "__main__":
     # Provide the number of generators per rank

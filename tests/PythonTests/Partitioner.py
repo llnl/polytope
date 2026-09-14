@@ -26,12 +26,10 @@ def test_partitioner(Ngen):
         mesh = polytope.Tessellation2d()
         with ptu.timer("Tessellate"):
             tessellator.tessellate(rank_points, mesh)
-        locfields = ptu.make_test_fields(mesh)
-        polytope.writeSilo(mesh=mesh,
-                           filePrefix="PartitionerTest",
-                           fields=locfields,
-                           cycle = k,
-                           time = k)
+        ptu.outputMesh2d(mesh=mesh,
+                         filePrefix="PartitionerTest",
+                         cycle = k,
+                         time = k)
 
 if __name__ == "__main__":
     # Provide the number of generators per rank

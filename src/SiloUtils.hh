@@ -10,6 +10,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <stdexcept>
+#include <type_traits>
 #include "silo.h"
 #include "Communicator.hh"
 
@@ -23,13 +24,35 @@ enum class FieldCentering {
   Cell = DB_ZONECENT
 };
 
-
 static std::map<std::string, FieldCentering>
 FieldCenteringMap = {{"Node", FieldCentering::Node},
                      {"Edge", FieldCentering::Edge},
                      {"Face", FieldCentering::Face},
                      {"Cell", FieldCentering::Cell}};
 
+//! Silo data types
+enum class FieldDataType {
+  Double = DB_DOUBLE,
+  Int = DB_INT
+};
+
+static std::map<std::string, FieldDataType>
+FieldDataTypeMap = {{"Double", FieldDataType::Double},
+                    {"Int", FieldDataType::Int}};
+
+//! Overlink attributes
+static std::map<std::string, int> OverlinkAttr = {
+    {"ATTR_NODAL",        0},
+    {"ATTR_ZONAL",        1},
+    {"ATTR_FACE",         2},
+    {"ATTR_EDGE",         3},
+    {"ATTR_INTENSIVE",    0},
+    {"ATTR_EXTENSIVE",    1},
+    {"ATTR_FIRST_ORDER",  0},
+    {"ATTR_SECOND_ORDER", 1},
+    {"ATTR_INTEGER",      0},
+    {"ATTR_FLOAT",        1}
+};
 
 // strdup isn't part of the C standard, so we can't rely on its existence.
 // We keep our own handy.
@@ -50,38 +73,19 @@ inline std::string getGlobalMeshName() {
   return "MMESH";
 }
 
-inline
+template<typename FieldType>
 void
-writeFieldsToFile(const std::map<std::string, std::vector<double>>& fields,
-                  DBfile* file,
-                  const int numElements,
-                  const int centering,
-                  DBoptlist* optlist) {
-  for (typename std::map<std::string, std::vector<double>>::const_iterator iter = fields.begin();
-       iter != fields.end();
-       ++iter) {
-    DBPutUcdvar1(file,
-                 (char*)iter->first.c_str(),
-                 (char*)"mesh",
-                 (void*)iter->second.data(),
-                 numElements,
-                 0,
-                 0,
-                 DB_DOUBLE,
-                 centering,
-                 optlist);
+writeFields(const std::map<std::string, std::vector<FieldType>>& fields,
+            const std::string& meshname,
+            DBfile* file,
+            const int numElements,
+            const int centering,
+            DBoptlist* optlist) {
+  int siloDataType = static_cast<int>(FieldDataType::Int);
+  if constexpr (std::is_floating_point_v<FieldType>) {
+    siloDataType = static_cast<int>(FieldDataType::Double);
   }
-}
-
-inline
-void
-writeFieldsToFile(const std::map<std::string, std::vector<double>>& fields,
-                  const std::string& meshname,
-                  DBfile* file,
-                  const int numElements,
-                  const int centering,
-                  DBoptlist* optlist) {
-  for (typename std::map<std::string, std::vector<double>>::const_iterator iter = fields.begin();
+  for (typename std::map<std::string, std::vector<FieldType>>::const_iterator iter = fields.begin();
        iter != fields.end();
        ++iter) {
     DBPutUcdvar1(file,
@@ -91,7 +95,7 @@ writeFieldsToFile(const std::map<std::string, std::vector<double>>& fields,
                  numElements,
                  0,
                  0,
-                 DB_DOUBLE,
+                 siloDataType,
                  centering,
                  optlist);
   }
@@ -111,8 +115,7 @@ putMultivarInFile(const std::map<std::string, std::vector<double>>& fields,
                   DBoptlist* optlist) {
   for (typename std::map<std::string, std::vector<double>>::const_iterator iter = fields.begin();
        iter != fields.end();
-       ++iter, ++fieldIndex)
-  {
+       ++iter, ++fieldIndex) {
     DBPutMultivar(file, iter->first.c_str(), numChunks,
                   &varNames[fieldIndex][0], &varTypes[0], optlist);
   }
@@ -194,9 +197,9 @@ std::vector<std::string> getProcPaths(const std::string& directory,
   return out;
 }
 
-inline
+template<typename FieldType>
 void putCellVars(DBfile* file,
-                 const std::map<std::string, std::vector<double>>& fields,
+                 const std::map<std::string, std::vector<FieldType>>& fields,
                  const std::vector<std::string>& procPaths,
                  const size_t nblocks,
                  const std::vector<int>& varTypes,

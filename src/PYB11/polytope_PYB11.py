@@ -14,6 +14,7 @@ PYB11includes = ['"polytope.hh"',
                  '"Cell.hh"',
                  '"PLC.hh"',
                  '"Tessellation.hh"',
+                 '"SiloWriter.hh"',
                  '"Tessellator.hh"',
                  '"Partitioners/Partitioner.hh"',
                  '"Partitioners/LatticePartitioner.hh"',
@@ -80,4 +81,4 @@ from Tessellator import *
 from Partitioner import *
 # Import any serial tessellators and the distributed tessellator
 from Tessellators import *
-from SiloUtils import *
+from SiloWriter import *

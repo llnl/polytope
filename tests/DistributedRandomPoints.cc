@@ -70,17 +70,19 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
     tessellator.tessellate(allPoints, boundary.mPLCpoints, boundary.mPLC,
                            serialMesh);
     serialArea = computeTessellationArea(serialMesh);
-    std::vector<double> finalRanksD;
+    std::vector<int> finalRanksD;
     for (auto& p : serialMesh.points) {
       auto rankItr = finalRanks.find(p);
       POLY_CHECK2(rankItr != finalRanks.end(),
                   "Could not find final rank for serial generator " << p);
-      finalRanksD.push_back(static_cast<double>(rankItr->second));
+      finalRanksD.push_back(rankItr->second);
     }
+    SiloWriter<2, Tessellation<2, double>> serial_writer(serialMesh);
     // Output the serial mesh with a rank variable showing the ranks for the
     // distributed test
+    serial_writer.addField(FieldCentering::Cell, "ranks", finalRanksD);
     std::string serialoutname = "SerialRandom_" + tessellator.name();
-    outputMesh(serialMesh, serialoutname, finalRanksD, "rank", btype, 0., 1);
+    serial_writer.write(serialoutname, btype, 0., 1);
   }
 
   // Output the parallel mesh

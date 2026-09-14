@@ -40,23 +40,19 @@ def test_distributed_2d_tessellators(Ngen):
         tessellator = polytope.DistributedTessellator2d(serial_tessellator)
         with ptu.timer("Unbounded tessellate"):
             tessellator.tessellate(points, mesh)
-        locfields = ptu.make_test_fields(mesh)
-        polytope.writeSilo(mesh=mesh,
-                           filePrefix=f"PyDist{tess_name}",
-                           fields=locfields,
-                           cycle=0,
-                           time=0.)
+        ptu.outputMesh2d(mesh=mesh, 
+                         filePrefix=f"PyDist{tess_name}",
+                         cycle=0,
+                         time=0.)
 
         ptu.rootprint(f"Testing clipped {tess_name}")
         clipped_mesh = polytope.Tessellation2d()
         with ptu.timer("Clipped tessellation"):
             tessellator.tessellate(points, boundary.PLCpoints, boundary.PLC, clipped_mesh)
-        locfields = ptu.make_test_fields(clipped_mesh)
-        polytope.writeSilo(mesh=clipped_mesh,
-                           filePrefix=f"PyDist{tess_name}",
-                           fields=locfields,
-                           cycle=1,
-                           time=1.)
+        ptu.outputMesh2d(mesh=clipped_mesh,
+                         filePrefix=f"PyDist{tess_name}",
+                         cycle=1,
+                         time=1.)
 
 if __name__ == "__main__":
     # Provide the number of generators per rank

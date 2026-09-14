@@ -10,21 +10,20 @@ def rootprint(string):
     if (comm.getRank() == comm.getRoot()):
         print(string)
 
-def make_test_fields(tessellation):
-    "Create a zone centered field dictionary of the generator locations"
-    comm = polytope.Communicator.instance()
-    nranks = comm.getNRanks()
-    fieldnames = ["x", "y", "z"]
-    centering = polytope.FieldCentering.Cell
-    points = tessellation.pointsAsTuples
-    result = dict()
-    result[centering.name] = dict()
-    for d in range(tessellation.numDims):
-        result[centering.name][fieldnames[d]] = [x[d] for x in points]
-    if (nranks > 1):
-        rank = comm.getRank()
-        result[centering.name]["ranks"] = [rank for _ in points]
-    return result
+def outputMesh2d(mesh,
+                 filePrefix,
+                 fields=None,
+                 cycle=0,
+                 time=0.,
+                 numFiles=-1):
+    writer = polytope.SiloWriter2d(mesh)
+    writer.generateTestVars()
+    if (fields):
+        for key, vals in fields.item():
+            writer.addField(polytope.FieldCentering.Cell,
+                            key,
+                            vals)
+    writer.write(filePrefix, cycle, time, numFiles)
 
 def generate_random_points(N, seed = -1, boundary2d = None, dim = 2):
     if (dim == 2):

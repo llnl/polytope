@@ -92,9 +92,9 @@ int main(int argc, char** argv) {
   cellFields["cell_index"] = index;
   cellFields["gen_x"     ] = genx;
   cellFields["gen_y"     ] = geny;
-  SiloWriter<2, QuantTessellation<2>>::FieldTypeMap fields;
-  fields[FieldCentering::Cell] = cellFields;
-  SiloWriter<2, QuantTessellation<2>>::write(quantMesh, fields, prefix, 1, 0., 1);
+  SiloWriter<2, QuantTessellation<2>> writer(quantMesh);
+  writer.addField<double>(FieldCentering::Cell, cellFields);
+  writer.write(prefix, "", 1, 0., 1);
 #endif
   comm.finalize();
   return 0;

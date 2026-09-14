@@ -91,7 +91,9 @@ void test(int testNum, Tessellator<2, double>& tessellator) {
   if (rank < activeRanks && nranks == 6) {
     Tessellation<2, double> procMesh;
     qmesh.fillTessellation(procMesh);
-    SiloWriter<2, Tessellation<2, double>>::write(procMesh, "ProcMesh" + tessellator.name(), 1, rank);
+    SiloWriter<2, Tessellation<2, double>> writer(procMesh);
+    writer.generateTestVars();
+    writer.write("ProcMesh" + tessellator.name(), "", rank, 0., 1);
     POLY_CHECK2(int(qmesh.points.size()) == refNPoints[rank],
                 "Number of generator points for rank " << rank << "incorrect, "
                 << "expected " << refNPoints[rank] << " actual " << qmesh.points.size());

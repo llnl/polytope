@@ -38,26 +38,21 @@ def test_serial_2d_tessellators(Ngen):
         mesh = polytope.Tessellation2d()
         tessellator.tessellate(points, mesh)
         _assert_mesh_populated(mesh)
-        locfields = ptu.make_test_fields(mesh)
-        polytope.writeSilo(mesh=mesh,
-                           filePrefix=f"PySerial{tess_name}",
-                           fields=locfields,
-                           cycle=0,
-                           time=0.,
-                           numFiles=1)
+        ptu.outputMesh2d(mesh=mesh,
+                         filePrefix=f"PySerial{tess_name}",
+                         cycle=0,
+                         time=0.,
+                         numFiles=1)
 
         print(f"Testing clipped {tess_name}")
         clipped_mesh = polytope.Tessellation2d()
         tessellator.tessellate(points, boundary.PLCpoints, boundary.PLC, clipped_mesh)
         _assert_mesh_populated(clipped_mesh)
-        locfields = ptu.make_test_fields(clipped_mesh)
-        polytope.writeSilo(mesh=clipped_mesh,
-                           filePrefix=f"PySerial{tess_name}",
-                           fields=locfields,
-                           cycle=1,
-                           time=1.,
-                           numFiles=1)
-
+        ptu.outputMesh2d(mesh=clipped_mesh,
+                         filePrefix=f"PySerial{tess_name}",
+                         cycle=1,
+                         time=1.,
+                         numFiles=1)
 
 if __name__ == "__main__":
     N = int(50000)

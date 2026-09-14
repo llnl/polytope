@@ -56,7 +56,7 @@ void test(Tessellator<2, double>& tessellator) {
         serialArea = computeTessellationArea(serialMesh);
         qvpart.assignCellRanks(serialMesh);
         std::string serialoutname = "SerialHole";
-        outputMesh(serialMesh, serialoutname, serialMesh.cellRank, "rank", btype, double(btype), 1);
+        outputMesh(serialMesh, serialoutname, btype, double(btype), 1);
       }
       Communicator::Barrier();
       DistributedTessellator<2> distributed(tessellator);
@@ -73,7 +73,8 @@ void test(Tessellator<2, double>& tessellator) {
       //   qmesh.clipTessellation(qplc, tessellator);
       //   Tessellation<2, double> procMesh;
       //   qmesh.fillTessellation(procMesh);
-      //   SiloWriter<2, Tessellation<2, double>>::write(procMesh, "ProcMesh", 1, rank);
+      //   SiloWriter<2, Tessellation<2, double>> writer(procMesh);
+      //   writer.write("ProcMesh", "", rank, 0., 1);
       // }
       compareArea(boundary, serialArea, "Serial area failure");
       compareArea(boundary, localMesh, "Distributed area failure");

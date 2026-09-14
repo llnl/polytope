@@ -22,9 +22,7 @@ using namespace std;
 //-------------------------------------------------------------------
 template <typename TessType>
 void
-SiloWriter<3, TessType>::write(const TessType& mesh,
-                               const FieldTypeMap& fields,
-                               const string& filePrefix,
+SiloWriter<3, TessType>::write(const string& filePrefix,
                                const string& directory,
                                int cycle,
                                double time,
@@ -40,7 +38,7 @@ SiloWriter<3, TessType>::write(const TessType& mesh,
   int rank = Communicator::getRank();
   int root = Communicator::getRoot();
   auto& comm = Communicator::communicator();
-  int localRankHasPoints = (mesh.points.size() > 0) ? 1 : 0;
+  int localRankHasPoints = (m_mesh.points.size() > 0) ? 1 : 0;
   std::vector<int> ranksWithData = gatherValidRanks(localRankHasPoints);
   if (numFiles == -1) {
     int globalWriteProcs = static_cast<int>(ranksWithData.size());
@@ -89,12 +87,12 @@ SiloWriter<3, TessType>::write(const TessType& mesh,
     coordnames[2] = (char*)"zcoords";
 
     // Node coordinates.
-    int numNodes = mesh.nodes.size();
+    int numNodes = m_mesh.nodes.size();
     vector<double> x(numNodes), y(numNodes), z(numNodes);
     for (int i = 0; i < numNodes; ++i) {
-      x[i] = static_cast<double>(mesh.nodes[i].x);
-      y[i] = static_cast<double>(mesh.nodes[i].y);
-      z[i] = static_cast<double>(mesh.nodes[i].z);
+      x[i] = static_cast<double>(m_mesh.nodes[i].x);
+      y[i] = static_cast<double>(m_mesh.nodes[i].y);
+      z[i] = static_cast<double>(m_mesh.nodes[i].z);
     }
     double* coords[3];
     coords[0] = &(x[0]);
@@ -117,12 +115,12 @@ SiloWriter<3, TessType>::write(const TessType& mesh,
     //                 0, &shapesize[0], &shapecnt[0], 1, 0, 0, 0);
     // }
 
-    const auto numFaces = mesh.faces.size();
+    const auto numFaces = m_mesh.faces.size();
     vector<int> faceNodeCounts, allFaceNodes;
     faceNodeCounts.reserve(numFaces);
     for (auto iface = 0u; iface < numFaces; ++iface) {
-      faceNodeCounts.push_back(mesh.faces[iface].size());
-      for (auto& face : mesh.faces[iface]) {
+      faceNodeCounts.push_back(m_mesh.faces[iface].size());
+      for (auto& face : m_mesh.faces[iface]) {
         allFaceNodes.push_back(static_cast<int>(face));
       }
       //std::copy(mesh.faces[iface].begin(), mesh.faces[iface].end(), std::back_inserter(allFaceNodes));
@@ -130,13 +128,13 @@ SiloWriter<3, TessType>::write(const TessType& mesh,
     POLY_ASSERT(faceNodeCounts.size() == numFaces);
 
     // All zones are polygonal.
-    const auto numCells = mesh.cells.size();
+    const auto numCells = m_mesh.cells.size();
     vector<int> cellFaceCounts, allCellFaces;
     cellFaceCounts.reserve(numCells);
     for (auto i = 0u; i < numCells; ++i) {
-      auto n = mesh.cells[i].size();
+      auto n = m_mesh.cells[i].size();
       cellFaceCounts.push_back(n);
-      std::copy(mesh.cells[i].begin(), mesh.cells[i].end(), std::back_inserter(allCellFaces));
+      std::copy(m_mesh.cells[i].begin(), m_mesh.cells[i].end(), std::back_inserter(allCellFaces));
     }
     vector<char> boundaryFaceFlags(numFaces, 0x0);
     // for (vector<unsigned>::const_iterator itr = mesh.boundaryFaces.begin();
@@ -147,25 +145,20 @@ SiloWriter<3, TessType>::write(const TessType& mesh,
     // }
 
     // The polyhedral zone list is referred to in the options list.
-    DBAddOption(optlist, DBOPT_PHZONELIST, (char*)"mesh_zonelist");
+    DBAddOption(optlist, DBOPT_PHZONELIST, (char*)"zonelist");
 
     // Write out the 3D polyhedral mesh.
     DBPutUcdmesh(file, meshname.c_str(), 3, coordnames, coords,
                  numNodes, numCells,
-                 "mesh_zonelist", NULL, DB_DOUBLE, optlist);
+                 NULL, NULL, DB_DOUBLE, optlist);
     // Write the connectivity information.
-    DBPutPHZonelist(file, (char*)"mesh_zonelist",
+    DBPutPHZonelist(file, (char*)"zonelist",
                     faceNodeCounts.size(), &faceNodeCounts[0],
                     allFaceNodes.size(), &allFaceNodes[0],
                     &boundaryFaceFlags[0],
                     cellFaceCounts.size(), &cellFaceCounts[0],
                     allCellFaces.size(), &allCellFaces[0],
                     0, 0, numCells-1, optlist);
-    // DBPutPHZonelist(file, "mesh_zonelist", faceNodeCounts.size(),
-    //                 &faceNodeCounts[0]
-    //                 2, &nodeList[0], nodeList.size(), 0, 0, 0,
-    //                 &shapetype[0], &shapesize[0], &shapecount[0],
-    //                 numCells, optlist);
 
     // Write out the cell-face connectivity data.
     vector<int> conn(numCells);
@@ -174,11 +167,11 @@ SiloWriter<3, TessType>::write(const TessType& mesh,
     elemnames[0] = strDup("ncellfaces");
     elemlengths[0] = numCells;
     for (auto c = 0u; c < numCells; ++c) {
-      conn[c] = mesh.cells[c].size();
+      conn[c] = m_mesh.cells[c].size();
     }
     for (auto c = 0u; c < numCells; ++c) {
-      for (size_t f = 0; f < mesh.cells[c].size(); ++f) {
-        conn.push_back(mesh.cells[c][f]);
+      for (size_t f = 0; f < m_mesh.cells[c].size(); ++f) {
+        conn.push_back(m_mesh.cells[c][f]);
       }
     }
     // Size of conn that is the cells
@@ -210,25 +203,14 @@ SiloWriter<3, TessType>::write(const TessType& mesh,
     // free(elemnames[1]);
     // free(elemnames[2]);
 
-    // Write cell-centered fields to CELLS directory
-    for (const auto& [centering, fieldmap] : fields) {
-      const int siloType = static_cast<int>(centering);
-      if (centering == FieldCentering::Node) {
-        writeFieldsToFile(fieldmap, meshname, file, numNodes, siloType, optlist);
-      } else if (centering == FieldCentering::Edge ||
-                 centering == FieldCentering::Face) {
-        writeFieldsToFile(fieldmap, meshname, file, numFaces, siloType, optlist);
-      } else {
-        writeFieldsToFile(fieldmap, meshname, file, numCells, siloType, optlist);
-      }
-    }
+    writeFieldsToFile(meshname, file, optlist);
 
-    int numPoints = mesh.points.size();
+    int numPoints = m_mesh.points.size();
     vector<double> xp(numPoints), yp(numPoints), zp(numPoints);
     for (int i = 0; i < numPoints; ++i) {
-      xp[i] = static_cast<double>(mesh.points[i].x);
-      yp[i] = static_cast<double>(mesh.points[i].y);
-      zp[i] = static_cast<double>(mesh.points[i].z);
+      xp[i] = static_cast<double>(m_mesh.points[i].x);
+      yp[i] = static_cast<double>(m_mesh.points[i].y);
+      zp[i] = static_cast<double>(m_mesh.points[i].z);
     }
     double* pcoords[3];
     pcoords[0] = &(xp[0]);
@@ -280,7 +262,10 @@ SiloWriter<3, TessType>::write(const TessType& mesh,
     DBPutMultimesh(file, global_mesh_name.c_str(), nblocks, cellMeshNames.data(), cellMeshTypes.data(), masteroptlist);
     DBPutMultimesh(file, "PPOINTS", nblocks, pointMeshNames.data(), pointMeshTypes.data(), masteroptlist);
 
-    for (const auto& [centering, fieldmap] : fields) {
+    for (const auto& [centering, fieldmap] : m_doubleFields) {
+      putCellVars(file, fieldmap, procPaths, nblocks, varTypes, masteroptlist);
+    }
+    for (const auto& [centering, fieldmap] : m_intFields) {
       putCellVars(file, fieldmap, procPaths, nblocks, varTypes, masteroptlist);
     }
 #ifdef POLYTOPE_ENABLE_DEBUG
