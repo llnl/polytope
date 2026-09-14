@@ -116,7 +116,7 @@ partitionAndTessellate(const std::vector<Point<Dimension, RealType>>& points,
   }
 
   m_keyEncode = Q.keyEncoding();
-  const auto localPoints = partitioner.computeLocalPartition(points);
+  const auto localPoints = partitioner.partition(points);
   QuantizedTessellation quantmesh(localPoints);
   this->tessellateQuantized(quantmesh);
   quantmesh.filterToLocalGenerators();
@@ -152,7 +152,7 @@ partitionAndTessellate(const std::vector<Point<Dimension, RealType>>& points,
 
   m_keyEncode = Q.keyEncoding();
   m_QPLC.init(PLCpoints, geometry);
-  const auto localPoints = partitioner.computeLocalPartition(points);
+  const auto localPoints = partitioner.partition(points);
   QuantizedTessellation quantmesh(localPoints);
   quantmesh.cullExternalPoints(m_QPLC);
   this->tessellateQuantized(quantmesh);

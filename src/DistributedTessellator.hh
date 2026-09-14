@@ -72,8 +72,9 @@ public:
                           const PLC<Dimension>& geometry,
                           TessellationType& mesh) override;
 
-  //! Partition a replicated generator set, then tessellate the local result.
-  //! Every rank must pass the same points in the same order.
+  //! Partition generators collectively, then tessellate the local result.
+  //! ReplicatedPartitioner implementations require the same points in the
+  //! same order on every rank; distributed implementations accept local input.
   void partitionAndTessellate(const std::vector<Point<Dimension, RealType>>& points,
                               const Partitioner<Dimension>& partitioner,
                               TessellationType& mesh);
@@ -87,9 +88,8 @@ public:
                                  mesh);
   }
 
-  //! Partition a replicated generator set inside a bounding PLC, then
-  //! tessellate the local result. Every rank must pass the same points in the
-  //! same order.
+  //! Partition generators collectively inside a bounding PLC, then tessellate
+  //! the local result.  Input requirements are defined by the partitioner.
   void partitionAndTessellate(const std::vector<Point<Dimension, RealType>>& points,
                               const std::vector<Point<Dimension, RealType>>& PLCpoints,
                               const PLC<Dimension>& geometry,

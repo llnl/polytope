@@ -15,13 +15,13 @@
 namespace polytope {
 
 template<int Dimension>
-class LatticePartitioner: public Partitioner<Dimension> {
+class LatticePartitioner: public ReplicatedPartitioner<Dimension> {
 public:
   using PointType = QuantizedPoint<Dimension>;
-  using OwnerType = typename Partitioner<Dimension>::OwnerType;
-  using RealPoint = typename Partitioner<Dimension>::RealPoint;
-  using QuantPoint = typename Partitioner<Dimension>::QuantPoint;
-  using Partitioner<Dimension>::computeOwners;
+  using OwnerType = typename ReplicatedPartitioner<Dimension>::OwnerType;
+  using RealPoint = typename ReplicatedPartitioner<Dimension>::RealPoint;
+  using QuantPoint = typename ReplicatedPartitioner<Dimension>::QuantPoint;
+  using ReplicatedPartitioner<Dimension>::computeOwners;
   using RanksPerAxis = std::array<unsigned, Dimension>;
 
   virtual std::string name() const override {
@@ -33,7 +33,7 @@ public:
   }
 
   explicit LatticePartitioner(const unsigned numPartitions = Communicator::getNRanks()):
-    Partitioner<Dimension>(numPartitions) {
+    ReplicatedPartitioner<Dimension>(numPartitions) {
     // Try to distribute evenly across each dimension
     if constexpr (Dimension == 2) {
       optimalLattice2D();
@@ -45,7 +45,7 @@ public:
 
   explicit LatticePartitioner(const RanksPerAxis& ranksPerAxis,
                               const unsigned numPartitions = Communicator::getNRanks()):
-    Partitioner<Dimension>(numPartitions),
+    ReplicatedPartitioner<Dimension>(numPartitions),
     m_ranksPerAxis(ranksPerAxis) {
     init();
   }
@@ -86,7 +86,7 @@ public:
   }
 
   RanksPerAxis m_ranksPerAxis;
-  using Partitioner<Dimension>::m_numPartitions;
+  using ReplicatedPartitioner<Dimension>::m_numPartitions;
 private:
   std::size_t owner(const PointType& point,
                     const PointType& lower,

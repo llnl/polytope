@@ -1,7 +1,7 @@
 //----------------------------------------------------------------------------//
 // Partitioner
 //
-// Deterministic MPI-domain partitioners for replicated generator point sets.
+// Common interface for MPI-domain partitioners.
 //----------------------------------------------------------------------------//
 #ifndef __Polytope_Partitioner__
 #define __Polytope_Partitioner__
@@ -33,6 +33,33 @@ public:
   using RealPoint = Point<Dimension, double>;
   using QuantPoint = QuantizedPoint<Dimension>;
 
+  virtual ~Partitioner() = default;
+
+  virtual std::string name() const = 0;
+
+  //! Collectively produce this rank's local generators.  Implementations may
+  //! accept replicated input or arbitrary rank-local input; see their class
+  //! documentation for the corresponding input contract.
+  virtual std::vector<RealPoint>
+  partition(const std::vector<RealPoint>& localPoints) const = 0;
+
+  //! Number of logical output partitions.
+  virtual unsigned getNumPartitions() const = 0;
+};
+
+//----------------------------------------------------------------------------//
+// ReplicatedPartitioner
+//
+// Base for partitioners that calculate owners from a generator list replicated
+// on every rank.  It retains the owner-query API used by serial callers.
+//----------------------------------------------------------------------------//
+template<int Dimension>
+class ReplicatedPartitioner: public Partitioner<Dimension> {
+public:
+  using OwnerType = typename Partitioner<Dimension>::OwnerType;
+  using RealPoint = typename Partitioner<Dimension>::RealPoint;
+  using QuantPoint = typename Partitioner<Dimension>::QuantPoint;
+
   //! A partitioning together with the owner of each input generator.
   template<typename CoordType>
   struct PartitionResult {
@@ -42,21 +69,23 @@ public:
 
   //! The number of logical partitions.  These are MPI ranks only when used
   //! by DistributedTessellator.
-  Partitioner(const unsigned numPartitions = Communicator::getNRanks()) :
+  ReplicatedPartitioner(const unsigned numPartitions = Communicator::getNRanks()) :
     m_numPartitions(numPartitions) {
     POLY_VERIFY(m_numPartitions > 0);
   }
-
-  virtual ~Partitioner() = default;
-
-  virtual std::string name() const = 0;
 
   void setNumPartitions(const unsigned numPartitions) {
     m_numPartitions = numPartitions;
     POLY_VERIFY(m_numPartitions > 0);
   }
 
-  unsigned getNumPartitions() const { return m_numPartitions; }
+  unsigned getNumPartitions() const override { return m_numPartitions; }
+
+  //! Return this rank's subset of an identically replicated generator list.
+  std::vector<RealPoint>
+  partition(const std::vector<RealPoint>& globalPoints) const override {
+    return computeLocalPartition(globalPoints);
+  }
 
   //! Determine a logical owner for every real-valued input generator.  The
   //! returned vector is in the same order as globalPoints.

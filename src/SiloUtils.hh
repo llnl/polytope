@@ -139,7 +139,7 @@ std::string getMasterDirName(const std::string& directory,
 inline
 std::string getFilename(const std::string& directory,
                         const int rank) {
-  return directory + "/domain_" + std::to_string(rank) + ".silo";
+  return directory + "/domain" + std::to_string(rank) + ".silo";
 }
 
 inline

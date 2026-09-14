@@ -13,17 +13,17 @@
 namespace polytope {
 
 template<int Dimension>
-class QuasiVoronoiPartitioner: public Partitioner<Dimension> {
+class QuasiVoronoiPartitioner: public ReplicatedPartitioner<Dimension> {
 public:
-  using OwnerType = typename Partitioner<Dimension>::OwnerType;
-  using RealPoint = typename Partitioner<Dimension>::RealPoint;
-  using QuantPoint = typename Partitioner<Dimension>::QuantPoint;
-  using Partitioner<Dimension>::computeOwners;
+  using OwnerType = typename ReplicatedPartitioner<Dimension>::OwnerType;
+  using RealPoint = typename ReplicatedPartitioner<Dimension>::RealPoint;
+  using QuantPoint = typename ReplicatedPartitioner<Dimension>::QuantPoint;
+  using ReplicatedPartitioner<Dimension>::computeOwners;
 
   explicit QuasiVoronoiPartitioner(const unsigned seed,
                                    const unsigned numPartitions = Communicator::getNRanks(),
                                    const unsigned Niter = 100):
-    Partitioner<Dimension>(numPartitions),
+    ReplicatedPartitioner<Dimension>(numPartitions),
     m_seed(seed),
     m_Niter(Niter) { }
 
@@ -43,7 +43,7 @@ public:
   unsigned getNumIter() { return m_Niter; }
 
   unsigned m_seed;
-  using Partitioner<Dimension>::m_numPartitions;
+  using ReplicatedPartitioner<Dimension>::m_numPartitions;
   unsigned m_Niter; // Number of Lloyd's iterations to run
 
   template<typename CoordType>

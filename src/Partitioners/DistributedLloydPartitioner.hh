@@ -21,14 +21,18 @@
 namespace polytope {
 
 template<int Dimension>
-class DistributedLloydPartitioner {
+class DistributedLloydPartitioner: public Partitioner<Dimension> {
 public:
-  using RealPoint = Point<Dimension, double>;
+  using RealPoint = typename Partitioner<Dimension>::RealPoint;
 
   explicit DistributedLloydPartitioner(const unsigned Niter = 100):
     m_Niter(Niter) { }
 
-  std::string name() const { return "DistributedLloydPartitioner"; }
+  std::string name() const override { return "DistributedLloydPartitioner"; }
+
+  unsigned getNumPartitions() const override {
+    return static_cast<unsigned>(Communicator::getNRanks());
+  }
 
   void setNumIter(const unsigned Niter) { m_Niter = Niter; }
   unsigned getNumIter() const { return m_Niter; }
@@ -36,7 +40,7 @@ public:
   //! Collectively redistribute arbitrary rank-local input.  Point coordinates
   //! and indices are preserved exactly during every exchange.
   std::vector<RealPoint>
-  partition(const std::vector<RealPoint>& localPoints) const {
+  partition(const std::vector<RealPoint>& localPoints) const override {
     auto& Q = Quantizer<Dimension>::instance();
     if (!Q.m_init && !localPoints.empty()) Q.init(localPoints);
 #ifdef POLYTOPE_ENABLE_MPI
