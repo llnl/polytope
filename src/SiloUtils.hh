@@ -123,7 +123,7 @@ putMultivarInFile(const std::map<std::string, std::vector<double>>& fields,
 
 //-------------------------------------------------------------------
 inline
-std::string getMasterDirName(const std::string& directory,
+std::string getMasterDirname(const std::string& directory,
                              const std::string& prefix,
                              const int cycle) {
   std::string outdir = directory;

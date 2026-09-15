@@ -57,7 +57,8 @@ if (POLYTOPE_ENABLE_SILO)
   list(APPEND polytope_headers
     SiloReader.hh
     SiloUtils.hh
-    SiloWriter.hh)
+    SiloWriter.hh
+    SiloWriterInline.hh)
   list(APPEND polytope_sources
     SiloWriter2D.cc
     SiloWriter3D.cc

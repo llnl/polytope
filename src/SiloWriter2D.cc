@@ -78,7 +78,7 @@ SiloWriter<2, TessType>::write(const string& filePrefix,
   // Open a file in Silo/HDF5 format for writing.
 #ifdef POLYTOPE_ENABLE_MPI
   bool doParallel = false;
-  std::string masterDirName = "";
+  std::string masterDirname = "";
   std::vector<int> ranksWithData;
   if (nranks == 1) {
     numFiles = 1;
@@ -94,11 +94,11 @@ SiloWriter<2, TessType>::write(const string& filePrefix,
     }
     POLY_ASSERT(numFiles <= nranks);
 
-    masterDirName = getMasterDirName(directory, prefix, cycle);
+    masterDirname = getMasterDirname(directory, prefix, cycle);
     if (rank == root) {
-      DIR* masterDir = opendir(masterDirName.c_str());
+      DIR* masterDir = opendir(masterDirname.c_str());
       if (masterDir == 0) {
-        mkdir(masterDirName.c_str(), S_IRWXU | S_IRWXG);
+        mkdir(masterDirname.c_str(), S_IRWXU | S_IRWXG);
       } else {
         closedir(masterDir);
       }
@@ -106,7 +106,7 @@ SiloWriter<2, TessType>::write(const string& filePrefix,
     Communicator::Barrier();
     hasPoints = bool(localRankHasPoints);
 
-    filename = getFilename(masterDirName, rank);
+    filename = getFilename(masterDirname, rank);
     meshname = getLocalMeshName();
   }
 #endif
@@ -202,7 +202,6 @@ SiloWriter<2, TessType>::write(const string& filePrefix,
 #ifdef POLYTOPE_ENABLE_DEBUG
     // Create NODES directory and write the nodes as points
     // Node coordinates
-    // Write point mesh of nodes
     DBPutPointmesh(file, (char*)"nodes", 2, coords, numNodes, DB_DOUBLE, optlist);
 #endif
 
@@ -212,62 +211,11 @@ SiloWriter<2, TessType>::write(const string& filePrefix,
   }
 
 #ifdef POLYTOPE_ENABLE_MPI
-
   // Finally, write the uber-master file.
   if (rank == root && doParallel) {
     std::string masterFilename = getMasterFilename(prefix, cycle);
-    int driver = DB_HDF5;
-    DBfile* file = DBCreate(masterFilename.c_str(), DB_CLOBBER, DB_LOCAL, "Master file", driver);
-
-    // Build mesh names
-    std::vector<std::string> procPaths = getProcPaths(masterDirName, ranksWithData);
-    int nblocks = static_cast<int>(ranksWithData.size());
-    std::vector<char*> cellMeshNames;
-    std::vector<char*> pointMeshNames;
-    std::vector<int> varTypes(nblocks, DB_UCDVAR);
-    std::vector<int> cellMeshTypes(nblocks, DB_UCDMESH);
-    std::vector<int> pointMeshTypes(nblocks, DB_POINTMESH);
-    for (const auto& p : procPaths) {
-      cellMeshNames.push_back(strDup((p + meshname).c_str()));
-      pointMeshNames.push_back(strDup((p + "points").c_str()));
-    }
-    DBoptlist* masteroptlist = DBMakeOptlist(10);
-    if (cycle >= 0)
-      DBAddOption(masteroptlist, DBOPT_CYCLE, &cycle);
-    if (time >= 0.)
-      DBAddOption(masteroptlist, DBOPT_DTIME, &time);
-    std::string global_mesh_name = getGlobalMeshName();
-    DBAddOption(masteroptlist, DBOPT_MMESH_NAME, global_mesh_name.data());
-    DBAddOption(masteroptlist, DBOPT_COORDSYS, &coord_sys);
-
-    DBPutMultimesh(file, global_mesh_name.c_str(), nblocks, cellMeshNames.data(), cellMeshTypes.data(), masteroptlist);
-    DBPutMultimesh(file, "PPOINTS", nblocks, pointMeshNames.data(), pointMeshTypes.data(), masteroptlist);
-
-    for (const auto& [centering, fieldmap] : m_doubleFields) {
-      putCellVars(file, fieldmap, procPaths, nblocks, varTypes, masteroptlist);
-    }
-    for (const auto& [centering, fieldmap] : m_intFields) {
-      putCellVars(file, fieldmap, procPaths, nblocks, varTypes, masteroptlist);
-    }
-#ifdef POLYTOPE_ENABLE_DEBUG
-    std::vector<char*> nodeMeshNames;
-    for (const auto& p : procPaths) {
-      nodeMeshNames.push_back(strDup((p + "nodes").c_str()));
-    }
-    DBPutMultimesh(file, "NNODES", nblocks, nodeMeshNames.data(), pointMeshTypes.data(), masteroptlist);
-    for (auto f = 0u; f < nodeMeshNames.size(); ++f) {
-      free(nodeMeshNames[f]);
-    }
-#endif
-
-    DBClose(file);
-
-    // Clean up
-    DBFreeOptlist(masteroptlist);
-    for (int i = 0; i < nblocks; ++i) {
-      free(cellMeshNames[i]);
-      free(pointMeshNames[i]);
-    }
+    writeMasterFile(masterFilename, masterDirname, ranksWithData,
+                    time, cycle);
   }
   if (doParallel) {
     Communicator::Barrier();

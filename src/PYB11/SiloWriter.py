@@ -62,6 +62,9 @@ class SiloWriter:
     def generateTestVars(self):
         return "void"
 
+    ovlType = PYB11property(getter="getOvlType", setter="setOvlType",
+                            doc="Whether to write an Overlink file type")
+
 SiloWriter2d = PYB11TemplateClass(
     SiloWriter,
     template_parameters=("2", "Tessellation<2, double>"))
