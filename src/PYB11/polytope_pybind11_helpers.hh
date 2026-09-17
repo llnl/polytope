@@ -240,21 +240,28 @@ copyPyToVector(const py::handle& values,
   return result;
 }
 
+template<typename ValueType>
+std::vector<std::vector<ValueType>>
+copyNestedPyToVector(const py::object& values,
+                     const std::string& name) {
+  if (not isPythonSequence(values)) {
+    throw py::type_error(name + " must be a nested sequence");
+  }
+
+  std::vector<std::vector<ValueType>> result;
+  const auto seq = values.cast<py::sequence>();
+  result.reserve(seq.size());
+  for (const auto values: seq) {
+    result.push_back(copyPyToVector<ValueType>(values, name));
+  }
+  return result;
+}
+
 inline
 std::vector<std::vector<unsigned>>
 copyFacetList(const py::object& facets,
               const std::string& name) {
-  if (not isPythonSequence(facets)) {
-    throw py::type_error(name + " must be a nested sequence");
-  }
-
-  std::vector<std::vector<unsigned>> result;
-  const auto seq = facets.cast<py::sequence>();
-  result.reserve(seq.size());
-  for (const auto facet: seq) {
-    result.push_back(copyPyToVector<unsigned>(facet, name));
-  }
-  return result;
+  return copyNestedPyToVector<unsigned>(facets, name);
 }
 
 inline

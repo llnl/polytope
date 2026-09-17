@@ -82,7 +82,7 @@ public:
     if (mClipping) {
       mArea = boost::geometry::area(mBGboundary);
     } else {
-      mArea = Q.m_lx_o.x*Q.m_lx_o.y;
+      mArea = Q.area();
     }
   }
 

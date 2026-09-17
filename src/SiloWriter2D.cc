@@ -185,8 +185,8 @@ SiloWriter<2, TessType>::write(const string& filePrefix,
     free(elemnames[0]);
     free(elemnames[1]);
 
-    // FIXME: We really should try to use the number of edges for edge fields.
     writeFieldsToFile(meshname, file, optlist);
+    writeMaterialsToFile(meshname, file, optlist);
 
     int numPoints = m_mesh.points.size();
     vector<double> xp(numPoints), yp(numPoints);
@@ -199,6 +199,7 @@ SiloWriter<2, TessType>::write(const string& filePrefix,
     pcoords[1] = &(yp[0]);
     // Write point mesh
     DBPutPointmesh(file, (char*)"points", 2, pcoords, numPoints, DB_DOUBLE, optlist);
+
 #ifdef POLYTOPE_ENABLE_DEBUG
     // Create NODES directory and write the nodes as points
     // Node coordinates

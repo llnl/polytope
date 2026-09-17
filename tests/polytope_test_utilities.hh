@@ -151,7 +151,7 @@ void compareArea(Boundary2D& boundary,
 #endif
   const double relErr = std::abs(boundary.mArea-area)/boundary.mArea;
   auto& Q = Quantizer<2>::instance();
-  const int maxAxis = Q.m_lx_o.maxAxis();
+  const int maxAxis = Q.domLength().maxAxis();
   const double tol = 2.*Q.degeneracy()[maxAxis];
   POLY_CHECK2(relErr < tol, "Error in area: error = " << relErr << " tolerance "
               << tol << " " << test_str);

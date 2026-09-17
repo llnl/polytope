@@ -30,8 +30,8 @@ def generate_random_points(N, seed = -1, boundary2d = None, dim = 2):
         Q = polytope.Quantizer2d.instance()
     else:
         Q = polytope.Quantizer3d.instance()
-    xmin = Q.m_xlo
-    xmax = Q.m_xhi
+    xmin = Q.domLoOrig
+    xmax = Q.domHiOrig
     if (seed >= 0):
         random.seed(seed)
     L = (xmax - xmin)
@@ -54,8 +54,8 @@ def generate_normal_random_points(N, seed = -1,
         Q = polytope.Quantizer2d.instance()
     else:
         Q = polytope.Quantizer3d.instance()
-    xmin = Q.m_xlo
-    xmax = Q.m_xhi
+    xmin = Q.domLoOrig
+    xmax = Q.domHiOrig
     if (seed >= 0):
         random.seed(seed)
     L = (xmax - xmin)

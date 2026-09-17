@@ -59,6 +59,7 @@ public:
     addField<double>(FieldCentering::Cell, name, vals);
   }
 
+  // Write routines
   virtual void write(const std::string& filePrefix,
                      const std::string& directory,
                      int cycle,
@@ -86,6 +87,10 @@ public:
     write(filePrefix, "", numFiles);
   }
 
+  // Routines for material data
+  void addMaterials(const std::vector<std::string>& matNames,
+                    const std::vector<std::vector<double>>& matVF);
+
   // Generate variables used in testing
   void generateTestVars();
 
@@ -93,8 +98,33 @@ public:
   bool m_overlinkType = false;
   void setOvlType(const bool inBool) { m_overlinkType = inBool; }
   bool getOvlType() { return m_overlinkType; }
+
+  // Set Overlink remapping attributes for a nodal or cell-centered field.
+  // Use the ATTR_* values in OverlinkAttr for scaling and linking; metric is
+  // 0 (default), 1 (Cartesian), or 2 (cylindrical).
+  void setOverlinkAttributes(const std::string& fieldName,
+                             int scaling,
+                             int linking,
+                             int metric = 0);
+
+  // Material member data
+  const double m_matTolerance = 1.E-12;
+  std::vector<std::string> m_matNames;
+  std::vector<int> m_matlist, m_mix_next, m_mix_mat, m_mix_zone;
+  std::vector<double> m_mix_vf;
+
+  struct OverlinkFieldAttributes {
+    int scaling;
+    int linking;
+    int metric;
+  };
+  std::map<std::string, OverlinkFieldAttributes> m_overlinkFieldAttributes;
+
+  // Field member data
   FieldTypeMap<double> m_doubleFields;
   FieldTypeMap<int> m_intFields;
+
+  // Tessellation member data
   const TessType& m_mesh;
 
 protected:
@@ -114,11 +144,20 @@ protected:
                   DBfile* file,
                   DBoptlist* optlist);
 
+  // Write master file
   void writeMasterFile(const std::string& masterFilename,
                        const std::string& masterDirname,
                        const std::vector<int>& ranksWithData,
                        double& time,
                        int cycle);
+
+  // Write material data
+  void writeMaterialsToFile(const std::string& meshname,
+                            DBfile* file,
+                            DBoptlist* optlist);
+
+  // Write Overlink's VAR_ATTRIBUTES compound array in its master file.
+  void writeOverlinkAttributes(DBfile* file, DBoptlist* optlist);
 };
 
 //! Instance writer for two-dimensional tessellations.
@@ -127,6 +166,7 @@ class SiloWriter<2, TessType>: public SiloWriterBase<2, TessType> {
   using Base = SiloWriterBase<2, TessType>;
 protected:
   using Base::writeFieldsToFile;
+  using Base::writeMaterialsToFile;
   using Base::writeMasterFile;
 public:
   using Base::Base;
@@ -148,6 +188,7 @@ class SiloWriter<3, TessType>: public SiloWriterBase<3, TessType> {
   using Base = SiloWriterBase<3, TessType>;
 protected:
   using Base::writeFieldsToFile;
+  using Base::writeMaterialsToFile;
   using Base::writeMasterFile;
 public:
   using Base::Base;

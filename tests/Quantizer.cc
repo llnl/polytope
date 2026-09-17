@@ -62,7 +62,7 @@ void test2DQuantizer() {
     // Check that recovery is reasonably close (within quantization error)
     RealType dx = abs(recovered.x - p.x);
     RealType dy = abs(recovered.y - p.y);
-    RealType maxError = quantizer.m_dx_o.x * 2.0; // Allow 2x spacing for rounding
+    RealType maxError = quantizer.dx().x * 2.0; // Allow 2x spacing for rounding
 
     POLY_CHECK2(dx < maxError && dy < maxError,
                 "Round-trip error too large for point (" << p.x << ", " << p.y << "): "
@@ -92,7 +92,7 @@ void test2DQuantizer() {
   RealPoint unhashed2 = quantizer.decodeAndDequantize(hash1);
   RealType dx = abs(unhashed2.x - testPt.x);
   RealType dy = abs(unhashed2.y - testPt.y);
-  RealType maxError = quantizer.m_dx_o.x * 2.0;
+  RealType maxError = quantizer.dx().x * 2.0;
   POLY_CHECK2(dx < maxError && dy < maxError,
               "decodeAndDequantize should recover original (within tolerance)");
 
@@ -140,7 +140,7 @@ void test3DQuantizer() {
     RealType dx = abs(recovered.x - p.x);
     RealType dy = abs(recovered.y - p.y);
     RealType dz = abs(recovered.z - p.z);
-    RealType maxError = quantizer.m_dx_o.x * 2.0;
+    RealType maxError = quantizer.dx().x * 2.0;
 
     POLY_CHECK2(dx < maxError && dy < maxError && dz < maxError,
                 "Round-trip error too large for point (" << p.x << ", " << p.y << ", " << p.z << "): "
@@ -205,7 +205,7 @@ void testBoundaryAccuracy() {
 
     RealType dx = abs(recovered.x - p.x);
     RealType dy = abs(recovered.y - p.y);
-    RealType maxError = quantizer.m_dx_o.x * 2.0;
+    RealType maxError = quantizer.dx().x * 2.0;
 
     POLY_CHECK2(dx < maxError && dy < maxError,
                 "Boundary point (" << p.x << ", " << p.y << ") has excessive error: "
@@ -277,7 +277,7 @@ void testGridAlignment() {
   auto& quantizer = Quantizer2D::instance();
   quantizer.init(xlo, xhi);
 
-  cout << "  Grid spacing: (" << quantizer.m_dx_o.x << ", " << quantizer.m_dx_o.y << ")" << endl;
+  cout << "  Grid spacing: (" << quantizer.dx().x << ", " << quantizer.dx().y << ")" << endl;
 
   // Test that points on a regular grid quantize to integer multiples
   const unsigned gridSize = 10;
@@ -295,7 +295,7 @@ void testGridAlignment() {
       // Grid points should recover accurately
       RealType dx = abs(recovered.x - x);
       RealType dy = abs(recovered.y - y);
-      RealType maxError = quantizer.m_dx_o.x * 2.0;
+      RealType maxError = quantizer.dx().x * 2.0;
 
       POLY_CHECK2(dx < maxError && dy < maxError,
                   "Grid point (" << x << ", " << y << ") has excessive error");
@@ -372,7 +372,7 @@ void stressTest() {
 
     RealType dx = abs(recovered.x - x);
     RealType dy = abs(recovered.y - y);
-    RealType maxError = quantizer.m_dx_o.x * 2.0;
+    RealType maxError = quantizer.dx().x * 2.0;
 
     if (dx >= maxError || dy >= maxError) {
       errorCount++;

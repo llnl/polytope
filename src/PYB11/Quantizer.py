@@ -17,11 +17,6 @@ class Quantizer:
     def instance(self):
         return "QuantizerType&"
 
-    def extend(self,
-               extendPad="const RealType"):
-        "Modify the padding of the Quantizer by a certain percent of the domain length"
-        return "void"
-
     @PYB11pycppname("init")
     def initBounds(self,
                    xlo="const RealPoint&",
@@ -103,17 +98,20 @@ class Quantizer:
                   point="const PointType&"):
         return "bool"
 
-    m_lx_o = PYB11readwrite(returnpolicy="reference_internal")
-    m_xlo_o = PYB11readwrite(returnpolicy="reference_internal")
-    m_dx_o = PYB11readwrite(returnpolicy="reference_internal")
-    m_xlo = PYB11readwrite(returnpolicy="reference_internal")
-    m_xhi = PYB11readwrite(returnpolicy="reference_internal")
-    m_pad = PYB11readwrite()
-    maxBound = PYB11readwrite(returnpolicy="reference_internal")
-    minBound = PYB11readwrite(returnpolicy="reference_internal")
-    rmaxBound = PYB11readwrite(returnpolicy="reference_internal")
-    rminBound = PYB11readwrite(returnpolicy="reference_internal")
-    m_init = PYB11readwrite()
+    area = PYB11property(getter="area", doc="Padded physical area (2D) of quantized space")
+    volume = PYB11property(getter="volume", doc="Padded physical volume (3D) of quantized space")
+    padding = PYB11property(getter="getPadding", setter="setPadding",
+                            doc="Padding for quantized space")
+
+    domLength = PYB11property(getter="domLength", doc="Padded domain length")
+    domLo = PYB11property(getter="domLo", doc="Padded lower bound")
+    domHi = PYB11property(getter="domHi", doc="Padded upper bound")
+    dx = PYB11property(getter="dx", doc="Physical grid spacing of padded quantized")
+    domLoOrig = PYB11property(getter="domLoOrig", doc="Original lower bound without padding")
+    domHiOrig = PYB11property(getter="domHiOrig", doc="Original upper bound without padding")
+    maxBound = PYB11readonly()
+    minBound = PYB11readonly()
+    m_init = PYB11readonly(doc="Whether quantizer has been initialized")
 
 Quantizer2d = PYB11TemplateClass(Quantizer, template_parameters="2")
 Quantizer3d = PYB11TemplateClass(Quantizer, template_parameters="3")

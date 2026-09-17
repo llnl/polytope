@@ -65,8 +65,8 @@ public:
     // std::mt19937 gen(seed);
     // std::uniform_real_distribution<double> distrib(0., 1.);
     auto& Q = Quantizer<Dimension>::instance();
-    auto bHigh = Q.m_xhi;
-    auto bLow = Q.m_xlo;
+    auto bHigh = Q.domHiOrig();
+    auto bLow = Q.domLoOrig();
 
     for (unsigned iter = 0; iter < nGenerators; ++iter ){
       Point<Dimension, double> pos;
@@ -96,8 +96,8 @@ public:
     std::mt19937 gen(seed);
     std::normal_distribution<double> distrib(mean, sigma);
     auto& Q = Quantizer<Dimension>::instance();
-    auto bHigh = Q.m_xhi;
-    auto bLow = Q.m_xlo;
+    auto bHigh = Q.domHiOrig();
+    auto bLow = Q.domLoOrig();
 
     for (unsigned iter = 0; iter < nGenerators; ++iter ){
       Point<Dimension, double> pos;
@@ -146,8 +146,8 @@ public:
   //------------------------------------------------------------------------
   void cartesian2D(const unsigned nx, const unsigned ny) {
     auto& Q = Quantizer<2>::instance();
-    auto bHigh = Q.m_xhi;
-    auto bLow = Q.m_xlo;
+    auto bHigh = Q.domHiOrig();
+    auto bLow = Q.domLoOrig();
     double x, y;
     double dx = (bHigh[0] - bLow[0]) / nx;
     double dy = (bHigh[1] - bLow[1]) / ny;
@@ -172,8 +172,8 @@ public:
   //------------------------------------------------------------------------
   void cartesian3D(const unsigned nx, const unsigned ny, const unsigned nz) {
     auto& Q = Quantizer<3>::instance();
-    auto bHigh = Q.m_xhi;
-    auto bLow = Q.m_xlo;
+    auto bHigh = Q.domHiOrig();
+    auto bLow = Q.domLoOrig();
     double x, y, z;
     double dx = (bHigh[0] - bLow[0]) / nx;
     double dy = (bHigh[1] - bLow[1]) / ny;

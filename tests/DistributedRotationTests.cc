@@ -132,8 +132,8 @@ void runTest(Tessellator<2, double>& tessellator,
   auto finalRanks = generators.distributePointsAmongRanks(procIndex);
   POLY_CONTRACT_VAR(finalRanks);
   auto& Q = Quantizer<2>::instance();
-  auto bHigh = Q.m_xhi;
-  auto bLow = Q.m_xlo;
+  auto bHigh = Q.domHiOrig();
+  auto bLow = Q.domLoOrig();
   double dx = (bHigh[0] - bLow[0]) / nx;
 
   // Test name for output

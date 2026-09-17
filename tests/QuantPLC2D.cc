@@ -112,7 +112,7 @@ void testQuantizationAccuracy(const int tnum) {
     RealPoint(-9.9, 9.9)
   };
 
-  RealType maxError = Q.m_dx_o.x * 2.0;  // Allow 2x grid spacing
+  RealType maxError = Q.dx().x * 2.0;  // Allow 2x grid spacing
 
   for (const auto& p : testPoints) {
     PointType quantized = Q.quantize(p);
