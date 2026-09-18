@@ -18,6 +18,18 @@ template<typename CoordType> struct Cell<2, CoordType> {
 
   Cell() = default;
 
+  Cell(const CellType& points) :
+    m_points(points) {
+  }
+
+  // Cell(const std::vector<PointType>& points,
+  //      const std::vector<Edge>& edges) {
+  //   m_points.reserve(edges.size());
+  //   for (const auto& edge : edges) {
+  //     m_points.push_back(points[edge.first]);
+  //   }
+  // }
+
   Cell(const std::vector<PointType>& points,
        const std::vector<std::vector<unsigned>>& facets) {
     init(points, facets);
@@ -83,24 +95,24 @@ template<typename CoordType> struct Cell<2, CoordType> {
   }
 
   // Extract with a layer of indirection
-  void init(const std::vector<CoordType>& points,
-            const std::vector<int>& faceIndices,
-            const std::vector<std::vector<unsigned>>& facets) {
-    m_points.reserve(faceIndices.size());
-    for (const auto& f : faceIndices) {
-      if (f < 0) {
-        int findx = facets[~f][1];
-        CoordType f0 = points[2*findx];
-        CoordType f1 = points[2*findx+1];
-        m_points.push_back(Point2<CoordType>(f0, f1));
-      } else {
-        int findx = facets[f][0];
-        CoordType f0 = points[2*findx];
-        CoordType f1 = points[2*findx+1];
-        m_points.push_back(Point2<CoordType>(f0, f1));
-      }
-    }
-  }
+  // void init(const std::vector<CoordType>& points,
+  //           const std::vector<int>& faceIndices,
+  //           const std::vector<std::vector<unsigned>>& facets) {
+  //   m_points.reserve(faceIndices.size());
+  //   for (const auto& f : faceIndices) {
+  //     if (f < 0) {
+  //       int findx = facets[~f][1];
+  //       CoordType f0 = points[2*findx];
+  //       CoordType f1 = points[2*findx+1];
+  //       m_points.push_back(Point2<CoordType>(f0, f1));
+  //     } else {
+  //       int findx = facets[f][0];
+  //       CoordType f0 = points[2*findx];
+  //       CoordType f1 = points[2*findx+1];
+  //       m_points.push_back(Point2<CoordType>(f0, f1));
+  //     }
+  //   }
+  // }
 
   bool operator==(const Cell& other) const {
     auto lhs = m_points;
@@ -108,6 +120,16 @@ template<typename CoordType> struct Cell<2, CoordType> {
     std::sort(lhs.begin(), lhs.end());
     std::sort(rhs.begin(), rhs.end());
     return lhs == rhs;
+  }
+
+  template<typename OtherType>
+  Cell<2, OtherType> type_cast() const {
+    std::vector<Point<2, OtherType>> rpoints;
+    rpoints.reserve(size());
+    for (const auto& point : m_points) {
+      rpoints.push_back(point.template type_cast<OtherType>());
+    }
+    return Cell<2, OtherType>(rpoints);
   }
 
 private:

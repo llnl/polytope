@@ -6,8 +6,8 @@
 #include "polytope.hh"
 #include "Point.hh"
 #include "QuantizedKeyTraits.hh"
-#include "EdgeUtils.hh"
 #include "Quantizer.hh"
+#include "Cell.hh"
 
 namespace polytope {
 
@@ -230,6 +230,32 @@ bool collinear(const Point2<CoordType>& segStart,
     return true;
   }
   return false;
+}
+
+//------------------------------------------------------------------------------
+// Compute the signed area of a polygon cell.
+//------------------------------------------------------------------------------
+template<typename CoordType>
+double signedArea(const Cell<2, CoordType>& cell) {
+  const auto N = cell.size();
+  long double area = 0.;
+  // Make a double cell
+  Cell<2, double> rcell = cell.template type_cast<double>();
+  for (auto i = 0u; i < N; ++i) {
+    const auto& vi = rcell[i];
+    const auto& vj = rcell[(i+1)%N];
+    area += (0.5*vi.x*vj.y - 0.5*vj.x*vi.y);
+  }
+  return area;
+}
+
+//------------------------------------------------------------------------------
+// Confirm that a polygon is oriented counter-clockwise by ensuring the signed
+// area is greater than 0.
+//------------------------------------------------------------------------------
+template<typename CoordType>
+bool ccwOrient(const Cell<2, CoordType>& cell) {
+  return (signedArea(cell) > 0);
 }
 
 //------------------------------------------------------------------------------

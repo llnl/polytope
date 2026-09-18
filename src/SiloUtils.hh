@@ -73,6 +73,14 @@ inline std::string getGlobalMeshName() {
   return "MMESH";
 }
 
+inline std::string getLocalMatName() {
+  return "MATERIAL";
+}
+
+inline std::string getGlobalMatName() {
+  return "MMATERIAL";
+}
+
 template<typename FieldType>
 void
 writeFields(const std::map<std::string, std::vector<FieldType>>& fields,

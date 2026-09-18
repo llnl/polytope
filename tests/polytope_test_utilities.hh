@@ -162,6 +162,10 @@ void compareArea(Boundary2D& boundary,
                  const std::string& test_str = "") {
   double area = computeTessellationArea(mesh);
   compareArea(boundary, area, test_str);
+  // Check for CCW orientation of polygons
+  for (auto i = 0u; i < mesh.cells.size(); ++i) {
+    POLY_CHECK2(ccwOrient(mesh.getCell(i)), "Bad orientation at cell " << i << " " << test_str);
+  }
 }
 
 }

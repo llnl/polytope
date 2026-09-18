@@ -35,6 +35,9 @@ void SiloWriterBase<Dimension, TessType>::generateTestVars() {
 #endif
   addField<double>(FieldCentering::Cell, cellDoubleFields);
   addField<int>(FieldCentering::Cell, cellIntFields);
+  std::vector<std::string> matNames(1, "O2");
+  std::vector<std::vector<double>> matVF(numCells, std::vector<double>(1, 1.));
+  addMaterials(matNames, matVF);
 }
 
 //------------------------------------------------------------------------
@@ -198,6 +201,7 @@ addMaterials(const std::vector<std::string>& matNames,
 template<int Dimension, typename TessType>
 void SiloWriterBase<Dimension, TessType>::
 writeMaterialsToFile(const std::string& meshname,
+                     const std::string& matname,
                      DBfile* file,
                      DBoptlist* optlist) {
   const auto nzones = m_mesh.cells.size();
@@ -217,7 +221,7 @@ writeMaterialsToFile(const std::string& meshname,
   }
   DBAddOption(optlist, DBOPT_MATNAMES, matNamesPtr.data());
   DBPutMaterial(file,
-                "MATERIAL",
+                matname.c_str(),
                 meshname.c_str(),
                 nmat,
                 matnos.data(),
@@ -258,6 +262,7 @@ writeMasterFile(const std::string& masterFilename,
   std::vector<std::string> procPaths = getProcPaths(masterDirname, ranksWithData);
   int nblocks = static_cast<int>(ranksWithData.size());
   const std::string meshname = getLocalMeshName();
+  const std::string matname = getLocalMatName();
   std::vector<char*> cellMeshNames;
   std::vector<char*> pointMeshNames;
   std::vector<char*> materialMeshNames;
@@ -267,7 +272,7 @@ writeMasterFile(const std::string& masterFilename,
   for (const auto& p : procPaths) {
     cellMeshNames.push_back(strDup((p + meshname).c_str()));
     pointMeshNames.push_back(strDup((p + "points").c_str()));
-    materialMeshNames.push_back(strDup((p + "MATERIAL").c_str()));
+    materialMeshNames.push_back(strDup((p + matname).c_str()));
   }
   DBoptlist* masteroptlist = DBMakeOptlist(10);
   if (cycle >= 0)
@@ -275,6 +280,7 @@ writeMasterFile(const std::string& masterFilename,
   if (time >= 0.)
     DBAddOption(masteroptlist, DBOPT_DTIME, &time);
   std::string global_mesh_name = getGlobalMeshName();
+  std::string global_mat_name = getGlobalMatName();
   DBAddOption(masteroptlist, DBOPT_MMESH_NAME, global_mesh_name.data());
   DBAddOption(masteroptlist, DBOPT_COORDSYS, &coord_sys);
 
@@ -305,7 +311,7 @@ writeMasterFile(const std::string& masterFilename,
     DBAddOption(masteroptlist, DBOPT_NMATNOS, &nmatnos);
     DBAddOption(masteroptlist, DBOPT_MATNOS, matnos.data());
     DBAddOption(masteroptlist, DBOPT_MATNAMES, matNamesPtr.data());
-    DBPutMultimat(file, "MMATERIAL", nblocks, materialMeshNames.data(), masteroptlist);
+    DBPutMultimat(file, global_mat_name.c_str(), nblocks, materialMeshNames.data(), masteroptlist);
     DBClearOption(masteroptlist, DBOPT_MATNAMES);
     DBClearOption(masteroptlist, DBOPT_MATNOS);
     DBClearOption(masteroptlist, DBOPT_NMATNOS);

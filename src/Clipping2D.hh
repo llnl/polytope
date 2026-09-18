@@ -19,6 +19,8 @@ struct Clip2D {
   // Output parameters
   BoxSide firstSide = BoxSide::L;
   BoxSide secondSide = BoxSide::L;
+  int ifirstSide = -1;
+  int isecondSide = -1;
   Point2<CoordType> p0, p1;
 
   // Input and output parameters
@@ -33,6 +35,8 @@ struct Clip2D {
     if (inf0 && inf1) {
       clip1 = clipInfiniteRay(m, -normalRay, p0, firstSide);
       clip2 = clipInfiniteRay(m, normalRay, p1, secondSide);
+      ifirstSide = static_cast<int>(firstSide);
+      isecondSide = static_cast<int>(secondSide);
       POLY_ASSERT(clip1 == clip2);
       return !clip1;
     }
@@ -55,11 +59,13 @@ struct Clip2D {
     }
     if (!validp0) {
       clip1 = clipInfiniteRay(m, -normalRay, p0, firstSide);
+      ifirstSide = static_cast<int>(firstSide);
       inf0 = true;
       if (!clip1) return true;
     }
     if (!validp1) {
       clip2 = clipInfiniteRay(m, normalRay, p1, secondSide);
+      isecondSide = static_cast<int>(secondSide);
       inf1 = true;
       if (!clip2) return true;
     }

@@ -33,6 +33,7 @@ set(polytope_headers
   TessellatorInline.hh
   TetgenTessellator.hh
   Serializer.hh
+  VoronoiConstructor.hh
   polytope_internal.hh
   findBoundaryElements.hh
   Partitioners/DistributedLloydPartitioner.hh
@@ -86,9 +87,6 @@ endif ()
 if (POLYTOPE_ENABLE_TRIANGLE)
   list(APPEND polytope_headers TriangleTessellator.hh)
   list(APPEND polytope_sources TriangleTessellator.cc)
-  if (NOT POLYTOPE_ENABLE_TETGEN)
-    list(APPEND polytope_source predicates.cc)
-  endif()
 endif()
 
 # Check if we can incude the distributed tessellators:

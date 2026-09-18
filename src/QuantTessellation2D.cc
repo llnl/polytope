@@ -302,7 +302,7 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
   std::map<QuantizedPoint<2>, int> node2id;
 
   // Map from canonical edge to face index (for oriented edge tracking)
-  edge::EdgeToFaceMap edgeToFace;
+  EdgeToFaceMap edgeToFace;
   unsigned i = 0;
   for (auto& cellPoly : cellPolygons) {
     // Check if any remaining orphans can be added to the current cell
@@ -345,7 +345,7 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
       int n0 = localCellIndex[ic];
       int n1 = localCellIndex[j];
       // Add oriented edge - returns signed index (negative if reversed)
-      int signedFaceIndex = edge::addOrientedEdge(n0, n1, newFaces, edgeToFace);
+      int signedFaceIndex = addOrientedEdge(n0, n1, newFaces, edgeToFace);
       cellEdgeIndices.push_back(signedFaceIndex);
     }
     int curIndex = polyIndex[i++];

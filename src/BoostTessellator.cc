@@ -15,6 +15,7 @@
 #include "RegisterBoostPolygonTypes.hh"
 #include "Shapes.hh"
 #include "QuantPLC.hh"
+#include "VoronoiConstructor.hh"
 #include "Clipping2D.hh"
 
 // The Voronoi tools in Boost.Polygon
@@ -54,17 +55,7 @@ tessellateQuantizedImpl(QuantizedTessellation& result) {
   result.faces.reserve(voronoi.num_edges());
   result.cells.resize(numGenerators);
 
-  // Map QuantizedPoint coordinates to our node indices (for deduplication)
-  std::map<QuantizedPoint<2>, int> node2id;
-
-  // Map canonical edges to face indices for oriented edge tracking
-  edge::EdgeToFaceMap edgeToFace;
-
-  // Map generator pairs to edges
-  edge::GenPairToEdgeDataMap genPairToEdge;
-
-  // Add nodes for the box extent and keep track of their indices
-  auto cornerIndices = addBoxPoints(Q, node2id, result.nodes);
+  VoronoiConstructor constructor(result);
 
   // Process each Voronoi cell
   for (typename VD::const_cell_iterator cellItr = voronoi.cells().begin();
@@ -79,10 +70,7 @@ tessellateQuantizedImpl(QuantizedTessellation& result) {
     // Walk edges CCW around this cell
     const typename VD::edge_type* firstEdge = cellItr->incident_edge();
     const typename VD::edge_type* edge = firstEdge;
-
-    // List of local edges
-    std::vector<edge::Edge> localEdges;
-    std::vector<std::pair<int, int>> clippedNodeSides;
+    std::vector<VoronoiPrimitive> vps;
     do {
       const VD::edge_type* nextEdge = edge->next();
       const typename VD::vertex_type* v0 = edge->vertex0();
@@ -92,69 +80,17 @@ tessellateQuantizedImpl(QuantizedTessellation& result) {
       // gen0 should always be the current cell's generator
       auto gindx1 = edge->cell()->source_index();
       auto gindx2 = edge->twin()->cell()->source_index();
-      edge::GenPair gp = edge::orderPair(gindx1, gindx2);
-      edge::Edge curEdge;
-      int startSide = -1;
-      int endSide = -1;
-      auto cacheIt = genPairToEdge.find(gp);
-      // Check if we have already solved for this Voronoi edge
-      if (cacheIt != genPairToEdge.end()) {
-        const edge::EdgeData& ed = cacheIt->second;
-        curEdge = std::make_pair(ed.curEdge.second, ed.curEdge.first);
-        startSide = ed.endSide;
-        endSide = ed.startSide;
-      } else {
-        Clip2D<QuantizedCoordinate<2>> clipper;
-        clipper.gen0 = result.points[gindx1];
-        clipper.gen1 = result.points[gindx2];
-        if (v0) {
-          clipper.rp0 = Point2<double>(v0->x(), v0->y());
-        } else {
-          clipper.inf0 = true;
-          clipper.normalRay = outwardRay(clipper.gen0, clipper.gen1);
-        }
-        if (v1) {
-          clipper.rp1 = Point2<double>(v1->x(), v1->y());
-        } else {
-          clipper.inf1 = true;
-          clipper.normalRay = outwardRay(clipper.gen0, clipper.gen1);
-        }
-        if (v1 && v0) {
-          clipper.normalRay = pointDirection<QuantizedCoordinate<2>>(clipper.rp0, clipper.rp1);
-        }
-        if (clipper.doClipping()) {
-          edge = nextEdge;
-          continue;
-        }
-        if (clipper.inf0) {
-          startSide = static_cast<int>(clipper.firstSide);
-        }
-        if (clipper.inf1) {
-          endSide = static_cast<int>(clipper.secondSide);
-        }
-        curEdge = edge::updateNodeMap(clipper.p0, clipper.p1, node2id, result.nodes);
-        if (curEdge.first == curEdge.second) {
-          edge = nextEdge;
-          continue;
-        }
-        genPairToEdge[gp] = {curEdge, startSide, endSide};
+      VoronoiPrimitive vp(gindx1, gindx2);
+      if (v0) {
+        vp.setV0(Point2<double>(v0->x(), v0->y()));
       }
-      localEdges.push_back(curEdge);
-      clippedNodeSides.push_back(std::make_pair(startSide, endSide));
-
+      if (v1) {
+        vp.setV1(Point2<double>(v1->x(), v1->y()));
+      }
+      vps.push_back(vp);
       edge = nextEdge;
     } while (edge != firstEdge);
-    // Walk edges and clipped nodes to connect them
-    std::vector<edge::Edge> finalEdges = closeClippedEdges(localEdges, clippedNodeSides, cornerIndices);
-    // Create faces and cells from local edges
-    removeCollinear(finalEdges, result.nodes);
-    for (const auto& cedge : finalEdges) {
-      int signedFaceIndex = edge::addOrientedEdge(cedge.first, cedge.second, result.faces, edgeToFace);
-      result.cells[cellIndex].push_back(signedFaceIndex);
-    }
-    // Check for nearly duplicate nodes
-    POLY_ASSERT2(!edge::hasNearDuplicates(result.points[cellIndex], node2id),
-                 "Found nearly duplicate nodes.");
+    constructor.constructEdges(vps, cellIndex);
   }
 }
 

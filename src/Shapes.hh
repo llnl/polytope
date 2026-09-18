@@ -7,7 +7,6 @@
 
 #include "Point.hh"
 #include "QuantizedKeyTraits.hh"
-#include "EdgeUtils.hh"
 
 namespace polytope {
 
@@ -100,9 +99,9 @@ inline BoxSide getBoxCorner(const BoxSide& s1, const BoxSide& s2) {
 
 template<typename CoordType>
 inline std::map<BoxSide, unsigned>
-addBoxPoints(const Quantizer<2>& Q,
-             std::map<Point<2, CoordType>, int>& node2id,
+addBoxPoints(std::map<Point<2, CoordType>, int>& node2id,
              std::vector<Point<2, CoordType>>& nodes) {
+  const auto& Q = Quantizer<2>::instance();
   std::map<BoxSide, unsigned> cornerIndices; // Ordered lower left and CCW
   std::vector<Point<2, CoordType>> box = createSquarePoints(Q.minBound, Q.maxBound);
   BoxSides sides;
@@ -115,59 +114,5 @@ addBoxPoints(const Quantizer<2>& Q,
   return cornerIndices;
 }
 
-// Walk box edges only in CCW direction
-inline void walkBoxEdges(const BoxSide& startSide,
-                         const BoxSide& endSide,
-                         const unsigned& startPoint,
-                         const unsigned& endPoint,
-                         const std::map<BoxSide, unsigned>& cornerIndices,
-                         std::vector<edge::Edge>& edges) {
-  BoxSides sides;
-  BoxSide thisSide = startSide;
-  unsigned curPoint = startPoint;
-  POLY_ASSERT(static_cast<int>(thisSide) >= 0);
-  POLY_ASSERT(static_cast<int>(endSide) >= 0);
-  while (thisSide != endSide) {
-    if (isCorner(thisSide)) {
-      unsigned nextPoint = cornerIndices.at(thisSide);
-      if (curPoint != nextPoint) {
-        edges.push_back(std::make_pair(curPoint, nextPoint));
-        curPoint = nextPoint;
-      }
-    }
-    thisSide = sides.next(thisSide);
-  }
-  edges.push_back(std::make_pair(curPoint, endPoint));
-}
-
-// Close any clipped edges
-inline std::vector<edge::Edge> closeClippedEdges(const std::vector<edge::Edge>& origEdges,
-                                                 const std::vector<std::pair<int, int>>& clippedNodeSides,
-                                                 const std::map<BoxSide, unsigned>& cornerIndices) {
-  auto N = origEdges.size();
-  POLY_ASSERT2(N > 0, "Must have at least 1 edge");
-  std::vector<edge::Edge> out;
-  out.reserve(N);
-  if (N == 1) {
-    BoxSide endSide = static_cast<BoxSide>(clippedNodeSides[0].first);
-    BoxSide startSide = static_cast<BoxSide>(clippedNodeSides[0].second);
-    out.push_back(origEdges[0]);
-    walkBoxEdges(startSide, endSide, origEdges[0].second, origEdges[0].first, cornerIndices, out);
-    return out;
-  }
-  for (auto i = 0u; i < N; ++i) {
-    auto curEdge = origEdges[i];
-    auto side1 = clippedNodeSides[i].second;
-    out.push_back(curEdge);
-    if (side1 >= 0) {
-      auto ip = (i+1)%N;
-      auto nextEdge = origEdges[ip];
-      BoxSide endSide = static_cast<BoxSide>(clippedNodeSides[ip].first);
-      BoxSide startSide = static_cast<BoxSide>(side1);
-      walkBoxEdges(startSide, endSide, curEdge.second, nextEdge.first, cornerIndices, out);
-    }
-  }
-  return out;
-}
 }
 #endif

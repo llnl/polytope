@@ -2,10 +2,15 @@
 // QuantPLC definitions
 //-----------------------------------------------------------------------------//
 
+#include <map>
+#include <set>
+
 #include "polytope_internal.hh"
 #include "QuantPLC.hh"
 #include "GeomUtils.hh"
 #include "Intersections.hh"
+#include "EdgeUtils.hh"
+#include "Shapes.hh"
 #ifdef POLYTOPE_ENABLE_QHULL
 #include "libqhullcpp/Qhull.h"
 #include "libqhullcpp/QhullFacet.h"
@@ -13,9 +18,6 @@
 #include "libqhullcpp/QhullVertex.h"
 #include "libqhullcpp/QhullVertexSet.h"
 #endif
-#include <map>
-#include <set>
-#include "Shapes.hh"
 
 namespace polytope {
 
@@ -296,10 +298,10 @@ template<int Dimension>
 template<int D>
 std::enable_if_t<D == 2, void>
 QuantPLC<Dimension>::orderFacets2D() {
-  edge::orderEdgeLoop(facets);
+  orderEdgeLoop(facets);
 
   for (auto& hole : holes) {
-    edge::orderEdgeLoop(hole);
+    orderEdgeLoop(hole);
     std::reverse(hole.begin(), hole.end());
   }
 }

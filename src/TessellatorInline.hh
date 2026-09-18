@@ -1,4 +1,5 @@
 #include "findBoundaryElements.hh"
+#include "EdgeUtils.hh"
 
 namespace polytope {
 
@@ -81,23 +82,22 @@ inline void
 Tessellator<Dimension, RealType>::
 singleNodeTessellate(QuantTessellation<Dimension>& result) {
   if constexpr (Dimension == 2) {
-    const auto& Q = Quantizer<2>::instance();
     result.cells.resize(1);
 
     // Map canonical edges to face indices for orientation tracking
-    edge::EdgeToFaceMap edgeToFace;
+    EdgeToFaceMap edgeToFace;
 
     // Map QuantizedPoint coordinates to node indices for deduplication
     std::map<QuantizedPoint<2>, int> node2id;
 
     // Add nodes for the box extent and keep track of their indices
-    auto cornerIndices = addBoxPoints(Q, node2id, result.nodes);
+    auto cornerIndices = addBoxPoints(node2id, result.nodes);
     const int N = 4;
     BoxSides side;
     for (int i = 0; i < N; ++i) {
       auto point0 = cornerIndices[side.corner(i)];
       auto point1 = cornerIndices[side.corner((i+1)%N)];
-      int signedFaceIndex = edge::addOrientedEdge(point0, point1, result.faces, edgeToFace);
+      int signedFaceIndex = addOrientedEdge(point0, point1, result.faces, edgeToFace);
       result.cells[0].push_back(signedFaceIndex);
     }
   }

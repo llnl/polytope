@@ -18,7 +18,7 @@ def test_siloIO(Ngen):
     # Generate Ngen points per rank
     Ntotal = Ngen*nranks
     all_points = ptu.generate_normal_random_points(Ntotal, seed=seed, boundary2d=boundary)
-    serial_tessellator = polytope.BoostTessellator()
+    serial_tessellator = polytope.TriangleTessellator()
     tessellator = polytope.DistributedTessellator2d(serial_tessellator)
     # Make a partitioner
     partitioner = polytope.QuasiVoronoiPartitioner2d(partseed)
@@ -36,7 +36,7 @@ def test_siloIO(Ngen):
     matvfs = []
     erx = [6.*x - 3. for x in normx]
     for x in erx:
-        mat0 = math.erf(x)
+        mat0 = 0.5 + 0.5*math.erf(x)
         mat1 = 1. - mat0
         matvfs.append([mat0, mat1])
     writer.addMaterials(matnames, matvfs)

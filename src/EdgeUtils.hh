@@ -6,9 +6,10 @@
 
 #include "Point.hh"
 #include "QuantizedKeyTraits.hh"
+#include "GeomUtils.hh"
+#include "Shapes.hh"
 
 namespace polytope {
-namespace edge {
 //------------------------------------------------------------------------------
 // Utilities for edges specifically
 //------------------------------------------------------------------------------
@@ -44,49 +45,135 @@ inline Edge orderEdge(const Edge edge) {
 }
 
 //------------------------------------------------------------------------------
+// A directed edge and the clipping-box sides associated with its start and end
+// nodes.  Keep these together whenever the edge loop is reordered.
+//------------------------------------------------------------------------------
+struct ClippedEdge {
+  Edge curEdge;
+  std::pair<int, int> clippedSides = std::make_pair(-1, -1);
+};
+
+inline void walkBoxEdges(const BoxSide& startSide,
+                         const BoxSide& endSide,
+                         const unsigned& startPoint,
+                         const unsigned& endPoint,
+                         const std::map<BoxSide, unsigned>& cornerIndices,
+                         std::vector<Edge>& edges) {
+  BoxSides sides;
+  BoxSide thisSide = startSide;
+  unsigned curPoint = startPoint;
+  POLY_ASSERT(static_cast<int>(thisSide) >= 0);
+  POLY_ASSERT(static_cast<int>(endSide) >= 0);
+  while (thisSide != endSide) {
+    if (isCorner(thisSide)) {
+      unsigned nextPoint = cornerIndices.at(thisSide);
+      if (curPoint != nextPoint) {
+        edges.push_back(std::make_pair(curPoint, nextPoint));
+        curPoint = nextPoint;
+      }
+    }
+    thisSide = sides.next(thisSide);
+  }
+  edges.push_back(std::make_pair(curPoint, endPoint));
+}
+
+//------------------------------------------------------------------------------
+// Close an ordered loop of clipped edges.  Consecutive edges either meet at a
+// node or are joined by the CCW box path between their clipped endpoints.
+//------------------------------------------------------------------------------
+inline std::vector<Edge>
+closeClippedEdges(const std::vector<ClippedEdge>& clippedEdges,
+                  const std::map<BoxSide, unsigned>& cornerIndices) {
+  const auto N = clippedEdges.size();
+  POLY_ASSERT2(N > 0, "Must have at least 1 edge");
+  std::vector<Edge> out;
+  out.reserve(2 * N + 4);
+
+  for (auto i = 0u; i < N; ++i) {
+    const auto& cur = clippedEdges[i];
+    const auto& next = clippedEdges[(i + 1) % N];
+    const auto& curEdge = cur.curEdge;
+    out.push_back(curEdge);
+
+    if (curEdge.second == next.curEdge.first) continue;
+
+    POLY_ASSERT2(cur.clippedSides.second >= 0 &&
+                 next.clippedSides.first >= 0,
+                 "Disconnected clipped edges without a box connection");
+    walkBoxEdges(static_cast<BoxSide>(cur.clippedSides.second),
+                 static_cast<BoxSide>(next.clippedSides.first),
+                 curEdge.second, next.curEdge.first, cornerIndices, out);
+  }
+  return out;
+}
+
+//------------------------------------------------------------------------------
+// Order any clipped edges based on the generator location. This must be done
+// before calling orderClippedEdges
+//------------------------------------------------------------------------------
+template<typename CoordType>
+void orientClippedEdges(std::vector<ClippedEdge>& clippedEdges,
+                        const Point<2, CoordType>& generator,
+                        const std::vector<Point<2, CoordType>>& nodes) {
+  for (auto& clipped : clippedEdges) {
+    const auto& p0 = nodes[clipped.curEdge.first];
+    const auto& p1 = nodes[clipped.curEdge.second];
+    if (qcross<CoordType>(p1 - p0, generator - p0) < 0) {
+      std::swap(clipped.curEdge.first, clipped.curEdge.second);
+      std::swap(clipped.clippedSides.first, clipped.clippedSides.second);
+    }
+  }
+}
+
+//------------------------------------------------------------------------------
 // Order a loop of edges to form a connected chain
 // Ensures edges[i][1] connects to edges[i+1][0] when possible and relies
-// on clippedNodeSides when not possible. Assumes 2D.
+// on clipping-box sides when not possible. Assumes 2D.
 //------------------------------------------------------------------------------
-inline void orderClippedNodes(std::vector<std::pair<int, int>>& clippedNodeSides,
-                              std::vector<edge::Edge>& edges) {
-  if (edges.empty()) return;
-  POLY_ASSERT2(edges.size() == clippedNodeSides.size(),
-               "Vectors must be the same size");
-  const auto N = edges.size();
+inline void orderClippedEdges(std::vector<ClippedEdge>& clippedEdges) {
+  if (clippedEdges.empty()) return;
+  // Remove any degenerate edges
+  clippedEdges.erase(
+    std::remove_if(clippedEdges.begin(), clippedEdges.end(),
+                   [](const ClippedEdge& edge) {
+                     return edge.curEdge.first == edge.curEdge.second;
+                   }),
+    clippedEdges.end());
+  if (clippedEdges.empty()) return;
+  const auto N = clippedEdges.size();
   auto sideDistance = [](int fromSide, int toSide) {
                         constexpr int numBoxSides = 8;
                         return (toSide - fromSide + numBoxSides) % numBoxSides;
                       };
-  std::vector<edge::Edge> orderedEdges;
-  std::vector<std::pair<int, int>> orderedSides;
+  std::vector<ClippedEdge> orderedEdges;
   orderedEdges.reserve(N);
-  orderedSides.reserve(N);
   std::vector<bool> used(N, false);
   size_t current = 0;
 
   for (size_t count = 0; count < N; ++count) {
-    orderedEdges.push_back(edges[current]);
-    orderedSides.push_back(clippedNodeSides[current]);
+    orderedEdges.push_back(clippedEdges[current]);
     used[current] = true;
     if (count + 1 == N) break;
     int next = -1;
     // Prefer exact Voronoi-edge adjacency.
     for (size_t candidate = 0; candidate < N; ++candidate) {
       if (!used[candidate] &&
-          edges[current].second == edges[candidate].first) {
+          clippedEdges[current].curEdge.second ==
+          clippedEdges[candidate].curEdge.first) {
         next = static_cast<int>(candidate);
         break;
       }
     }
     // If the current edge ends on the clipping box, connect to the next
     // edge that starts on the box by walking the box in CCW side order.
-    if (next == -1 && clippedNodeSides[current].second >= 0) {
+    if (next == -1 && clippedEdges[current].clippedSides.second >= 0) {
       int bestDistance = 8;
       for (size_t candidate = 0; candidate < N; ++candidate) {
-        if (!used[candidate] && clippedNodeSides[candidate].first >= 0) {
-          const int distance = sideDistance(clippedNodeSides[current].second,
-                                            clippedNodeSides[candidate].first);
+        if (!used[candidate] &&
+            clippedEdges[candidate].clippedSides.first >= 0) {
+          const int distance = sideDistance(
+              clippedEdges[current].clippedSides.second,
+              clippedEdges[candidate].clippedSides.first);
           if (distance < bestDistance) {
             bestDistance = distance;
             next = static_cast<int>(candidate);
@@ -94,86 +181,11 @@ inline void orderClippedNodes(std::vector<std::pair<int, int>>& clippedNodeSides
         }
       }
     }
-    // Last-resort fallback: preserve all entries, but this means the loop
-    // was not fully recoverable from endpoint/box-side adjacency.
-    if (next == -1) {
-      for (size_t candidate = 0; candidate < N; ++candidate) {
-        if (!used[candidate]) {
-          next = static_cast<int>(candidate);
-          break;
-        }
-      }
-    }
-    POLY_ASSERT(next != -1);
+    POLY_ASSERT2(next != -1,
+                 "Unable to order clipped edges by node or CCW box adjacency");
     current = static_cast<size_t>(next);
   }
-  edges = std::move(orderedEdges);
-  clippedNodeSides = std::move(orderedSides);
-}
-
-//------------------------------------------------------------------------------
-// Order a loop of edges to form a connected chain
-// Ensures edges[i][1] connects to edges[i+1][0]
-// Also reorders otherVec accordingly
-//------------------------------------------------------------------------------
-template<typename OtherType>
-inline void orderEdgeLoop(std::vector<edge::Edge>& edges,
-                          std::vector<OtherType>& otherVec) {
-  if (edges.empty()) return;
-  POLY_ASSERT2(edges.size() == otherVec.size(), "Vectors must be the same size");
-
-  std::vector<edge::Edge> ordered;
-  ordered.reserve(edges.size());
-  std::vector<OtherType> orderedVec;
-  orderedVec.reserve(otherVec.size());
-
-  // Build map: start vertex -> list of edge indices starting at that vertex
-  std::map<int, std::vector<int>> startMap;
-  for (size_t i = 0; i < edges.size(); ++i) {
-    startMap[edges[i].first].push_back(i);
-  }
-
-  // Follow the chain starting from first edge
-  std::set<int> used;
-  int current = 0;
-
-  while (used.size() < edges.size()) {
-    // Add current edge to ordered list
-    ordered.push_back(edges[current]);
-    orderedVec.push_back(otherVec[current]);
-    used.insert(current);
-
-    // Find next edge: one that starts where this one ends
-    int nextVertex = edges[current].second;
-    bool foundNext = false;
-
-    if (startMap.count(nextVertex)) {
-      for (int candidate : startMap[nextVertex]) {
-        if (!used.count(candidate)) {
-          current = candidate;
-          foundNext = true;
-          break;
-        }
-      }
-    }
-
-    // If chain is broken but we haven't used all edges, find an unused edge to continue
-    if (!foundNext && used.size() < edges.size()) {
-      for (size_t i = 0; i < edges.size(); ++i) {
-        if (!used.count(i)) {
-          current = i;
-          foundNext = true;
-          break;
-        }
-      }
-    }
-
-    // If we still can't find an edge, we're done
-    if (!foundNext) break;
-  }
-
-  edges = ordered;
-  otherVec = orderedVec;
+  clippedEdges = std::move(orderedEdges);
 }
 
 inline void orderEdgeLoop(std::vector<std::vector<unsigned>>& edges) {
@@ -207,90 +219,26 @@ inline void orderEdgeLoop(std::vector<std::vector<unsigned>>& edges) {
 }
 
 //------------------------------------------------------------------------------
-// Convert an EdgeToFaceMap into an ordered facet.
-// Uses deterministic starting point and sorted neighbors for consistent ordering
-//------------------------------------------------------------------------------
-inline std::vector<unsigned> traceBoundary(const EdgeToFaceMap& uniqueEdges) {
-  // Determine boundary faces since they only appear once
-  std::unordered_map<int, std::vector<int>> adjacency;
-  for (const auto& [edge, count] : uniqueEdges) {
-    if (count == 1) {
-      adjacency[edge.first].push_back(edge.second);
-      adjacency[edge.second].push_back(edge.first);
-    }
-  }
-  std::vector<unsigned> boundary;
-  if (adjacency.empty()) return boundary;
-
-  // Sort neighbors for deterministic traversal
-  for (auto& [vertex, neighbors] : adjacency) {
-    std::sort(neighbors.begin(), neighbors.end());
-  }
-  // Pick smallest vertex as start for deterministic ordering
-  int start = std::min_element(adjacency.begin(), adjacency.end(),
-                                [](const auto& a, const auto& b) {
-                                  return a.first < b.first;
-                                })->first;
-  int current = start;
-  int prev = -1;
-
-  do {
-    boundary.push_back(current);
-    const auto& neighbors = adjacency.at(current);
-    auto it = std::find_if(neighbors.begin(), neighbors.end(),
-                           [prev](int n) { return n != prev; });
-    // Check if we found a valid neighbor
-    if (it == neighbors.end()) {
-      // Boundary is not a simple closed loop - return what we have
-      break;
-    }
-    prev = current;
-    current = *it;
-  } while (current != start && boundary.size() < adjacency.size() + 1);
-  return boundary;
-}
-
-//------------------------------------------------------------------------------
-// Adds any unique edges to a set.
-//------------------------------------------------------------------------------
-inline void addUniqueEdges(const std::vector<unsigned>& facet,
-                           EdgeToFaceMap& uniqueEdges) {
-  const auto N = facet.size();
-  for (size_t i = 0; i < N; ++i) {
-    int v0 = facet[i];
-    int v1 = facet[(i + 1) % N];
-    auto edge = orderEdge(v0, v1);
-    uniqueEdges[edge]++;
-  }
-}
-
-//------------------------------------------------------------------------------
-// Check if facet shares edges with a unique set.
-//------------------------------------------------------------------------------
-inline bool sharedEdges(const std::vector<unsigned>& facet,
-                        EdgeToFaceMap& uniqueEdges) {
-  const auto N = facet.size();
-  bool shared = false;
-  for (size_t i = 0; i < N; ++i) {
-    int v0 = facet[i];
-    int v1 = facet[(i + 1) % N];
-    auto edge = orderEdge(v0, v1);
-    if (uniqueEdges.count(edge)) {
-      uniqueEdges.erase(edge);
-      shared = true;
-    } else {
-      uniqueEdges[edge]++;
-    }
-  }
-  return shared;
-}
-
-//------------------------------------------------------------------------------
 // Edge storage and orientation tracking
 //------------------------------------------------------------------------------
 
-// Map from canonical edge to its face/edge index
-using EdgeToFaceMap = std::unordered_map<Edge, int, EdgeHash>;
+//------------------------------------------------------------------------------
+// Utilities for edge data, meaning edges paired with generator points
+// This allows us to keep track of which edges belong to which generators
+//------------------------------------------------------------------------------
+using GenPair = std::pair<int, int>;
+inline GenPair orderGenPair(const int a, const int b) {
+  return orderEdge(a, b);
+}
+
+inline ClippedEdge flipEdge(const ClippedEdge& clippedEdge) {
+  ClippedEdge out(clippedEdge);
+  std::swap(out.curEdge.first, out.curEdge.second);
+  std::swap(out.clippedSides.first, out.clippedSides.second);
+  return out;
+}
+
+using GenPairToClippedEdgeMap = std::map<GenPair, ClippedEdge>;
 
 //------------------------------------------------------------------------------
 // Add an oriented edge to the edge map
@@ -318,6 +266,57 @@ inline int addOrientedEdge(int n0, int n1,
 
   // Return signed index based on whether orientation matches canonical
   return (canonical.first == n0) ? faceIndex : ~faceIndex;
+}
+
+//------------------------------------------------------------------------------
+// Reverse the order of the edges, both the order of each edge and
+// the order of the edges
+//------------------------------------------------------------------------------
+inline void reverseEdgeLoop(std::vector<Edge>& edges) {
+  // Reverse every directed edge.
+  for (auto& edge : edges) {
+    std::swap(edge.first, edge.second);
+  }
+  // Reverse traversal order so the edges remain a connected loop.
+  std::reverse(edges.begin(), edges.end());
+}
+
+//------------------------------------------------------------------------------
+// Assemble an unordered set of clipped Voronoi edges into one CCW cell.
+// Each edge is first directed with the owning generator on its left.  The
+// routine then follows direct node connections, filling only box-boundary gaps
+// with CCW box edges, before creating the signed face references.
+//------------------------------------------------------------------------------
+template<typename CoordType>
+inline std::vector<int>
+makeCCWCellFromClippedEdges(std::vector<ClippedEdge> clippedEdges,
+                            const Point<2, CoordType>& generator,
+                            const std::map<BoxSide, unsigned>& cornerIndices,
+                            const std::vector<Point<2, CoordType>>& nodes,
+                            std::vector<std::vector<unsigned>>& faces,
+                            EdgeToFaceMap& edgeToFace) {
+  POLY_ASSERT2(!clippedEdges.empty(), "Cannot construct a cell without edges");
+
+  // Direct each Voronoi edge so the cell interior is on its left.
+  orientClippedEdges(clippedEdges, generator, nodes);
+
+  // Establish edge order, then fill every non-node-connected transition with
+  // its CCW clipping-box path.
+  orderClippedEdges(clippedEdges);
+  POLY_ASSERT2(!clippedEdges.empty(), "All clipped edges collapsed to zero length");
+  auto edges = closeClippedEdges(clippedEdges, cornerIndices);
+
+  POLY_ASSERT2(edges.size() >= 3, "Degenerate cell after clipping");
+
+  // Store each canonical face once; retain per-cell direction in its
+  // signed face index.
+  std::vector<int> cell;
+  cell.reserve(edges.size());
+  for (const auto& edge : edges) {
+    cell.push_back(addOrientedEdge(edge.first, edge.second, faces, edgeToFace));
+  }
+
+  return cell;
 }
 
 //------------------------------------------------------------------------------
@@ -358,32 +357,13 @@ inline int reverseOrientation(int signedIndex) {
 }
 
 //------------------------------------------------------------------------------
-// Check if there are nearly duplicate nodes
-//------------------------------------------------------------------------------
-template<int Dimension, typename CoordType>
-inline bool hasNearDuplicates(const Point<Dimension, CoordType>& point,
-                              std::map<Point<Dimension, CoordType>, int>& node2id) {
-  for (int offset : {-1, 1}) {
-    for (int dim = 0; dim < Dimension; ++dim) {
-      Point<Dimension, CoordType> pp(point);
-      pp[dim] += offset;
-      auto it = node2id.find(pp);
-      if (it != node2id.end()) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-//------------------------------------------------------------------------------
 // Modify the nodes list if points do not exist in a given node id map
 //------------------------------------------------------------------------------
 template<int Dimension, typename CoordType>
-inline edge::Edge updateNodeMap(const Point<Dimension, CoordType>& p0,
-                                const Point<Dimension, CoordType>& p1,
-                                std::map<Point<Dimension, CoordType>, int>& node2id,
-                                std::vector<Point<Dimension, CoordType>>& nodes) {
+inline Edge updateNodeMap(const Point<Dimension, CoordType>& p0,
+                          const Point<Dimension, CoordType>& p1,
+                          std::map<Point<Dimension, CoordType>, int>& node2id,
+                          std::vector<Point<Dimension, CoordType>>& nodes) {
   auto it0 = node2id.find(p0);
   int n0;
   if (it0 == node2id.end()) {
@@ -402,24 +382,8 @@ inline edge::Edge updateNodeMap(const Point<Dimension, CoordType>& p0,
   } else {
     n1 = it1->second;
   }
-  return edge::Edge(std::make_pair(n0, n1));
+  return Edge(std::make_pair(n0, n1));
 }
 
-//------------------------------------------------------------------------------
-// Utilities for edge data, meaning edges paired with generator points
-// This allows us to keep track of which edges belong to which generators
-//------------------------------------------------------------------------------
-using GenPair = std::pair<int, int>;
-inline GenPair orderPair(const int a, const int b) {
-  return orderEdge(a, b);
-}
-
-struct EdgeData {
-  edge::Edge curEdge;
-  int startSide, endSide;
-};
-
-using GenPairToEdgeDataMap = std::map<GenPair, EdgeData>;
-}
 }
 #endif

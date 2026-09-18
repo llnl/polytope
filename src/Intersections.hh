@@ -199,66 +199,6 @@ void removeCollinear(std::vector<Point2<CoordType>>& vertices) {
 }
 
 //------------------------------------------------------------------------------
-// Remove collinear points from an edge loop
-// Edges should form a connected chain where edges[i][1] == edges[i+1][0]
-//------------------------------------------------------------------------------
-template<typename CoordType>
-void removeCollinear(std::vector<edge::Edge>& edges,
-                     const std::vector<Point2<CoordType>>& vertices) {
-  const auto N = edges.size();
-  if (N < 3) return;  // Need at least 3 edges to have collinear points
-
-  std::vector<edge::Edge> result;
-  result.reserve(N);
-
-  for (unsigned i = 0; i < N; ++i) {
-    // Get three consecutive vertices from the edge loop
-    auto p1_idx = edges[(i+N-1)%N].first;   // Previous edge start
-    auto p2_idx = edges[i].first;           // Current edge start
-    auto p3_idx = edges[i].second;          // Current edge end
-
-    const auto& p1 = vertices[p1_idx];
-    const auto& p2 = vertices[p2_idx];
-    const auto& p3 = vertices[p3_idx];
-
-    // Keep this edge only if the middle point is not collinear
-    if (!collinear(p1, p3, p2)) {
-      result.push_back(edges[i]);
-    } else {
-      // Collinear: skip this edge and update the next edge to span across
-      // The next edge should start from p1 instead of p2
-      if (!result.empty()) {
-        // Update the last added edge to connect to p3
-        result.back().second = p3_idx;
-      } else {
-        // Special case: first edges are collinear, need to fix at the end
-        // We'll handle this by checking if the first and last edges merge
-      }
-    }
-  }
-
-  // Handle wraparound: if we removed the first edge, the last edge might need adjustment
-  if (result.size() < N && !result.empty()) {
-    // Check if first and last result edges are now collinear
-    auto p1_idx = result.back().first;
-    auto p2_idx = result.back().second;
-    auto p3_idx = result.front().second;
-
-    const auto& p1 = vertices[p1_idx];
-    const auto& p2 = vertices[p2_idx];
-    const auto& p3 = vertices[p3_idx];
-
-    if (collinear(p1, p3, p2)) {
-      // Merge last and first edges
-      result.back().second = result.front().second;
-      result.erase(result.begin());
-    }
-  }
-
-  edges = std::move(result);
-}
-
-//------------------------------------------------------------------------------
 // Clip infinite ray provided by tessellator.
 //
 // Given the start of the ray and the direction, determine the boundary

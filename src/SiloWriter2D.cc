@@ -74,6 +74,7 @@ SiloWriter<2, TessType>::write(const string& filePrefix,
   std::string filename = getMasterFilename(prefix, cycle);
 
   std::string meshname = getGlobalMeshName();
+  std::string matname = getGlobalMatName();
   bool hasPoints = true;
   // Open a file in Silo/HDF5 format for writing.
 #ifdef POLYTOPE_ENABLE_MPI
@@ -108,6 +109,7 @@ SiloWriter<2, TessType>::write(const string& filePrefix,
 
     filename = getFilename(masterDirname, rank);
     meshname = getLocalMeshName();
+    matname = getLocalMatName();
   }
 #endif
   if (hasPoints) {
@@ -147,9 +149,11 @@ SiloWriter<2, TessType>::write(const string& filePrefix,
       // Gather the nodes from this cell in traversal order.
       vector<int> cellNodes;
       traverseNodes<TessType>(m_mesh, i, cellNodes);
-      // Insert the cell's node connectivity into the node list.
-      nodeList.push_back(cellNodes.size());
-      nodeList.insert(nodeList.end(), cellNodes.begin(), cellNodes.end());
+      // DB_ZONETYPE_POLYGON uses shapesize to specify each zone's
+      // vertex count.  Store each vertex once: Silo consumers such as
+      // Overlink close the final edge implicitly.
+      shapesize[i] = static_cast<int>(cellNodes.size()) - 1;
+      nodeList.insert(nodeList.end(), cellNodes.begin(), cellNodes.end() - 1);
     }
 
     // Write out the 2D polygonal mesh.
@@ -186,7 +190,7 @@ SiloWriter<2, TessType>::write(const string& filePrefix,
     free(elemnames[1]);
 
     writeFieldsToFile(meshname, file, optlist);
-    writeMaterialsToFile(meshname, file, optlist);
+    writeMaterialsToFile(meshname, matname, file, optlist);
 
     int numPoints = m_mesh.points.size();
     vector<double> xp(numPoints), yp(numPoints);

@@ -153,6 +153,7 @@ protected:
 
   // Write material data
   void writeMaterialsToFile(const std::string& meshname,
+                            const std::string& matname,
                             DBfile* file,
                             DBoptlist* optlist);
 
