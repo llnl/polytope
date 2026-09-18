@@ -1,180 +1,97 @@
 //------------------------------------------------------------------------
 // BoostTessellator
 //------------------------------------------------------------------------
+#include "BoostTessellator.hh"
+#include "EdgeUtils.hh"
+
 #include <iostream>
-#include <algorithm>
-#include <set>
-#include <list>
-#include <map>
-#include <limits>
-#include "float.h"
 
 // Handy Boost stuff
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
 #include <boost/iterator/transform_iterator.hpp>
 
-#include "polytope.hh" // Pulls in POLY_ASSERT
-
-#include "within.hh"
-#include "nearestPoint.hh"
-#include "intersect.hh"
-#include "polytope_plc_canned_geometries.hh"
-#include "PLC_Boost_2d.hh"
-#include "Segment.hh"
-
+#include "polytope_internal.hh" // Pulls in POLY_ASSERT
 #include "RegisterBoostPolygonTypes.hh"
-
-// Fast predicate for determining colinearity of points.
-extern double orient2d(double* pa, double* pb, double* pc);
+#include "Shapes.hh"
+#include "QuantPLC.hh"
+#include "VoronoiConstructor.hh"
+#include "Clipping2D.hh"
 
 // The Voronoi tools in Boost.Polygon
 #include <boost/polygon/voronoi.hpp>
 
 namespace polytope {
 
-using namespace std;
-using std::min;
-using std::max;
-using std::abs;
-
-//------------------------------------------------------------------------------
-// Default constructor
-//------------------------------------------------------------------------------
-template<typename RealType>
-BoostTessellator<RealType>::
-BoostTessellator():
-  Tessellator<2, RealType>() {
-}
-
-//------------------------------------------------------------------------------
-// Destructor
-//------------------------------------------------------------------------------
-template<typename RealType>
-BoostTessellator<RealType>::
-~BoostTessellator() {
-}
-
 //------------------------------------------------------------------------------
 // Compute the QuantizedTessellation
 //------------------------------------------------------------------------------
-template<typename RealType>
 void
-BoostTessellator<RealType>::
-tessellateQuantized(QuantizedTessellation& result) const {
+BoostTessellator::
+tessellateQuantizedImpl(QuantizedTessellation& result) {
+  // Type aliases
+  using VD = boost::polygon::voronoi_diagram<RealType>;
+  const auto& Q = Quantizer<2>::instance();
+  // First ensure that the encoding method has not changed
+  POLY_CHECK2(Q.keyEncoding() == result.keyEncoding(),
+              "Key encoding method changed during tessellation");
+  // Get the quantized generators
+  std::vector<QuantizedPoint<2>> generators = result.getQuantizedPoints();
+  const size_t numGenerators = generators.size();
 
-  // Sort the input points by the first element of the generator-index pair.
-  // The second element provides the pre-sort generator index. Shame on you,
-  // Boost, for making us do this.
-  const int numGenerators = result.generators.size();
-  vector<IntPoint> generators(result.generators.begin(), result.generators.end());
-  std::copy(result.guardGenerators.begin(), result.guardGenerators.end(), std::back_inserter(generators));
-  // sort(generators.begin(), generators.end());
-  
-  // // Build ourselves the segments representing our bounding box.
-  // typedef Segment<2> IntSegment;
-  // vector<IntSegment> bounds(4);
-  // const CoordHash coordMin = QuantizedTessellation2d<CoordHash, RealType>::coordMin;
-  // const CoordHash coordMax = QuantizedTessellation2d<CoordHash, RealType>::coordMax;
-  // bounds[0] = IntSegment(coordMin, coordMin, coordMax, coordMin);
-  // bounds[1] = IntSegment(coordMax, coordMin, coordMax, coordMax);
-  // bounds[2] = IntSegment(coordMax, coordMax, coordMin, coordMax);
-  // bounds[3] = IntSegment(coordMin, coordMax, coordMin, coordMin);
-  // // sort(bounds.begin(), bounds.end());  // Not sure if this is necessary
+  VD voronoi;
 
   // Invoke the Boost.Voronoi diagram constructor
-  VD voronoi;
-  construct_voronoi(generators.begin(), generators.end(),
-                    // bounds.begin(), bounds.end(),
-                    &voronoi);  
-  // POLY_ASSERT(voronoi.num_cells() == numGenerators + result.guardGenerators.size());
+  typedef boost::polygon::detail::voronoi_ctype_traits<QuantizedCoordinate<2>> MyTraits;
+  boost::polygon::voronoi_builder<QuantizedCoordinate<2>, MyTraits> builder;
+  for (const auto& p : generators) {
+    builder.insert_point(p.x, p.y);
+  }
+  builder.construct(&voronoi);
 
-  // Read out the Voronoi topology to our intermediate QuantizedTessellation format.
-  // Iterate over the edges.  Boost has organized them CCW around each generator.
-  // Note here we just extract information about the point generators, and build straight
-  // edges where those interface with our segment boundaries.
-  result.cellEdges = vector<vector<int> >(numGenerators);
-  result.edges.reserve(voronoi.num_edges());
-  result.nodes.reserve(voronoi.num_vertices());
-  map<IntPoint, int> node2id;
-  map<std::pair<int, int>, int> edge2id;
-  for (typename VD::const_cell_iterator cellItr = voronoi.cells().begin(); 
-       cellItr != voronoi.cells().end(); 
+  // Build the tessellation data structures
+  // In 2D: nodes are Voronoi vertices, faces are edges, cells are Voronoi cells
+  result.nodes.reserve(voronoi.num_vertices()+4);
+  result.faces.reserve(voronoi.num_edges());
+  result.cells.resize(numGenerators);
+
+  VoronoiConstructor constructor(result);
+
+  // Process each Voronoi cell
+  for (typename VD::const_cell_iterator cellItr = voronoi.cells().begin();
+       cellItr != voronoi.cells().end();
        ++cellItr) {
-    int cellIndex = generators[cellItr->source_index()].index;
-    if (cellItr->contains_point() and cellIndex < numGenerators) {
-    // if (cellItr->contains_point() and cellItr->source_index() < numGenerators) {
-      // POLY_ASSERT2(sortedIndex == cellItr->source_index(),
-      //              sortedIndex << " != " << cellItr->source_index());
-      // POLY_ASSERT(sortedIndex <  numGenerators + 4);
-      // POLY_ASSERT(cellItr->source_index() <  numGenerators);
-      POLY_ASSERT2(cellIndex   <  numGenerators, cellIndex << " " << cellItr->source_index() << " " << numGenerators);
 
-      // Start the chain walking the edges of this cell.
-      const typename VD::edge_type* edge = cellItr->incident_edge();
-      do {
-        edge = edge->next();
+    if (!cellItr->contains_point()) continue;
 
-        // The two vertex pointers for this edge
-        // NOTE: If edge is infinite, one of these pointers is null.  This should never happen
-        // since we added bounding segments.
-        const typename VD::vertex_type* v0 = edge->vertex0();
-        const typename VD::vertex_type* v1 = edge->vertex1();
-        if (not (v0 and v1)) {
-          cerr << "Bad news at generator " << generators[cellIndex] << " " << result.coordMin << " " << result.coordMax << endl;
-          if (v0) {
-            cerr << "v0 : " << v0->x() << " " << v0->y() << endl;
-          } else {
-            cerr << "v1 : " << v1->x() << " " << v1->y() << endl;
-          }
-        }
-        POLY_ASSERT(v0 and v1);
+    const int cellIndex = cellItr->source_index();
+    if (cellIndex >= int(numGenerators)) continue;
 
-        // Finite edge.  Add the edge to the cell, and any new nodes.
-        // Insert vertex 0.
-        const IntPoint p0(v0->x(), v0->y());
-        int old_size = node2id.size();
-        const int j0 = internal::addKeyToMap(p0, node2id);
-        if (j0 == old_size) {
-          POLY_ASSERT(j0 == result.nodes.size());
-          result.nodes.push_back(p0);
-        }
+    // Walk edges CCW around this cell
+    const typename VD::edge_type* firstEdge = cellItr->incident_edge();
+    const typename VD::edge_type* edge = firstEdge;
+    std::vector<VoronoiPrimitive> vps;
+    do {
+      const VD::edge_type* nextEdge = edge->next();
+      const typename VD::vertex_type* v0 = edge->vertex0();
+      const typename VD::vertex_type* v1 = edge->vertex1();
 
-        // Insert vertex 1.
-        const IntPoint p1(v1->x(), v1->y());
-        old_size = node2id.size();
-        const int j1 = internal::addKeyToMap(p1, node2id);
-        if (j1 == old_size) {
-          POLY_ASSERT(j1 == result.nodes.size());
-          result.nodes.push_back(p1);
-        }
-        
-        // Now insert the edge.  Since we use oriented single edges between cells, a bit different than Boost.Polygon.
-        // We have to screen out zero-length edges apparently.
-        if (j0 != j1) {
-          const pair<int, int> edge = internal::hashEdge(j0, j1);
-          POLY_ASSERT((edge.first == j0 and edge.second == j1) or
-                      (edge.first == j1 and edge.second == j0));
-          old_size = edge2id.size();
-          const int e1 = internal::addKeyToMap(edge, edge2id);
-          if (e1 == old_size) {
-            POLY_ASSERT(e1 == result.edges.size());
-            result.edges.push_back(edge);
-          }
-          if (edge.first == j0) {
-            result.cellEdges[cellIndex].push_back(e1);
-          } else {
-            result.cellEdges[cellIndex].push_back(~e1);
-          }
-        }
-      } while (edge != cellItr->incident_edge());
-    }
+      // An edge is considered infinite if Boost provides a null pointer
+      // gen0 should always be the current cell's generator
+      auto gindx1 = edge->cell()->source_index();
+      auto gindx2 = edge->twin()->cell()->source_index();
+      VoronoiPrimitive vp(gindx1, gindx2);
+      if (v0) {
+        vp.setV0(Point2<double>(v0->x(), v0->y()));
+      }
+      if (v1) {
+        vp.setV1(Point2<double>(v1->x(), v1->y()));
+      }
+      vps.push_back(vp);
+      edge = nextEdge;
+    } while (edge != firstEdge);
+    constructor.constructEdges(vps, cellIndex);
   }
 }
-
-//------------------------------------------------------------------------------
-// Explicit instantiation.
-//------------------------------------------------------------------------------
-template class BoostTessellator<double>;
 
 } //end polytope namespace
