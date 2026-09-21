@@ -1,58 +1,127 @@
 # ----------------------------------------------------------------------------------
-# CMake file for Polytope's Python bindings using PYB11Generator
-#   -Builds and compiles the Python bindings according to UsePyBindGen cmake module
+# Python bindings for the renovated Polytope C++ implementation using PYB11Generator.
 # ----------------------------------------------------------------------------------
 
-# The serial tessellators to be wrapped
-set(SERIAL_TESSELLATORS "")
-if(HAVE_TRIANGLE)
-  set(SERIAL_TESSELLATORS ${SERIAL_TESSELLATORS} "TriangleTessellator2d")
+set(ALL_TESSELLATORS "")
+if(POLYTOPE_ENABLE_BOOST)
+  list(APPEND ALL_TESSELLATORS "BoostTessellator")
 endif()
-if(HAVE_BOOST_VORONOI)
-  set(SERIAL_TESSELLATORS ${SERIAL_TESSELLATORS} "BoostTessellator2d")
+if(POLYTOPE_ENABLE_TRIANGLE)
+  list(APPEND ALL_TESSELLATORS "TriangleTessellator")
 endif()
-if(HAVE_TETGEN)
-  set(SERIAL_TESSELLATORS ${SERIAL_TESSELLATORS} "TetgenTessellator3d")
-endif()
-
-# Generate the Tessellators.py script with the tessellators we're building
-configure_file(Tessellators.py.in ${PROJECT_BINARY_DIR}/src/PYB11/Tessellators.py)
-
-# libtriangle location
-if(HAVE_TRIANGLE)
-  set(TRIANGLE_STATIC_LIB "${PROJECT_BINARY_DIR}/src/libtriangle${CMAKE_STATIC_LIBRARY_SUFFIX}")
-else()
-  set(TRIANGLE_STATIC_LIB)
+if(POLYTOPE_ENABLE_MPI)
+  list(APPEND ALL_TESSELLATORS "DistributedTessellator")
 endif()
 
-# libtetgen location
-if(HAVE_TETGEN)
-  set(TETGEN_STATIC_LIB "${PROJECT_BINARY_DIR}/src/libtetgen${CMAKE_STATIC_LIBRARY_SUFFIX}")
-else()
-  set(TETGEN_STATIC_LIB)
-endif()
+configure_file(
+  Tessellators.py.in
+  ${PROJECT_BINARY_DIR}/src/PYB11/Tessellators.py
+)
 
-## Additional HDF5 link libraries
-## NOTE:  This was added in to catch a few known build cases of static
-##        silo and hdf5 on x86_64. Specifying the HDF5_ROOT will cause
-##        Polytope to link against all the hdf5 libraries it finds.
-## FIXME: A better solution is to allow users to specify a list of
-##        additional link args when configuring Polytope.
+set(POLYTOPE_PYTHON_SRC_FILES
+  BoostTessellator.py
+  Communicator.py
+  DistributedTessellator.py
+  KeyCodec.py
+  MortonKeyTraits.py
+  PackedKeyTraits.py
+  Partitioner.py
+  PLC.py
+  Point.py
+  polytope_PYB11.py
+  polytope_pybind11_helpers.hh
+  QuantizedKeyTraits.py
+  Quantizer.py
+  QuantPLC.py
+  Tessellators.py.in
+  SiloWriter.py
+  Tessellation.py
+  Tessellator.py
+  TriangleTessellator.py
+)
 
-# On some Linux machines we get messed up with the HDF5 libs including
-# things like libdl and libm, so we try to cut down the list here to the
-# first couple of elements.
-list(LENGTH HDF5_LIBRARIES NUM_HDF5_LIBRARIES)
-if (NUM_HDF5_LIBRARIES GREATER 2)
-  list(GET HDF5_LIBRARIES 0 1 HDF5_LIB)
-endif()
-
-# Add our PYB11 module
+get_property(POLYTOPE_TPL_DEPENDS GLOBAL PROPERTY POLYTOPE_TPL_DEPENDS)
+get_property(POLYTOPE_CXX_COMPILE_FLAGS GLOBAL PROPERTY POLYTOPE_CXX_COMPILE_FLAGS)
+get_property(POLYTOPE_CXX_LINK_FLAGS GLOBAL PROPERTY POLYTOPE_CXX_LINK_FLAGS)
 PYB11Generator_add_module(polytope
   MODULE   polytope
   SOURCE   polytope_PYB11.py
-  INCLUDES ${CMAKE_INSTALL_PREFIX}/include
-  LINKS    polytopeC ${TRIANGLE_STATIC_LIB} ${TETGEN_STATIC_LIB} ${ZLIB_LIBRARIES} ${SILO_LIBRARIES} ${HDF5_LIBRARIES}
-  INSTALL  ${POLYTOPE_SITE_PACKAGES_PATH}
+  INCLUDES ${PROJECT_SOURCE_DIR}/src
+           ${PROJECT_SOURCE_DIR}/src/Partitioners
+           ${PROJECT_BINARY_DIR}/src
+           ${CMAKE_CURRENT_SOURCE_DIR}
+  LINKS    polytopeC
+  USE_BLT  ON
+  INSTALL  OFF
+  COMPILE_OPTIONS ${POLYTOPE_CXX_COMPILE_FLAGS}
   DEPENDS  polytopeC
+)
+
+target_link_options(polytope PUBLIC ${POLYTOPE_CXX_LINK_FLAGS})
+install(TARGETS polytope
+  DESTINATION ${POLYTOPE_SITE_PACKAGES_PATH})
+
+include(PolytopePythonEnvironment)
+
+# If testing is enabled, create a virtual python environment in the build
+if(POLYTOPE_ENABLE_TESTING)
+  polytope_add_python_environment(
+    build
+    "${CMAKE_BINARY_DIR}/${POLYTOPE_VIRT_DIR}"
+    "${LIBRARY_OUTPUT_PATH}"
+    ALL
+    TARGET_NAME polytope_build_virt_env
+    DEPENDS Python3::Python polytopeC polytope "${POLYTOPE_PYTHON_SRC_FILES}"
   )
+endif()
+
+polytope_add_python_environment(
+  install
+  "${CMAKE_INSTALL_PREFIX}/${POLYTOPE_VIRT_DIR}"
+  "${CMAKE_INSTALL_PREFIX}/${POLYTOPE_SITE_PACKAGES_PATH}"
+  TARGET_NAME polytope_install_virt_env
+  DEPENDS Python3::Python polytopeC polytope "${POLYTOPE_PYTHON_SRC_FILES}"
+)
+
+# Add the virtual env target run to the install
+install(CODE "
+message(\"-- Setting up Polytope virtual environment.\")
+execute_process(
+  COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target polytope_install_virt_env
+  RESULT_VARIABLE result
+)
+if(NOT result EQUAL 0)
+  message(FATAL_ERROR \"Failed to set up Polytope virtual environment\")
+endif()
+")
+
+# Make a script that generates a wrapper file that allows us
+# to run the virtual python environment directly
+
+set(WRAPPER_TEMPLATE
+  [=[#!/usr/bin/env bash
+# Determine the path of this script file
+POLYTOPE_BIN_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+# Adding -B to prevent byte-compiling
+$POLYTOPE_BIN_DIR/../@POLYTOPE_VIRT_DIR@/bin/python -B "$@"
+]=]
+)
+
+string(CONFIGURE
+  "${WRAPPER_TEMPLATE}"
+  WRAPPER_CONTENT
+  @ONLY
+)
+
+set(POLYTOPE_PYTHON_WRAPPER_SCRIPT ${CMAKE_CURRENT_BINARY_DIR}/wrapper_script)
+
+file(GENERATE
+  OUTPUT "${POLYTOPE_PYTHON_WRAPPER_SCRIPT}"
+  CONTENT "${WRAPPER_CONTENT}"
+)
+
+install(
+  PROGRAMS ${POLYTOPE_PYTHON_WRAPPER_SCRIPT}
+  DESTINATION bin
+  RENAME python
+)

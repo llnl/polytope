@@ -1,0 +1,215 @@
+from PYB11Generator import *
+
+#TODO: Could probably remove repeated code
+
+@PYB11template("CoordType")
+@PYB11cppname("Point2")
+class Point2:
+    "A 2D coordinate point with an index."
+
+    def pyinit(self):
+        "Default constructor"
+
+    def pyinit1(self,
+                value="const %(CoordType)s"):
+        "Construct with x and y set to one value."
+
+    def pyinit2(self,
+                x="const %(CoordType)s",
+                y="const %(CoordType)s",
+                index=("const unsigned", "0")):
+        "Construct from x and y."
+
+    def pyinit3(self,
+                rhs="const Point<2, %(CoordType)s>"):
+        "Copy constructor"
+
+    @PYB11const
+    def iszero(self):
+        return "bool"
+
+    @PYB11const
+    def maxAxis(self):
+        return "int"
+
+    @PYB11const
+    def allLess(self, rhs="const Point2<%(CoordType)s>&"):
+        return "bool"
+
+    @PYB11const
+    def allLessEqual(self, rhs="const Point2<%(CoordType)s>&"):
+        return "bool"
+
+    @PYB11const
+    def allGreater(self, rhs="const Point2<%(CoordType)s>&"):
+        return "bool"
+
+    @PYB11const
+    def allGreaterEqual(self, rhs="const Point2<%(CoordType)s>&"):
+        return "bool"
+
+    @PYB11const
+    def minElements(self, rhs="const Point2<%(CoordType)s>&"):
+        return "Point2<%(CoordType)s>"
+
+    @PYB11const
+    def maxElements(self, rhs="const Point2<%(CoordType)s>&"):
+        return "Point2<%(CoordType)s>"
+
+    @PYB11implementation("[](const Point2<%(CoordType)s>& self) { std::stringstream ss; ss << self; return ss.str(); }")
+    def __str__(self):
+        return "std::string"
+
+    @PYB11implementation("[](const Point2<%(CoordType)s>& self) { std::stringstream ss; ss << self; return ss.str(); }")
+    def __repr__(self):
+        return
+
+    @PYB11implementation("[](const Point2<%(CoordType)s>& self, size_t i) { if (i >= 2) throw py::index_error(); return self[i]; }")
+    def __getitem__(self):
+        return "%(CoordType)s"
+
+    @PYB11implementation("[](Point2<%(CoordType)s>& self, size_t i, const %(CoordType)s& v) { if (i >= 2) throw py::index_error(); self[i] = v; }")
+    def __setitem__(self):
+        return "void"
+
+    # Operators
+    def __neg__(self):
+        return
+    def __add__(self):
+        return
+    def __sub__(self):
+        return
+    def __mul__(self):
+        return
+    def __iadd__(self):
+        return
+    def __isub__(self):
+        return
+
+    @PYB11pycppname("__mul__")
+    def __mul__f(self, rhs="%(CoordType)s()"):
+        return
+    @PYB11pycppname("__rmul__")
+    def __rmul__f(self, rhs="%(CoordType)s()"):
+        return
+    @PYB11pycppname("__truediv__")
+    def __truediv__f(self, rhs="%(CoordType)s()"):
+        return
+    @PYB11pycppname("__itruediv__")
+    def __itruediv__f(self, rhs="%(CoordType)s()"):
+        return
+
+    x = PYB11readwrite()
+    y = PYB11readwrite()
+    index = PYB11readwrite()
+
+@PYB11template("CoordType")
+@PYB11cppname("Point3")
+class Point3:
+    "A 3D coordinate point with an index."
+
+    def pyinit(self):
+        "Default constructor"
+
+    def pyinit1(self,
+                value="const %(CoordType)s"):
+        "Construct with x, y, and z set to one value."
+
+    def pyinit2(self,
+                x="const %(CoordType)s",
+                y="const %(CoordType)s",
+                z="const %(CoordType)s",
+                index=("const unsigned", "0")):
+        "Construct from x, y, and z."
+
+    def pyinit3(self,
+                rhs="const Point<3, %(CoordType)s>"):
+        "Copy constructor"
+
+    @PYB11const
+    def iszero(self):
+        return "bool"
+
+    @PYB11const
+    def maxAxis(self):
+        return "int"
+
+    @PYB11const
+    def allLess(self, rhs="const Point3<%(CoordType)s>&"):
+        return "bool"
+
+    @PYB11const
+    def allLessEqual(self, rhs="const Point3<%(CoordType)s>&"):
+        return "bool"
+
+    @PYB11const
+    def allGreater(self, rhs="const Point3<%(CoordType)s>&"):
+        return "bool"
+
+    @PYB11const
+    def allGreaterEqual(self, rhs="const Point3<%(CoordType)s>&"):
+        return "bool"
+
+    @PYB11const
+    def minElements(self, rhs="const Point3<%(CoordType)s>&"):
+        return "Point3<%(CoordType)s>"
+
+    @PYB11const
+    def maxElements(self, rhs="const Point3<%(CoordType)s>&"):
+        return "Point3<%(CoordType)s>"
+
+    @PYB11implementation("[](const Point3<%(CoordType)s>& self) { std::stringstream ss; ss << self; return ss.str(); }")
+    def __str__(self):
+        return "std::string"
+
+    @PYB11implementation("[](const Point3<%(CoordType)s>& self) { std::stringstream ss; ss << self; return ss.str(); }")
+    def __repr__(self):
+        return
+
+    @PYB11implementation("[](const Point3<%(CoordType)s>& self, size_t i) { if (i >= 3) throw py::index_error(); return self[i]; }")
+    def __getitem__(self):
+        return "%(CoordType)s"
+
+    @PYB11implementation("[](Point3<%(CoordType)s>& self, size_t i, const %(CoordType)s& v) { if (i >= 3) throw py::index_error(); self[i] = v; }")
+    def __setitem__(self):
+        return "void"
+
+    # Operators
+    def __neg__(self):
+        return
+    def __add__(self):
+        return
+    def __sub__(self):
+        return
+    def __mul__(self):
+        return
+    def __iadd__(self):
+        return
+    def __isub__(self):
+        return
+
+    @PYB11pycppname("__mul__")
+    def __mul__f(self, rhs="%(CoordType)s()"):
+        return
+    @PYB11pycppname("__rmul__")
+    def __rmul__f(self, rhs="%(CoordType)s()"):
+        return
+    @PYB11pycppname("__truediv__")
+    def __truediv__f(self, rhs="%(CoordType)s()"):
+        return
+    @PYB11pycppname("__itruediv__")
+    def __itruediv__f(self, rhs="%(CoordType)s()"):
+        return
+
+    x = PYB11readwrite()
+    y = PYB11readwrite()
+    z = PYB11readwrite()
+    index = PYB11readwrite()
+
+for ndim in [2, 3]:
+    for (name, ctype) in [("", "double"),
+                          ("Coordinate", f"polytope::QuantizedCoordinate<{ndim}>"),
+                          ("Key", f"polytope::QuantizedKey<{ndim}>")]:
+        exec(f'''
+{name}Point{ndim}d = PYB11TemplateClass(Point{ndim}, template_parameters="{ctype}")
+''')
