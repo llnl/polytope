@@ -33,7 +33,6 @@ public:
     }
   }
 
-protected:
   //! Generate one collection of raw Voronoi primitives per generator.
   virtual PrimitiveCells
   tessellateQuantizedImpl(const QuantizedTessellation& input) const = 0;

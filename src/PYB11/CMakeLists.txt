@@ -33,11 +33,14 @@ set(POLYTOPE_PYTHON_SRC_FILES
   QuantizedKeyTraits.py
   Quantizer.py
   QuantPLC.py
+  QuantTessellation.py
+  SerialTessellator.py
   Tessellators.py.in
   SiloWriter.py
   Tessellation.py
   Tessellator.py
   TriangleTessellator.py
+  VoronoiPrimitive.py
 )
 
 get_property(POLYTOPE_TPL_DEPENDS GLOBAL PROPERTY POLYTOPE_TPL_DEPENDS)

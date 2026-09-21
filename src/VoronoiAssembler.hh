@@ -88,7 +88,6 @@ private:
         clippedEdges.push_back(flipEdge(cacheIt->second));
         continue;
       }
-      ClippedEdge clippedEdge;
       Clip2D<QuantizedCoordinate<2>> clipper;
       const int gindx1 = cellIndex;
       const int gindx2 = (gp.first != cellIndex) ? gp.first : gp.second;
@@ -115,6 +114,7 @@ private:
       if (clipper.doClipping()) {
         continue;
       }
+      ClippedEdge clippedEdge;
       clippedEdge.clippedSides = std::make_pair(clipper.ifirstSide, clipper.isecondSide);
       clippedEdge.curEdge = updateNodeMap(clipper.p0, clipper.p1, node2id, result.nodes);
       genPairToEdge[gp] = clippedEdge;

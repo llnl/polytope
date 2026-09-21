@@ -10,12 +10,15 @@ PYB11includes = ['"polytope.hh"',
                  '"QuantizedKeyTraits.hh"',
                  '"Quantizer.hh"',
                  '"QuantPLC.hh"',
+                 '"QuantTessellation.hh"',
                  '"Point.hh"',
                  '"Cell.hh"',
                  '"PLC.hh"',
                  '"Tessellation.hh"',
                  '"SiloWriter.hh"',
                  '"Tessellator.hh"',
+                 '"SerialTessellator.hh"',
+                 '"VoronoiAssembler.hh"',
                  '"Partitioners/Partitioner.hh"',
                  '"Partitioners/LatticePartitioner.hh"',
                  '"Partitioners/QuasiVoronoiPartitioner.hh"',
@@ -76,8 +79,15 @@ vector_of_vector_of_vector_of_Point3d = PYB11_bind_vector("std::vector<std::vect
 
 from PLC import *
 from QuantPLC import *
+from QuantTessellation import *
 from Tessellation import *
 from Tessellator import *
+from SerialTessellator import *
+from VoronoiPrimitive import *
+
+vector_of_VoronoiPrimitive2d = PYB11_bind_vector("VoronoiPrimitive<2>", opaque=True, local=True)
+vector_of_vector_of_VoronoiPrimitive2d = PYB11_bind_vector("std::vector<VoronoiPrimitive<2>>", opaque=True, local=True)
+
 from Partitioner import *
 # Import any serial tessellators and the distributed tessellator
 from Tessellators import *

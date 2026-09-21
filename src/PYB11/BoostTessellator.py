@@ -1,9 +1,9 @@
 from PYB11Generator import *
-from Tessellator import Tessellator
+from SerialTessellator import SerialTessellator
 
 @PYB11template()
 @PYB11template_dict({"Dimension": "2", "RealType": "double"})
-class BoostTessellator(Tessellator):
+class BoostTessellator(SerialTessellator):
     "2D Voronoi tessellator backed by Boost.Polygon."
 
     def pyinit(self):
@@ -13,3 +13,9 @@ class BoostTessellator(Tessellator):
     @PYB11const
     def name(self):
         return "std::string"
+
+    @PYB11virtual
+    @PYB11const
+    def tessellateQuantizedImpl(self,
+                                input="const QuantTessellation<%(Dimension)s>&"):
+        return "std::vector<std::vector<VoronoiPrimitive<%(Dimension)s>>>"
