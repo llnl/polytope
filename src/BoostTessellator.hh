@@ -13,17 +13,19 @@
 
 #include "boost/polygon/voronoi.hpp"
 
-#include "Tessellator.hh"
+#include "SerialTessellator.hh"
 #include "QuantTessellation.hh"
 #include "Point.hh"
+#include "VoronoiAssembler.hh"
 
 namespace polytope {
 
-class BoostTessellator : public Tessellator<2, double> {
+class BoostTessellator : public SerialTessellator<2> {
 public:
 
   using RealType = double;
   using QuantizedTessellation = QuantTessellation<2>;
+  using PrimitiveCells = VoronoiPrimitiveCells<2>;
 
   // Constructor, destructor.
   BoostTessellator() = default;
@@ -31,7 +33,7 @@ public:
 
   // Compute the nodes around a collection of generators.
   // Required method for all Tessellators.
-  virtual void tessellateQuantizedImpl(QuantizedTessellation& result) override;
+  PrimitiveCells tessellateQuantizedImpl(const QuantizedTessellation& result) const override;
 
   // The name of the tessellator
   virtual std::string name() const override { return "BoostTessellator"; }

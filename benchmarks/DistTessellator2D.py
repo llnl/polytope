@@ -58,7 +58,7 @@ if __name__ == "__main__":
     plc_points = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]
     Q.init(plc_points)
     ptu.rootprint(f"Degeneracy {Q.degeneracy()}")
-    ptu.rootprint(f"Generating {N} random points")
+    ptu.rootprint(f"Generating {N} random points with {nranks} ranks")
     if (rank == root):
         with open(timer_log, "w") as ff:
             ff.write(f"Degeneracy {Q.degeneracy()}, {N} points\n")

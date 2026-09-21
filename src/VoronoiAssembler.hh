@@ -1,5 +1,12 @@
-#ifndef __Polytope_VoronoiConstructor__
-#define __Polytope_VoronoiConstructor__
+//-----------------------------------------------------------------------------//
+// VoronoiAssembler
+//
+// Convert backend-produced Voronoi primitives into a bounded quantized
+// tessellation.  Specializations define the primitive representation and the
+// dimension-specific clipping/topology construction.
+//-----------------------------------------------------------------------------//
+#ifndef __Polytope_VoronoiAssembler__
+#define __Polytope_VoronoiAssembler__
 
 #include "QuantTessellation.hh"
 #include "EdgeUtils.hh"
@@ -7,9 +14,22 @@
 #include "Shapes.hh"
 #include "Clipping2D.hh"
 
+#include <vector>
+
 namespace polytope {
 
-struct VoronoiPrimitive {
+template<int Dimension>
+struct VoronoiPrimitive {};
+
+template<int Dimension>
+using VoronoiPrimitiveCells =
+  std::vector<std::vector<VoronoiPrimitive<Dimension>>>;
+
+template<int Dimension>
+class VoronoiAssembler;
+
+template<>
+struct VoronoiPrimitive<2> {
   GenPair gp;
   Point2<double> rp0;
   Point2<double> rp1;
@@ -34,45 +54,44 @@ struct VoronoiPrimitive {
   }
 };
 
-class VoronoiConstructor {
+template<>
+class VoronoiAssembler<2> {
 public:
-  // Map QuantizedPoint coordinates to our node indices (for deduplication)
-  std::map<QuantizedPoint<2>, int> node2id;
-  // Map canonical edges to face indices for oriented edge tracking
-  EdgeToFaceMap edgeToFace;
-  // Map generator pairs to ClippedEdges
-  // ClippedEdge contains an edge and two ints for the box sides that
-  // possibly clipped the start and the end of the segment
-  GenPairToClippedEdgeMap genPairToEdge;
-  // Corner indices
-  std::map<BoxSide, unsigned> cornerIndices;
-  // Reference to the quantized tessellation
-  QuantTessellation<2>& result;
-
-  VoronoiConstructor(QuantTessellation<2>& input) :
+  VoronoiAssembler(QuantTessellation<2>& input):
     result(input) {
     cornerIndices = addBoxPoints(node2id, result.nodes);
   }
 
-  // For a set of VoronoiPrimitives, create an unordered vector of ClippedEdges
-  // and update the nodes, faces, and cells in the result QuantTessellation.
-  void constructEdges(std::vector<VoronoiPrimitive>& vps,
+  //! Assemble all cells using one shared edge/node cache.
+  void assemble(const VoronoiPrimitiveCells<2>& cellPrimitives) {
+    POLY_ASSERT(cellPrimitives.size() == result.points.size());
+    result.cells.resize(cellPrimitives.size());
+    for (auto cellIndex = 0u; cellIndex < cellPrimitives.size(); ++cellIndex) {
+      constructEdges(cellPrimitives[cellIndex], cellIndex);
+    }
+  }
+
+private:
+  std::map<QuantizedPoint<2>, int> node2id;
+  EdgeToFaceMap edgeToFace;
+  GenPairToClippedEdgeMap genPairToEdge;
+  std::map<BoxSide, unsigned> cornerIndices;
+  QuantTessellation<2>& result;
+
+  void constructEdges(const std::vector<VoronoiPrimitive<2>>& vps,
                       const int cellIndex) {
     std::vector<ClippedEdge> clippedEdges;
-    for (auto& vp : vps) {
-      auto& gp = vp.gp;
+    for (const auto& vp : vps) {
+      const auto& gp = vp.gp;
       auto cacheIt = genPairToEdge.find(gp);
-      // Check if we have already solved for this Voronoi edge
       if (cacheIt != genPairToEdge.end()) {
         clippedEdges.push_back(flipEdge(cacheIt->second));
         continue;
       }
       ClippedEdge clippedEdge;
-      // Check if edge must be clipped by quantized space
-      // TODO: Simplify the clipping logic
       Clip2D<QuantizedCoordinate<2>> clipper;
-      int gindx1 = cellIndex;
-      int gindx2 = (gp.first != cellIndex) ? gp.first : gp.second;
+      const int gindx1 = cellIndex;
+      const int gindx2 = (gp.first != cellIndex) ? gp.first : gp.second;
       clipper.gen0 = result.points[gindx1];
       clipper.gen1 = result.points[gindx2];
       if (vp.inf0) {
@@ -106,6 +125,7 @@ public:
                                                           cornerIndices, result.nodes, result.faces, edgeToFace);
   }
 };
-}
+
+} // namespace polytope
 
 #endif

@@ -27,7 +27,7 @@ def test_distributed_2d_tessellators(Ngen):
     local_points = ptu.generate_normal_random_points(Ngen, seed=local_seed, boundary2d=boundary)
     # Make a partitioner
     partitioner = polytope.DistributedLloydPartitioner2d()
-    ptu.rootprint(f"Tessellating {Ntotal} generators")
+    ptu.rootprint(f"Tessellating {Ntotal} generators with {nranks} ranks")
     serial_tessellator = get_tessellator()
     tess_name = serial_tessellator.name()
     ptu.rootprint(f"Testing unbounded {tess_name}")

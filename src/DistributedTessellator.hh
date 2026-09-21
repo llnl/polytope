@@ -109,12 +109,7 @@ public:
                                  mesh);
   }
 
-  //! Simply becomes a wrapper for the Impl
-  virtual void tessellateQuantized(QuantizedTessellation& qmesh) override {
-    this->tessellateQuantizedImpl(qmesh);
-  }
-
-  virtual void tessellateQuantizedImpl(QuantizedTessellation& qmesh) override;
+  virtual void tessellateQuantized(QuantizedTessellation& qmesh) override;
 
   virtual std::string name() const override;
 

@@ -62,25 +62,11 @@ public:
                      geometry, mesh);
   }
 
-  //! Required for all tessellators:
-  //! Compute the quantized tessellation.  This is the basic method all
-  //! Tessellator implementations must provide, on which the other tessellation methods
-  //! in polytope build.
+  //! Compute the quantized tessellation.  Serial implementations inherit the
+  //! primitive-producing implementation from SerialTessellator; distributed
+  //! implementations provide this operation directly.
   virtual void
-  tessellateQuantizedImpl(QuantTessellation<Dimension>& result) = 0;
-
-  //! Wrapper for tessellateQuantizedImpl that tests if only 1 generator point is given.
-  //! DistributedTessellator will override this.
-  virtual void
-  tessellateQuantized(QuantTessellation<Dimension>& result) {
-    if (result.points.empty()) {
-      return;
-    } else if (result.points.size() == 1) {
-      singleNodeTessellate(result);
-    } else {
-      this->tessellateQuantizedImpl(result);
-    }
-  }
+  tessellateQuantized(QuantTessellation<Dimension>& result) = 0;
 
   //! Required for all tessellators:
   //! A unique name string per tessellation instance.

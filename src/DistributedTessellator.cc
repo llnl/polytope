@@ -169,7 +169,7 @@ partitionAndTessellate(const std::vector<Point<Dimension, RealType>>& points,
 template<int Dimension>
 void
 DistributedTessellator<Dimension>::
-tessellateQuantizedImpl(QuantizedTessellation& qmesh) {
+tessellateQuantized(QuantizedTessellation& qmesh) {
   int rank = Communicator::getRank();
   int nranks = Communicator::getNRanks();
 

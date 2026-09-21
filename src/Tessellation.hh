@@ -10,7 +10,7 @@
 #include "Point.hh"
 namespace polytope {
 
-//! \class Mesh - A basic descriptor class for a topologically-consistent
+//! \class Tessellation - A basic descriptor class for a topologically-consistent
 //! arbitrary poly(gonal/hedral) mesh.
 template<int Dimension, typename CoordType>
 class Tessellation {

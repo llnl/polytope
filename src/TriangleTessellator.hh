@@ -11,17 +11,19 @@
 #include <cmath>
 #include <limits>
 
-#include "Tessellator.hh"
+#include "SerialTessellator.hh"
 #include "QuantTessellation.hh"
 #include "Point.hh"
+#include "VoronoiAssembler.hh"
 
 namespace polytope {
 
-class TriangleTessellator : public Tessellator<2, double> {
+class TriangleTessellator : public SerialTessellator<2> {
 public:
 
   using RealType = double;
   using QuantizedTessellation = QuantTessellation<2>;
+  using PrimitiveCells = VoronoiPrimitiveCells<2>;
 
   // Constructor, destructor.
   TriangleTessellator() = default;
@@ -29,7 +31,7 @@ public:
 
   // Compute the nodes around a collection of generators.
   // Required method for all Tessellators.
-  virtual void tessellateQuantizedImpl(QuantizedTessellation& result) override;
+  PrimitiveCells tessellateQuantizedImpl(const QuantizedTessellation& result) const override;
 
   // The name of the tessellator
   virtual std::string name() const override { return "TriangleTessellator"; }

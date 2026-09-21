@@ -5,6 +5,7 @@
 #include "EdgeUtils.hh"
 
 #include <iostream>
+#include <utility>
 
 // Handy Boost stuff
 #include <boost/bind.hpp>
@@ -13,10 +14,6 @@
 
 #include "polytope_internal.hh" // Pulls in POLY_ASSERT
 #include "RegisterBoostPolygonTypes.hh"
-#include "Shapes.hh"
-#include "QuantPLC.hh"
-#include "VoronoiConstructor.hh"
-#include "Clipping2D.hh"
 
 // The Voronoi tools in Boost.Polygon
 #include <boost/polygon/voronoi.hpp>
@@ -26,9 +23,9 @@ namespace polytope {
 //------------------------------------------------------------------------------
 // Compute the QuantizedTessellation
 //------------------------------------------------------------------------------
-void
+BoostTessellator::PrimitiveCells
 BoostTessellator::
-tessellateQuantizedImpl(QuantizedTessellation& result) {
+tessellateQuantizedImpl(const QuantizedTessellation& result) const {
   // Type aliases
   using VD = boost::polygon::voronoi_diagram<RealType>;
   const auto& Q = Quantizer<2>::instance();
@@ -49,13 +46,7 @@ tessellateQuantizedImpl(QuantizedTessellation& result) {
   }
   builder.construct(&voronoi);
 
-  // Build the tessellation data structures
-  // In 2D: nodes are Voronoi vertices, faces are edges, cells are Voronoi cells
-  result.nodes.reserve(voronoi.num_vertices()+4);
-  result.faces.reserve(voronoi.num_edges());
-  result.cells.resize(numGenerators);
-
-  VoronoiConstructor constructor(result);
+  PrimitiveCells cellPrimitives(numGenerators);
 
   // Process each Voronoi cell
   for (typename VD::const_cell_iterator cellItr = voronoi.cells().begin();
@@ -70,7 +61,7 @@ tessellateQuantizedImpl(QuantizedTessellation& result) {
     // Walk edges CCW around this cell
     const typename VD::edge_type* firstEdge = cellItr->incident_edge();
     const typename VD::edge_type* edge = firstEdge;
-    std::vector<VoronoiPrimitive> vps;
+    std::vector<VoronoiPrimitive<2>> vps;
     do {
       const VD::edge_type* nextEdge = edge->next();
       const typename VD::vertex_type* v0 = edge->vertex0();
@@ -80,7 +71,7 @@ tessellateQuantizedImpl(QuantizedTessellation& result) {
       // gen0 should always be the current cell's generator
       auto gindx1 = edge->cell()->source_index();
       auto gindx2 = edge->twin()->cell()->source_index();
-      VoronoiPrimitive vp(gindx1, gindx2);
+      VoronoiPrimitive<2> vp(gindx1, gindx2);
       if (v0) {
         vp.setV0(Point2<double>(v0->x(), v0->y()));
       }
@@ -90,8 +81,9 @@ tessellateQuantizedImpl(QuantizedTessellation& result) {
       vps.push_back(vp);
       edge = nextEdge;
     } while (edge != firstEdge);
-    constructor.constructEdges(vps, cellIndex);
+    cellPrimitives[cellIndex] = std::move(vps);
   }
+  return cellPrimitives;
 }
 
 } //end polytope namespace

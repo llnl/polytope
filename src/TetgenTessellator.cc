@@ -10,7 +10,13 @@
 
 namespace polytope {
 
-void TetgenTessellator::tessellateQuantizedImpl(QT& result) {
+void TetgenTessellator::tessellateQuantized(QT& result) {
+  if (result.points.empty()) {
+    return;
+  } else if (result.points.size() == 1) {
+    singleNodeTessellate(result);
+    return;
+  }
   tetgenio in = createTetgenPoints(result);
   tetgenio out;
   // Create the Delaunay

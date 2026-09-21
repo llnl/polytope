@@ -413,7 +413,7 @@ public:
   void cullExternalPoints(const QuantPLC<Dimension>& QPLC);
 
   // Return the encoding scheme used for this instance
-  KeyEncoding keyEncoding() { return m_keyEncode; }
+  KeyEncoding keyEncoding() const { return m_keyEncode; }
 
   //------------------------------------------------------------------------------
   // Output method

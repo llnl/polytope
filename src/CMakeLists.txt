@@ -30,10 +30,11 @@ set(polytope_headers
   Shapes.hh
   Tessellation.hh
   Tessellator.hh
+  SerialTessellator.hh
   TessellatorInline.hh
   TetgenTessellator.hh
   Serializer.hh
-  VoronoiConstructor.hh
+  VoronoiAssembler.hh
   polytope_internal.hh
   findBoundaryElements.hh
   Partitioners/DistributedLloydPartitioner.hh
