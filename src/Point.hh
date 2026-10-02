@@ -1,6 +1,7 @@
 //----------------------------------------------------------------------------//
 // 2D and 3D integral Point types used internally in polytope.  Not really
 // for external consumption!.
+// FIXME: Most logic can be consolidated into a single class.
 //----------------------------------------------------------------------------//
 #ifndef __Polytope_Point__
 #define __Polytope_Point__
@@ -153,6 +154,16 @@ struct Point<2, CoordType> {
   // Return dimension with largest value
   int maxAxis() const {
     return (x >= y) ? 0 : 1;
+  }
+
+  // Return the max value
+  CoordType max() const {
+    return (x >= y) ? x : y;
+  }
+
+  // Retun the min value
+  CoordType min() const {
+    return (x >= y) ? y : x;
   }
 
   // Convert to an std::array
@@ -319,6 +330,26 @@ struct Point<3, CoordType> {
       return 1;
     }
     return 2;
+  }
+
+  // Return dimension with smallest value
+  int minAxis() const {
+    if (x < y && x < z) {
+      return 0;
+    } else if (y < z) {
+      return 1;
+    }
+    return 2;
+  }
+
+  // Return the max value
+  CoordType max() const {
+    return this->operator[](maxAxis());
+  }
+
+  // Return the min value
+  CoordType min() const {
+    return this->operator[](minAxis());
   }
 
   // Convert to an std::array

@@ -14,7 +14,6 @@ def test_distributed_2d_tessellators(Ngen):
     rank = comm.getRank()
     nranks = comm.getNRanks()
     tessellator_types = _available_tessellators()
-    #assert tessellator_types
     Q = polytope.Quantizer2d.instance()
 
     # Seed for generating points randomly

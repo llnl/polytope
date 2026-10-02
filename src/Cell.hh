@@ -2,6 +2,7 @@
 // Cell
 //
 // Generalized class for handling cells in 2D and 3D.
+// FIXME: Consolidate repeated routines
 //-----------------------------------------------------------------------------//
 #ifndef __Polytope_Cell__
 #define __Polytope_Cell__
@@ -22,26 +23,12 @@ template<typename CoordType> struct Cell<2, CoordType> {
     m_points(points) {
   }
 
-  // Cell(const std::vector<PointType>& points,
-  //      const std::vector<Edge>& edges) {
-  //   m_points.reserve(edges.size());
-  //   for (const auto& edge : edges) {
-  //     m_points.push_back(points[edge.first]);
-  //   }
-  // }
-
   Cell(const std::vector<PointType>& points,
        const std::vector<std::vector<unsigned>>& facets) {
     init(points, facets);
   }
 
   Cell(const std::vector<PointType>& points,
-       const std::vector<int>& faceIndices,
-       const std::vector<std::vector<unsigned>>& facets) {
-    init(points, faceIndices, facets);
-  }
-
-  Cell(const std::vector<CoordType>& points,
        const std::vector<int>& faceIndices,
        const std::vector<std::vector<unsigned>>& facets) {
     init(points, faceIndices, facets);
@@ -94,26 +81,6 @@ template<typename CoordType> struct Cell<2, CoordType> {
     }
   }
 
-  // Extract with a layer of indirection
-  // void init(const std::vector<CoordType>& points,
-  //           const std::vector<int>& faceIndices,
-  //           const std::vector<std::vector<unsigned>>& facets) {
-  //   m_points.reserve(faceIndices.size());
-  //   for (const auto& f : faceIndices) {
-  //     if (f < 0) {
-  //       int findx = facets[~f][1];
-  //       CoordType f0 = points[2*findx];
-  //       CoordType f1 = points[2*findx+1];
-  //       m_points.push_back(Point2<CoordType>(f0, f1));
-  //     } else {
-  //       int findx = facets[f][0];
-  //       CoordType f0 = points[2*findx];
-  //       CoordType f1 = points[2*findx+1];
-  //       m_points.push_back(Point2<CoordType>(f0, f1));
-  //     }
-  //   }
-  // }
-
   bool operator==(const Cell& other) const {
     auto lhs = m_points;
     auto rhs = other.m_points;
@@ -153,11 +120,6 @@ template<typename CoordType> struct Cell<3, CoordType> {
     init(points, faceIndices, facets);
   }
 
-  Cell(const std::vector<CoordType>& points,
-       const std::vector<int>& faceIndices,
-       const std::vector<std::vector<unsigned>>& facets) {
-    init(points, faceIndices, facets);
-  }
   // Extract using the points and a vector of vector of indices
   void init(const std::vector<PointType>& points,
             const std::vector<std::vector<unsigned>>& facets) {
@@ -182,31 +144,6 @@ template<typename CoordType> struct Cell<3, CoordType> {
           m_points.back().push_back(points[~f]);
         } else {
           m_points.back().push_back(points[f]);
-        }
-      }
-    }
-  }
-
-  // Extract with a layer of indirection
-  void init(const std::vector<CoordType>& points,
-            const std::vector<int>& faceIndices,
-            const std::vector<std::vector<unsigned>>& facets) {
-    m_points.reserve(faceIndices.size());
-    for (const auto& fi : faceIndices) {
-      m_points.push_back(std::vector<PointType>());
-      for (const auto& f : facets[fi]) {
-        if (f < 0) {
-          int findx = facets[~f];
-          CoordType f0 = points[3*findx];
-          CoordType f1 = points[3*findx+1];
-          CoordType f2 = points[3*findx+2];
-          m_points.back().push_back(Point3<CoordType>(f0, f1, f2));
-        } else {
-          int findx = facets[f];
-          CoordType f0 = points[3*findx];
-          CoordType f1 = points[3*findx+1];
-          CoordType f2 = points[3*findx+2];
-          m_points.back().push_back(Point3<CoordType>(f0, f1, f2));
         }
       }
     }

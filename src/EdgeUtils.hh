@@ -9,6 +9,8 @@
 #include "GeomUtils.hh"
 #include "Shapes.hh"
 
+#include <unordered_set>
+
 namespace polytope {
 //------------------------------------------------------------------------------
 // Utilities for edges specifically
@@ -45,14 +47,43 @@ inline Edge orderEdge(const Edge edge) {
 }
 
 //------------------------------------------------------------------------------
+// Utilities for edge data, meaning edges paired with generator points
+// This allows us to keep track of which edges belong to which generators
+//------------------------------------------------------------------------------
+using GenPair = std::pair<int, int>;
+inline GenPair orderGenPair(const int a, const int b) {
+  return orderEdge(a, b);
+}
+
+//------------------------------------------------------------------------------
 // A directed edge and the clipping-box sides associated with its start and end
-// nodes.  Keep these together whenever the edge loop is reordered.
+// nodes. Keep these together whenever the edge loop is reordered.
 //------------------------------------------------------------------------------
 struct ClippedEdge {
-  Edge curEdge;
-  std::pair<int, int> clippedSides = std::make_pair(-1, -1);
+  GenPair gp; // Ordered generator pair
+  Edge edge = std::make_pair(-1, -1); // Default is infinite in both directions
+  // Designate which box side clipped the edge, if it was clipped. -1 means not clipped
+  std::pair<int, int> csides = std::make_pair(-1, -1);
+
+  ClippedEdge(const int gp0,
+              const int gp1):
+    gp(orderGenPair(gp0, gp1)) { }
+
+  void flipEdge() {
+    std::swap(edge.first, edge.second);
+    std::swap(csides.first, csides.second);
+  }
 };
 
+inline ClippedEdge flipEdge(const ClippedEdge& clippedEdge) {
+  ClippedEdge out(clippedEdge);
+  out.flipEdge();
+  return out;
+}
+
+//------------------------------------------------------------------------------
+// Walk the box edges to close clipped edges.
+//------------------------------------------------------------------------------
 inline void walkBoxEdges(const BoxSide& startSide,
                          const BoxSide& endSide,
                          const unsigned& startPoint,
@@ -92,41 +123,36 @@ closeClippedEdges(const std::vector<ClippedEdge>& clippedEdges,
   for (auto i = 0u; i < N; ++i) {
     const auto& cur = clippedEdges[i];
     const auto& next = clippedEdges[(i + 1) % N];
-    const auto& curEdge = cur.curEdge;
+    const auto& curEdge = cur.edge;
     out.push_back(curEdge);
 
-    if (curEdge.second == next.curEdge.first) continue;
+    if (curEdge.second == next.edge.first) continue;
 
-    POLY_ASSERT2(cur.clippedSides.second >= 0 &&
-                 next.clippedSides.first >= 0,
+    POLY_ASSERT2(cur.csides.second >= 0 &&
+                 next.csides.first >= 0,
                  "Disconnected clipped edges without a box connection");
-    walkBoxEdges(static_cast<BoxSide>(cur.clippedSides.second),
-                 static_cast<BoxSide>(next.clippedSides.first),
-                 curEdge.second, next.curEdge.first, cornerIndices, out);
+    walkBoxEdges(static_cast<BoxSide>(cur.csides.second),
+                 static_cast<BoxSide>(next.csides.first),
+                 curEdge.second, next.edge.first, cornerIndices, out);
   }
   return out;
 }
 
 //------------------------------------------------------------------------------
-// Order any clipped edges based on the generator location. This must be done
-// before calling orderClippedEdges
+// Orient the edges CCW around a generator point.
 //------------------------------------------------------------------------------
 template<typename CoordType>
-void orientClippedEdges(std::vector<ClippedEdge>& clippedEdges,
-                        const Point<2, CoordType>& generator,
-                        const std::vector<Point<2, CoordType>>& nodes) {
-  for (auto& clipped : clippedEdges) {
-    const auto& p0 = nodes[clipped.curEdge.first];
-    const auto& p1 = nodes[clipped.curEdge.second];
-    if (qcross<CoordType>(p1 - p0, generator - p0) < 0) {
-      std::swap(clipped.curEdge.first, clipped.curEdge.second);
-      std::swap(clipped.clippedSides.first, clipped.clippedSides.second);
-    }
+void orientClippedEdge(ClippedEdge& clippedEdge,
+                       const Point<2, CoordType>& p0,
+                       const Point<2, CoordType>& p1,
+                       const Point<2, CoordType>& generator) {
+  if (qcross<CoordType>(p1 - p0, generator - p0) < 0) {
+    clippedEdge.flipEdge();
   }
 }
 
 //------------------------------------------------------------------------------
-// Order a loop of edges to form a connected chain
+// Order a loop of edges to form a connected chain. Remove any degeneracies.
 // Ensures edges[i][1] connects to edges[i+1][0] when possible and relies
 // on clipping-box sides when not possible. Assumes 2D.
 //------------------------------------------------------------------------------
@@ -135,8 +161,16 @@ inline void orderClippedEdges(std::vector<ClippedEdge>& clippedEdges) {
   // Remove any degenerate edges
   clippedEdges.erase(
     std::remove_if(clippedEdges.begin(), clippedEdges.end(),
-                   [](const ClippedEdge& edge) {
-                     return edge.curEdge.first == edge.curEdge.second;
+                   [](const ClippedEdge& curEdge) {
+                     return curEdge.edge.first == curEdge.edge.second;
+                   }),
+    clippedEdges.end());
+  // Remove any redundant edges
+  std::unordered_set<Edge, EdgeHash> seenEdges;
+  clippedEdges.erase(
+    std::remove_if(clippedEdges.begin(), clippedEdges.end(),
+                   [&seenEdges](const ClippedEdge& curEdge) {
+                     return !seenEdges.insert(orderEdge(curEdge.edge)).second;
                    }),
     clippedEdges.end());
   if (clippedEdges.empty()) return;
@@ -147,9 +181,14 @@ inline void orderClippedEdges(std::vector<ClippedEdge>& clippedEdges) {
                       };
   std::vector<ClippedEdge> orderedEdges;
   orderedEdges.reserve(N);
-  std::vector<bool> used(N, false);
   size_t current = 0;
-
+  std::vector<bool> used(N, false);
+  for (size_t i = 0; i < N; ++i) {
+    if (clippedEdges[i].csides.first >= 0) {
+      current = i;
+      break;
+    }
+  }
   for (size_t count = 0; count < N; ++count) {
     orderedEdges.push_back(clippedEdges[current]);
     used[current] = true;
@@ -158,22 +197,22 @@ inline void orderClippedEdges(std::vector<ClippedEdge>& clippedEdges) {
     // Prefer exact Voronoi-edge adjacency.
     for (size_t candidate = 0; candidate < N; ++candidate) {
       if (!used[candidate] &&
-          clippedEdges[current].curEdge.second ==
-          clippedEdges[candidate].curEdge.first) {
+          clippedEdges[current].edge.second ==
+          clippedEdges[candidate].edge.first) {
         next = static_cast<int>(candidate);
         break;
       }
     }
     // If the current edge ends on the clipping box, connect to the next
     // edge that starts on the box by walking the box in CCW side order.
-    if (next == -1 && clippedEdges[current].clippedSides.second >= 0) {
+    if (next == -1 && clippedEdges[current].csides.second >= 0) {
       int bestDistance = 8;
       for (size_t candidate = 0; candidate < N; ++candidate) {
         if (!used[candidate] &&
-            clippedEdges[candidate].clippedSides.first >= 0) {
+            clippedEdges[candidate].csides.first >= 0) {
           const int distance = sideDistance(
-              clippedEdges[current].clippedSides.second,
-              clippedEdges[candidate].clippedSides.first);
+              clippedEdges[current].csides.second,
+              clippedEdges[candidate].csides.first);
           if (distance < bestDistance) {
             bestDistance = distance;
             next = static_cast<int>(candidate);
@@ -188,6 +227,9 @@ inline void orderClippedEdges(std::vector<ClippedEdge>& clippedEdges) {
   clippedEdges = std::move(orderedEdges);
 }
 
+//------------------------------------------------------------------------------
+// Order a vector of edges to form a connected chain.
+//------------------------------------------------------------------------------
 inline void orderEdgeLoop(std::vector<std::vector<unsigned>>& edges) {
   if (edges.empty()) return;
 
@@ -221,22 +263,6 @@ inline void orderEdgeLoop(std::vector<std::vector<unsigned>>& edges) {
 //------------------------------------------------------------------------------
 // Edge storage and orientation tracking
 //------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-// Utilities for edge data, meaning edges paired with generator points
-// This allows us to keep track of which edges belong to which generators
-//------------------------------------------------------------------------------
-using GenPair = std::pair<int, int>;
-inline GenPair orderGenPair(const int a, const int b) {
-  return orderEdge(a, b);
-}
-
-inline ClippedEdge flipEdge(const ClippedEdge& clippedEdge) {
-  ClippedEdge out(clippedEdge);
-  std::swap(out.curEdge.first, out.curEdge.second);
-  std::swap(out.clippedSides.first, out.clippedSides.second);
-  return out;
-}
 
 using GenPairToClippedEdgeMap = std::map<GenPair, ClippedEdge>;
 
@@ -282,23 +308,17 @@ inline void reverseEdgeLoop(std::vector<Edge>& edges) {
 }
 
 //------------------------------------------------------------------------------
-// Assemble an unordered set of clipped Voronoi edges into one CCW cell.
-// Each edge is first directed with the owning generator on its left.  The
-// routine then follows direct node connections, filling only box-boundary gaps
+// Assemble an unordered set of clipped Voronoi edges into one CCW cell. The
+// routine follows direct node connections, filling only box-boundary gaps
 // with CCW box edges, before creating the signed face references.
 //------------------------------------------------------------------------------
 template<typename CoordType>
 inline std::vector<int>
 makeCCWCellFromClippedEdges(std::vector<ClippedEdge> clippedEdges,
-                            const Point<2, CoordType>& generator,
                             const std::map<BoxSide, unsigned>& cornerIndices,
-                            const std::vector<Point<2, CoordType>>& nodes,
                             std::vector<std::vector<unsigned>>& faces,
                             EdgeToFaceMap& edgeToFace) {
   POLY_ASSERT2(!clippedEdges.empty(), "Cannot construct a cell without edges");
-
-  // Direct each Voronoi edge so the cell interior is on its left.
-  orientClippedEdges(clippedEdges, generator, nodes);
 
   // Establish edge order, then fill every non-node-connected transition with
   // its CCW clipping-box path.
@@ -360,28 +380,28 @@ inline int reverseOrientation(int signedIndex) {
 // Modify the nodes list if points do not exist in a given node id map
 //------------------------------------------------------------------------------
 template<int Dimension, typename CoordType>
+inline int updateNodeMap(const Point<Dimension, CoordType>& point,
+                         std::map<Point<Dimension, CoordType>, int>& node2id,
+                         std::vector<Point<Dimension, CoordType>>& nodes) {
+  auto it = node2id.find(point);
+  int n;
+  if (it == node2id.end()) {
+    n = nodes.size();
+    node2id[point] = n;
+    nodes.push_back(point);
+  } else {
+    n = it->second;
+  }
+  return n;
+}
+
+template<int Dimension, typename CoordType>
 inline Edge updateNodeMap(const Point<Dimension, CoordType>& p0,
                           const Point<Dimension, CoordType>& p1,
                           std::map<Point<Dimension, CoordType>, int>& node2id,
                           std::vector<Point<Dimension, CoordType>>& nodes) {
-  auto it0 = node2id.find(p0);
-  int n0;
-  if (it0 == node2id.end()) {
-    n0 = nodes.size();
-    node2id[p0] = n0;
-    nodes.push_back(p0);
-  } else {
-    n0 = it0->second;
-  }
-  auto it1 = node2id.find(p1);
-  int n1;
-  if (it1 == node2id.end()) {
-    n1 = nodes.size();
-    node2id[p1] = n1;
-    nodes.push_back(p1);
-  } else {
-    n1 = it1->second;
-  }
+  int n0 = updateNodeMap(p0, node2id, nodes);
+  int n1 = updateNodeMap(p1, node2id, nodes);
   return Edge(std::make_pair(n0, n1));
 }
 

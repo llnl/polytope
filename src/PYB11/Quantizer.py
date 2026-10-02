@@ -10,6 +10,7 @@ class Quantizer:
   using RealType = typename QuantizerType::RealType;
   using PointType = QuantizedPoint<%(Dimension)s>;
   using RealPoint = typename QuantizerType::RealPoint;
+  using CoordType = QuantizedCoordinate<%(Dimension)s>;
 """
 
     @PYB11static
@@ -37,13 +38,31 @@ class Quantizer:
         return "void"
 
     @PYB11const
+    @PYB11implementation("""[](const QuantizerType& self,
+                               const py::object& point) {
+                                 return self.quantize(pybind11_helpers::pyToPoint<%(Dimension)s, RealType>(point));
+                               }""")
     def quantize(self,
-                 x="const RealPoint&"):
+                 x="const py::object&"):
         return "PointType"
 
     @PYB11const
+    @PYB11implementation("""[](const QuantizerType& self,
+                               const py::object& point) {
+                                 return self.quantizeReal(pybind11_helpers::pyToPoint<%(Dimension)s, RealType>(point));
+                               }""")
+    @PYB11const
+    def quantizeReal(self,
+                     x="const py::object&"):
+        return "RealPoint"
+
+    @PYB11const
+    @PYB11implementation("""[](const QuantizerType& self,
+                               const py::object& point) {
+                                 return self.dequantize(pybind11_helpers::pyToPoint<%(Dimension)s, CoordType>(point));
+                               }""")
     def dequantize(self,
-                   x="const PointType&"):
+                   x="const py::object&"):
         return "RealPoint"
 
     @PYB11const

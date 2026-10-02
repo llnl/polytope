@@ -60,11 +60,12 @@ void initTriangleData(triangulateio& in) {
 //------------------------------------------------------------------------------
 // Compute the QuantizedTessellation
 //------------------------------------------------------------------------------
-TriangleTessellator::PrimitiveCells
+VoronoiAssembler<2>
 TriangleTessellator::
-tessellateQuantizedImpl(const QuantizedTessellation& result) const {
+tessellateQuantizedImpl(QuantizedTessellation& result) const {
+  VoronoiAssembler<2> assembler(result);
   if (result.points.empty()) {
-    return {};
+    return assembler;
   }
   // Type aliases
   const auto& Q = Quantizer<2>::instance();
@@ -92,13 +93,11 @@ tessellateQuantizedImpl(const QuantizedTessellation& result) const {
     // Points are already ordered by hash.  Each adjacent pair produces an
     // unbounded Voronoi bisector, which the shared assembler clips, orients,
     // closes, and turns into cells.
-    PrimitiveCells cellPrimitives(N);
     for (auto cellIndex = 0u; cellIndex < N-1; ++cellIndex) {
-      cellPrimitives[cellIndex].emplace_back(cellIndex, cellIndex + 1);
-      cellPrimitives[cellIndex + 1].emplace_back(cellIndex, cellIndex + 1);
+      assembler.addInfLines(cellIndex, cellIndex + 1);
     }
     delete[] in.pointlist;
-    return cellPrimitives;
+    return assembler;
   }
   std::vector<std::set<unsigned>> gen2tri(N);
   std::vector<Point2<double>> centers;
@@ -119,7 +118,7 @@ tessellateQuantizedImpl(const QuantizedTessellation& result) const {
     gen2tri[ic].insert(i);
   }
 
-  PrimitiveCells cellPrimitives(N);
+  assembler.fillTessNodes(centers);
 
   // Process each generator to build its Voronoi cell primitives
   for (auto cellIndex = 0u; cellIndex < N; ++cellIndex) {
@@ -127,7 +126,6 @@ tessellateQuantizedImpl(const QuantizedTessellation& result) const {
     auto genit = gen2tri[cellIndex].begin();
     int curTri = *genit;
     bool ccwDir = true;
-    std::vector<VoronoiPrimitive<2>> vps;
     // Walk the edges, if there is an infinite edge in the
     // CW direction of this cell, start there
     for (auto it : gen2tri[cellIndex]) {
@@ -166,22 +164,19 @@ tessellateQuantizedImpl(const QuantizedTessellation& result) const {
       int localSide = (ccwDir) ? ccwSide : cwSide;
       int nextTri = out.neighborlist[3*curTri+localSide];
       int otherGen = tri[3 - localIndex - localSide];
-      VoronoiPrimitive<2> vp(cellIndex, otherGen);
-      vp.setV0(centers[curTri]);
       if (nextTri != -1) {
-        vp.setV1(centers[nextTri]);
+        assembler.addFiniteEdge(cellIndex, otherGen, curTri, nextTri);
       } else {
-        vp.setThirdPoint(tri[localSide]);
+        // Add a third point to use when determing ray direction
+        assembler.addRay(cellIndex, otherGen, curTri, tri[localSide]);
       }
-      vps.push_back(vp);
       curTri = nextTri;
     } while (curTri != startTri);
-    cellPrimitives[cellIndex] = std::move(vps);
   }
   // Clean up Triangle memory
   delete[] in.pointlist;
   // Note: Triangle allocates out.* arrays, but they're cleaned up by Triangle internally
-  return cellPrimitives;
+  return assembler;
 }
 
 } //end polytope namespace

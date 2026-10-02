@@ -5,8 +5,8 @@ from Tessellator import Tessellator
 @PYB11template_dict({"RealType": "double"})
 class SerialTessellator(Tessellator):
     """Abstract serial tessellator base.
-    Concrete implementations generate Voronoi primitives and use the shared
-    Voronoi assembler to produce quantized tessellations.
+    Concrete implementations populate and return a Voronoi assembler, which
+    produces the quantized tessellation.
     """
 
     def pyinit(self):
@@ -15,7 +15,7 @@ class SerialTessellator(Tessellator):
     @PYB11pure_virtual
     @PYB11const
     def tessellateQuantizedImpl(self,
-                                input="const QuantTessellation<%(Dimension)s>&"):
-        return "std::vector<std::vector<VoronoiPrimitive<%(Dimension)s>>>"
+                                input="QuantTessellation<%(Dimension)s>&"):
+        return "VoronoiAssembler<%(Dimension)s>"
 
 SerialTessellator2d = PYB11TemplateClass(SerialTessellator, template_parameters="2")

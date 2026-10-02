@@ -28,18 +28,6 @@ using namespace std;
 using namespace polytope;
 
 // -----------------------------------------------------------------------
-// printArea
-// -----------------------------------------------------------------------
-void printArea(Boundary2D& boundary,
-	       Tessellation<2,double>& mesh) {
-   const double area = computeTessellationArea(mesh);
-   const double relErr = std::abs(boundary.mArea-area)/boundary.mArea;
-   cout << "Tessellation Area = " << area << endl;
-   cout << "Relative error    = " << relErr << endl;
-   POLY_CHECK(relErr < 1.0E-8);
-}
-
-// -----------------------------------------------------------------------
 // checkNearestNode
 // -----------------------------------------------------------------------
 bool checkNearestNode(const Tessellation<2,double>& mesh,
@@ -292,16 +280,12 @@ void test(Tessellator<2,double>& tessellator) {
       cout << iter << endl;
       compareArea(boundary, mesh);
       testWatertight(mesh, boundary.mPLC.holes.size());
-      //printArea(boundary,mesh);
       bool result = checkNearestNode(mesh, dist);
       POLY_CHECK(result);
       seed++;
     }
     ++i;
   }
-
-
-
 }
 
 // -----------------------------------------------------------------------

@@ -80,13 +80,10 @@ vector_of_vector_of_vector_of_Point3d = PYB11_bind_vector("std::vector<std::vect
 from PLC import *
 from QuantPLC import *
 from QuantTessellation import *
+from VoronoiAssembler import *
 from Tessellation import *
 from Tessellator import *
 from SerialTessellator import *
-from VoronoiPrimitive import *
-
-vector_of_VoronoiPrimitive2d = PYB11_bind_vector("VoronoiPrimitive<2>", opaque=True, local=True)
-vector_of_vector_of_VoronoiPrimitive2d = PYB11_bind_vector("std::vector<VoronoiPrimitive<2>>", opaque=True, local=True)
 
 from Partitioner import *
 # Import any serial tessellators and the distributed tessellator

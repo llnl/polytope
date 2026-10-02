@@ -1,6 +1,6 @@
 from PYB11Generator import *
 
-#TODO: Could probably remove repeated code
+#TODO: Consolidate classes
 
 @PYB11template("CoordType")
 @PYB11cppname("Point2")
@@ -84,6 +84,10 @@ class Point2:
     def __iadd__(self):
         return
     def __isub__(self):
+        return
+    def __eq__(self):
+        return
+    def __ne__(self):
         return
 
     @PYB11pycppname("__mul__")
@@ -186,6 +190,10 @@ class Point3:
     def __iadd__(self):
         return
     def __isub__(self):
+        return
+    def __eq__(self):
+        return
+    def __ne__(self):
         return
 
     @PYB11pycppname("__mul__")

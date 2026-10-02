@@ -23,9 +23,9 @@ namespace polytope {
 //------------------------------------------------------------------------------
 // Compute the QuantizedTessellation
 //------------------------------------------------------------------------------
-BoostTessellator::PrimitiveCells
+VoronoiAssembler<2>
 BoostTessellator::
-tessellateQuantizedImpl(const QuantizedTessellation& result) const {
+tessellateQuantizedImpl(QuantizedTessellation& result) const {
   // Type aliases
   using VD = boost::polygon::voronoi_diagram<RealType>;
   const auto& Q = Quantizer<2>::instance();
@@ -34,7 +34,6 @@ tessellateQuantizedImpl(const QuantizedTessellation& result) const {
               "Key encoding method changed during tessellation");
   // Get the quantized generators
   std::vector<QuantizedPoint<2>> generators = result.getQuantizedPoints();
-  const size_t numGenerators = generators.size();
 
   VD voronoi;
 
@@ -46,44 +45,35 @@ tessellateQuantizedImpl(const QuantizedTessellation& result) const {
   }
   builder.construct(&voronoi);
 
-  PrimitiveCells cellPrimitives(numGenerators);
+  VoronoiAssembler<2> assembler(result);
 
-  // Process each Voronoi cell
-  for (typename VD::const_cell_iterator cellItr = voronoi.cells().begin();
-       cellItr != voronoi.cells().end();
-       ++cellItr) {
+  // Process each Voronoi edge
+  for (const auto& edge : voronoi.edges()) {
+    if (&edge > edge.twin()) {
+      continue;
+    }
+    const auto* cell0 = edge.cell();
+    const auto* cell1 = edge.twin()->cell();
 
-    if (!cellItr->contains_point()) continue;
-
-    const int cellIndex = cellItr->source_index();
-    if (cellIndex >= int(numGenerators)) continue;
-
-    // Walk edges CCW around this cell
-    const typename VD::edge_type* firstEdge = cellItr->incident_edge();
-    const typename VD::edge_type* edge = firstEdge;
-    std::vector<VoronoiPrimitive<2>> vps;
-    do {
-      const VD::edge_type* nextEdge = edge->next();
-      const typename VD::vertex_type* v0 = edge->vertex0();
-      const typename VD::vertex_type* v1 = edge->vertex1();
-
-      // An edge is considered infinite if Boost provides a null pointer
-      // gen0 should always be the current cell's generator
-      auto gindx1 = edge->cell()->source_index();
-      auto gindx2 = edge->twin()->cell()->source_index();
-      VoronoiPrimitive<2> vp(gindx1, gindx2);
-      if (v0) {
-        vp.setV0(Point2<double>(v0->x(), v0->y()));
-      }
-      if (v1) {
-        vp.setV1(Point2<double>(v1->x(), v1->y()));
-      }
-      vps.push_back(vp);
-      edge = nextEdge;
-    } while (edge != firstEdge);
-    cellPrimitives[cellIndex] = std::move(vps);
+    const auto& gindx0 = cell0->source_index();
+    const auto& gindx1 = cell1->source_index();
+    const auto* v0 = edge.vertex0();
+    const auto* v1 = edge.vertex1();
+    if (v0 && v1) {
+      assembler.addFiniteEdge(gindx0, gindx1,
+                              Point2<double>(v0->x(), v0->y()),
+                              Point2<double>(v1->x(), v1->y()));
+    } else if (v0) {
+      assembler.addStartRay(gindx0, gindx1,
+                            Point2<double>(v0->x(), v0->y()));
+    } else if (v1) {
+      assembler.addEndRay(gindx0, gindx1,
+                          Point2<double>(v1->x(), v1->y()));
+    } else {
+      assembler.addInfLines(gindx0, gindx1);
+    }
   }
-  return cellPrimitives;
+  return assembler;
 }
 
 } //end polytope namespace

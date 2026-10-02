@@ -20,13 +20,12 @@ class QuantTessellation:
     def pyinit(self):
         "Construct an empty quantized tessellation."
 
-    @PYB11implementation("""[](const py::object& points, const bool doSort) {
+    @PYB11implementation("""[](const py::object& points) {
                                  return QuantTessellation<%(Dimension)s>(
-                                   pybind11_helpers::copyCoords<%(Dimension)s, double>(points), doSort);
+                                   pybind11_helpers::copyCoords<%(Dimension)s, double>(points));
                                }""")
     def pyinitFromPoints(self,
-                         points="const py::object&",
-                         doSort=("const bool", "true")):
+                         points="const py::object&"):
         "Construct from flattened coordinates or coordinate tuples."
 
     @PYB11implementation("""[](QuantTessellation<%(Dimension)s>& self,
@@ -61,8 +60,7 @@ class QuantTessellation:
 
     @PYB11const
     @PYB11implementation("""[](const QuantTessellation<%(Dimension)s>& self) {
-                                 const auto generators =
-                                   pybind11_helpers::pointsAsTuples<%(Dimension)s, QuantCoord>(self.getQuantizedPoints());
+                                 return pybind11_helpers::pointsAsTuples<%(Dimension)s, QuantCoord>(self.getQuantizedPoints());
                                }""")
     def getQuantizedPoints(self):
         "Return generator coordinates in quantized space."
@@ -70,17 +68,19 @@ class QuantTessellation:
 
     @PYB11const
     @PYB11implementation("""[](const QuantTessellation<%(Dimension)s>& self) {
-                                 const auto generators =
-                                   pybind11_helpers::pointsAsTuples<%(Dimension)s, double>(self.getRealQPoints());
+                                 return pybind11_helpers::pointsAsTuples<%(Dimension)s, double>(self.getRealQPoints());
                                }""")
     def getRealQPoints(self):
         "Return nested list of quantized generator coordinates cast to doubles, not dequantized."
         return "py::list"
 
     @PYB11const
+    @PYB11implementation("""[](const QuantTessellation<%(Dimension)s>& self) {
+                                 return pybind11_helpers::pointsAsTuples<%(Dimension)s, double>(self.getRealPoints());
+                               }""")
     def getRealPoints(self):
         "Return generator coordinates dequantized to physical space."
-        return "std::vector<RealPoint>"
+        return "py::list"
 
     @PYB11const
     def keyEncoding(self):
@@ -90,5 +90,10 @@ class QuantTessellation:
     numGenerators = PYB11property(
         getterraw="[](const QuantTessellation<%(Dimension)s>& self) { return self.points.size(); }",
         doc="Number of quantized generator points.")
+
+    points = PYB11readwrite(returnpolicy="reference_internal")
+    nodes = PYB11readwrite(returnpolicy="reference_internal")
+    cells = PYB11readwrite(returnpolicy="reference_internal")
+    faces = PYB11readwrite(returnpolicy="reference_internal")
 
 QuantTessellation2d = PYB11TemplateClass(QuantTessellation, template_parameters="2")

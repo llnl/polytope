@@ -14,10 +14,10 @@ class BoundaryType(IntEnum):
 class Boundary2d:
     """Construct the standard PLC fixtures and query them through QuantPLC2d."""
 
-    def __init__(self, input_type):
+    def __init__(self, input_type, pad=0.1):
         self.mDiff = 0.5
         self.mCenter = [0.0, 0.0]
-        self.m_pad = 0.1
+        self.m_pad = pad
         self.mType = input_type
         self.clear()
         self.setDefaultBoundary(self.mType)

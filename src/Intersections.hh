@@ -202,15 +202,15 @@ void removeCollinear(std::vector<Point2<CoordType>>& vertices) {
 // Clip infinite ray provided by tessellator.
 //
 // Given the start of the ray and the direction, determine the boundary
-// intersection point and the box side being intersected.
+// intersection point and return the box intersection side.
 //------------------------------------------------------------------------------
 
 template<typename CoordType>
-bool
+int
 clipInfiniteRay(const Point2<CoordType>& validVertex,
                 const Point2<CoordType>& normdiffg,
-                Point2<CoordType>& result,
-                BoxSide& side) {
+                Point2<CoordType>& result) {
+  BoxSide side;
   auto& Q = Quantizer<2>::instance();
   CoordType x_lim = (normdiffg.x > 0) ? Q.maxBound.x : Q.minBound.x;
   CoordType y_lim = (normdiffg.y > 0) ? Q.maxBound.y : Q.minBound.y;
@@ -223,15 +223,13 @@ clipInfiniteRay(const Point2<CoordType>& validVertex,
   Point2<CoordType> planex1(x_lim, Q.minBound.y);
   Point2<CoordType> planex2(x_lim, Q.maxBound.y);
   bool xint = segmentRayIntersection2D(planex1, planex2, validVertex, normdiffg, intersectionx);
-  if (!xint && !yint) {
-    return false;
-  }
+  POLY_ASSERT(xint || yint);
   bool hitX = true;
   if (xint && yint) {
     if (intersectionx == intersectiony) {
       result = intersectionx;
       side = getBoxCorner(LR, TB);
-      return true;
+      return static_cast<int>(side);
     }
     // Assume it intersects both planes, check if ||p-x|| is longer than ||p-y||
     if (magComparison(validVertex - intersectionx, validVertex - intersectiony)) {
@@ -247,7 +245,7 @@ clipInfiniteRay(const Point2<CoordType>& validVertex,
     result = intersectiony;
     side = TB;
   }
-  return true;
+  return static_cast<int>(side);
 }
 
 //------------------------------------------------------------------------------

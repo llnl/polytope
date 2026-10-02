@@ -17,5 +17,5 @@ class BoostTessellator(SerialTessellator):
     @PYB11virtual
     @PYB11const
     def tessellateQuantizedImpl(self,
-                                input="const QuantTessellation<%(Dimension)s>&"):
-        return "std::vector<std::vector<VoronoiPrimitive<%(Dimension)s>>>"
+                                input="QuantTessellation<%(Dimension)s>&"):
+        return "VoronoiAssembler<%(Dimension)s>"

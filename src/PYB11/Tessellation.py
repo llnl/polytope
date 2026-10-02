@@ -33,6 +33,9 @@ class Tessellation:
     def __str__(self):
         return "std::string"
 
+    def __eq__(self):
+        return
+
     points = PYB11readwrite(returnpolicy="reference_internal")
     nodes = PYB11readwrite(returnpolicy="reference_internal")
     cells = PYB11readwrite(returnpolicy="reference_internal")

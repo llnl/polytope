@@ -179,7 +179,8 @@ Point2<CoordType> midPoint(const Point2<CoordType>& gen0,
 }
 
 //------------------------------------------------------------------------------
-// Given two generator points, return a vector normal to the segment between them
+// Given two generator points, return a vector normal to the segment between
+// them. This normal vector represents the CCW dir relative to gen0.
 //------------------------------------------------------------------------------
 template<typename CoordType>
 Point2<CoordType> outwardRay(const Point2<CoordType>& gen0,
@@ -533,10 +534,10 @@ pointCentroid(const std::vector<Point<Dimension, CoordType>>& points) {
 // Double and pointer operations
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-template<int Dimension, typename RealType>
-RealType dot(const RealType* a,
-             const RealType* b) {
-  RealType sum = 0.;
+template<int Dimension>
+double dot(const Point<Dimension, double>& a,
+           const Point<Dimension, double>& b) {
+  double sum = 0.;
   for (int i = 0; i < Dimension; ++i) {
     sum += a[i]*b[i];
   }

@@ -158,6 +158,29 @@ public:
     return CoordCell(nodes, cells[cellIndex], faces);
   }
 
+  bool operator==(const Tessellation& other) const {
+    if (other.points.size() != points.size()) return false;
+    if (other.nodes.size() != nodes.size()) return false;
+    if (other.faces.size() != faces.size()) return false;
+    const unsigned numCells = cells.size();
+    if (other.cells.size() != numCells) return false;
+    for (unsigned i = 0; i < numCells; ++i) {
+      bool foundMatch = false;
+      const auto celli = getCell(i);
+      for (unsigned j = 0; j < numCells; ++j) {
+        const auto cellj = other.getCell(j);
+        if (celli == cellj) {
+          foundMatch = true;
+          break;
+        }
+      }
+      if (!foundMatch) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   //! output operator.
   friend std::ostream& operator<<(std::ostream& s, const Tessellation& mesh) {
     for (auto i = 0u; i < mesh.cells.size(); ++i) {

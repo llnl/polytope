@@ -173,16 +173,23 @@ pyToKey(const py::object& value) {
 
 template<int Dimension, typename CoordType>
 Point<Dimension, CoordType>
-pyToPoint(const py::object& value) {
+pyToPoint(const py::object& value,
+          const unsigned index = 0) {
+  using PointType = Point<Dimension, CoordType>;
+  if (py::isinstance<PointType>(value)) {
+    auto result = value.cast<PointType>();
+    return result;
+  }
   Point<Dimension, CoordType> out;
-  const auto seq = py::reinterpret_borrow<py::sequence>(value);
-  if (seq.size() != Dimension) {
+  const py::sequence seq = py::reinterpret_borrow<py::sequence>(value);
+  const py::ssize_t size = py::len(seq);
+  if (size != Dimension) {
     throw py::value_error("Point is wrong dimension");
   }
-  int d = 0;
-  for (const py::handle item : seq) {
-    out[d++] = item.cast<CoordType>();
+  for (py::ssize_t d = 0; d < size; ++d) {
+    out[d] = py::cast<CoordType>(seq[d]);
   }
+  out.index = index;
   return out;
 }
 
@@ -200,23 +207,30 @@ isPythonSequence(const py::handle& value) {
 template<int Dimension, typename CoordType>
 std::vector<Point<Dimension, CoordType>>
 copyCoords(const py::object& coords) {
+  using PointType = Point<Dimension, CoordType>;
+  using PointVector = std::vector<PointType>;
+  if (py::isinstance<PointVector>(coords)) {
+    auto result = coords.cast<PointVector>();
+    return result;
+  } else if (py::isinstance<PointType>(coords)) {
+    return {pyToPoint<Dimension, CoordType>(coords, 0)};
+  }
+  PointVector result;
   POLY_ASSERT2(isPythonSequence(coords), "Must pass a sequence to copyCoords");
-  std::vector<Point<Dimension, CoordType>> result;
-  const auto seq = coords.cast<py::sequence>();
-  if (seq.size() == 0) return result;
+  const py::sequence seq = py::reinterpret_borrow<py::sequence>(coords);
+  const py::ssize_t size = py::len(seq);
+  if (size == 0) return result;
   const auto first = seq[0];
   // If it is a nested list
-  if (py::isinstance<py::list>(first) || py::isinstance<py::tuple>(first)) {
-    result.reserve(seq.size());
-    for (const py::handle item : seq) {
-      const auto pypoint = py::reinterpret_borrow<py::object>(item);
-      auto point = pyToPoint<Dimension, CoordType>(pypoint);
-      result.push_back(point);
+  if (py::isinstance<PointType>(first) || isPythonSequence(first)) {
+    result.reserve(size);
+    for (py::ssize_t i = 0; i < size; ++i) {
+      result.push_back(pyToPoint<Dimension, CoordType>(seq[i], i));
     }
     return result;
   }
   std::vector<CoordType> svec;
-  svec.reserve(seq.size());
+  svec.reserve(size);
   for (const py::handle value : seq) {
     svec.push_back(value.cast<CoordType>());
   }
@@ -235,7 +249,8 @@ copyPyToVector(const py::handle& values,
 
   std::vector<ValueType> result;
   const auto seq = py::reinterpret_borrow<py::sequence>(values);
-  result.reserve(seq.size());
+  const py::ssize_t size = py::len(seq);
+  result.reserve(size);
   for (const auto value: seq) result.push_back(value.cast<ValueType>());
   return result;
 }
@@ -250,7 +265,8 @@ copyNestedPyToVector(const py::object& values,
 
   std::vector<std::vector<ValueType>> result;
   const auto seq = values.cast<py::sequence>();
-  result.reserve(seq.size());
+  const py::ssize_t size = py::len(seq);
+  result.reserve(size);
   for (const auto values: seq) {
     result.push_back(copyPyToVector<ValueType>(values, name));
   }

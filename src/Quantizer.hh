@@ -55,6 +55,12 @@ public:
     return x.template convertXi<QuantizedCoordinate<Dimension>>(m_xlo_o, m_dx_o);
   }
 
+  // Quantize a coordinate but keep it as doubles
+  RealPoint quantizeReal(const RealPoint& x) const {
+    POLY_ASSERT2(m_init, "Must initialize quantizer before using it");
+    return x.template convertXi<RealType, RealType>(m_xlo_o, m_dx_o);
+  }
+
   RealPoint dequantize(const QuantizedPoint<Dimension>& X) const {
     POLY_CHECK2(m_init, "Must initialize quantizer before using it");
     return X.convertx(m_xlo_o, m_dx_o);

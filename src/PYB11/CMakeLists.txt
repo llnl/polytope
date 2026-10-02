@@ -40,7 +40,7 @@ set(POLYTOPE_PYTHON_SRC_FILES
   Tessellation.py
   Tessellator.py
   TriangleTessellator.py
-  VoronoiPrimitive.py
+  VoronoiAssembler.py
 )
 
 get_property(POLYTOPE_TPL_DEPENDS GLOBAL PROPERTY POLYTOPE_TPL_DEPENDS)
