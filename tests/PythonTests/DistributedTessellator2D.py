@@ -44,14 +44,15 @@ def test_distributed_2d_tessellators(Ngen):
                          cycle=0,
                          time=0.)
 
-        ptu.rootprint(f"Testing clipped {tess_name}")
-        clipped_mesh = polytope.Tessellation2d()
-        with ptu.timer("Clipped tessellation"):
-            tessellator.tessellate(points, boundary.PLCpoints, boundary.PLC, clipped_mesh)
-        ptu.outputMesh2d(mesh=clipped_mesh,
-                         filePrefix=f"PyDist{tess_name}",
-                         cycle=1,
-                         time=1.)
+        if (tessellator.clippingEnabled()):
+            ptu.rootprint(f"Testing clipped {tess_name}")
+            clipped_mesh = polytope.Tessellation2d()
+            with ptu.timer("Clipped tessellation"):
+                tessellator.tessellate(points, boundary.PLCpoints, boundary.PLC, clipped_mesh)
+            ptu.outputMesh2d(mesh=clipped_mesh,
+                             filePrefix=f"PyDist{tess_name}",
+                             cycle=1,
+                             time=1.)
 
 if __name__ == "__main__":
     # Provide the number of generators per rank

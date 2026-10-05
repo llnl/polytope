@@ -43,5 +43,9 @@ class Tessellator:
     def degeneracy(self):
         return "Point<%(Dimension)s, double>"
 
+    @PYB11const
+    def clippingEnabled(self):
+        return "bool"
+
 Tessellator2d = PYB11TemplateClass(Tessellator, template_parameters=("2", "double"))
 Tessellator3d = PYB11TemplateClass(Tessellator, template_parameters=("3", "double"))

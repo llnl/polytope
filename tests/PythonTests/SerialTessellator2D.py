@@ -44,15 +44,16 @@ def test_serial_2d_tessellators(Ngen):
                          time=0.,
                          numFiles=1)
 
-        print(f"Testing clipped {tess_name}")
-        clipped_mesh = polytope.Tessellation2d()
-        tessellator.tessellate(points, boundary.PLCpoints, boundary.PLC, clipped_mesh)
-        _assert_mesh_populated(clipped_mesh)
-        ptu.outputMesh2d(mesh=clipped_mesh,
-                         filePrefix=f"PySerial{tess_name}",
-                         cycle=1,
-                         time=1.,
-                         numFiles=1)
+        if (tessellator.clippingEnabled()):
+            print(f"Testing clipped {tess_name}")
+            clipped_mesh = polytope.Tessellation2d()
+            tessellator.tessellate(points, boundary.PLCpoints, boundary.PLC, clipped_mesh)
+            _assert_mesh_populated(clipped_mesh)
+            ptu.outputMesh2d(mesh=clipped_mesh,
+                             filePrefix=f"PySerial{tess_name}",
+                             cycle=1,
+                             time=1.,
+                             numFiles=1)
 
 if __name__ == "__main__":
     N = int(50000)

@@ -416,6 +416,21 @@ operator*(const CoordType val, const Point<Dimension, CoordType>& vec) {
   return vec*val;
 }
 
+// Tolerance comparison
+template<int Dimension, typename CoordType>
+inline
+bool isApprox(const Point<Dimension, CoordType>& p0,
+              const Point<Dimension, CoordType>& p1,
+              const CoordType& relTol) {
+  for (int d = 0; d < Dimension; ++d) {
+    const auto scale = std::max(std::abs(p0[d]), std::abs(p1[d]));
+    if (std::abs(p0[d] - p1[d]) > relTol*scale) {
+      return false;
+    }
+  }
+  return true;
+}
+
 // Roll flattened coordinates into Points
 template<int Dimension, typename CoordType>
 std::vector<Point<Dimension, CoordType>>

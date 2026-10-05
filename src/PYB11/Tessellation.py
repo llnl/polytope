@@ -75,3 +75,12 @@ class Tessellation:
 
 Tessellation2d = PYB11TemplateClass(Tessellation, template_parameters=("2", "double"))
 Tessellation3d = PYB11TemplateClass(Tessellation, template_parameters=("3", "double"))
+
+@PYB11template("int Dimension", "CoordType")
+def isApprox(tess0="const Tessellation<%(Dimension)s, %(CoordType)s>&",
+             tess1="const Tessellation<%(Dimension)s, %(CoordType)s>&",
+             relTol="const %(CoordType)s&"):
+    return "bool"
+
+isApproxTess2d = PYB11TemplateFunction(isApprox, ("2", "double"))
+isApproxTess3d = PYB11TemplateFunction(isApprox, ("3", "double"))

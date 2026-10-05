@@ -185,6 +185,51 @@ private:
   CellType m_points;
 };
 
+template<int Dimension, typename CoordType>
+bool isApprox(const std::vector<Point<Dimension, CoordType>>& points0,
+              const std::vector<Point<Dimension, CoordType>>& points1,
+              const CoordType& relTol) {
+  for (const auto& p0 : points0) {
+    bool found = false;
+    for (const auto& p1 : points1) {
+      if (isApprox(p0, p1, relTol)) {
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      return false;
+    }
+  }
+  return true;
+}
+
+template<typename CoordType>
+bool isApprox(const Cell<2, CoordType>& cell0,
+              const Cell<2, CoordType>& cell1,
+              const CoordType& relTol) {
+  return isApprox<2, CoordType>(cell0.points(), cell1.points(), relTol);
+}
+
+template<typename CoordType>
+bool isApprox(const Cell<3, CoordType>& cell0,
+              const Cell<3, CoordType>& cell1,
+              const CoordType& relTol) {
+  for (const auto& f0 : cell0.points()) {
+    bool found = false;
+    for (const auto& f1 : cell1.points()) {
+      if (isApprox(f0, f1, relTol)) {
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      return false;
+    }
+  }
+  return true;
+}
+
 template<typename CoordType>
 std::ostream&
 operator<<(std::ostream& s, const Cell<2, CoordType>& cell) {

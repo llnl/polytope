@@ -67,8 +67,6 @@ tessellateQuantizedImpl(QuantizedTessellation& result) const {
   if (result.points.empty()) {
     return assembler;
   }
-  // Type aliases
-  const auto& Q = Quantizer<2>::instance();
   // Get quantized generators cast as doubles and flattened
   std::vector<double> generators = flattenCoords(result.getRealQPoints());
   const auto N = generators.size()/2;
@@ -90,89 +88,30 @@ tessellateQuantizedImpl(QuantizedTessellation& result) const {
   // Special collinear or 2 generators cases
   //-------------------------------------------------------------------
   if (ntri == 0u) {
-    // Points are already ordered by hash.  Each adjacent pair produces an
-    // unbounded Voronoi bisector, which the shared assembler clips, orients,
-    // closes, and turns into cells.
-    for (auto cellIndex = 0u; cellIndex < N-1; ++cellIndex) {
-      assembler.addInfLines(cellIndex, cellIndex + 1);
-    }
+    assembler.degenerateAssembly();
     delete[] in.pointlist;
     return assembler;
   }
-  std::vector<std::set<unsigned>> gen2tri(N);
-  std::vector<Point2<double>> centers;
-  centers.reserve(ntri);
+  std::vector<std::array<int, 3>> triangles;
+  std::vector<std::array<int, 3>> neighbors;
+  triangles.reserve(ntri);
+  neighbors.reserve(ntri);
 
-  // Extract the circumcenters of triangles (these become Voronoi vertices)
   for (auto i = 0u; i < ntri; ++i) {
+    // triangles[i][v] is the generator index at Triangle local vertex
+    // 'v'. The local vertex ordering must agree with neighbors below.
     int ia = out.trianglelist[3*i];
     int ib = out.trianglelist[3*i+1];
     int ic = out.trianglelist[3*i+2];
-    auto a = result.points[ia].template type_cast<double>();
-    auto b = result.points[ib].template type_cast<double>();
-    auto c = result.points[ic].template type_cast<double>();
-    Point2<double> rcen = circumcenter(a, b, c);
-    centers.push_back(rcen);
-    gen2tri[ia].insert(i);
-    gen2tri[ib].insert(i);
-    gen2tri[ic].insert(i);
+    triangles.push_back({ia, ib, ic});
+
+    // neighbors[i][side] is the triangle across the side opposite
+    // triangles[i][side]; Triangle uses -1 when that side is on the hull.
+    neighbors.push_back({out.neighborlist[3*i],
+                         out.neighborlist[3*i+1],
+                         out.neighborlist[3*i+2]});
   }
-
-  assembler.fillTessNodes(centers);
-
-  // Process each generator to build its Voronoi cell primitives
-  for (auto cellIndex = 0u; cellIndex < N; ++cellIndex) {
-    // Walk edges around this generator point
-    auto genit = gen2tri[cellIndex].begin();
-    int curTri = *genit;
-    bool ccwDir = true;
-    // Walk the edges, if there is an infinite edge in the
-    // CW direction of this cell, start there
-    for (auto it : gen2tri[cellIndex]) {
-      int v0 = out.trianglelist[3*it];
-      int v1 = out.trianglelist[3*it+1];
-      // Find which vertex is the generator
-      int localIndex = (v0 == int(cellIndex)) ? 0 : (v1 == int(cellIndex)) ? 1 : 2;
-      int prevSide = (localIndex + 2)%3;
-      bool curBound = Q.inQBounds(centers[it]);
-      int prevTri = out.neighborlist[3*it+prevSide];
-      bool prevBound = true;
-      if (prevTri != -1) {
-        prevBound = Q.inQBounds(centers[prevTri]);
-      }
-      if (curBound && (prevTri == -1 || !prevBound)) {
-        curTri = it;
-      }
-    }
-    int startTri = curTri;
-    do {
-      if (curTri == -1) {
-        if (!ccwDir) break;
-        curTri = startTri;
-        ccwDir = false;
-      }
-      int v0 = out.trianglelist[3*curTri];
-      int v1 = out.trianglelist[3*curTri+1];
-      int v2 = out.trianglelist[3*curTri+2];
-      int tri[3] = {v0, v1, v2};
-
-      // Find which vertex is the generator
-      int localIndex = (v0 == int(cellIndex)) ? 0 : (v1 == int(cellIndex)) ? 1 : 2;
-
-      int ccwSide = (localIndex + 1)%3;
-      int cwSide = (localIndex + 2)%3;
-      int localSide = (ccwDir) ? ccwSide : cwSide;
-      int nextTri = out.neighborlist[3*curTri+localSide];
-      int otherGen = tri[3 - localIndex - localSide];
-      if (nextTri != -1) {
-        assembler.addFiniteEdge(cellIndex, otherGen, curTri, nextTri);
-      } else {
-        // Add a third point to use when determing ray direction
-        assembler.addRay(cellIndex, otherGen, curTri, tri[localSide]);
-      }
-      curTri = nextTri;
-    } while (curTri != startTri);
-  }
+  assembler.assembleDelaunay(triangles, neighbors);
   // Clean up Triangle memory
   delete[] in.pointlist;
   // Note: Triangle allocates out.* arrays, but they're cleaned up by Triangle internally

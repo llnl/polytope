@@ -13,18 +13,25 @@ class VoronoiAssembler:
                input="QuantTessellation<%(Dimension)s>&"):
         "Construct an assembler for a quantized tessellation."
 
-    def fillTessNodes(self,
-                      nodes="const std::vector<Point<2, double>>&"):
+    @PYB11implementation("""[](VoronoiAssembler<%(Dimension)s>& self,
+                               const py::object& triangles,
+                               const py::object& neighbors) {
+                                 auto trivec = pybind11_helpers::copyPyToTriList(triangles, "assembleDelaunay");
+                                 auto nvec = pybind11_helpers::copyPyToTriList(neighbors, "assembleDelaunay");
+                                 self.assembleDelaunay(trivec, nvec);
+                                }""")
+    def assembleDelaunay(self,
+                         triangles="const py::object&",
+                         neighbors="const py::object&"):
         return "void"
 
-    @PYB11pycppname("fillTessNodes")
     @PYB11implementation("""[](VoronoiAssembler<%(Dimension)s>& self,
                                const py::object& nodes) {
                                  auto coords = pybind11_helpers::copyCoords<%(Dimension)s, double>(nodes);
                                  self.fillTessNodes(coords);
                                }""")
-    def fillPyTessNodes(self,
-                        nodes="const py::object&"):
+    def fillTessNodes(self,
+                      nodes="const py::object&"):
         "Set tessellator nodes from flattened coordinates or coordinate tuples."
         return "void"
 

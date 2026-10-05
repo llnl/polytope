@@ -13,6 +13,7 @@
 #include "Shapes.hh"
 #include "Clipping2D.hh"
 
+#include <array>
 #include <vector>
 
 namespace polytope {
@@ -38,6 +39,64 @@ public:
   // List of indices into vps for each generator index
   std::vector<std::vector<unsigned>> genVPS;
   std::vector<Point<2, double>> tessNodes; // Nodes provided by tessellator
+
+  //-----------------------------------------------------------------------------//
+  // Handle special cases like 2 generators or collinear generators
+  //-----------------------------------------------------------------------------//
+  void degenerateAssembly() {
+    const auto N = result.points.size();
+    // Implies collinear or 2 generator case
+    for (auto cellIndex = 0u; cellIndex < N-1; ++cellIndex) {
+      addInfLines(cellIndex, cellIndex+1);
+    }
+  }
+
+  //-----------------------------------------------------------------------------//
+  // Assemble Voronoi primitives from a Delaunay triangulation. For every
+  // triangle i, triangles[i][v] is its generator at local vertex v.
+  // neighbors[i][side] is the adjacent triangle across the side opposite
+  // triangles[i][side], or -1 when that side belongs to the convex hull.
+  // Triangle indices are also the indices of the generated circumcenters.
+  //-----------------------------------------------------------------------------//
+  void assembleDelaunay(const std::vector<std::array<int, 3>>& triangles,
+                        const std::vector<std::array<int, 3>>& neighbors) {
+    POLY_ASSERT(triangles.size() == neighbors.size());
+    const auto ntri = triangles.size();
+    tessNodes.reserve(ntri);
+
+    // Extract the circumcenters of triangles (these become Voronoi vertices)
+    for (auto i = 0u; i < ntri; ++i) {
+      int ia = triangles[i][0];
+      int ib = triangles[i][1];
+      int ic = triangles[i][2];
+      auto a = result.points[ia].template type_cast<double>();
+      auto b = result.points[ib].template type_cast<double>();
+      auto c = result.points[ic].template type_cast<double>();
+      tessNodes.push_back(circumcenter(a, b, c));
+    }
+
+    // Each Delaunay side has one dual Voronoi primitive: a segment for an
+    // interior side and a ray for a hull side.  Emit interior sides once.
+    for (auto triIndex = 0u; triIndex < ntri; ++triIndex) {
+      const auto& tri = triangles[triIndex];
+      const auto& adjacent = neighbors[triIndex];
+      for (auto side = 0u; side < 3; ++side) {
+        const int neighbor = adjacent[side];
+        const int gen0 = tri[(side + 1) % 3];
+        const int gen1 = tri[(side + 2) % 3];
+
+        if (neighbor == -1) {
+          addRay(gen0, gen1, triIndex, tri[side]);
+        } else {
+          POLY_ASSERT(neighbor >= 0 &&
+                      static_cast<size_t>(neighbor) < ntri);
+          if (triIndex < static_cast<size_t>(neighbor)) {
+            addFiniteEdge(gen0, gen1, triIndex, neighbor);
+          }
+        }
+      }
+    }
+  }
 
   // Insert edge that is infinite in both directions
   void addInfLines(const int gen0,
@@ -172,11 +231,8 @@ public:
   }
 
 private:
-
-
   std::map<QuantizedPoint<2>, int> node2id;
   EdgeToFaceMap edgeToFace;
-  //GenPairToClippedEdgeMap genPairToEdge;
   std::map<BoxSide, unsigned> cornerIndices;
   QuantTessellation<2>& result;
 

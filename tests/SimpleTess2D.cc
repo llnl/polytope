@@ -23,10 +23,14 @@ using namespace std;
 
 namespace {
 
-void tests(const int tnum, bool boostTess) {
-  std::string outname = (boostTess) ? "boost" : "triangle";
+void tests(const int tnum, Tessellator<2, double>& tessellator) {
+  std::string outname = tessellator.name();
   Boundary2D boundary;
   boundary.mDiff = 1.;
+  if (!tessellator.clippingEnabled()) {
+    if (tnum >= 14) return;
+    boundary.mClipping = false;
+  }
   std::vector<double> points;
   std::vector<QuantizedPoint<2>> qpoints;
   std::string testname;
@@ -130,11 +134,11 @@ void tests(const int tnum, bool boostTess) {
       testname = "Difficult quantized points";
       boundary.setDefaultBoundary(0);
       std::vector<QuantizedCoordinate<2>> rqp = {547445970, 380834812,
-                                    545899097, 374153061,
-                                    544323133, 368524286,
-                                    542713618, 709756041,
-                                    547445970, 692907011,
-                                    630394586, 932588752};
+                                                 545899097, 374153061,
+                                                 544323133, 368524286,
+                                                 542713618, 709756041,
+                                                 547445970, 692907011,
+                                                 630394586, 932588752};
       qpoints = extractCoords<2, QuantizedCoordinate<2>>(rqp);
       break;
     }
@@ -143,10 +147,10 @@ void tests(const int tnum, bool boostTess) {
       testname = "Difficult quantized points 2";
       boundary.setDefaultBoundary(0);
       std::vector<QuantizedCoordinate<2>> rqp = {958459259, 368147224,
-                                    947586761, 544198943,
-                                    772074713, 824295508,
-                                    950857238, 541497367,
-                                    960886415, 365110638};
+                                                 947586761, 544198943,
+                                                 772074713, 824295508,
+                                                 950857238, 541497367,
+                                                 960886415, 365110638};
       qpoints = extractCoords<2, QuantizedCoordinate<2>>(rqp);
       break;
     }
@@ -172,16 +176,9 @@ void tests(const int tnum, bool boostTess) {
   }
   QuantPLC<2> QPLC(boundary.mPLCpoints, boundary.mPLC);
   quantMesh.cullExternalPoints(QPLC);
-  if (boostTess) {
-    BoostTessellator boost;
-    boost.tessellateQuantized(quantMesh);
-    quantMesh.clipTessellation(QPLC, boost);
-#ifdef POLYTOPE_ENABLE_TRIANGLE
-  } else {
-    TriangleTessellator tri;
-    tri.tessellateQuantized(quantMesh);
-    quantMesh.clipTessellation(QPLC, tri);
-#endif
+  tessellator.tessellateQuantized(quantMesh);
+  if (tessellator.clippingEnabled()) {
+    quantMesh.clipTessellation(QPLC, tessellator);
   }
   Tessellation<2, double> mesh;
   quantMesh.fillTessellation(mesh);
@@ -189,7 +186,7 @@ void tests(const int tnum, bool boostTess) {
   outputMesh(mesh, outname, tnum, double(tnum));
   compareArea(boundary, mesh);
   testWatertight(mesh, boundary.mPLC.holes.size());
-  if (numNodes > 0) {
+  if (numNodes > 0 && tessellator.clippingEnabled()) {
     // Ideally we would match nodes exactly but determine collinearity exactly is not really
     // possible with quantized coordinates
     POLY_CHECK2(mesh.nodes.size() >= numNodes, "We must have at least " << numNodes
@@ -209,16 +206,19 @@ int main(int argc, char** argv) {
   const int numtest = 16;
   try {
 #ifdef POLYTOPE_ENABLE_TRIANGLE
-    for (bool boost : {true, false}) {
+    {
+      TriangleTessellator tessellator;
       for (int test = 1; test <= numtest; ++test) {
-        tests(test, boost);
+        tests(test, tessellator);
       }
     }
-#else
-    for (int test = 1; test <= numtest; ++test) {
-      tests(test, true);
-    }
 #endif
+    {
+      BoostTessellator tessellator;
+      for (int test = 1; test <= numtest; ++test) {
+        tests(test, tessellator);
+      }
+    }
 
     cout << "\n=== ALL TESTS PASSED ===" << endl;
   } catch (const exception& e) {

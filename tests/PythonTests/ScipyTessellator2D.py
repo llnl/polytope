@@ -3,12 +3,12 @@ from Boundary2d import Boundary2d
 import polytope
 import sys
 
-class ScipyTessellator(polytope.SerialTessellator2d):
+class ScipyVoronoi(polytope.SerialTessellator2d):
     def __init__(self):
         polytope.SerialTessellator2d.__init__(self)
 
     def name(self):
-        return "ScipyTessellator"
+        return "ScipyVoronoi"
 
     def third_generator(self, voronoi, gen0, gen1, vertex):
         """
@@ -44,6 +44,22 @@ class ScipyTessellator(polytope.SerialTessellator2d):
                 assembler.addRay(gen0, gen1, vertex, gen2)
         return assembler
 
+class ScipyDelaunay(polytope.SerialTessellator2d):
+    def __init__(self):
+        polytope.SerialTessellator2d.__init__(self)
+
+    def name(self):
+        return "ScipyDelaunay"
+
+    def tessellateQuantizedImpl(self, quantMesh):
+        from scipy.spatial import Delaunay
+        Q = polytope.Quantizer2d.instance()
+        points = quantMesh.getRealQPoints()
+        delaunay = Delaunay(points, qhull_options="Qbb Qc")
+        assembler = polytope.VoronoiAssembler2d(quantMesh)
+        assembler.assembleDelaunay(delaunay.simplices, delaunay.neighbors)
+        return assembler
+
 def test_serial_2d_tessellators(Ngen):
     Q = polytope.Quantizer2d.instance()
 
@@ -64,10 +80,10 @@ def test_serial_2d_tessellators(Ngen):
                      time=0.,
                      numFiles=1)
 
-    # If Scipy is available, use it to generate a Voronoi
+    # If Scipy is available, use it to generate a Voronoi and a Delaunay
     try:
         import scipy
-        tessellator = ScipyTessellator()
+        tessellator = ScipyVoronoi()
         tess_name = tessellator.name()
         print(f"Testing unbounded {tess_name}")
         scipy_mesh = polytope.Tessellation2d()
@@ -77,7 +93,18 @@ def test_serial_2d_tessellators(Ngen):
                          cycle=0,
                          time=0.,
                          numFiles=1)
-        assert scipy_mesh == boost_mesh
+        assert polytope.isApproxTess2d(scipy_mesh, boost_mesh, 1.E-12)
+        tessellator = ScipyDelaunay()
+        tess_name = tessellator.name()
+        print(f"Testing unbounded {tess_name}")
+        scipyd_mesh = polytope.Tessellation2d()
+        tessellator.tessellate(points, scipyd_mesh)
+        ptu.outputMesh2d(mesh=scipyd_mesh,
+                         filePrefix=f"scipyd",
+                         cycle=0,
+                         time=0.,
+                         numFiles=1)
+        assert polytope.isApproxTess2d(scipyd_mesh, boost_mesh, 1.E-12)
     except ModuleNotFoundError:
         print("No Scipy module found. Skipping test.")
         pass

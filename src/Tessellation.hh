@@ -232,6 +232,27 @@ public:
   }
 };
 
+template<int Dimension, typename CoordType>
+bool isApprox(const Tessellation<Dimension, CoordType>& tess0,
+              const Tessellation<Dimension, CoordType>& tess1,
+              const CoordType& relTol) {
+  for (auto i = 0; i < tess0.points.size(); ++i) {
+    auto celli = tess0.getCell(i);
+    bool found = false;
+    for (auto j = 0; j < tess1.points.size(); ++j) {
+      auto cellj = tess1.getCell(j);
+      if (isApprox(celli, cellj, relTol)) {
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      return false;
+    }
+  }
+  return true;
+}
+
 }
 
 #endif

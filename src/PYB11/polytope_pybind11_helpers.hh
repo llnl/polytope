@@ -32,6 +32,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <array>
 
 namespace py = pybind11;
 
@@ -216,7 +217,7 @@ copyCoords(const py::object& coords) {
     return {pyToPoint<Dimension, CoordType>(coords, 0)};
   }
   PointVector result;
-  POLY_ASSERT2(isPythonSequence(coords), "Must pass a sequence to copyCoords");
+  POLY_CHECK2(isPythonSequence(coords), "Must pass a sequence to copyCoords");
   const py::sequence seq = py::reinterpret_borrow<py::sequence>(coords);
   const py::ssize_t size = py::len(seq);
   if (size == 0) return result;
@@ -235,6 +236,27 @@ copyCoords(const py::object& coords) {
     svec.push_back(value.cast<CoordType>());
   }
   result = extractCoords<Dimension, CoordType>(svec);
+  return result;
+}
+
+// Helper routines for converting triangle and neighbor lists
+// Assumes input object is something like [[0, 1, 2], [2, 3, 4],...
+inline
+std::vector<std::array<int, 3>>
+copyPyToTriList(const py::object& values,
+                const std::string& func_name) {
+  POLY_CHECK2(isPythonSequence(values), "Must pass a sequence to " << func_name);
+  const py::sequence seq = py::reinterpret_borrow<py::sequence>(values);
+  const py::ssize_t size = py::len(seq);
+  std::vector<std::array<int, 3>> result;
+  if (size == 0) return result;
+  result.reserve(size);
+  POLY_CHECK2(isPythonSequence(seq[0]), "Must nested sequence to " << func_name);
+  for (py::ssize_t i = 0; i < size; ++i) {
+    const py::sequence seqi = py::reinterpret_borrow<py::sequence>(seq[i]);
+    POLY_ASSERT2(py::len(seqi) == 3, "Inner sequence in " << func_name << " must be length 3");
+    result.push_back({seqi[0].cast<int>(), seqi[1].cast<int>(), seqi[2].cast<int>()});
+  }
   return result;
 }
 

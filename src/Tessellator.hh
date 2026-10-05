@@ -84,6 +84,14 @@ public:
 
   void singleNodeTessellate(QuantTessellation<Dimension>& quantmesh);
 
+  bool clippingEnabled() const {
+#ifdef POLYTOPE_ENABLE_HIBIT2D
+    return false;
+#else
+    return true;
+#endif
+  }
+
 private:
   // Disallowed.
   Tessellator(const Tessellator&);
