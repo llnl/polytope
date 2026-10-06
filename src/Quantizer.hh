@@ -217,13 +217,6 @@ public:
     return area();
   }
 
-  // Check the quantizer for consistency
-  // TODO: add this routine
-//   void checkQuantizer() {
-// #if defined(POLYTOPE_ENABLE_DEBUG) && defined(POLYTOPE_ENABLE_MPI)
-// #endif
-//   }
-
 private:
   // Private constructor
   Quantizer() = default;
