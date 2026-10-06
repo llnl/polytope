@@ -302,9 +302,6 @@ vector<int> findAvailableCycles(const string& prefix,
   vector<int> cycles;
   DIR* d = opendir(dir.c_str());
   POLY_ASSERT2(d, "Could not find the directory " << dir);
-  // if (d == 0) {
-  //   error("Could not find the directory " + dir);
-  // }
   dirent* entry;
   while ((entry = readdir(d)) != 0) {
     std::string path = dir + "/" + entry->d_name;

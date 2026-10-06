@@ -66,8 +66,9 @@ SiloWriter<2, TessType>::write(const string& filePrefix,
   // Strip .silo off of the prefix if it's there.
   string prefix = filePrefix;
   int index = prefix.find(".silo");
-  if (index >= 0)
+  if (index >= 0) {
     prefix.erase(index);
+  }
   int coord_sys = DB_CARTESIAN;
   string dirname = directory;
   if (dirname.empty()) dirname = ".";
@@ -77,14 +78,19 @@ SiloWriter<2, TessType>::write(const string& filePrefix,
   std::string matname = getGlobalMatName();
   bool hasPoints = true;
   // Open a file in Silo/HDF5 format for writing.
-#ifdef POLYTOPE_ENABLE_MPI
   bool doParallel = false;
   std::string masterDirname = "";
   std::vector<int> ranksWithData;
   if (nranks == 1) {
     numFiles = 1;
   }
-  if (numFiles == -1 || numFiles > 1) {
+  if (numFiles == 1) {
+    ranksWithData.push_back(rank);
+    POLY_CONTRACT_VAR(comm);
+    POLY_CONTRACT_VAR(numFiles);
+  }
+#ifdef POLYTOPE_ENABLE_MPI
+  else if (numFiles == -1 || numFiles > 1) {
     doParallel = true;
     int localRankHasPoints = (m_mesh.points.size() > 0) ? 1 : 0;
     ranksWithData = std::move(gatherValidRanks(localRankHasPoints));
@@ -94,7 +100,11 @@ SiloWriter<2, TessType>::write(const string& filePrefix,
       numFiles = globalWriteProcs;
     }
     POLY_ASSERT(numFiles <= nranks);
+    hasPoints = bool(localRankHasPoints);
+  }
+#endif
 
+  if (doParallel || getOvlType()) {
     masterDirname = getMasterDirname(directory, prefix, cycle);
     if (rank == root) {
       DIR* masterDir = opendir(masterDirname.c_str());
@@ -104,14 +114,14 @@ SiloWriter<2, TessType>::write(const string& filePrefix,
         closedir(masterDir);
       }
     }
-    Communicator::Barrier();
-    hasPoints = bool(localRankHasPoints);
+    if (doParallel) {
+      Communicator::Barrier();
+    }
 
     filename = getFilename(masterDirname, rank);
     meshname = getLocalMeshName();
     matname = getLocalMatName();
   }
-#endif
   if (hasPoints) {
     DBfile* file = DBCreate(filename.c_str(), DB_CLOBBER, DB_LOCAL, 0, DB_HDF5);
     // Add cycle/time metadata if needed.
@@ -215,9 +225,8 @@ SiloWriter<2, TessType>::write(const string& filePrefix,
     DBFreeOptlist(optlist);
   }
 
-#ifdef POLYTOPE_ENABLE_MPI
   // Finally, write the uber-master file.
-  if (rank == root && doParallel) {
+  if (rank == root && (doParallel || getOvlType())) {
     std::string masterFilename = getMasterFilename(prefix, cycle);
     writeMasterFile(masterFilename, masterDirname, ranksWithData,
                     time, cycle);
@@ -225,7 +234,6 @@ SiloWriter<2, TessType>::write(const string& filePrefix,
   if (doParallel) {
     Communicator::Barrier();
   }
-#endif
 }
 //-------------------------------------------------------------------
 

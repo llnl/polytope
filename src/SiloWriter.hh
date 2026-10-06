@@ -95,7 +95,7 @@ public:
   void generateTestVars();
 
   // Whether to write Overlink file type
-  bool m_overlinkType = false;
+  bool m_overlinkType = true;
   void setOvlType(const bool inBool) { m_overlinkType = inBool; }
   bool getOvlType() { return m_overlinkType; }
 
@@ -171,6 +171,8 @@ protected:
   using Base::writeMasterFile;
 public:
   using Base::Base;
+  using Base::getOvlType;
+  using Base::setOvlType;
   using Base::write;
   using Base::m_doubleFields;
   using Base::m_intFields;
@@ -193,6 +195,8 @@ protected:
   using Base::writeMasterFile;
 public:
   using Base::Base;
+  using Base::getOvlType;
+  using Base::setOvlType;
   using Base::write;
   using Base::m_doubleFields;
   using Base::m_intFields;

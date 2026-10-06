@@ -1,7 +1,7 @@
 //----------------------------------------------------------------------------//
 // 2D and 3D integral Point types used internally in polytope.  Not really
 // for external consumption!.
-// FIXME: Most logic can be consolidated into a single class.
+// TODO: Most logic can be consolidated into a single class.
 //----------------------------------------------------------------------------//
 #ifndef __Polytope_Point__
 #define __Polytope_Point__

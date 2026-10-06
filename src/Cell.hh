@@ -2,7 +2,7 @@
 // Cell
 //
 // Generalized class for handling cells in 2D and 3D.
-// FIXME: Consolidate repeated routines
+// TODO: Consolidate repeated routines
 //-----------------------------------------------------------------------------//
 #ifndef __Polytope_Cell__
 #define __Polytope_Cell__
