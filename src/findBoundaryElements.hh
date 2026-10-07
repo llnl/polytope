@@ -4,8 +4,8 @@
 // cells in a tessellation, you'll hit the boundary faces once and the interior
 // faces twice.
 //------------------------------------------------------------------------------
-#ifndef __polytope_findBoundaryElements__
-#define __polytope_findBoundaryElements__
+#ifndef __Polytope_findBoundaryElements__
+#define __Polytope_findBoundaryElements__
 
 #include <vector>
 #include <algorithm>
@@ -20,6 +20,7 @@ void
 findBoundaryElements(const Tessellation<Dimension, RealType>& mesh,
                      std::vector<unsigned>& boundaryFaces,
                      std::vector<unsigned>& boundaryNodes) {
+  if (mesh.nodes.size() == 0) return;
   boundaryFaces.clear();
   boundaryNodes.clear();
   for (unsigned iface = 0; iface < mesh.faces.size(); ++iface) {
@@ -35,19 +36,12 @@ findBoundaryElements(const Tessellation<Dimension, RealType>& mesh,
   boundaryNodes.erase(unique(boundaryNodes.begin(), boundaryNodes.end()), boundaryNodes.end());
 
   POLY_ASSERT(boundaryNodes.size() > 0);
-  POLY_ASSERT(boundaryNodes.size() <= mesh.nodes.size()/2);
+  // Note: In 2D, boundary nodes ~ O(sqrt(N)). In 3D, boundary nodes ~ O(N^(2/3)).
+  // For small meshes, thin domains, or surface tessellations, boundary nodes can be
+  // a large fraction of total nodes. We just verify there are some boundary nodes.
+  POLY_ASSERT(boundaryNodes.size() <= mesh.nodes.size());
 }
 
-}
-
-#else
-
-namespace polytope {
-template<int Dimension, typename RealType>
-void
-findBoundaryElements(const Tessellation<Dimension, RealType>& mesh,
-                     std::vector<int>& boundaryFaces,
-                     std::vector<int>& boundaryNodes);
 }
 
 #endif

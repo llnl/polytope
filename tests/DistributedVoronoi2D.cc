@@ -1,0 +1,96 @@
+#include <cmath>
+#include <exception>
+#include <iostream>
+#include <vector>
+
+#include "polytope.hh"
+
+#include "Communicator.hh" 
+
+#include "BoostTessellator.hh"
+#include "DistributedTessellator.hh"
+#include "PLC.hh"
+#include "Tessellation.hh"
+#include "polytope_test_utilities.hh"
+#include "Generators.hh"
+
+#ifdef POLYTOPE_ENABLE_TRIANGLE
+#include "TriangleTessellator.hh"
+#endif
+
+using namespace polytope;
+
+namespace {
+
+void test(Tessellator<2, double>& tessellator) {
+  int rank = Communicator::getRank();
+  int nranks = Communicator::getNRanks();
+  int root = Communicator::getRoot();
+
+  const int Ngen = 100;
+  int oseed = 1049600;
+  int seed = oseed + rank;
+  Boundary2D boundary;
+  boundary.mClipping = false;
+  boundary.setDefaultBoundary(0);
+  Generators<2> generators(boundary);
+  generators.randomPoints(Ngen, seed);
+
+  DistributedTessellator<2> distributed(tessellator);
+
+  Tessellation<2, double> localMesh;
+  distributed.tessellate(generators.mPoints, localMesh);
+
+  const auto localCells = static_cast<int>(localMesh.cells.size());
+  int totalCells = 0;
+  MPI_Allreduce(&localCells, &totalCells, 1, MPI_INT, MPI_SUM, Communicator::communicator());
+
+  double serialArea = 0.0;
+  Tessellation<2, double> serialMesh;
+  if (rank == root) {
+    std::vector<double> allPoints;
+    for (int p = 0; p < nranks; ++p) {
+      int cseed = oseed + p;
+      generators.randomPoints(Ngen, cseed);
+      std::copy(generators.mPoints.begin(), generators.mPoints.end(), std::back_inserter(allPoints));
+    }
+    tessellator.tessellate(allPoints, serialMesh);
+    serialArea = computeTessellationArea(serialMesh);
+  }
+  std::string outname = "parallelVoronoi_" + tessellator.name();
+  std::string serialoutname = "serialVoronoi_" + tessellator.name();
+  outputMesh(serialMesh, serialoutname, 0, 0.);
+  outputMesh(localMesh, outname, 0, 0.);
+  compareArea(boundary, serialArea, "Serial area failure");
+  compareArea(boundary, localMesh, "Distributed area failure");
+}
+} // anonymous namespace
+
+int main(int argc, char** argv) {
+  auto& comm = Communicator::instance();
+  comm.init(argc, argv);
+  const int root = Communicator::getRoot();
+
+#ifdef POLYTOPE_ENABLE_TRIANGLE
+   {
+     if (Communicator::getRank() == root) {
+       cout << "\nTriangle Tessellator:\n" << endl;
+     }
+     TriangleTessellator tessellator;
+     test(tessellator);
+   }
+#endif
+
+   {
+     if (Communicator::getRank() == root) {
+       cout << "\nBoost Tessellator:\n" << endl;
+     }
+     BoostTessellator tessellator;
+     test(tessellator);
+   }
+   if (Communicator::getRank() == root) {
+     std::cout << "=== DistributedVoronoi2D passed ===" << std::endl;
+   }
+  comm.finalize();
+  return 0;
+}
