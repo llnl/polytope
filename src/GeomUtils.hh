@@ -327,68 +327,32 @@ bool aboveBelow(const Point<Dimension, CoordType>& v0,
 //------------------------------------------------------------------------------
 // Determine if a separating axis exists
 //------------------------------------------------------------------------------
-template<typename CoordType>
-bool SAT(const std::vector<Point2<CoordType>>& pointsA,
-         const std::vector<Point2<CoordType>>& pointsB,
-         const Point2<WideInt<2>>& axis) {
-  using Wide = WideInt<2>;
-  using Big = BigInt<2>;
+template<int Dimension, typename CoordType>
+bool SAT(const std::vector<Point<Dimension, CoordType>>& pointsA,
+         const std::vector<Point<Dimension, CoordType>>& pointsB,
+         const Point2<WideInt<Dimension>>& axis) {
+  using Wide = WideInt<Dimension>;
+  using Big = BigInt<Dimension>;
   POLY_ASSERT(!pointsA.empty());
   POLY_ASSERT(!pointsB.empty());
   if (axis.iszero()) return false;
 
-  Big minA = qqdot(axis, pointsA.front());
+  Big minA = qqdot<Dimension>(axis, pointsA.front());
   Big maxA = minA;
   for (const auto& p : pointsA) {
-    const auto ztest = qqdot(axis, p);
-    if (ztest < minA) {
-      minA = ztest;
-    }
-    if (ztest > maxA) {
-      maxA = ztest;
-    }
+    const auto ztest = qqdot<Dimension>(axis, p);
+    minA = std::min(minA, ztest);
+    maxA = std::max(maxA, ztest);
   }
 
-  Big minB = qqdot(axis, pointsB.front());
+  Big minB = qqdot<Dimension>(axis, pointsB.front());
   Big maxB = minB;
   for (const auto& p : pointsB) {
-    const auto ztest = qqdot(axis, p);
-    if (ztest < minB) {
-      minB = ztest;
-    }
-    if (ztest > maxB) {
-      maxB = ztest;
-    }
+    const auto ztest = qqdot<Dimension>(axis, p);
+    minB = std::min(minB, ztest);
+    maxB = std::max(maxB, ztest);
   }
 
-  return maxA < minB || maxB < minA;
-}
-
-template<typename CoordType>
-bool SAT(const std::vector<Point3<CoordType>>& pointsA,
-         const std::vector<Point3<CoordType>>& pointsB,
-         const Point3<CoordType>& axis) {
-  using Wide = WideInt<3>;
-  Wide minA = QuantizedKeyTraits<3>::maxKey();
-  Wide minB = minA, maxA = -minA, maxB = maxA;
-  for (const auto& p : pointsA) {
-    auto ztest = qdot<3>(p, axis);
-    if (ztest < minA) {
-      minA = ztest;
-    }
-    if (ztest > maxA) {
-      maxA = ztest;
-    }
-  }
-  for (const auto& p : pointsB) {
-    auto ztest = qdot<3>(p, axis);
-    if (ztest < minB) {
-      minB = ztest;
-    }
-    if (ztest > maxB) {
-      maxB = ztest;
-    }
-  }
   return maxA < minB || maxB < minA;
 }
 

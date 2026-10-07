@@ -61,6 +61,7 @@ target_include_directories(polytope_ac_types INTERFACE
 list(APPEND POLYTOPE_TPL_DEPENDS polytope_ac_types)
 install(DIRECTORY extern/ac_types/include DESTINATION include/ac_types)
 install(TARGETS polytope_ac_types EXPORT polytope-targets DESTINATION lib)
+blt_convert_to_system_includes(TARGETS polytope_ac_types)
 
 # BOOST
 #-----------------------------------------------------------------------------------
@@ -150,6 +151,7 @@ if(POLYTOPE_ENABLE_TRIANGLE)
   install(FILES ${triangle_headers} DESTINATION include/triangle)
   list(APPEND POLYTOPE_TPL_DEPENDS triangle)
   include_directories(${triangle_SRC_DIR})
+  blt_convert_to_system_includes(TARGETS triangle)
 endif()
 
 # Tetgen

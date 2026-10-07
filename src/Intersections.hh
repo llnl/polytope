@@ -28,10 +28,6 @@
 
 namespace polytope {
 
-//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// Convex hull intersection methods
-//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
 //------------------------------------------------------------------------------
 // Test if points are contained in a convex hull using half-space intersection
 //------------------------------------------------------------------------------
@@ -452,17 +448,17 @@ bool segmentRayIntersection2D(const Point2<CoordType>& a,
                               Point2<CoordType>& result) {
   return intersection2D(a, b, c, n, result, true);
 }
- 
+
 //------------------------------------------------------------------------------
 // 3D segment-plane intersection
 //------------------------------------------------------------------------------
 template<typename CoordType>
-int segmentPlaneIntersection3D(const Point3<CoordType>& segStart,
-                               const Point3<CoordType>& segEnd,
-                               const Point3<CoordType>& v0,
-                               const Point3<CoordType>& plane_normal,
-                               Point3<WideInt<3>>& result,
-                               WideInt<3>& denom) {
+int segmentPlaneIntersection3D(const Point3<CoordType>& /*segStart*/,
+                               const Point3<CoordType>& /*segEnd*/,
+                               const Point3<CoordType>& /*v0*/,
+                               const Point3<CoordType>& /*plane_normal*/,
+                               Point3<WideInt<3>>& /*result*/,
+                               WideInt<3>& /*denom*/) {
   // Implement this
   return 0;
 }
@@ -483,12 +479,12 @@ int segmentPlaneIntersection3D(const Point3<CoordType>& segStart,
 // Otherwise 1 and fills result with intersection point.
 //------------------------------------------------------------------------------
 template<typename CoordType>
-int segmentFaceIntersection3D(const Point3<CoordType>& segStart,
-                              const Point3<CoordType>& segEnd,
-                              const std::vector<unsigned>& faceIndices,
-                              const std::vector<Point3<CoordType>>& vertices,
-                              const Point3<CoordType>& plane_normal,
-                              Point3<CoordType>& result) {
+int segmentFaceIntersection3D(const Point3<CoordType>& /*segStart*/,
+                              const Point3<CoordType>& /*segEnd*/,
+                              const std::vector<unsigned>& /*faceIndices*/,
+                              const std::vector<Point3<CoordType>>& /*vertices*/,
+                              const Point3<CoordType>& /*plane_normal*/,
+                              Point3<CoordType>& /*result*/) {
   // Implement this
   return 0;
 }
