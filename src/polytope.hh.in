@@ -1,27 +1,18 @@
 // Generator file for polytope.hh. Modify this file, not polytope.hh.
-
+#ifndef POLYTOPE_HH
+#define POLYTOPE_HH
 // Version numbers
-#define POLYTOPE_VERSION_MAJOR @POLYTOPE_VERSION_MAJOR@
-#define POLYTOPE_VERSION_MINOR @POLYTOPE_VERSION_MINOR@
+#define POLYTOPE_VERSION_MAJOR @PROJECT_VERSION_MAJOR@
+#define POLYTOPE_VERSION_MINOR @PROJECT_VERSION_MINOR@
 
 // Various flags determined by how polytope is configured.
-#cmakedefine HAVE_MPI
-#cmakedefine HAVE_HDF5
-#cmakedefine HAVE_PARALLEL_HDF5
-#cmakedefine HAVE_SILO
-#cmakedefine HAVE_TRIANGLE
-#cmakedefine HAVE_TETGEN
-#cmakedefine HAVE_BOOST
-#cmakedefine HAVE_BOOST_VORONOI
+#cmakedefine POLYTOPE_ENABLE_MPI
+#cmakedefine POLYTOPE_ENABLE_SILO
+#cmakedefine POLYTOPE_ENABLE_TRIANGLE
+#cmakedefine POLYTOPE_ENABLE_TETGEN
+#cmakedefine POLYTOPE_ENABLE_BOOST
+#cmakedefine POLYTOPE_ENABLE_DEBUG
+#cmakedefine POLYTOPE_ENABLE_QHULL
+#cmakedefine POLYTOPE_ENABLE_HIBIT2D
 
-// Classes within the library.
-#include "TriangleTessellator.hh"
-#include "BoostTessellator.hh"
-#include "TetgenTessellator.hh"
-#include "SiloWriter.hh"
-#include "SiloReader.hh"
-
-#ifdef HAVE_MPI
-#include "DistributedTessellator.hh"
-#include "SerialDistributedTessellator.hh"
 #endif

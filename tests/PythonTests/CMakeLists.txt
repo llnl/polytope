@@ -1,0 +1,11 @@
+# Add python tests
+if(POLYTOPE_ENABLE_MPI)
+  polytope_add_python_test(DistributedTessellator2D NUMTASKS 4)
+  polytope_add_python_test(SiloWriter NUMTASKS 4)
+  polytope_add_python_test(Partitioner NUMTASKS 10)
+endif()
+polytope_add_python_test(SerialTessellator2D)
+polytope_add_python_test(PythonTessellator2D)
+polytope_add_python_test(Quantizer)
+polytope_add_python_test(MortonKeyTraits)
+polytope_add_python_test(PLC)
