@@ -59,7 +59,7 @@ class PointGenerator:
         if (self.boundary2d and self.boundary2d.mType > 1):
             while(len(pout) < self.dim*N):
                 point = [self.xmin[d] + random.random()*L[d] for d in range(self.dim)]
-                if (boundary2d.testInside(point)):
+                if (self.boundary2d.testInside(point)):
                     pout.extend(point)
         else:
             for _ in range(N):
@@ -75,7 +75,7 @@ class PointGenerator:
         if (self.boundary2d and self.boundary2d.mType > 1):
             while(len(pout) < self.dim*N):
                 point = [self.xmin[d] + random.normalvariate(mu, sigma)*L[d] for d in range(self.dim)]
-                if (boundary2d.testInside(point)):
+                if (self.boundary2d.testInside(point)):
                     pout.extend(point)
         else:
             while(len(pout) < self.dim*N):

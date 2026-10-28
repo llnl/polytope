@@ -45,10 +45,12 @@ rankLocalPoints(const std::vector<double>& allPoints,
                 const int size) {
   std::vector<double> result;
   const auto n = allPoints.size()/2;
-  for (unsigned i = 0; i < n; ++i) {
-    if (static_cast<int>(i % size) == rank) {
-      result.push_back(allPoints[2*i]);
-      result.push_back(allPoints[2*i + 1]);
+  if (rank < n) {
+    for (unsigned i = 0; i < n; ++i) {
+      if (static_cast<int>(i % size) == rank) {
+        result.push_back(allPoints[2*i]);
+        result.push_back(allPoints[2*i + 1]);
+      }
     }
   }
   return result;
@@ -77,8 +79,9 @@ void test(Tessellator<2, double>& tessellator) {
     serialMesh = tessellator.tessellate(allPoints);
     totalCells = serialMesh.totalPointCount(false);
     outputMesh(serialMesh, serial_mesh_name, 0, 0., 1);
+    compareArea(boundary, serialMesh, tessellator.getQuantizer(),
+                "Serial area failed", false);
   }
-  compareArea(boundary, serialMesh, tessellator.getQuantizer(), "Serial area failed");
   if (nranks > 1) {
     DistributedTessellator<2> distributed(tessellator);
     Tessellation<2, double> localMesh = distributed.tessellate(localPoints);

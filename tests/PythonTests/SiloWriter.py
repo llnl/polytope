@@ -12,8 +12,8 @@ def test_siloIO(Ngen):
     # Seed for partitioning points randomly
     partseed = 19
     boundary = Boundary2d(0)
-    xlo = boundary.low
-    xhi = boundary.high
+    xlo = boundary.low[0]
+    xhi = boundary.high[0]
     xlen = xhi - xlo
     # Generate Ngen points per rank
     Ntotal = Ngen*nranks

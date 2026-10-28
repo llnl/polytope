@@ -163,10 +163,11 @@ double errorTolerance(const Quantizer<2>& Q,
 void compareArea(Boundary2D& boundary,
                  Tessellation<2, double>& mesh,
                  const Quantizer<2>& Q,
-                 const std::string& test_str = "") {
-  double area = computeTessellationArea(mesh);
+                 const std::string& test_str = "",
+                 bool parallel = true) {
+  double area = computeTessellationArea(mesh, parallel);
   bool clipped = boundary.mClipping;
-  const auto Ncells = mesh.totalPointCount(true);
+  const auto Ncells = mesh.totalPointCount(parallel);
   const double tol = errorTolerance(Q, Ncells);
   const double bArea = clipped ? boundary.area() : Q.area();
   const double relErr = std::abs(bArea-area)/bArea;
