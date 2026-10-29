@@ -12,6 +12,7 @@
 #include "Intersections.hh"
 #include "Shapes.hh"
 #include "Clipping2D.hh"
+#include "SiloWriter.hh"
 
 #include <array>
 #include <vector>
@@ -76,9 +77,9 @@ public:
       int ia = triangles[i][0];
       int ib = triangles[i][1];
       int ic = triangles[i][2];
-      auto a = result.points[ia].template type_cast<double>();
-      auto b = result.points[ib].template type_cast<double>();
-      auto c = result.points[ic].template type_cast<double>();
+      auto a = result.points[ia].template type_cast<long double>();
+      auto b = result.points[ib].template type_cast<long double>();
+      auto c = result.points[ic].template type_cast<long double>();
       tessNodes.push_back(circumcenter(a, b, c));
     }
 
@@ -378,8 +379,45 @@ private:
         clippedEdges.push_back(vp);
       }
     }
-    result.cells[cellIndex] =
-      makeCCWCellFromClippedEdges<QuantizedCoordinate<2>>(clippedEdges, cornerIndices, result.faces, edgeToFace);
+    std::string errorStr =
+      makeCCWCellFromClippedEdges<QuantizedCoordinate<2>>(clippedEdges,
+                                                          cornerIndices,
+                                                          result.faces,
+                                                          edgeToFace,
+                                                          result.cells[cellIndex]);
+    // If error occurs above, generate an escape pod
+    if (!errorStr.empty()) {
+      using PodTess = Tessellation<2, QuantizedCoordinate<2>>;
+      PodTess escapePod;
+      escapePod.points.push_back(result.points[cellIndex]);
+      std::vector<int> cell;
+      int curCell = 0;
+      unsigned faceIndex = 0;
+      for (const auto i : clippedEdges) {
+        int gen = (i.gp.first == cellIndex) ? i.gp.second : i.gp.first;
+        escapePod.points.push_back(result.points[gen]);
+        int e0 = i.edge.first;
+        int e1 = i.edge.second;
+        if (e0 >= 0) {
+          escapePod.nodes.push_back(result.nodes[e0]);
+          faceIndex++;
+        }
+        if (e1 >= 0) {
+          escapePod.nodes.push_back(result.nodes[e1]);
+          faceIndex++;
+        }
+        if (e0 >= 0 && e1 >= 0) {
+          escapePod.faces.push_back({faceIndex-2, faceIndex-1});
+          cell.push_back(curCell++);
+        }
+      }
+      escapePod.cells.push_back(cell);
+      SiloWriter<2, PodTess> writer(escapePod);
+      writer.setOvlType(false);
+      std::string filename = "escapePod" + std::to_string(Communicator::getRank());
+      writer.write(filename, "", 1);
+      POLY_CHECK2(false, errorStr << " wrote escape pod file " << filename);
+    }
   }
 };
 

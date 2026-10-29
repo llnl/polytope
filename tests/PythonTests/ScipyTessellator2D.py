@@ -47,7 +47,7 @@ class ScipyDelaunay(polytope.SerialTessellator2d):
     def tessellateQuantizedImpl(self, quantMesh):
         from scipy.spatial import Delaunay
         points = quantMesh.getRealQPoints()
-        delaunay = Delaunay(points, qhull_options="Qbb Qc QJ")
+        delaunay = Delaunay(points, qhull_options="Qbb Qc")
         assembler = polytope.VoronoiAssembler2d(quantMesh)
         assembler.assembleDelaunay(delaunay.simplices, delaunay.neighbors)
         return assembler

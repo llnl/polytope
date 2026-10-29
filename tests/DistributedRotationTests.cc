@@ -88,14 +88,16 @@ void runTest(Tessellator<2, double>& serialTessellator,
   unsigned step = 0;
   double time = 0.0;
   Tessellation<2,double> mesh;
-  mesh = tessellator.tessellate(localPoints);
-  outputMesh(mesh, testName, step, time);
 
   // Update the point positions and generate the mesh
   vector<Point2<double>> halfTimePositions(localPoints.size());
   while (time < Tmax) {
-    if (step % 5 == 0 and rank == root) cout << (time/Tmax)*100 << "%" << endl;
-    mesh.clear();
+    mesh = tessellator.tessellate(localPoints);
+    if (step % 5 == 0) {
+      outputMesh(mesh, testName, step, time);
+      if (rank == root) cout << std::round((time/Tmax)*100) << "%" << endl;
+    }
+    compareArea(boundary, mesh, tessellator.getQuantizer(), "Test " + std::to_string(flowType));
     getVelocities(localPoints, bHigh, bLow, flowType, velocityField);
     for (unsigned i = 0; i != localPoints.size(); ++i) {
       halfTimePositions[i] = localPoints[i] + dt*velocityField[i];
@@ -106,10 +108,7 @@ void runTest(Tessellator<2, double>& serialTessellator,
     }
     time += dt;
     ++step;
-    mesh = tessellator.tessellate(localPoints);
-    if (step % 5 == 0) {
-      outputMesh(mesh, testName, step, time);
-    }
+    mesh.clear();
     Communicator::Barrier();
   }
 }

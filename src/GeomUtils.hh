@@ -359,16 +359,16 @@ bool SAT(const std::vector<Point<Dimension, CoordType>>& pointsA,
 
 // Returns a point that is the circumcenter
 inline
-Point2<double> circumcenter(const Point2<double>& a,
-                            const Point2<double>& b,
-                            const Point2<double>& c) {
+Point2<double> circumcenter(const Point2<long double>& a,
+                            const Point2<long double>& b,
+                            const Point2<long double>& c) {
   // Differences are formed in long double before subtraction overflow
-  const long double ax = static_cast<long double>(a.x);
-  const long double ay = static_cast<long double>(a.y);
-  const long double bx = static_cast<long double>(b.x);
-  const long double by = static_cast<long double>(b.y);
-  const long double cx = static_cast<long double>(c.x);
-  const long double cy = static_cast<long double>(c.y);
+  const long double ax = a.x;
+  const long double ay = a.y;
+  const long double bx = b.x;
+  const long double by = b.y;
+  const long double cx = c.x;
+  const long double cy = c.y;
 
   const long double abx = bx - ax;
   const long double aby = by - ay;

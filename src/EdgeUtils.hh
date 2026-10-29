@@ -93,8 +93,6 @@ inline void walkBoxEdges(const BoxSide& startSide,
   BoxSides sides;
   BoxSide thisSide = startSide;
   unsigned curPoint = startPoint;
-  POLY_ASSERT(static_cast<int>(thisSide) >= 0);
-  POLY_ASSERT(static_cast<int>(endSide) >= 0);
   while (thisSide != endSide) {
     if (isCorner(thisSide)) {
       unsigned nextPoint = cornerIndices.at(thisSide);
@@ -112,12 +110,12 @@ inline void walkBoxEdges(const BoxSide& startSide,
 // Close an ordered loop of clipped edges.  Consecutive edges either meet at a
 // node or are joined by the CCW box path between their clipped endpoints.
 //------------------------------------------------------------------------------
-inline std::vector<Edge>
+inline std::string
 closeClippedEdges(const std::vector<ClippedEdge>& clippedEdges,
-                  const std::map<BoxSide, unsigned>& cornerIndices) {
+                  const std::map<BoxSide, unsigned>& cornerIndices,
+                  std::vector<Edge>& out) {
   const auto N = clippedEdges.size();
   POLY_ASSERT2(N > 0, "Must have at least 1 edge");
-  std::vector<Edge> out;
   out.reserve(2 * N + 4);
 
   for (auto i = 0u; i < N; ++i) {
@@ -128,14 +126,14 @@ closeClippedEdges(const std::vector<ClippedEdge>& clippedEdges,
 
     if (curEdge.second == next.edge.first) continue;
 
-    POLY_ASSERT2(cur.csides.second >= 0 &&
-                 next.csides.first >= 0,
-                 "Disconnected clipped edges without a box connection");
+    if (cur.csides.second < 0 || next.csides.first < 0) {
+      return "Disconnected clipped edges without a box connection";
+    }
     walkBoxEdges(static_cast<BoxSide>(cur.csides.second),
                  static_cast<BoxSide>(next.csides.first),
                  curEdge.second, next.edge.first, cornerIndices, out);
   }
-  return out;
+  return "";
 }
 
 //------------------------------------------------------------------------------
@@ -155,9 +153,11 @@ void orientClippedEdge(ClippedEdge& clippedEdge,
 // Order a loop of edges to form a connected chain. Remove any degeneracies.
 // Ensures edges[i][1] connects to edges[i+1][0] when possible and relies
 // on clipping-box sides when not possible. Assumes 2D.
+// Returns empty string if no issues occurred
 //------------------------------------------------------------------------------
-inline void orderClippedEdges(std::vector<ClippedEdge>& clippedEdges) {
-  if (clippedEdges.empty()) return;
+inline std::string
+orderClippedEdges(std::vector<ClippedEdge>& clippedEdges) {
+  if (clippedEdges.empty()) return "";
   // Remove any degenerate edges
   clippedEdges.erase(
     std::remove_if(clippedEdges.begin(), clippedEdges.end(),
@@ -173,7 +173,7 @@ inline void orderClippedEdges(std::vector<ClippedEdge>& clippedEdges) {
                      return !seenEdges.insert(orderEdge(curEdge.edge)).second;
                    }),
     clippedEdges.end());
-  if (clippedEdges.empty()) return;
+  if (clippedEdges.empty()) return "";
   const auto N = clippedEdges.size();
   auto sideDistance = [](int fromSide, int toSide) {
                         constexpr int numBoxSides = 8;
@@ -220,11 +220,13 @@ inline void orderClippedEdges(std::vector<ClippedEdge>& clippedEdges) {
         }
       }
     }
-    POLY_ASSERT2(next != -1,
-                 "Unable to order clipped edges by node or CCW box adjacency");
+    if (next == -1) {
+      return "Unable to order clipped edges by node or CCW box";
+    }
     current = static_cast<size_t>(next);
   }
   clippedEdges = std::move(orderedEdges);
+  return "";
 }
 
 //------------------------------------------------------------------------------
@@ -313,30 +315,31 @@ inline void reverseEdgeLoop(std::vector<Edge>& edges) {
 // with CCW box edges, before creating the signed face references.
 //------------------------------------------------------------------------------
 template<typename CoordType>
-inline std::vector<int>
+inline std::string
 makeCCWCellFromClippedEdges(std::vector<ClippedEdge> clippedEdges,
                             const std::map<BoxSide, unsigned>& cornerIndices,
                             std::vector<std::vector<unsigned>>& faces,
-                            EdgeToFaceMap& edgeToFace) {
+                            EdgeToFaceMap& edgeToFace,
+                            std::vector<int>& cell) {
   POLY_ASSERT2(!clippedEdges.empty(), "Cannot construct a cell without edges");
 
   // Establish edge order, then fill every non-node-connected transition with
   // its CCW clipping-box path.
-  orderClippedEdges(clippedEdges);
-  POLY_ASSERT2(!clippedEdges.empty(), "All clipped edges collapsed to zero length");
-  auto edges = closeClippedEdges(clippedEdges, cornerIndices);
-
-  POLY_ASSERT2(edges.size() >= 3, "Degenerate cell after clipping");
+  std::string errorStr = orderClippedEdges(clippedEdges);
+  // Return false if issue occurs
+  if (!errorStr.empty()) return errorStr;
+  std::vector<Edge> edges;
+  errorStr = closeClippedEdges(clippedEdges, cornerIndices, edges);
+  if (!errorStr.empty()) return errorStr;
 
   // Store each canonical face once; retain per-cell direction in its
   // signed face index.
-  std::vector<int> cell;
+  cell.clear();
   cell.reserve(edges.size());
   for (const auto& edge : edges) {
     cell.push_back(addOrientedEdge(edge.first, edge.second, faces, edgeToFace));
   }
-
-  return cell;
+  return "";
 }
 
 //------------------------------------------------------------------------------

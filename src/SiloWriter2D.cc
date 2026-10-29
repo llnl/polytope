@@ -248,5 +248,6 @@ SiloWriter<2, TessType>::write(const string& filePrefix,
 // Explicit instantiation.
 template class SiloWriter<2, Tessellation<2, double>>;
 template class SiloWriter<2, QuantTessellation<2>>;
+template class SiloWriter<2, Tessellation<2, QuantizedCoordinate<2>>>;
 
 } // end namespace

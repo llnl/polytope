@@ -61,11 +61,11 @@ macro(polytope_add_python_test target)
     "${options}" "${singleValueArgs}" "${multiValueArgs}" ${ARGN})
 
   if(NOT DEFINED arg_NUMTASKS OR "${arg_NUMTASKS}" STREQUAL "")
-    set(test_name "${target}_test")
+    set(test_name "${target}_pytest")
     set(arg_NUMTASKS 1)
     message("--- Creating test ${target}")
   else()
-    set(test_name "${target}_${arg_NUMTASKS}_test")
+    set(test_name "${target}_${arg_NUMTASKS}_pytest")
     message("--- Creating test ${target}: N=${arg_NUMTASKS}")
   endif()
 

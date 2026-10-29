@@ -73,14 +73,16 @@ void runTest(Tessellator<2,double>& tessellator,
   unsigned step = 0;
   double time = 0.0;
   Tessellation<2,double> mesh;
-  mesh = tessellator.tessellate(points);
-  outputMesh(mesh, testName, step, time);
 
   // Update the point positions and generate the mesh
   vector<Point2<double>> halfTimePositions(points.size());
   while (time < Tmax) {
-    if (step % 5 == 0) cout << (time/Tmax)*100 << "%" << endl;
-    mesh.clear();
+    mesh = tessellator.tessellate(points);
+    if (step % 5 == 0) {
+      outputMesh(mesh, testName, step, time);
+      cout << std::round((time/Tmax)*100) << "%" << endl;
+    }
+    compareArea(boundary, mesh, tessellator.getQuantizer(), "Test " + std::to_string(flowType));
     getVelocities(points, bHigh, bLow, flowType, velocityField);
     for (unsigned i = 0; i != points.size(); ++i) {
       halfTimePositions[i] = points[i] + dt*velocityField[i];
@@ -91,11 +93,7 @@ void runTest(Tessellator<2,double>& tessellator,
     }
     time += dt;
     ++step;
-    mesh = tessellator.tessellate(points);
-    if (step % 5 == 0) {
-      outputMesh(mesh, testName, step, time);
-    }
-    compareArea(boundary, mesh, tessellator.getQuantizer(), "Test " + std::to_string(flowType));
+    mesh.clear();
   }
 }
 
