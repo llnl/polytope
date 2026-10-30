@@ -46,9 +46,8 @@ def test_rotation(nx=5):
     if nx <= 0:
         raise ValueError("Number of points specified must be > 0")
     ttypes = ("TriangleTessellator", "BoostTessellator")
-    tessellators = []
     # These are already tested in the C++ test
-    #tessellators = [getattr(polytope, name)() for name in ttypes if hasattr(polytope, name)]
+    tessellators = [getattr(polytope, name)() for name in ttypes if hasattr(polytope, name)]
     # If Scipy is installed, use the wrappers provided by polytope
     try:
         import scipy

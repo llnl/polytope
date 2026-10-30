@@ -81,7 +81,7 @@ if(POLYTOPE_ENABLE_MPI)
   polytope_add_test(SiloIO2D NUMTASKS 4)
   polytope_add_test(DistributedVoronoi2D NUMTASKS 4)
   polytope_add_test(DistributedVisible2D NUMTASKS 6)
-  polytope_add_test(DistributedRotationTests NUMTASKS 4)
+  polytope_add_test(DistributedRotationTests NUMTASKS 6)
 endif()
 
 #-----------------------------------------------------------------------------

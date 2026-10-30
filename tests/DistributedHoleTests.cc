@@ -55,8 +55,9 @@ void test(Tessellator<2, double>& tessellator) {
         qvpart.assignCellRanks(serialMesh);
         std::string serialoutname = "SerialHole";
         outputMesh(serialMesh, serialoutname, btype, double(btype), 1);
+        compareArea(boundary, serialMesh, tessellator.quantizer(),
+                    "Serial area failure", false);
       }
-      compareArea(boundary, serialMesh, tessellator.quantizer(), "Serial area failure");
       Communicator::Barrier();
       DistributedTessellator<2> distributed(tessellator);
       Tessellation<2, double> localMesh;

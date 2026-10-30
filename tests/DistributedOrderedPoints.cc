@@ -54,9 +54,9 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
     // Output the serial mesh with a rank variable showing the ranks for the
     // distributed test
     serial_writer.write(serialoutname, btype, 0., 1);
+    compareArea(boundary, serialMesh, tessellator.quantizer(),
+                "Serial area failure", false);
   }
-  compareArea(boundary, serialMesh, tessellator.quantizer(), "Serial area failure");
-
   Communicator::Barrier();
   DistributedTessellator<2> distributed(tessellator);
   auto localPoints = qvpart.computeLocalPartition(allPoints);

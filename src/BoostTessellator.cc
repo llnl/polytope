@@ -42,6 +42,7 @@ tessellateQuantizedImpl(QuantizedTessellation& result) const {
   builder.construct(&voronoi);
 
   VoronoiAssembler<2> assembler(result);
+  assembler.useOrderedGens();
 
   // Process each Voronoi edge
   for (const auto& edge : voronoi.edges()) {

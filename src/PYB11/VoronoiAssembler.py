@@ -66,16 +66,6 @@ class VoronoiAssembler:
         "Add a ray with third generator to determine direction."
         return "void"
 
-    @PYB11pycppname("addRay")
-    def addAmbiguousRay(self,
-                        gen0="const int",
-                        gen1="const int",
-                        vertex0="const int"):
-        """
-        Add a ray and determine the direction using the mean generator location
-        """
-        return "void"
-
     def addStartRay(self,
                     gen0="const int",
                     gen1="const int",
@@ -91,6 +81,18 @@ class VoronoiAssembler:
         return "void"
 
     def assemble(self):
+        return "void"
+
+    def useOrderedGens(self):
+        """
+        Enable when the Voronoi tessellator provides edges oriented according the first generator for the edge. Not enabled by default.
+        """
+        return "void"
+
+    def determineGenOrder(self):
+        """
+        Enable when the generator points provided by the Voronoi tessellator are arbitrarily ordered. The assembler will attempt to determine the edge orientation. This is enabled by default but can make mistakes.
+        """
         return "void"
 
 VoronoiAssembler2d = PYB11TemplateClass(VoronoiAssembler, template_parameters="2")

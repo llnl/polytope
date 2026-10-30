@@ -31,12 +31,6 @@ public:
     result(input) {
     cornerIndices = addBoxPoints(node2id, result.nodes, result.quantizer());
     genVPS.resize(input.points.size());
-    auto N = static_cast<long double>(input.points.size());
-    // Determine the mean location of the generator points
-    for (auto& p : input.points) {
-      auto rp = p.template type_cast<long double>();
-      centerPoint += rp/N;
-    }
   }
 
   //-----------------------------------------------------------------------------//
@@ -46,7 +40,11 @@ public:
   // List of indices into vps for each generator index
   std::vector<std::vector<unsigned>> genVPS;
   std::vector<Point<2, double>> tessNodes; // Nodes provided by tessellator
-  Point<2, long double> centerPoint; // Mean location of all generators
+  // Some Voronoi tessellators, like Boost, provide which generator the edge
+  // is oriented against. Set this flag to true for those tessellators
+  bool m_useOrderedGens = false;
+  void useOrderedGens() { m_useOrderedGens = true; }
+  void determineGenOrder() { m_useOrderedGens = false; }
 
   //-----------------------------------------------------------------------------//
   // Handle special cases like 2 generators or collinear generators
@@ -153,13 +151,6 @@ public:
     addRay(gen0, gen1, tessNodes[vertex], gen2);
   }
 
-  // Insert ray and use mean generator location to determine direction
-  void addRay(const int gen0,
-              const int gen1,
-              const int vertex) {
-    addRay(gen0, gen1, tessNodes[vertex]);
-  }
-
   // Insert ray that goes to infinity
   void addStartRay(const int gen0,
                    const int gen1,
@@ -204,17 +195,6 @@ public:
     // For consistency, recompute the direction using the generators
     // Only use the provided direction to determine generator order
     RawEdge edge = makeRawEdge(gen0, gen1, rayDir(gen0, gen1, dir));
-    edge.hasStart = true;
-    edge.start = node0;
-    addVP(gen0, gen1, edge);
-  }
-
-  // Insert ray with a vertex and use the generator mean location to
-  // determine the direction
-  void addRay(const int gen0,
-              const int gen1,
-              const Point<2, double>& node0) {
-    RawEdge edge = makeRawEdge(gen0, gen1, rayDirMean(gen0, gen1));
     edge.hasStart = true;
     edge.start = node0;
     addVP(gen0, gen1, edge);
@@ -277,6 +257,9 @@ private:
     RawEdge edge;
     edge.bisectorPoint = midPoint(result.points[gen0], result.points[gen1]);
     edge.direction = direction;
+    if (m_useOrderedGens) {
+      edge.leftGen = gen0;
+    }
     return edge;
   }
 
@@ -299,27 +282,6 @@ private:
       edge.direction = outwardRay(a, b);
     }
     return edge;
-  }
-
-  // Determine ray direction using the mean point
-  QuantizedPoint<2> rayDirMean(const int gen0,
-                               const int gen1) const {
-    const auto& qa = result.points[gen0];
-    const auto& qb = result.points[gen1];
-
-    const auto a = qa.template type_cast<long double>();
-    const auto b = qb.template type_cast<long double>();
-    const auto midpoint = (a + b) * 0.5;
-
-    auto direction = outwardRay(qa, qb);
-    const auto directionD = direction.template type_cast<long double>();
-    const long double side = dot(directionD, midpoint - centerPoint);
-    POLY_CHECK2(std::abs(side) > 1.E-12,
-                "Cannot determine hull-ray direction from center");
-    if (side < 0.0) {
-      direction = -direction;
-    }
-    return direction;
   }
 
   // Determine the get outward direction
@@ -401,7 +363,8 @@ private:
       int curCell = 0;
       unsigned faceIndex = 0;
       // Loop over current clipped edges and fill the escape pod tessellation
-      std::set<int> foundGens;
+      std::set<int> foundGens, foundNodes;
+      std::map<int, int> nodeMap;
       foundGens.insert(cellIndex);
       for (const auto i : clippedEdges) {
         int gen = (i.gp.first == cellIndex) ? i.gp.second : i.gp.first;
@@ -425,16 +388,21 @@ private:
         }
         int e0 = i.edge.first;
         int e1 = i.edge.second;
-        if (e0 >= 0) {
+        if (e0 >= 0 && foundNodes.count(e0) == 0) {
+          foundNodes.insert(e0);
           escapePod.nodes.push_back(result.nodes[e0]);
+          nodeMap[e0] = faceIndex;
           faceIndex++;
         }
-        if (e1 >= 0) {
+        if (e1 >= 0 && foundNodes.count(e1) == 0) {
+          foundNodes.insert(e1);
           escapePod.nodes.push_back(result.nodes[e1]);
+          nodeMap[e1] = faceIndex;
           faceIndex++;
         }
         if (e0 >= 0 && e1 >= 0) {
-          escapePod.faces.push_back({faceIndex-2, faceIndex-1});
+          escapePod.faces.push_back({static_cast<unsigned>(nodeMap[e0]),
+                                     static_cast<unsigned>(nodeMap[e1])});
           cell.push_back(curCell++);
         }
       }

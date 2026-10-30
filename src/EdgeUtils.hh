@@ -183,6 +183,7 @@ orderClippedEdges(std::vector<ClippedEdge>& clippedEdges) {
   orderedEdges.reserve(N);
   size_t current = 0;
   std::vector<bool> used(N, false);
+  // Start on a valid finite edge
   for (size_t i = 0; i < N; ++i) {
     if (clippedEdges[i].csides.first >= 0) {
       current = i;
