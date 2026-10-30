@@ -1,0 +1,89 @@
+
+#include "Communicator.hh"
+#include "QuantTessellation.hh"
+#include "Tessellator.hh"
+
+#include "SiloWriter.hh"
+#include "SiloReader.hh"
+
+#ifdef POLYTOPE_ENABLE_BOOST
+#include "BoostTessellator.hh"
+#endif
+#ifdef POLYTOPE_ENABLE_TRIANGLE
+#include "TriangleTessellator.hh"
+#endif
+
+#include <iostream>
+#include <memory>
+#include <string>
+
+using namespace polytope;
+
+namespace {
+
+std::unique_ptr<Tessellator<2, double>>
+makeTessellator(const std::string& name) {
+#ifdef POLYTOPE_ENABLE_BOOST
+  if (name == "BoostTessellator" || name == "DistributedBoostTessellator") {
+    return std::unique_ptr<Tessellator<2, double>>(new BoostTessellator());
+  }
+#endif
+
+#ifdef POLYTOPE_ENABLE_TRIANGLE
+  if (name == "TriangleTessellator" || name == "DistributedTriangleTessellator") {
+    return std::unique_ptr<Tessellator<2, double>>(new TriangleTessellator());
+  }
+#endif
+
+  return std::unique_ptr<Tessellator<2, double>>();
+}
+
+}
+
+int main(int argc, char** argv) {
+  auto& comm = Communicator::instance();
+  comm.init(argc, argv);
+
+  if (argc < 2) {
+    std::cout << "Must provide an escape pod file" << std::endl;
+    Communicator::abort();
+  }
+  std::string inputFile = argv[1];
+  Quantizer<2> q;
+  q.init(Point2<double>(0.), Point2<double>(1.));
+
+  QuantTessellation<2> quantMesh(q);
+  SiloReader<2, QuantTessellation<2>> reader;
+  reader.read(quantMesh, inputFile);
+  // Keep as an escape pod to avoid overwriting existing escape pod file
+  quantMesh.escapePod = true;
+  std::string tessellatorName = quantMesh.tessellatorName;
+  if (tessellatorName.empty()) {
+    std::cout << "Escape pod does not specify a serial tessellator" << std::endl;
+    Communicator::abort();
+  }
+  std::cout << "Using " << tessellatorName << std::endl;
+  QuantPLC<2> qplc(q);
+
+  auto tessellator = makeTessellator(tessellatorName);
+  if (!tessellator) {
+    std::cout << "Unsupported or unavailable serial tessellator '"
+              << tessellatorName << "'" << std::endl;
+    Communicator::abort();
+  }
+
+  tessellator->tessellateQuantized(quantMesh);
+  if (!qplc.empty()) {
+    quantMesh.clipTessellation(qplc, *tessellator);
+  } else {
+    std::cout << "Escape pod does not contain QPLC data; skipping clipping" << std::endl;
+  }
+// #ifdef POLYTOPE_ENABLE_SILO
+//   std::string prefix = "escapefile";
+//   SiloWriter<2, QuantTessellation<2>> writer(quantMesh);
+//   writer.generateTestVars();
+//   writer.write(prefix, "", 1, 0., 1);
+// #endif
+  comm.finalize();
+  return 0;
+}

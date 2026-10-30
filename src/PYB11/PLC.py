@@ -1,50 +1,34 @@
 from PYB11Generator import *
 
-@PYB11template("Dimension", "RealType")
+@PYB11template("int Dimension")
 class PLC:
-    """class PLC - A Piecewise Linear Complex in 3D, or a Planar Straight Line 
-Graph (PSLG) in 2D."""
+    "A piecewise linear complex in 3D, or planar straight line graph in 2D."
 
-    #...........................................................................
-    # Constructors
     def pyinit(self):
         "Default constructor"
 
-    #...........................................................................
-    # Methods
     def clear(self):
-        "Clears facets and holes to empty the PLC"
+        "Clear facets and holes."
         return "void"
 
     @PYB11const
     def empty(self):
-        "Returns true if this PLC is empty, false otherwise."
         return "bool"
 
     @PYB11const
     def valid(self):
-        """Returns true if this PLC is valid (at first glance), false if it 
-is obviously invalid. This is not a rigorous check!"""
         return "bool"
 
-    @PYB11implementation("[](const PLC<%(Dimension)s, %(RealType)s>& self) { std::stringstream ss; ss << self; return ss.str();}")
+    @PYB11implementation("[](const PLC<%(Dimension)s>& self) { std::stringstream ss; ss << self; return ss.str(); }")
     def __str__(self):
         return "std::string"
 
-    #...........................................................................
-    # Attributes
-    facets = PYB11readwrite(doc="""This two-dimensional array defines the topology of the facets of the 
-piecewise linear complex in terms of connections to generating points. 
-A facet has an arbitrary number of points in 3D and 2 points in 2D. 
-facets[i][j] gives the index of the jth generating point of the ith 
-facet.""")
-    holes = PYB11readwrite(doc="""This three dimensional array defines the topology of the inner facets
-or holes in the geometry.  The outer-most dimension is the number of 
-holes, and the remaining are facets using the same convention as the
-the "facets" member.  In other words, holes[k][i][j] is the jth
-generating point of the ith facet of the kth hole.""")
+    facets = PYB11property(getterraw="[](PLC<%(Dimension)s>& self) -> std::vector<std::vector<unsigned>>& { return self.facets; }",
+                           setterraw="[](PLC<%(Dimension)s>& self, const py::object& value) { self.facets = pybind11_helpers::copyFacetList(value, \"facets\"); }",
+                           returnpolicy="reference_internal")
+    holes = PYB11property(getterraw="[](PLC<%(Dimension)s>& self) -> std::vector<std::vector<std::vector<unsigned>>>& { return self.holes; }",
+                          setterraw="[](PLC<%(Dimension)s>& self, const py::object& value) { self.holes = pybind11_helpers::copyHoleList(value, \"holes\"); }",
+                          returnpolicy="reference_internal")
 
-#-------------------------------------------------------------------------------
-# Template instantiations
-PLC2d = PYB11TemplateClass(PLC, template_parameters=("2", "double"))
-PLC3d = PYB11TemplateClass(PLC, template_parameters=("3", "double"))
+PLC2d = PYB11TemplateClass(PLC, template_parameters="2")
+PLC3d = PYB11TemplateClass(PLC, template_parameters="3")
