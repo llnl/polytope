@@ -79,7 +79,7 @@ void test(Tessellator<2, double>& tessellator) {
     serialMesh = tessellator.tessellate(allPoints);
     totalCells = serialMesh.totalPointCount(false);
     outputMesh(serialMesh, serial_mesh_name, 0, 0., 1);
-    compareArea(boundary, serialMesh, tessellator.getQuantizer(),
+    compareArea(boundary, serialMesh, tessellator.quantizer(),
                 "Serial area failed", false);
   }
   if (nranks > 1) {
@@ -90,7 +90,7 @@ void test(Tessellator<2, double>& tessellator) {
     std::string parallel_mesh_name = "parallelIO" + std::to_string(nranks) + tessellator.name();
     outputMesh(localMesh, parallel_mesh_name, 0, 0.);
     read_mesh_name = parallel_mesh_name;
-    compareArea(boundary, localMesh, distributed.getQuantizer(), "Distributed area failed");
+    compareArea(boundary, localMesh, distributed.quantizer(), "Distributed area failed");
   }
   POLY_CHECK2(totalCells == expectedCells,
               "Distributed output has " << totalCells
@@ -99,7 +99,8 @@ void test(Tessellator<2, double>& tessellator) {
   Tessellation<2, double> readMesh;
   std::string masterFilename = getMasterFilename(read_mesh_name, 0);
   SiloReader<2, Tessellation<2, double>>::FieldTypeMap fields;
-  SiloReader<2, Tessellation<2, double>>::read(readMesh, fields, masterFilename);
+  SiloReader<2, Tessellation<2, double>> reader;
+  reader.read(readMesh, fields, masterFilename);
   totalCells = readMesh.totalPointCount(true);
   POLY_CHECK2(totalCells == expectedCells, "Read in mesh has " << totalCells
               << " cells but expected " << expectedCells);

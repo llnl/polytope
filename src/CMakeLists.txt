@@ -121,14 +121,16 @@ set_target_properties(polytopeC PROPERTIES EXPORT_NAME "polytope")
 install(TARGETS polytopeC EXPORT polytope-targets DESTINATION lib)
 install(FILES ${polytope_headers} DESTINATION include/polytope)
 
-blt_add_executable(NAME loadEscapePod
-  HEADERS ${polytope_headers}
-  SOURCES loadEscapePod.cc ${polytope_sources}
-  DEPENDS_ON polytopeC ${POLYTOPE_TPL_DEPENDS}
-  OUTPUT_DIR ${CMAKE_BINARY_DIR}/bin
-  OUTPUT_NAME loadEscapePod
-  INCLUDES ${POLYTOPE_ROOT_DIR}/src ${PROJECT_BINARY_DIR}/src
-)
+if (POLYTOPE_ENABLE_SILO)
+  blt_add_executable(NAME loadEscapePod
+    HEADERS ${polytope_headers}
+    SOURCES loadEscapePod.cc ${polytope_sources}
+    DEPENDS_ON polytopeC ${POLYTOPE_TPL_DEPENDS}
+    OUTPUT_DIR ${CMAKE_BINARY_DIR}/bin
+    OUTPUT_NAME loadEscapePod
+    INCLUDES ${POLYTOPE_ROOT_DIR}/src ${PROJECT_BINARY_DIR}/src
+  )
+endif()
 
 target_compile_options(loadEscapePod PRIVATE ${POLYTOPE_CXX_COMPILE_FLAGS})
 target_link_options(loadEscapePod PUBLIC ${POLYTOPE_CXX_LINK_FLAGS})

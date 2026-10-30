@@ -71,6 +71,8 @@ public:
     POLY_ASSERT(triangles.size() == neighbors.size());
     const auto ntri = triangles.size();
     tessNodes.reserve(ntri);
+    std::vector<bool> invalidTris;
+    invalidTris.reserve(ntri);
 
     // Extract the circumcenters of triangles (these become Voronoi vertices)
     for (auto i = 0u; i < ntri; ++i) {
@@ -80,12 +82,16 @@ public:
       auto a = result.points[ia].template type_cast<long double>();
       auto b = result.points[ib].template type_cast<long double>();
       auto c = result.points[ic].template type_cast<long double>();
-      tessNodes.push_back(circumcenter(a, b, c));
+      Point2<double> out;
+      invalidTris.push_back(circumcenter(a, b, c, out));
+      tessNodes.push_back(out);
     }
 
     // Each Delaunay side has one dual Voronoi primitive: a segment for an
     // interior side and a ray for a hull side.  Emit interior sides once.
     for (auto triIndex = 0u; triIndex < ntri; ++triIndex) {
+      // FIXME: Handle invalid triangles better
+      //if (invalidTris[triIndex]) continue;
       const auto& tri = triangles[triIndex];
       const auto& adjacent = neighbors[triIndex];
       for (auto side = 0u; side < 3; ++side) {
@@ -93,7 +99,7 @@ public:
         const int gen0 = tri[(side + 1) % 3];
         const int gen1 = tri[(side + 2) % 3];
 
-        if (neighbor == -1) {
+        if (neighbor == -1) {// || invalidTris[neighbor]) {
           addRay(gen0, gen1, triIndex, tri[side]);
         } else {
           POLY_ASSERT(neighbor >= 0 &&
@@ -178,8 +184,7 @@ public:
                      const int gen2 = -1) {
     RawEdge edge;
     if (gen2 >= 0) {
-      edge = makeRawEdge(gen0, gen1, rayDirThirdPoint(gen0, gen1, gen2));
-      edge.leftGen = getLeftGen(gen0, gen1, gen2);
+      edge = makeRawEdge(gen0, gen1, gen2);
     } else {
       auto dir = node1 - node0;
       edge = makeRawEdge(gen0, gen1, rayDir(gen0, gen1, dir));
@@ -221,9 +226,7 @@ public:
               const int gen1,
               const Point<2, double>& node0,
               const int gen2) {
-    RawEdge edge = makeRawEdge(gen0, gen1,
-                               rayDirThirdPoint(gen0, gen1, gen2));
-    edge.leftGen = getLeftGen(gen0, gen1, gen2);
+    RawEdge edge = makeRawEdge(gen0, gen1, gen2);
     edge.hasStart = true;
     edge.start = node0;
     addVP(gen0, gen1, edge);
@@ -267,12 +270,34 @@ private:
   std::map<BoxSide, unsigned> cornerIndices;
   QuantTessellation<2>& result;
 
+  // Make raw edge using 2 generators and a bisector direction
   RawEdge makeRawEdge(const int gen0,
                       const int gen1,
                       const QuantizedPoint<2>& direction) const {
     RawEdge edge;
     edge.bisectorPoint = midPoint(result.points[gen0], result.points[gen1]);
     edge.direction = direction;
+    return edge;
+  }
+
+  // Make raw edge using 3 generator points
+  RawEdge makeRawEdge(const int gen0,
+                      const int gen1,
+                      const int gen2) const {
+    RawEdge edge;
+    const auto& a = result.points[gen0];
+    const auto& b = result.points[gen1];
+    const auto& c = result.points[gen2];
+    edge.bisectorPoint = midPoint(a, b);
+    const auto winding = qcross(b - a, c - a);
+    POLY_CHECK(winding != 0);
+    if (winding > 0) {
+      edge.leftGen = gen1;
+      edge.direction = outwardRay(b, a);
+    } else if (winding < 0) {
+      edge.leftGen = gen0;
+      edge.direction = outwardRay(a, b);
+    }
     return edge;
   }
 
@@ -312,27 +337,6 @@ private:
       ray = -ray;
     }
     return ray;
-  }
-
-  // Determine the ray direction using a third generator point
-  QuantizedPoint<2> rayDirThirdPoint(const int gen0,
-                                     const int gen1,
-                                     const int gen2) const {
-    return outwardRay(result.points[gen0],
-                      result.points[gen1],
-                      result.points[gen2]);
-  }
-
-  // Determine which generator is to the left of the current edge
-  int getLeftGen(const int gen0,
-                 const int gen1,
-                 const int gen2) {
-    const auto& a = result.points[gen0];
-    const auto& b = result.points[gen1];
-    const auto& c = result.points[gen2];
-    const auto winding = qcross(b - a, c - a);
-    POLY_ASSERT(winding != 0);
-    return winding > 0 ? gen1 : gen0;
   }
 
   // Clip once, then store a canonical edge directed with gp.first on its left.
@@ -386,16 +390,39 @@ private:
                                                           edgeToFace,
                                                           result.cells[cellIndex]);
     // If error occurs above, generate an escape pod
-    if (!errorStr.empty()) {
+    if (!errorStr.empty() && !result.escapePod) {
+      // FIXME: Move functionality elsewhere
       using PodTess = Tessellation<2, QuantizedCoordinate<2>>;
       PodTess escapePod;
+      escapePod.escapePod = true;
+      escapePod.tessellatorName = result.tessellatorName;
       escapePod.points.push_back(result.points[cellIndex]);
       std::vector<int> cell;
       int curCell = 0;
       unsigned faceIndex = 0;
+      // Loop over current clipped edges and fill the escape pod tessellation
+      std::set<int> foundGens;
+      foundGens.insert(cellIndex);
       for (const auto i : clippedEdges) {
         int gen = (i.gp.first == cellIndex) ? i.gp.second : i.gp.first;
-        escapePod.points.push_back(result.points[gen]);
+        if (foundGens.count(gen) == 0) {
+          foundGens.insert(gen);
+          escapePod.points.push_back(result.points[gen]);
+        }
+        // Loop over any generators paired with paired generators
+        for (const auto ig : genVPS[gen]) {
+          auto& gpi = vps[ig].gp;
+          int geni0 = gpi.first;
+          int geni1 = gpi.second;
+          if (foundGens.count(geni0) == 0) {
+            foundGens.insert(geni0);
+            escapePod.points.push_back(result.points[geni0]);
+          }
+          if (foundGens.count(geni1) == 0) {
+            foundGens.insert(geni1);
+            escapePod.points.push_back(result.points[geni1]);
+          }
+        }
         int e0 = i.edge.first;
         int e1 = i.edge.second;
         if (e0 >= 0) {
@@ -414,9 +441,18 @@ private:
       escapePod.cells.push_back(cell);
       SiloWriter<2, PodTess> writer(escapePod);
       writer.setOvlType(false);
-      std::string filename = "escapePod" + std::to_string(Communicator::getRank());
+      std::string filename = "narrowEscapePod" + std::to_string(Communicator::getRank());
       writer.write(filename, "", 1);
+      // Also write the entire tessellation but remove unfilled cells
+      result.cells.resize(cellIndex);
+      result.escapePod = true;
+      SiloWriter<2, QuantTessellation<2>> qwriter(result);
+      qwriter.setOvlType(false);
+      filename = "wideEscapePod" + std::to_string(Communicator::getRank());
+      qwriter.write(filename, "", 1);
       POLY_CHECK2(false, errorStr << " wrote escape pod file " << filename);
+    } else if (!errorStr.empty()) {
+      POLY_CHECK2(false, errorStr);
     }
   }
 };

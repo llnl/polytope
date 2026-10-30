@@ -19,16 +19,16 @@ def time_tessellation(allpoints, tessellator, partitioner):
         ptess.setExchangePoints(exchange_points)
         for encodingtype in range(2):
             if encodingtype == 0:
-                ptess.getQuantizer().useMortonEncoding()
+                ptess.quantizer().useMortonEncoding()
             else:
-                ptess.getQuantizer().usePackedEncoding()
+                ptess.quantizer().usePackedEncoding()
             comm.Barrier()
             tess_begin = time.perf_counter()
             mesh = ptess.partitionAndTessellate(points, partitioner)
             comm.Barrier()
             tess_time = time.perf_counter() - tess_begin
             time_dict = {"MPI exchange": "points" if ptess.exchangePoints() else "hashes",
-                         "encoding": ptess.getQuantizer().keyName(),
+                         "encoding": ptess.quantizer().keyName(),
                          "time": tess_time}
             time_dicts.append(time_dict)
     return time_dicts

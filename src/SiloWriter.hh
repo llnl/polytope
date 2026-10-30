@@ -127,6 +127,13 @@ public:
   // Tessellation member data
   const TessType& m_mesh;
 
+  // FIXME: Add qplc IO logic
+  // void setPLC(const QuantPLC<2>& qplc) {
+  //   m_qplc = qplc;
+  // }
+  // // Optional QPLC member data
+  // std::optional<std::reference_wrapper<const QuantPLC<2>>> m_qplc = std::nullopt;
+
 protected:
 
   // Write the double and int fields

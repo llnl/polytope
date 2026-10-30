@@ -13,6 +13,7 @@
 #include <type_traits>
 #include "silo.h"
 #include "Communicator.hh"
+#include "polytope_internal.hh"
 
 namespace polytope {
 
@@ -81,6 +82,19 @@ inline std::string getGlobalMatName() {
   return "MMATERIAL";
 }
 
+// Name of custom variables, tessellator name, coord bit count
+inline std::string getTessNameVar() {
+  return "tessellatorName";
+}
+
+inline std::string getCoordBitVar() {
+  return "coord_bits";
+}
+
+inline std::string getEscapePodVar() {
+  return "escape_pod";
+}
+
 template<typename FieldType>
 void
 writeFields(const std::map<std::string, std::vector<FieldType>>& fields,
@@ -96,16 +110,16 @@ writeFields(const std::map<std::string, std::vector<FieldType>>& fields,
   for (typename std::map<std::string, std::vector<FieldType>>::const_iterator iter = fields.begin();
        iter != fields.end();
        ++iter) {
-    DBPutUcdvar1(file,
-                 (char*)iter->first.c_str(),
-                 meshname.c_str(),
-                 (void*)iter->second.data(),
-                 numElements,
-                 0,
-                 0,
-                 siloDataType,
-                 centering,
-                 optlist);
+    POLY_CHECK(DBPutUcdvar1(file,
+                            (char*)iter->first.c_str(),
+                            meshname.c_str(),
+                            (void*)iter->second.data(),
+                            numElements,
+                            0,
+                            0,
+                            siloDataType,
+                            centering,
+                            optlist) != 1);
   }
 }
 //-------------------------------------------------------------------
@@ -124,8 +138,8 @@ putMultivarInFile(const std::map<std::string, std::vector<double>>& fields,
   for (typename std::map<std::string, std::vector<double>>::const_iterator iter = fields.begin();
        iter != fields.end();
        ++iter, ++fieldIndex) {
-    DBPutMultivar(file, iter->first.c_str(), numChunks,
-                  &varNames[fieldIndex][0], &varTypes[0], optlist);
+    POLY_CHECK(DBPutMultivar(file, iter->first.c_str(), numChunks,
+                             &varNames[fieldIndex][0], &varTypes[0], optlist) != 1);
   }
 }
 
@@ -219,7 +233,8 @@ void putCellVars(DBfile* file,
       varNames.push_back(strDup(varName.c_str()));
     }
     auto gvarName = iter->first;
-    DBPutMultivar(file, gvarName.c_str(), nblocks, varNames.data(), varTypes.data(), optlist);
+    POLY_CHECK(DBPutMultivar(file, gvarName.c_str(), nblocks,
+                             varNames.data(), varTypes.data(), optlist) != 1);
     for (auto f = 0u; f < varNames.size(); ++f) {
       free(varNames[f]);
     }

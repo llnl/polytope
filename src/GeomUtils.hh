@@ -357,11 +357,13 @@ bool SAT(const std::vector<Point<Dimension, CoordType>>& pointsA,
 // Circumcenter operations
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-// Returns a point that is the circumcenter
+// Returns a point that is the circumcenter and a bool that is true if
+// triangle is degenerate
 inline
-Point2<double> circumcenter(const Point2<long double>& a,
-                            const Point2<long double>& b,
-                            const Point2<long double>& c) {
+bool circumcenter(const Point2<long double>& a,
+                  const Point2<long double>& b,
+                  const Point2<long double>& c,
+                  Point2<double>& out) {
   // Differences are formed in long double before subtraction overflow
   const long double ax = a.x;
   const long double ay = a.y;
@@ -376,7 +378,8 @@ Point2<double> circumcenter(const Point2<long double>& a,
   const long double acy = cy - ay;
   const long double cross = abx * acy - aby * acx;
   if (cross == 0.0L) {
-    return Point2<double>(0., 0.);
+    out = Point2<double>(0., 0.);
+    return true;
   }
   const long double ab2 = abx * abx + aby * aby;
   const long double ac2 = acx * acx + acy * acy;
@@ -385,10 +388,11 @@ Point2<double> circumcenter(const Point2<long double>& a,
   // U = A + (ac2 * perp(AB) - ab2 * perp(AC)) / (2 * cross)
   //
   const long double ux =
-    ax + (acy * ab2 - aby * ac2) / (2.0L * cross);
+    std::round(ax + (acy * ab2 - aby * ac2) / (2.0L * cross));
   const long double uy =
-    ay + (abx * ac2 - acx * ab2) / (2.0L * cross);
-  return Point2<double>(static_cast<double>(ux), static_cast<double>(uy));
+    std::round(ay + (abx * ac2 - acx * ab2) / (2.0L * cross));
+  out = Point2<double>(static_cast<double>(ux), static_cast<double>(uy));
+  return false;
 }
 
 #ifdef POLYTOPE_ENABLE_TETGEN

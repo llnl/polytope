@@ -98,7 +98,7 @@ void test(Tessellator<2,double>& tessellator) {
     Tessellation<2,double> mesh;
     mesh = tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC);
     outputMesh(mesh, testName, i, double(i));
-    compareArea(boundary, mesh, tessellator.getQuantizer());
+    compareArea(boundary, mesh, tessellator.quantizer());
     testWatertight(mesh, boundary.mPLC.holes.size());
     POLY_CHECK(checkNearestNode(mesh, dist));
     ++i;
@@ -113,7 +113,7 @@ void test(Tessellator<2,double>& tessellator) {
     Tessellation<2,double> mesh;
     mesh = tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC);
     outputMesh(mesh, testName, i, double(i));
-    compareArea(boundary, mesh, tessellator.getQuantizer());
+    compareArea(boundary, mesh, tessellator.quantizer());
     testWatertight(mesh, boundary.mPLC.holes.size());
     POLY_CHECK(checkNearestNode(mesh, dist));
     ++i;
@@ -128,7 +128,7 @@ void test(Tessellator<2,double>& tessellator) {
     Tessellation<2,double> mesh;
     mesh = tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC);
     outputMesh(mesh, testName, i, double(i));
-    compareArea(boundary, mesh, tessellator.getQuantizer());
+    compareArea(boundary, mesh, tessellator.quantizer());
     testWatertight(mesh, boundary.mPLC.holes.size());
     POLY_CHECK(checkNearestNode(mesh, dist));
     ++i;
@@ -143,7 +143,7 @@ void test(Tessellator<2,double>& tessellator) {
     Tessellation<2,double> mesh;
     mesh = tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC);
     outputMesh(mesh, testName, i, double(i));
-    compareArea(boundary, mesh, tessellator.getQuantizer());
+    compareArea(boundary, mesh, tessellator.quantizer());
     testWatertight(mesh, boundary.mPLC.holes.size());
     POLY_CHECK(checkNearestNode(mesh, dist));
     ++i;
@@ -158,7 +158,7 @@ void test(Tessellator<2,double>& tessellator) {
     Tessellation<2,double> mesh;
     mesh = tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC);
     outputMesh(mesh, testName, i, double(i));
-    compareArea(boundary, mesh, tessellator.getQuantizer());
+    compareArea(boundary, mesh, tessellator.quantizer());
     testWatertight(mesh, boundary.mPLC.holes.size());
     POLY_CHECK(checkNearestNode(mesh, dist));
     ++i;
@@ -193,7 +193,7 @@ void test(Tessellator<2,double>& tessellator) {
     Tessellation<2,double> mesh;
     mesh = tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC);
     outputMesh(mesh, testName, i, double(i));
-    compareArea(boundary, mesh, tessellator.getQuantizer());
+    compareArea(boundary, mesh, tessellator.quantizer());
     testWatertight(mesh, boundary.mPLC.holes.size());
     ++i;
   }
@@ -237,7 +237,7 @@ void test(Tessellator<2,double>& tessellator) {
     tessellator.setPadding(0.5);
     mesh = tessellator.tessellate(points, boundary.mPLCpoints, boundary.mPLC);
     outputMesh(mesh, testName, i);
-    compareArea(boundary, mesh, tessellator.getQuantizer());
+    compareArea(boundary, mesh, tessellator.quantizer());
     testWatertight(mesh, boundary.mPLC.holes.size());
     POLY_CHECK(checkNearestNode(mesh, dist));
     tessellator.setPadding(0.1);
@@ -257,7 +257,7 @@ void test(Tessellator<2,double>& tessellator) {
     Tessellation<2, double> mesh;
     mesh = tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC);
     outputMesh(mesh, testName, i, double(i));
-    compareArea(boundary, mesh, tessellator.getQuantizer());
+    compareArea(boundary, mesh, tessellator.quantizer());
     testWatertight(mesh, boundary.mPLC.holes.size());
     POLY_CHECK(checkNearestNode(mesh, dist));
     ++i;
@@ -277,7 +277,7 @@ void test(Tessellator<2,double>& tessellator) {
       mesh = tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC);
       outputMesh(mesh, testName, i+iter);
       cout << iter << endl;
-      compareArea(boundary, mesh, tessellator.getQuantizer());
+      compareArea(boundary, mesh, tessellator.quantizer());
       testWatertight(mesh, boundary.mPLC.holes.size());
       bool result = checkNearestNode(mesh, dist);
       POLY_CHECK(result);

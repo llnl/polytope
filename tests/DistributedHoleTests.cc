@@ -56,7 +56,7 @@ void test(Tessellator<2, double>& tessellator) {
         std::string serialoutname = "SerialHole";
         outputMesh(serialMesh, serialoutname, btype, double(btype), 1);
       }
-      compareArea(boundary, serialMesh, tessellator.getQuantizer(), "Serial area failure");
+      compareArea(boundary, serialMesh, tessellator.quantizer(), "Serial area failure");
       Communicator::Barrier();
       DistributedTessellator<2> distributed(tessellator);
       Tessellation<2, double> localMesh;
@@ -75,7 +75,7 @@ void test(Tessellator<2, double>& tessellator) {
       //   SiloWriter<2, Tessellation<2, double>> writer(procMesh);
       //   writer.write("ProcMesh", "", rank, 0., 1);
       // }
-      compareArea(boundary, localMesh, distributed.getQuantizer(), "Distributed area failure");
+      compareArea(boundary, localMesh, distributed.quantizer(), "Distributed area failure");
 
       if (rank == root) {
         std::cout << btype << " test: gen seed " << Gseed << " partition seed " << Dseed << std::endl;

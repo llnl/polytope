@@ -27,10 +27,13 @@ void createTriangle(const double loval,
 
 template<typename IntType>
 Point2<IntType> circumcenter2d(std::array<Point2<double>, 3> tri) {
-  auto a = tri[0];
-  auto b = tri[1];
-  auto c = tri[2];
-  return round<2, IntType>(circumcenter(a, b, c));
+  auto a = tri[0].template type_cast<long double>();
+  auto b = tri[1].template type_cast<long double>();
+  auto c = tri[2].template type_cast<long double>();
+  Point2<double> out;
+  bool failed = circumcenter(a, b, c, out);
+  POLY_CHECK(!failed);
+  return round<2, IntType>(out);
 }
 
 template<typename IntType>

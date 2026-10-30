@@ -48,7 +48,7 @@ void test(Tessellator<2, double>& tessellator) {
   POLY_CHECK2(totalCells = static_cast<unsigned>(Ngen*nranks),
               "Incorrect number of total cells");
   compareArea(boundary, localMesh,
-              distributed.getQuantizer(),
+              distributed.quantizer(),
               "Distributed area failure");
 
   Tessellation<2, double> serialMesh;
@@ -64,7 +64,7 @@ void test(Tessellator<2, double>& tessellator) {
     outputMesh(serialMesh, serialoutname, 0, 0., 1);
   }
   compareArea(boundary, serialMesh,
-              distributed.getQuantizer(),
+              distributed.quantizer(),
               "Serial area failure");
 }
 } // anonymous namespace

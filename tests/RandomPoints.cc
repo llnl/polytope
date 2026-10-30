@@ -50,7 +50,7 @@ void testBoundary(Boundary2D& boundary,
     generators.randomPoints(nPoints, seed);
     mesh = tessellator.tessellate(generators.mPoints, boundary.mPLCpoints, boundary.mPLC);
     outputMesh(mesh, testName, plotIndex);
-    compareArea(boundary, mesh, tessellator.getQuantizer());
+    compareArea(boundary, mesh, tessellator.quantizer());
     mesh.clear();
     plotIndex++;
   }

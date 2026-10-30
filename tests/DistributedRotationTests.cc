@@ -33,7 +33,8 @@ using namespace polytope;
 // runTest
 // -----------------------------------------------------------------------
 void runTest(Tessellator<2, double>& serialTessellator,
-             const unsigned flowType) {
+             const unsigned flowType,
+             const bool cartesian = true) {
   POLY_CHECK(flowType >= 1 and flowType <= 4);
 
   // Boundary size parameters
@@ -42,17 +43,22 @@ void runTest(Tessellator<2, double>& serialTessellator,
   // Figure out parallel configuration
   int rank = Communicator::getRank();
   int root = Communicator::getRoot();
-  const int seed = 10489592;
 
   Boundary2D boundary;
   boundary.mCenter[0] = 0.5;
   boundary.mCenter[1] = 0.5;
   boundary.mDiff = 0.4;
   boundary.setDefaultBoundary(0);
+  boundary.mClipping = false;
   serialTessellator.setPadding(boundary.mPad);
   Generators<2> generators(boundary);
-  const int Ngen = nx*nx;
-  generators.randomPoints(Ngen, seed);
+  if (cartesian) {
+    generators.cartesian2D(nx, nx);
+  } else {
+    const int seed = 10489592;
+    const int Ngen = nx*nx;
+    generators.randomPoints(Ngen, seed);
+  }
   QuasiVoronoiPartitioner<2> qvpart(0);
   const auto bHigh = boundary.maxBound;
   const auto bLow = boundary.minBound;
@@ -97,7 +103,8 @@ void runTest(Tessellator<2, double>& serialTessellator,
       outputMesh(mesh, testName, step, time);
       if (rank == root) cout << std::round((time/Tmax)*100) << "%" << endl;
     }
-    compareArea(boundary, mesh, tessellator.getQuantizer(), "Test " + std::to_string(flowType));
+    compareArea(boundary, mesh, tessellator.quantizer(), "Test " + std::to_string(flowType) +
+                " time step " + std::to_string(step));
     getVelocities(localPoints, bHigh, bLow, flowType, velocityField);
     for (unsigned i = 0; i != localPoints.size(); ++i) {
       halfTimePositions[i] = localPoints[i] + dt*velocityField[i];

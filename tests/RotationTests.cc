@@ -42,6 +42,7 @@ void runTest(Tessellator<2,double>& tessellator,
   boundary.setDefaultBoundary(0);
   boundary.mClipping = false;
   Generators<2> generators(boundary);
+  tessellator.setPadding(boundary.mPad);
   const auto bHigh = boundary.maxBound;
   const auto bLow = boundary.minBound;
   const auto len = bHigh - bLow;
@@ -82,7 +83,7 @@ void runTest(Tessellator<2,double>& tessellator,
       outputMesh(mesh, testName, step, time);
       cout << std::round((time/Tmax)*100) << "%" << endl;
     }
-    compareArea(boundary, mesh, tessellator.getQuantizer(), "Test " + std::to_string(flowType));
+    compareArea(boundary, mesh, tessellator.quantizer(), "Test " + std::to_string(flowType));
     getVelocities(points, bHigh, bLow, flowType, velocityField);
     for (unsigned i = 0; i != points.size(); ++i) {
       halfTimePositions[i] = points[i] + dt*velocityField[i];

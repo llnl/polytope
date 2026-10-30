@@ -21,6 +21,7 @@ tessellate(const std::vector<Point<Dimension, RealType>>& points) {
 
   // Invoke the descendant method to fill the quant mesh.
   QuantTessellation<Dimension> quantmesh(m_Q, points);
+  quantmesh.tessellatorName = this->name();
   this->tessellateQuantized(quantmesh);
 
   // Convert back to physical space.
@@ -52,6 +53,7 @@ tessellate(const std::vector<Point<Dimension, RealType>>& points,
 
   // Invoke the descendant method to fill the quant mesh.
   QuantTessellation<Dimension> quantmesh(m_Q, points);
+  quantmesh.tessellatorName = this->name();
   QuantPLC<Dimension> qplc(m_Q, PLCpoints, geometry);
   // Remove any external points
   quantmesh.cullExternalPoints(qplc);

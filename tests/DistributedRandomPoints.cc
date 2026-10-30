@@ -87,8 +87,8 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
   // Output the parallel mesh
   std::string outname = "DistributedRandom_" + tessellator.name();
   outputMesh(localMesh, outname, btype, 0.);
-  compareArea(boundary, serialMesh, distributed.getQuantizer(), "Serial area failure");
-  compareArea(boundary, localMesh, distributed.getQuantizer(), "Distributed area failure");
+  compareArea(boundary, serialMesh, distributed.quantizer(), "Serial area failure");
+  compareArea(boundary, localMesh, distributed.quantizer(), "Distributed area failure");
 }
 } // anonymous namespace
 

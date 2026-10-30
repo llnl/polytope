@@ -31,7 +31,7 @@ class Tessellator:
         return "Tessellation<%(Dimension)s, %(RealType)s>"
 
     @PYB11returnpolicy("reference_internal")
-    def getQuantizer(self):
+    def quantizer(self):
         return "Quantizer<%(Dimension)s>&"
 
     @PYB11implementation("""[](Tessellator<%(Dimension)s, %(RealType)s>& self,

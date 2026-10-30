@@ -99,7 +99,7 @@ void test(Tessellator<2, double>& tessellator) {
   outputMesh(localMesh, outname, 0, 0.);
 
   // Now get the current mesh including all it's neighbor generators
-  auto& quantizer = distributed.getQuantizer();
+  auto& quantizer = distributed.quantizer();
   QuantTessellation<2> qmesh(quantizer, points);
   distributed.tessellateQuantized(qmesh);
   if (rank < activeRanks && nranks >= activeRanks) {

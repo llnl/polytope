@@ -46,7 +46,7 @@ timeTessellation(const std::vector<double> allPoints,
     if (encoding == 0) serialTessellator.useMortonEncoding();
     else serialTessellator.usePackedEncoding();
     DistributedTessellator<2> distributed(serialTessellator);    
-    const auto& quantizer = distributed.getQuantizer();
+    const auto& quantizer = distributed.quantizer();
     if (rank == root) {
       std::cout << "Encoding: " << quantizer.keyName() << std::endl;
     }

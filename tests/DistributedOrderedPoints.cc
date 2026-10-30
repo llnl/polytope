@@ -55,7 +55,7 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
     // distributed test
     serial_writer.write(serialoutname, btype, 0., 1);
   }
-  compareArea(boundary, serialMesh, tessellator.getQuantizer(), "Serial area failure");
+  compareArea(boundary, serialMesh, tessellator.quantizer(), "Serial area failure");
 
   Communicator::Barrier();
   DistributedTessellator<2> distributed(tessellator);
@@ -70,7 +70,7 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
               "Total number of cells " << totalCells
               << " is incorrect; expected " << allPoints.size()/2);
 
-  compareArea(boundary, localMesh, distributed.getQuantizer(), "Distributed area failure");
+  compareArea(boundary, localMesh, distributed.quantizer(), "Distributed area failure");
   if (rank == root) {
     cout << "\nTest " << btype << " passed." << endl;
   }

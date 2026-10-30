@@ -32,7 +32,7 @@ void test(Tessellator<2,double>& tessellator, const std::string& outname, bool h
   if (honeyComb) {
     double dx = (xmax - xmin)/(nx + 1.);
     double dy = (ymax - ymin)/(ny + 1.);
-    cycle = 1;
+    cycle = 2;
     int iy = -1;
     for (int ix = 0; ix <= nx; ++ix) {
       if ((ix % 2) > 0) {
@@ -69,9 +69,6 @@ void test(Tessellator<2,double>& tessellator, const std::string& outname, bool h
   }
   Point2<double> lo(xmin, ymin);
   Point2<double> hi(xmax, ymax);
-  std::vector<double> plcPoints = flattenCoords(createSquarePoints(lo, hi));
-  PLC<2> plc;
-  plc.facets = createSquareFaces();
   tessellator.usePackedEncoding();
   Tessellation<2, double> mesh = tessellator.tessellate(points);
   outputMesh(mesh, outname, cycle);
@@ -80,9 +77,10 @@ void test(Tessellator<2,double>& tessellator, const std::string& outname, bool h
   Tessellation<2, double> readMesh;
   std::string masterFilename = getMasterFilename(outname, cycle);
   SiloReader<2, Tessellation<2, double>>::FieldTypeMap fields;
-  SiloReader<2, Tessellation<2, double>>::read(readMesh, fields, masterFilename);
+  SiloReader<2, Tessellation<2, double>> reader;
+  reader.read(readMesh, fields, masterFilename);
   // Try writing the mesh back out
-  outputMesh(readMesh, "re"+outname, cycle);
+  outputMesh(readMesh, outname, cycle + 1);
   int meshnodes = readMesh.nodes.size();
   POLY_CHECK2(meshnodes == numNodes, "Number of nodes in mesh: " << meshnodes
               << " does not match expected number of nodes: " << numNodes);

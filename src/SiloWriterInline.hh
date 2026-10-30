@@ -286,8 +286,10 @@ writeMasterFile(const std::string& masterFilename,
   DBAddOption(masteroptlist, DBOPT_MMESH_NAME, global_mesh_name.data());
   DBAddOption(masteroptlist, DBOPT_COORDSYS, &coord_sys);
 
-  DBPutMultimesh(file, global_mesh_name.c_str(), nblocks, cellMeshNames.data(), cellMeshTypes.data(), masteroptlist);
-  DBPutMultimesh(file, "PPOINTS", nblocks, pointMeshNames.data(), pointMeshTypes.data(), masteroptlist);
+  POLY_CHECK(DBPutMultimesh(file, global_mesh_name.c_str(), nblocks,
+                            cellMeshNames.data(), cellMeshTypes.data(), masteroptlist) != 1);
+  POLY_CHECK(DBPutMultimesh(file, "PPOINTS", nblocks, pointMeshNames.data(),
+                            pointMeshTypes.data(), masteroptlist) != 1);
 
   // Add field data
   for (const auto& [centering, fieldmap] : m_doubleFields) {
@@ -313,21 +315,21 @@ writeMasterFile(const std::string& masterFilename,
     DBAddOption(masteroptlist, DBOPT_NMATNOS, &nmatnos);
     DBAddOption(masteroptlist, DBOPT_MATNOS, matnos.data());
     DBAddOption(masteroptlist, DBOPT_MATNAMES, matNamesPtr.data());
-    DBPutMultimat(file, global_mat_name.c_str(), nblocks, materialMeshNames.data(), masteroptlist);
+    POLY_CHECK(DBPutMultimat(file, global_mat_name.c_str(), nblocks,
+                             materialMeshNames.data(), masteroptlist) != 1);
     DBClearOption(masteroptlist, DBOPT_MATNAMES);
     DBClearOption(masteroptlist, DBOPT_MATNOS);
     DBClearOption(masteroptlist, DBOPT_NMATNOS);
   }
-#ifdef POLYTOPE_ENABLE_DEBUG
   std::vector<char*> nodeMeshNames;
   for (const auto& p : procPaths) {
     nodeMeshNames.push_back(strDup((p + "nodes").c_str()));
   }
-  DBPutMultimesh(file, "NNODES", nblocks, nodeMeshNames.data(), pointMeshTypes.data(), masteroptlist);
+  POLY_CHECK(DBPutMultimesh(file, "NNODES", nblocks, nodeMeshNames.data(),
+                            pointMeshTypes.data(), masteroptlist) != 1);
   for (auto f = 0u; f < nodeMeshNames.size(); ++f) {
     free(nodeMeshNames[f]);
   }
-#endif
   DBClose(file);
   // Clean up
   DBFreeOptlist(masteroptlist);

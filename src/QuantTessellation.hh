@@ -378,28 +378,6 @@ public:
   // Used for debugging purposes. Creates a file of relevant generator points
   //------------------------------------------------------------------------------
 
-  // Eject only certain generators
-  void ejectEscapePod(std::string filename,
-                      const std::vector<unsigned>& genPoints,
-                      const QuantPLC<Dimension>& QPLC,
-                      const std::string& tessellatorName = "");
-  // Eject all generators
-  void ejectEscapePod(std::string filename,
-                      const QuantPLC<Dimension>& QPLC,
-                      const std::string& tessellatorName = "") {
-    std::vector<unsigned> genPoints(points.size());
-    for (auto i = 0u; i < points.size(); ++i) {
-      genPoints[i] = i;
-    }
-    ejectEscapePod(filename, genPoints, QPLC, tessellatorName);
-  }
-
-  void loadEscapePod(std::string filename,
-                     QuantPLC<Dimension>& QPLC);
-  void loadEscapePod(std::string filename,
-                     QuantPLC<Dimension>& QPLC,
-                     std::string& tessellatorName);
-
   bool cellIntersectsHull(const QuantPLC<Dimension>& QPLC,
                           const unsigned index) {
     auto qcell = getCell(index);
@@ -480,7 +458,6 @@ public:
   //------------------------------------------------------------------------------
   // Member data
   //------------------------------------------------------------------------------
-  bool m_isEscapePod = false;
   std::vector<QuantizedKey<Dimension>> hashes;
   using Tessellation<Dimension, QCoord>::points; // Generator points
   using Tessellation<Dimension, QCoord>::nodes; // Nodes that make up the Voronoi
@@ -491,6 +468,7 @@ public:
   QuantPLC<Dimension> convexHull;
   // Disable to keep points in the same order
   bool m_doSort = true;
+  using Tessellation<Dimension, QCoord>::escapePod;
 };
 
 } // namespace polytope

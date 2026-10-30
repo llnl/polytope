@@ -30,10 +30,10 @@ def runTest(tessellator, flowType, nx):
 
     while time < maxTime:
         if step % 5 == 0:
-            ptu.rootprint(f"{100.0*time/maxTime}%")
+            ptu.rootprint(f"{round(100.0*time/maxTime)}%")
         mesh = tessellator.tessellate(points)
         ptu.outputMesh2d(mesh, testName, cycle=step, time=time)
-        ptu.compareArea(mesh, tessellator.getQuantizer(), f"Test {flowType}")
+        ptu.compareArea(mesh, tessellator.quantizer(), f"Test {flowType}")
         velocities = ptu.getVelocities(points, bhi, blo, flowType)
         halfTimePositions = [point + dt*velocity
                              for point, velocity in zip(points, velocities)]

@@ -168,7 +168,7 @@ void tests(const int tnum, Tessellator<2, double>& tessellator) {
     }
   }
   cout << "\n=== " << outname << " Test " << tnum << ":  " << testname << " ===" << endl;
-  auto& quantizer = tessellator.getQuantizer();
+  auto& quantizer = tessellator.quantizer();
   quantizer.init(boundary.mPLCpoints.empty() ? points : boundary.mPLCpoints, boundary.mPad);
   QuantTessellation<2> quantMesh(quantizer);
   if (qpoints.size() > 0) {
@@ -186,7 +186,7 @@ void tests(const int tnum, Tessellator<2, double>& tessellator) {
   quantMesh.fillTessellation(mesh);
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
   outputMesh(mesh, outname, tnum, double(tnum));
-  compareArea(boundary, mesh, tessellator.getQuantizer());
+  compareArea(boundary, mesh, tessellator.quantizer());
   testWatertight(mesh, boundary.mPLC.holes.size());
   if (numNodes > 0 && tessellator.clippingEnabled()) {
     // Ideally we would match nodes exactly but determine collinearity exactly is not really

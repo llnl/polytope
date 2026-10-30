@@ -90,11 +90,11 @@ public:
     return m_Q.getPadding();
   }
 
-  Quantizer<Dimension>& getQuantizer() {
+  Quantizer<Dimension>& quantizer() {
     return m_Q;
   }
 
-  const Quantizer<Dimension>& getQuantizer() const {
+  const Quantizer<Dimension>& quantizer() const {
     return m_Q;
   }
 

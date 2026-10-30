@@ -140,6 +140,21 @@ SiloWriter<2, TessType>::write(const string& filePrefix,
       DBAddOption(optlist, DBOPT_DTIME, &time);
 
     DBAddOption(optlist, DBOPT_COORDSYS, &coord_sys);
+    // Write custom variables (tessellator name, coordinate bits, escape pod)
+    std::string tessName = m_mesh.tessellatorName;
+    if (!tessName.empty()) {
+      int ns = static_cast<int>(tessName.size());
+      DBWrite(file, getTessNameVar().c_str(), tessName.c_str(), &ns, 1, DB_CHAR);
+    }
+    // Write the number of bits per coordinate
+    int ns = 1;
+    KeyCodec<2> codec;
+    int numBits = codec.coordinateBits();
+    DBWrite(file, getCoordBitVar().c_str(), &numBits, &ns, 1, DB_INT);
+    // Add escape pod var when necessary
+    if (m_mesh.escapePod) {
+      DBWrite(file, getEscapePodVar().c_str(), &ns, &ns, 1, DB_INT);
+    }
     // This is optional for now, but we'll give it anyway.
     char *coordnames[2];
     coordnames[0] = (char*)"xcoords";
@@ -175,13 +190,13 @@ SiloWriter<2, TessType>::write(const string& filePrefix,
     }
 
     // Write out the 2D polygonal mesh.
-    DBPutUcdmesh(file, meshname.c_str(), 2, coordnames, coords,
-                 numNodes, numCells,
-                 "zonelist", NULL, DB_DOUBLE, optlist);
-    DBPutZonelist2(file, "zonelist", numCells,
-                   2, &nodeList[0], nodeList.size(), 0, 0, 0,
-                   &shapetype[0], &shapesize[0], &shapecount[0],
-                   numShapes, optlist);
+    POLY_CHECK(DBPutUcdmesh(file, meshname.c_str(), 2, coordnames, coords,
+                            numNodes, numCells,
+                            "zonelist", NULL, DB_DOUBLE, optlist) != 1);
+    POLY_CHECK(DBPutZonelist2(file, "zonelist", numCells,
+                              2, &nodeList[0], nodeList.size(), 0, 0, 0,
+                              &shapetype[0], &shapesize[0], &shapecount[0],
+                              numShapes, optlist) != 1);
 
     // Write out the cell-face connectivity data.
     // This is used when Polytope reads a Silo file it wrote.
@@ -220,13 +235,13 @@ SiloWriter<2, TessType>::write(const string& filePrefix,
     pcoords[0] = &(xp[0]);
     pcoords[1] = &(yp[0]);
     // Write point mesh
-    DBPutPointmesh(file, (char*)"points", 2, pcoords, numPoints, DB_DOUBLE, optlist);
+    POLY_CHECK(DBPutPointmesh(file, (char*)"points", 2, pcoords,
+                              numPoints, DB_DOUBLE, optlist) != 1);
 
-#ifdef POLYTOPE_ENABLE_DEBUG
     // Create NODES directory and write the nodes as points
     // Node coordinates
-    DBPutPointmesh(file, (char*)"nodes", 2, coords, numNodes, DB_DOUBLE, optlist);
-#endif
+    POLY_CHECK(DBPutPointmesh(file, (char*)"nodes", 2, coords,
+                              numNodes, DB_DOUBLE, optlist) != 1);
 
     // Clean up.
     DBClose(file);

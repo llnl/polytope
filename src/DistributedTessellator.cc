@@ -76,6 +76,7 @@ tessellate(const std::vector<Point<Dimension, RealType>>& points) {
   initQ(points);
 
   QuantizedTessellation quantmesh(m_Q, points);
+  quantmesh.tessellatorName = this->name();
   this->tessellateQuantized(quantmesh);
   quantmesh.filterToLocalGenerators();
   quantmesh.fillTessellation(mesh);
@@ -97,13 +98,14 @@ tessellate(const std::vector<Point<Dimension, RealType>>& points,
   if (!hasAnyGenerators(!points.empty())) return mesh;
   initQ(points, PLCpoints);
 
-  QuantizedTessellation qmesh(m_Q, points);
+  QuantizedTessellation quantmesh(m_Q, points);
+  quantmesh.tessellatorName = this->name();
   m_QPLC.emplace(m_Q, PLCpoints, geometry);
-  qmesh.cullExternalPoints(*m_QPLC);
-  this->tessellateQuantized(qmesh);
-  qmesh.clipTessellation(*m_QPLC, m_serialTessellator);
-  qmesh.filterToLocalGenerators();
-  qmesh.fillTessellation(mesh);
+  quantmesh.cullExternalPoints(*m_QPLC);
+  this->tessellateQuantized(quantmesh);
+  quantmesh.clipTessellation(*m_QPLC, m_serialTessellator);
+  quantmesh.filterToLocalGenerators();
+  quantmesh.fillTessellation(mesh);
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
   return mesh;
 }
@@ -125,6 +127,7 @@ partitionAndTessellate(const std::vector<Point<Dimension, RealType>>& points,
 
   const auto localPoints = partitioner.partition(points);
   QuantizedTessellation quantmesh(m_Q, localPoints);
+  quantmesh.tessellatorName = this->name();
   this->tessellateQuantized(quantmesh);
   quantmesh.filterToLocalGenerators();
   quantmesh.fillTessellation(mesh);
@@ -152,6 +155,7 @@ partitionAndTessellate(const std::vector<Point<Dimension, RealType>>& points,
   m_QPLC.emplace(m_Q, PLCpoints, geometry);
   const auto localPoints = partitioner.partition(points);
   QuantizedTessellation quantmesh(m_Q, localPoints);
+  quantmesh.tessellatorName = this->name();
   quantmesh.cullExternalPoints(*m_QPLC);
   this->tessellateQuantized(quantmesh);
   quantmesh.clipTessellation(*m_QPLC, m_serialTessellator);
@@ -167,12 +171,12 @@ partitionAndTessellate(const std::vector<Point<Dimension, RealType>>& points,
 template<int Dimension>
 void
 DistributedTessellator<Dimension>::
-tessellateQuantized(QuantizedTessellation& qmesh) {
+tessellateQuantized(QuantizedTessellation& quantmesh) {
   int rank = Communicator::getRank();
   int nranks = Communicator::getNRanks();
 
   // Get the local visible generators and gather them on all processors
-  auto visibleMesh = generateVisibleMesh(qmesh);
+  auto visibleMesh = generateVisibleMesh(quantmesh);
   std::set<int> neighborRanks;
   if (visibleMesh.points.size() > 1) {
     neighborRanks = visibleMesh.neighboringRanks();
@@ -185,10 +189,10 @@ tessellateQuantized(QuantizedTessellation& qmesh) {
   }
 
   // Check if any there is any overlap with other convex hulls
-  if (!qmesh.convexHull.m_convex) {
-    qmesh.makeConvexHull();
+  if (!quantmesh.convexHull.m_convex) {
+    quantmesh.makeConvexHull();
   }
-  const auto localHull = qmesh.convexHull;
+  const auto localHull = quantmesh.convexHull;
   const bool validLocalHull = localHull.isValid() &&
                               localHull.m_convex &&
                               localHull.facets.size() >= Dimension + 1;
@@ -208,23 +212,23 @@ tessellateQuantized(QuantizedTessellation& qmesh) {
   // Exchange complete neighbor generator sets using the selected representation.
   if (m_exchangePoints) {
     auto neighborGenerators =
-      exchangeNeighborGenerators<Dimension, QuantizedPoint<Dimension>>(qmesh.points, neighborRanks);
-    if (!qmesh.points.empty()) {
-      qmesh.extend(neighborGenerators);
+      exchangeNeighborGenerators<Dimension, QuantizedPoint<Dimension>>(quantmesh.points, neighborRanks);
+    if (!quantmesh.points.empty()) {
+      quantmesh.extend(neighborGenerators);
     }
   } else {
     auto neighborGenerators =
-      exchangeNeighborGenerators<Dimension, QuantizedKey<Dimension>>(qmesh.hashes, neighborRanks);
-    if (!qmesh.points.empty()) {
-      qmesh.extend(neighborGenerators);
+      exchangeNeighborGenerators<Dimension, QuantizedKey<Dimension>>(quantmesh.hashes, neighborRanks);
+    if (!quantmesh.points.empty()) {
+      quantmesh.extend(neighborGenerators);
     }
   }
   // If we are clipping, we must include all visible generator points to avoid issues
   // See the DistributedHoleTests.cc for examples why this is needed
   if (m_clipping) {
-    addVisibleMesh(visibleMesh, neighborRanks, qmesh);
+    addVisibleMesh(visibleMesh, neighborRanks, quantmesh);
   }
-  m_serialTessellator.tessellateQuantized(qmesh);
+  m_serialTessellator.tessellateQuantized(quantmesh);
 }
 
 //------------------------------------------------------------------------------
@@ -233,13 +237,14 @@ tessellateQuantized(QuantizedTessellation& qmesh) {
 template<int Dimension>
 QuantTessellation<Dimension>
 DistributedTessellator<Dimension>::
-generateVisibleMesh(QuantizedTessellation& qmesh) {
-  if (!qmesh.points.empty()) {
-    m_serialTessellator.tessellateQuantized(qmesh);
+generateVisibleMesh(QuantizedTessellation& quantmesh) {
+  if (!quantmesh.points.empty()) {
+    m_serialTessellator.tessellateQuantized(quantmesh);
   }
-  QuantizedTessellation visibleMesh(qmesh.quantizer());
+  QuantizedTessellation visibleMesh(quantmesh.quantizer());
+  visibleMesh.tessellatorName = this->name();
   if (m_exchangePoints) {
-    const auto visiblePoints = qmesh.visibleGeneratorPoints();
+    const auto visiblePoints = quantmesh.visibleGeneratorPoints();
     auto allVisibleRecords =
       allGatherGenerators<Dimension, QuantizedPoint<Dimension>>(visiblePoints);
     size_t nvisible = 0;
@@ -251,7 +256,7 @@ generateVisibleMesh(QuantizedTessellation& qmesh) {
       m_serialTessellator.tessellateQuantized(visibleMesh);
     }
   } else {
-    const auto visibleHashes = qmesh.visibleGeneratorKeys();
+    const auto visibleHashes = quantmesh.visibleGeneratorKeys();
     auto allVisibleRecords =
       allGatherGenerators<Dimension, QuantizedKey<Dimension>>(visibleHashes);
     size_t nvisible = 0;
@@ -276,7 +281,7 @@ void
 DistributedTessellator<Dimension>::
 addVisibleMesh(const QuantizedTessellation& visibleMesh,
                const std::set<int>& neighborRanks,
-               QuantizedTessellation& qmesh) {
+               QuantizedTessellation& quantmesh) {
   int rank = Communicator::getRank();
   int nranks = Communicator::getNRanks();
   if (m_exchangePoints) {
@@ -290,7 +295,7 @@ addVisibleMesh(const QuantizedTessellation& visibleMesh,
         visibleGenerators[source].push_back(vpoints[i]);
       }
     }
-    qmesh.extend(visibleGenerators);
+    quantmesh.extend(visibleGenerators);
   } else {
     std::vector<std::vector<QuantizedKey<Dimension>>> visibleGenerators(nranks);
     const auto& vhashes = visibleMesh.hashes;
@@ -302,7 +307,7 @@ addVisibleMesh(const QuantizedTessellation& visibleMesh,
         visibleGenerators[source].push_back(vhashes[i]);
       }
     }
-    qmesh.extend(visibleGenerators);
+    quantmesh.extend(visibleGenerators);
   }
 }
 

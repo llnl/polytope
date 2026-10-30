@@ -106,6 +106,11 @@ public:
   // UNUSED
   std::vector<std::vector<unsigned> > sharedNodes, sharedFaces;
 
+  // Name of tessellator being used
+  std::string tessellatorName = "";
+
+  bool escapePod = false;
+
   //! Get the total point count for a tessellation. Provide with true
   //! to reduce over all ranks
   unsigned totalPointCount(bool parallel = false) {

@@ -119,39 +119,6 @@ QuantTessellation<3>::visibleGenerators(const std::vector<ExchangeType>& et) {
 }
 
 //------------------------------------------------------------------------------
-// Escape pod methods
-//------------------------------------------------------------------------------
-template<>
-void
-QuantTessellation<3>::ejectEscapePod(std::string filename,
-                                     const std::vector<unsigned>& genPoints,
-                                     const QuantPLC<3>& QPLC,
-                                     const std::string& tessellatorName) {
-  POLY_CONTRACT_VAR(filename);
-  POLY_CONTRACT_VAR(genPoints);
-  POLY_CONTRACT_VAR(QPLC);
-  POLY_CONTRACT_VAR(tessellatorName);
-}
-
-template<>
-void
-QuantTessellation<3>::loadEscapePod(std::string filename,
-                                    QuantPLC<3>& QPLC,
-                                    std::string& tessellatorName) {
-  POLY_CONTRACT_VAR(filename);
-  POLY_CONTRACT_VAR(QPLC);
-  POLY_CONTRACT_VAR(tessellatorName);
-}
-
-template<>
-void
-QuantTessellation<3>::loadEscapePod(std::string filename,
-                                    QuantPLC<3>& QPLC) {
-  std::string tessellatorName;
-  loadEscapePod(filename, QPLC, tessellatorName);
-}
-
-//------------------------------------------------------------------------------
 // Explicit instantiation
 //------------------------------------------------------------------------------
 template class QuantTessellation<3>;

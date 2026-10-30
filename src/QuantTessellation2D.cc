@@ -19,129 +19,6 @@
 
 namespace polytope {
 
-//------------------------------------------------------------------------------
-// Escape pod methods
-//------------------------------------------------------------------------------
-template<>
-void
-QuantTessellation<2>::ejectEscapePod(std::string filename,
-                                     const std::vector<unsigned>& genPoints,
-                                     const QuantPLC<2>& QPLC,
-                                     const std::string& tessellatorName) {
-  if (m_isEscapePod) return;
-  const auto podName = escape_pod::filename(filename);
-  std::ofstream out(podName.c_str());
-  POLY_VERIFY2(out, "Unable to open escape pod file for writing: " << podName);
-
-  out << "PolytopeQuantTessellation2DEscapePod 2\n";
-  out << "rank " << Communicator::getRank() << "\n";
-  out << "tessellator " << (tessellatorName.empty() ? "unknown" : tessellatorName) << "\n";
-
-  out << "generators " << genPoints.size() << "\n";
-  for (const auto genIndex : genPoints) {
-    POLY_VERIFY2(genIndex < points.size(),
-                 "Escape pod generator index " << genIndex
-                 << " exceeds generator count " << points.size());
-    out << points[genIndex] << "\n";
-  }
-
-  const bool haveQPLC = not QPLC.empty();
-  out << "qplc " << haveQPLC << "\n";
-  if (haveQPLC) {
-    out << "qplc_points " << QPLC.points.size() << "\n";
-    for (const auto& point : QPLC.points) out << point << "\n";
-
-    out << "qplc_topology\n";
-    QPLC.write(out);
-  }
-
-  POLY_VERIFY2(out, "Failed while writing escape pod file: " << podName);
-}
-
-template<>
-void
-QuantTessellation<2>::loadEscapePod(std::string filename,
-                                    QuantPLC<2>& QPLC,
-                                    std::string& tessellatorName) {
-  auto podName = filename;
-  std::ifstream in(podName.c_str());
-  if (!in) {
-    podName = escape_pod::filename(filename);
-    in.clear();
-    in.open(podName.c_str());
-  }
-  POLY_VERIFY2(in, "Unable to open escape pod file for reading: " << podName);
-
-  escape_pod::expectToken(in, "PolytopeQuantTessellation2DEscapePod");
-  unsigned version = 0;
-  in >> version;
-  POLY_VERIFY2(in and (version == 1 or version == 2),
-               "Unsupported escape pod version " << version
-               << " in file " << podName);
-
-  escape_pod::expectToken(in, "rank");
-  int fileRank = -1;
-  in >> fileRank;
-  POLY_VERIFY2(in, "Malformed escape pod file while reading rank");
-
-  tessellatorName.clear();
-  if (version >= 2) {
-    escape_pod::expectToken(in, "tessellator");
-    in >> tessellatorName;
-    POLY_VERIFY2(in, "Malformed escape pod file while reading tessellator name");
-  }
-
-  clear();
-
-  escape_pod::expectToken(in, "generators");
-  unsigned ngenerators = 0;
-  in >> ngenerators;
-  POLY_VERIFY2(in, "Malformed escape pod file while reading generator count");
-  points.resize(ngenerators);
-  for (auto& point : points) {
-    in >> point;
-    POLY_VERIFY2(in, "Malformed escape pod file while reading a generator point");
-  }
-  escape_pod::rebuildTessellationPointMetadata(*this);
-
-  escape_pod::expectToken(in, "qplc");
-  bool haveQPLC = false;
-  in >> haveQPLC;
-  POLY_VERIFY2(in, "Malformed escape pod file while reading QPLC presence");
-
-  QuantPLC<2> localQPLC(m_Q);
-  if (haveQPLC) {
-    escape_pod::expectToken(in, "qplc_points");
-    unsigned nqplcPoints = 0;
-    in >> nqplcPoints;
-    POLY_VERIFY2(in, "Malformed escape pod file while reading QPLC point count");
-    localQPLC.points.resize(nqplcPoints);
-    for (auto& point : localQPLC.points) {
-      in >> point;
-      POLY_VERIFY2(in, "Malformed escape pod file while reading a QPLC point");
-    }
-
-    escape_pod::expectToken(in, "qplc_topology");
-    localQPLC.read(in);
-    POLY_VERIFY2(in, "Malformed escape pod file while reading QPLC topology");
-    escape_pod::rebuildQPLCPointMetadata(localQPLC);
-  }
-  QPLC = std::move(localQPLC);
-
-  std::string trailing;
-  POLY_VERIFY2(!(in >> trailing),
-               "Unexpected trailing token in escape pod file "
-               << podName << ": " << trailing);
-}
-
-template<>
-void
-QuantTessellation<2>::loadEscapePod(std::string filename,
-                                    QuantPLC<2>& QPLC) {
-  std::string tessellatorName;
-  loadEscapePod(filename, QPLC, tessellatorName);
-}
-
 template<>
 void
 QuantTessellation<2>::cullExternalPoints(const QuantPLC<2>& QPLC) {
@@ -277,7 +154,7 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
     } else {
       // Retessellate with these select generators, convert final product into boost polygons for simplicity
       QuantTessellation<2> newQT(m_Q, genPoints);
-      newQT.m_isEscapePod = m_isEscapePod;
+      newQT.escapePod = escapePod;
       tessellator.tessellateQuantized(newQT);
       POLY_ASSERT2(newQT.cells.size() == genPoints.size(), "Number of gen points should not change");
       for (auto i = 0u; i < newQT.cells.size(); ++i) {
@@ -354,11 +231,12 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
       newCellRank.push_back(cellRank[curIndex]);
     }
   }
-  if (remainingOrphans.size() != 0) {
-    ejectEscapePod("remainingorphan", QPLC, tessellator.name());
-    std::cerr << "Rank " << Communicator::getRank() << ": Outstanding orphan remains" << std::endl;
-    Communicator::abort();
-  }
+  // FIXME: Implement escape pod with QPLC
+  // if (remainingOrphans.size() != 0) {
+  //   ejectEscapePod("remainingorphan", QPLC, tessellator.name());
+  //   std::cerr << "Rank " << Communicator::getRank() << ": Outstanding orphan remains" << std::endl;
+  //   Communicator::abort();
+  // }
   POLY_ASSERT2(newCells.size() == newPoints.size(),
                "Clipped cell and generator counts differ: "
                << newCells.size() << " cells, " << newPoints.size() << " generators");

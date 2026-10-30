@@ -31,7 +31,7 @@ class FakeTessellator(polytope.SerialTessellator2d):
             self.nodes.append(closest)
 
     def tessellateQuantizedImpl(self, quantMesh):
-        Q = self.getQuantizer()
+        Q = self.quantizer()
         assembler = polytope.VoronoiAssembler2d(quantMesh)
         qnodes = [Q.quantizeReal(x) for x in self.nodes]
         assembler.fillTessNodes(qnodes)

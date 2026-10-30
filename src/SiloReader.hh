@@ -19,7 +19,7 @@ std::vector<int> findAvailableCycles(const std::string& prefix,
 }
 
 //! \class SiloReader
-//! This class provides a static interface for reading Silo files 
+//! This class provides a interface for reading Silo files
 //! containing tessellations made by polytope.
 template <int Dimension, typename TessType>
 class SiloReader {
@@ -34,24 +34,30 @@ public:
   using FieldTypeMap = std::map<FieldCentering, FieldMap>;
 
   //! Returns a list of cycle numbers for Silo files dumped by a SiloWriter
-  //! with the given prefix, in the given directory. If the directory is 
+  //! with the given prefix, in the given directory. If the directory is
   //! omitted, its name is generated automatically from the prefix.
-  static std::vector<int> availableCycles(const std::string& filePrefix,
-                                          const std::string& directory = "") {
+  std::vector<int> availableCycles(const std::string& filePrefix,
+                                   const std::string& directory = "") {
     return Silo::findAvailableCycles(filePrefix, directory);
   }
 
   //! Read an arbitrary polygonal mesh and associated field/t maps from a
   //! SILO file. Field maps are keyed by Polytope field centering.
-  //! \param fields A map that will store arrays of field data read in from 
+  //! \param fields A map that will store arrays of field data read in from
   //!               the file. If \a fields contains keys, only those fields
-  //!               with those keys will be read from the file, and an error 
-  //!               will occur if any of the keys are not found. If \a fields 
+  //!               with those keys will be read from the file, and an error
+  //!               will occur if any of the keys are not found. If \a fields
   //!               is empty, all data will be read in from the file.
-  static void read(TessType& mesh,
-                   FieldTypeMap& fields,
-                   const std::string& masterFilename);
+  void read(TessType& mesh,
+            FieldTypeMap& fields,
+            const std::string& masterFilename);
 
+  //! Wrapper for when fields are not of interest
+  void read(TessType& mesh,
+            const std::string& masterFilename) {
+    FieldTypeMap fields;
+    read(mesh, fields, masterFilename);
+  }
 };
 
 //! Partial specialization for 3D tessellations.
@@ -62,24 +68,24 @@ public:
   using FieldTypeMap = std::map<FieldCentering, FieldMap>;
 
   //! Returns a list of cycle numbers for Silo files dumped by a SiloWriter
-  //! with the given prefix, in the given directory. If the directory is 
+  //! with the given prefix, in the given directory. If the directory is
   //! omitted, its name is generated automatically from the prefix.
-  static std::vector<int> availableCycles(const std::string& filePrefix,
-                                          const std::string& directory = "") {
+  std::vector<int> availableCycles(const std::string& filePrefix,
+                                   const std::string& directory = "") {
     return Silo::findAvailableCycles(filePrefix, directory);
   }
 
-  //! Read an arbitrary polyhedral mesh and an associated set of 
+  //! Read an arbitrary polyhedral mesh and an associated set of
   //! fields from a SILO file. Field maps are keyed by Polytope
   //! field centering.
-  //! \param fields A map that will store arrays of field data read in from 
+  //! \param fields A map that will store arrays of field data read in from
   //!               the file. If \a fields contains keys, only those fields
-  //!               with those keys will be read from the file, and an error 
-  //!               will occur if any of the keys are not found. If \a fields 
+  //!               with those keys will be read from the file, and an error
+  //!               will occur if any of the keys are not found. If \a fields
   //!               is empty, all data will be read in from the file.
-  static void read(TessType& mesh,
-                   FieldTypeMap& fields,
-                   const std::string& masterFilename);
+  void read(TessType& mesh,
+            FieldTypeMap& fields,
+            const std::string& masterFilename);
 
 };
 

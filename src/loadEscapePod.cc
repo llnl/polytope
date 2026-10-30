@@ -3,9 +3,8 @@
 #include "QuantTessellation.hh"
 #include "Tessellator.hh"
 
-#ifdef POLYTOPE_ENABLE_SILO
 #include "SiloWriter.hh"
-#endif
+#include "SiloReader.hh"
 
 #ifdef POLYTOPE_ENABLE_BOOST
 #include "BoostTessellator.hh"
@@ -25,13 +24,13 @@ namespace {
 std::unique_ptr<Tessellator<2, double>>
 makeTessellator(const std::string& name) {
 #ifdef POLYTOPE_ENABLE_BOOST
-  if (name == "BoostTessellator") {
+  if (name == "BoostTessellator" || name == "DistributedBoostTessellator") {
     return std::unique_ptr<Tessellator<2, double>>(new BoostTessellator());
   }
 #endif
 
 #ifdef POLYTOPE_ENABLE_TRIANGLE
-  if (name == "TriangleTessellator") {
+  if (name == "TriangleTessellator" || name == "DistributedTriangleTessellator") {
     return std::unique_ptr<Tessellator<2, double>>(new TriangleTessellator());
   }
 #endif
@@ -54,15 +53,17 @@ int main(int argc, char** argv) {
   q.init(Point2<double>(0.), Point2<double>(1.));
 
   QuantTessellation<2> quantMesh(q);
-  QuantPLC<2> qplc(q);
-  std::string tessellatorName;
-  quantMesh.loadEscapePod(inputFile, qplc, tessellatorName);
-  quantMesh.m_isEscapePod = true;
-
+  SiloReader<2, QuantTessellation<2>> reader;
+  reader.read(quantMesh, inputFile);
+  // Keep as an escape pod to avoid overwriting existing escape pod file
+  quantMesh.escapePod = true;
+  std::string tessellatorName = quantMesh.tessellatorName;
   if (tessellatorName.empty()) {
     std::cout << "Escape pod does not specify a serial tessellator" << std::endl;
     Communicator::abort();
   }
+  std::cout << "Using " << tessellatorName << std::endl;
+  QuantPLC<2> qplc(q);
 
   auto tessellator = makeTessellator(tessellatorName);
   if (!tessellator) {
@@ -77,12 +78,12 @@ int main(int argc, char** argv) {
   } else {
     std::cout << "Escape pod does not contain QPLC data; skipping clipping" << std::endl;
   }
-#ifdef POLYTOPE_ENABLE_SILO
-  std::string prefix = "escapefile";
-  SiloWriter<2, QuantTessellation<2>> writer(quantMesh);
-  writer.generateTestVars();
-  writer.write(prefix, "", 1, 0., 1);
-#endif
+// #ifdef POLYTOPE_ENABLE_SILO
+//   std::string prefix = "escapefile";
+//   SiloWriter<2, QuantTessellation<2>> writer(quantMesh);
+//   writer.generateTestVars();
+//   writer.write(prefix, "", 1, 0., 1);
+// #endif
   comm.finalize();
   return 0;
 }

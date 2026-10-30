@@ -140,9 +140,44 @@ SiloReader<2, TessType>::read(TessType& mesh,
       printf("Rank %d Failed to open file %s\n", rank, filename.c_str());
     }
     POLY_ASSERT2(file, "Could not open file " << filename);
+    // Get the generator points
+    DBpointmesh* pmesh = DBGetPointmesh(file, "points");
+    POLY_ASSERT2(pmesh, "Could not find generator points in file " << filename);
+    int npts = pmesh->nels;
+    mesh.points.resize(npts);
+    for (int i = 0; i < npts; ++i) {
+      mesh.points[i].x = static_cast<CoordType>(((double*)(pmesh->coords[0]))[i]);
+      mesh.points[i].y = static_cast<CoordType>(((double*)(pmesh->coords[1]))[i]);
+    }
+    DBFreePointmesh(pmesh);
+    // Retrieve tessellator name
+    int hasTName = DBInqVarExists(file, getTessNameVar().c_str());
+    if (hasTName != 0) {
+      const char* tname = (char*)DBGetVar(file, getTessNameVar().c_str());
+      mesh.tessellatorName = std::string(tname);
+    }
+    // Check coordinate bits
+    KeyCodec<2> codec;
+    int hasKName = DBInqVarExists(file, getCoordBitVar().c_str());
+    if (hasKName != 0) {
+      int* in_bits = (int*)DBGetVar(file, getCoordBitVar().c_str());
+      int cur_bits = codec.coordinateBits();
+      POLY_CHECK2(*in_bits == cur_bits,
+                  filename << " used " << &in_bits << " per coordinate, "
+                  << "current build uses " << cur_bits);
+    }
+    // Check if it is an escape pod
+    int hasEName = DBInqVarExists(file, getEscapePodVar().c_str());
+    if (hasEName != 0) {
+      mesh.escapePod = true;
+    }
+    if (mesh.escapePod) {
+      // Skip the rest if reading an escape pod
+      DBClose(file);
+      continue;
+    }
     DBucdmesh* dbmesh = DBGetUcdmesh(file, internal_obj_path.c_str());
     POLY_ASSERT2(dbmesh, "Could not find mesh " << internal_obj_path << " in file " << filename);
-
     // Node coordinates.
     mesh.nodes.resize(dbmesh->nnodes);
     for (int i = 0; i < dbmesh->nnodes; ++i) {
@@ -233,16 +268,6 @@ SiloReader<2, TessType>::read(TessType& mesh,
     mesh.computeFaceCells();
     DBFreeUcdmesh(dbmesh);
     DBFreeCompoundarray(conn);
-    // Get the generator points
-    DBpointmesh* pmesh = DBGetPointmesh(file, "points");
-    POLY_ASSERT2(pmesh, "Could not find generator points in file " << filename);
-    int npts = pmesh->nels;
-    mesh.points.resize(npts);
-    for (int i = 0; i < npts; ++i) {
-      mesh.points[i].x = static_cast<CoordType>(((double*)(pmesh->coords[0]))[i]);
-      mesh.points[i].y = static_cast<CoordType>(((double*)(pmesh->coords[1]))[i]);
-    }
-    DBFreePointmesh(pmesh);
 
     // Get the cell field variables
     // TODO: Retrieve all other field types as well
