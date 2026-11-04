@@ -79,7 +79,7 @@ void test(const int btype, Tessellator<2, double>& tessellator) {
     SiloWriter<2, Tessellation<2, double>> serial_writer(serialMesh);
     // Output the serial mesh with a rank variable showing the ranks for the
     // distributed test
-    serial_writer.addField(FieldCentering::Cell, "ranks", finalRanksD);
+    serialMesh.fields.addField(FieldCentering::Cell, "ranks", finalRanksD);
     std::string serialoutname = "SerialRandom_" + tessellator.name();
     serial_writer.write(serialoutname, btype, 0., 1);
   }

@@ -29,6 +29,23 @@ class Tessellation:
     def computeFaceCells(self):
         return "void"
 
+    @PYB11template("FieldType")
+    @PYB11implementation("""[](Tessellation<%(Dimension)s, %(RealType)s>& self,
+                               const FieldCentering& centering,
+                               const std::string& name,
+                               const py::object& values) {
+                                 const auto vec_vals = pybind11_helpers::copyPyToVector<%(FieldType)s>(values, "vec_vals");
+                                 self.fields.addField<%(FieldType)s>(centering, name, vec_vals);
+                               }""")
+    def addField(self,
+                 centering="const FieldCentering&",
+                 name="const std::string&",
+                 values="const py::object&"):
+        return "void"
+
+    addFieldDouble = PYB11TemplateMethod(addField, ("double"), pyname="addField")
+    addFieldInt = PYB11TemplateMethod(addField, ("int"), pyname="addField")
+
     @PYB11implementation("[](const Tessellation<%(Dimension)s, %(RealType)s>& self) { std::stringstream ss; ss << self; return ss.str(); }")
     def __str__(self):
         return "std::string"

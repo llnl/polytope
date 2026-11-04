@@ -3,7 +3,6 @@ This creates a shrinking column of generators. Good test for unusual degeneracie
 """
 
 import sys
-
 import polytope
 from Boundary2D import Boundary2D
 import polytope_test_utilities as ptu

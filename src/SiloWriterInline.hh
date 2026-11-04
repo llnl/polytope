@@ -14,14 +14,14 @@ void SiloWriterBase<Dimension, TessType>::generateTestVars() {
     for (int d = 0; d < Dimension; ++d) {
       pos[d][i] = static_cast<double>(m_mesh.points[i][d]);
     }
-    indices[i] = int(i);
+    indices[i] = int(m_mesh.points[i].index);
   }
   std::array<std::string, 3> pos_names = {"x", "y", "z"};
-  FieldMap<double> cellDoubleFields;
+  FieldData::TypedFieldMap<double> cellDoubleFields;
   for (int d = 0; d < Dimension; ++d) {
     cellDoubleFields[pos_names[d]] = pos[d];
   }
-  FieldMap<int> cellIntFields;
+  FieldData::TypedFieldMap<int> cellIntFields;
   cellIntFields["cell_index"] = indices;
 #ifdef POLYTOPE_ENABLE_MPI
   if (!m_mesh.cellRank.empty()) {
@@ -33,8 +33,8 @@ void SiloWriterBase<Dimension, TessType>::generateTestVars() {
     cellIntFields["rank"] = ranks;
   }
 #endif
-  addField<double>(FieldCentering::Cell, cellDoubleFields);
-  addField<int>(FieldCentering::Cell, cellIntFields);
+  m_mesh.fields.template addField<double>(FieldCentering::Cell, cellDoubleFields);
+  m_mesh.fields.template addField<int>(FieldCentering::Cell, cellIntFields);
   std::vector<std::string> matNames(1, "O2");
   std::vector<std::vector<double>> matVF(numCells, std::vector<double>(1, 1.));
   addMaterials(matNames, matVF);
@@ -44,9 +44,8 @@ void SiloWriterBase<Dimension, TessType>::generateTestVars() {
 // Determine the centering and write the appropriate field.
 //------------------------------------------------------------------------
 template<int Dimension, typename TessType>
-template<typename FieldType>
 void SiloWriterBase<Dimension, TessType>::
-fieldWrite(const typename SiloWriterBase<Dimension, TessType>::FieldTypeMap<FieldType>& fields,
+fieldWrite(const FieldData::FieldTypeMap& fields,
            const std::string& meshname,
            DBfile* file,
            DBoptlist* optlist) {
@@ -54,14 +53,14 @@ fieldWrite(const typename SiloWriterBase<Dimension, TessType>::FieldTypeMap<Fiel
   const auto numNodes = m_mesh.nodes.size();
   const auto numCells = m_mesh.cells.size();
   for (const auto& [centering, fieldmap] : fields) {
-    const int centType = static_cast<int>(centering);
-    if (centering == FieldCentering::Face ||
-        centering == FieldCentering::Edge) {
-      writeFields<FieldType>(fieldmap, meshname, file, numFaces, centType, optlist);
-    } else if (centering == FieldCentering::Node) {
-      writeFields<FieldType>(fieldmap, meshname, file, numNodes, centType, optlist);
-    } else {
-      writeFields<FieldType>(fieldmap, meshname, file, numCells, centType, optlist);
+    const int centType = siloFieldCentering(centering);
+    const auto numElements =
+      centering == FieldCentering::Face || centering == FieldCentering::Edge ? numFaces :
+      centering == FieldCentering::Node ? numNodes : numCells;
+    for (const auto& [name, values] : fieldmap) {
+      std::visit([&](const auto& typedValues) {
+        writeField(name, typedValues, meshname, file, numElements, centType, optlist);
+      }, values);
     }
   }
 }
@@ -96,7 +95,7 @@ writeOverlinkAttributes(DBfile* file, DBoptlist* optlist) {
   std::vector<int> attributes;
 
   const auto appendFields = [this, &variableNames, &attributeLengths, &attributes]
-    (const auto& fields, int dataType) {
+    (const auto& fields) {
       for (const auto& [centering, fieldmap] : fields) {
         // Overlink VAR_ATTRIBUTES supports nodal and zonal variables only.
         if (centering != FieldCentering::Node &&
@@ -104,8 +103,9 @@ writeOverlinkAttributes(DBfile* file, DBoptlist* optlist) {
         const int overlinkCentering =
           centering == FieldCentering::Node ?
           OverlinkAttr.at("ATTR_NODAL") : OverlinkAttr.at("ATTR_ZONAL");
-        for (const auto& field : fieldmap) {
-          const auto& name = field.first;
+        for (const auto& [name, values] : fieldmap) {
+          const int dataType = std::holds_alternative<std::vector<double>>(values) ?
+            OverlinkAttr.at("ATTR_FLOAT") : OverlinkAttr.at("ATTR_INTEGER");
           const auto attrIter = m_overlinkFieldAttributes.find(name);
           const auto scaling = attrIter == m_overlinkFieldAttributes.end() ?
             OverlinkAttr.at("ATTR_INTENSIVE") : attrIter->second.scaling;
@@ -121,8 +121,7 @@ writeOverlinkAttributes(DBfile* file, DBoptlist* optlist) {
       }
     };
 
-  appendFields(m_doubleFields, OverlinkAttr.at("ATTR_FLOAT"));
-  appendFields(m_intFields, OverlinkAttr.at("ATTR_INTEGER"));
+  appendFields(m_mesh.fields.fields);
   if (!variableNames.empty()) {
     DBPutCompoundarray(file,
                        "VAR_ATTRIBUTES",
@@ -292,10 +291,7 @@ writeMasterFile(const std::string& masterFilename,
                             pointMeshTypes.data(), masteroptlist) != 1);
 
   // Add field data
-  for (const auto& [centering, fieldmap] : m_doubleFields) {
-    putCellVars(file, fieldmap, procPaths, nblocks, varTypes, masteroptlist);
-  }
-  for (const auto& [centering, fieldmap] : m_intFields) {
+  for (const auto& [centering, fieldmap] : m_mesh.fields.fields) {
     putCellVars(file, fieldmap, procPaths, nblocks, varTypes, masteroptlist);
   }
   if (m_overlinkType) {

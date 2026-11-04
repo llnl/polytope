@@ -284,6 +284,7 @@ QuantTessellation<2>::fillTessellation(TessellationType& mesh) {
   for (unsigned i = 0; i < numCells; ++i) {
     auto index = points[i].index;
     mesh.points[index] = m_Q.dequantize(points[i]);
+    mesh.points[index].index = index;
     mesh.cells[index] = cells[i];
     POLY_ASSERT2(cells[i].size() >= 3, "Cell " << index << " has fewer than three faces");
   }

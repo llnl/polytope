@@ -15,6 +15,7 @@ set(polytope_headers
   Communicator.hh
   Cube.hh
   EdgeUtils.hh
+  FieldData.hh
   EscapePod.hh
   GeomUtils.hh
   KeyCodec.hh

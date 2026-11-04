@@ -57,6 +57,13 @@ rankLocalPoints(const std::vector<double>& allPoints,
 }
 
 void test(Tessellator<2, double>& tessellator) {
+  FieldData fieldData;
+  fieldData.addField(FieldCentering::Cell, "unique", std::vector<int>{1});
+  fieldData.addField(FieldCentering::Cell, "unique", std::vector<double>{2.});
+  POLY_CHECK(fieldData.fields.at(FieldCentering::Cell).size() == 1);
+  POLY_CHECK(std::holds_alternative<std::vector<int>>(
+    fieldData.fields.at(FieldCentering::Cell).at("unique")));
+
   int rank = Communicator::getRank();
   int nranks = Communicator::getNRanks();
 
@@ -74,11 +81,13 @@ void test(Tessellator<2, double>& tessellator) {
   std::string serial_mesh_name = "serialIO" + std::to_string(nranks) + tessellator.name();
   std::string read_mesh_name = serial_mesh_name;
   unsigned totalCells = 0;
+  FieldData::FieldMap expectedFields;
   Tessellation<2, double> serialMesh;
   if (rank == Communicator::getRoot()) {
     serialMesh = tessellator.tessellate(allPoints);
     totalCells = serialMesh.totalPointCount(false);
     outputMesh(serialMesh, serial_mesh_name, 0, 0., 1);
+    expectedFields = serialMesh.fields.fields.at(FieldCentering::Cell);
     compareArea(boundary, serialMesh, tessellator.quantizer(),
                 "Serial area failed", false);
   }
@@ -89,6 +98,7 @@ void test(Tessellator<2, double>& tessellator) {
 
     std::string parallel_mesh_name = "parallelIO" + std::to_string(nranks) + tessellator.name();
     outputMesh(localMesh, parallel_mesh_name, 0, 0.);
+    expectedFields = localMesh.fields.fields.at(FieldCentering::Cell);
     read_mesh_name = parallel_mesh_name;
     compareArea(boundary, localMesh, distributed.quantizer(), "Distributed area failed");
   }
@@ -101,9 +111,20 @@ void test(Tessellator<2, double>& tessellator) {
   SiloReader<2, Tessellation<2, double>>::FieldTypeMap fields;
   SiloReader<2, Tessellation<2, double>> reader;
   reader.read(readMesh, fields, masterFilename);
+  const auto& readFields = readMesh.fields.fields.at(FieldCentering::Cell);
+  const auto& cellIndices = std::get<std::vector<int>>(readFields.at("cell_index"));
+  POLY_CHECK2(cellIndices.size() == readMesh.cells.size(),
+              "Read cell index field has the wrong size");
+  POLY_CHECK(readFields.at("cell_index") == expectedFields.at("cell_index"));
+  POLY_CHECK(std::holds_alternative<std::vector<double>>(readFields.at("x")));
+  POLY_CHECK(readFields.at("x") == expectedFields.at("x"));
+  POLY_CHECK2(fields.at(FieldCentering::Cell).at("cell_index").size() == cellIndices.size(),
+              "Reader field output map has the wrong size");
   totalCells = readMesh.totalPointCount(true);
   POLY_CHECK2(totalCells == expectedCells, "Read in mesh has " << totalCells
               << " cells but expected " << expectedCells);
+  readMesh.clear();
+  POLY_CHECK(readMesh.fields.fields.empty());
 }
 } // anonymous namespace
 

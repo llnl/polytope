@@ -9,6 +9,7 @@
 #include "Cell.hh"
 #include "Point.hh"
 #include "Communicator.hh"
+#include "FieldData.hh"
 namespace polytope {
 
 //! \class Tessellation - A basic descriptor class for a topologically-consistent
@@ -42,6 +43,7 @@ public:
     sharedFaces.clear();
     points.clear();
     cellRank.clear();
+    fields.clear();
   }
 
   //! Returns true if the tessellation is empty (not defined),
@@ -92,6 +94,9 @@ public:
 
   //! Rank associated with each cell. For distributed tessellation.
   std::vector<int> cellRank;
+
+  //! Numeric data centered on mesh nodes, edges, faces, or cells.
+  FieldData fields;
 
   //! Parallel data structure: the set of neighbor domains this portion of
   //! the tessellation is in contact with.

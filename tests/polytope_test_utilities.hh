@@ -20,7 +20,7 @@ namespace polytope {
 // A simple mesh output function for the SiloWriter
 //------------------------------------------------------------------------------
 // 2D
-void outputMesh(const Tessellation<2, double>& mesh,
+void outputMesh(Tessellation<2, double>& mesh,
 		std::string prefix,
 		const unsigned testCycle = 1,
 		const double time = 0.0,
@@ -33,7 +33,7 @@ void outputMesh(const Tessellation<2, double>& mesh,
 }
 
 template<typename FieldType>
-void outputMesh(const Tessellation<2, double>& mesh,
+void outputMesh(Tessellation<2, double>& mesh,
 		std::string prefix,
                 std::vector<FieldType>& cellFieldVec,
                 std::string cellFieldName,
@@ -43,14 +43,14 @@ void outputMesh(const Tessellation<2, double>& mesh,
 #ifdef POLYTOPE_ENABLE_SILO
   SiloWriter<2, Tessellation<2, double>> writer(mesh);
   writer.generateTestVars();
-  writer.addField<double>(FieldCentering::Cell, cellFieldName, cellFieldVec);
+  mesh.fields.addField<double>(FieldCentering::Cell, cellFieldName, cellFieldVec);
   writer.write(prefix, "", testCycle, time, numFiles);
 #endif
 }
 
 //..............................................................................
 // 3D
-void outputMesh(const Tessellation<3, double>& mesh,
+void outputMesh(Tessellation<3, double>& mesh,
 		std::string prefix,
 		const unsigned testCycle = 1,
 		const double time = 0.0) {
@@ -65,14 +65,14 @@ void outputMesh(const Tessellation<3, double>& mesh,
 // Some specialized subsets of outputMesh
 //------------------------------------------------------------------------------
 template <int nDim>
-void outputMesh(const Tessellation<nDim, double>& mesh,
+void outputMesh(Tessellation<nDim, double>& mesh,
 		std::string prefix,
 		const unsigned testCycle) {
   outputMesh(mesh, prefix, testCycle, 0.0);
 }
 //------------------------------------------------------------------------------
 template <int nDim>
-void outputMesh(const Tessellation<nDim, double>& mesh,
+void outputMesh(Tessellation<nDim, double>& mesh,
 		std::string prefix) {
   outputMesh(mesh, prefix, 1, 0.0);
 }

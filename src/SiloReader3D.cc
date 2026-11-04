@@ -84,6 +84,7 @@ read(TessType& mesh,
      FieldTypeMap& fields,
      const string& masterFilename)
 {
+  mesh.fields.clear();
   using CoordType = typename std::decay<decltype(mesh.nodes[0].x)>::type;
   std::vector<std::string> inputFiles;
   int rank = 0;
@@ -247,10 +248,9 @@ read(TessType& mesh,
       const auto& fieldName = requestedField.name;
       DBucdvar* dbvar = DBGetUcdvar(file, fieldName.c_str());
       POLY_ASSERT2(dbvar, "Could not find field " << fieldName << " in file " << filename);
-      FieldCentering centering = requestedField.centering;
-      fields[centering][fieldName].resize(dbvar->nels);
-      copy((double*)(dbvar->vals[0]), (double*)(dbvar->vals[0]) + dbvar->nels,
-           &(fields[centering][fieldName][0]));
+      const auto centering = requestedField.hasCentering ?
+        requestedField.centering : fieldCenteringFromSilo(dbvar->centering);
+      storeReadField(mesh.fields, fields, centering, fieldName, *dbvar);
 
       // Clean up.
       DBFreeUcdvar(dbvar);

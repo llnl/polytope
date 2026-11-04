@@ -5,7 +5,6 @@
 #include <float.h>
 #include <array>
 #include <map>
-#include <type_traits>
 #include <vector>
 #include "Communicator.hh"
 #include "SiloUtils.hh"
@@ -21,43 +20,9 @@ class SiloWriter;
 template<int Dimension, typename TessType>
 class SiloWriterBase {
 public:
-  // Map of a field name and it's values
-  template<typename FieldType>
-  using FieldMap = std::map<std::string, std::vector<FieldType>>;
-  // Map of a Polytope field centering and its FieldMap
-  template<typename FieldType>
-  using FieldTypeMap = std::map<FieldCentering, FieldMap<FieldType>>;
-
-  SiloWriterBase(const TessType& mesh) :
+  SiloWriterBase(TessType& mesh) :
     m_mesh(mesh) { }
   virtual ~SiloWriterBase() = default;
-
-  // Routines for filling field data
-  template<typename FieldType,
-           std::enable_if_t<std::is_same_v<FieldType, double> ||
-                            std::is_same_v<FieldType, int>, int> = 0>
-  void addField(const FieldCentering& centering,
-                const FieldMap<FieldType>& field) {
-    if constexpr (std::is_floating_point_v<FieldType>) {
-      m_doubleFields[centering].insert(field.begin(), field.end());
-    } else {
-      m_intFields[centering].insert(field.begin(), field.end());
-    }
-  }
-
-  template<typename FieldType,
-           std::enable_if_t<std::is_same_v<FieldType, double> ||
-                            std::is_same_v<FieldType, int>, int> = 0>
-  void addField(const FieldCentering& centering,
-                const std::string& name,
-                const std::vector<FieldType>& vals) {
-    addField<FieldType>(centering, FieldMap<FieldType>{{name, vals}});
-  }
-
-  void addDoubleCellField(const std::string& name,
-                          const std::vector<double>& vals) {
-    addField<double>(FieldCentering::Cell, name, vals);
-  }
 
   // Write routines
   virtual void write(const std::string& filePrefix,
@@ -120,12 +85,8 @@ public:
   };
   std::map<std::string, OverlinkFieldAttributes> m_overlinkFieldAttributes;
 
-  // Field member data
-  FieldTypeMap<double> m_doubleFields;
-  FieldTypeMap<int> m_intFields;
-
   // Tessellation member data
-  const TessType& m_mesh;
+  TessType& m_mesh;
 
   // FIXME: Add qplc IO logic
   // void setPLC(const QuantPLC<2>& qplc) {
@@ -136,17 +97,15 @@ public:
 
 protected:
 
-  // Write the double and int fields
+  // Write mesh fields
   void writeFieldsToFile(const std::string& meshname,
                          DBfile* file,
                          DBoptlist* optlist) {
-    fieldWrite<double>(m_doubleFields, meshname, file, optlist);
-    fieldWrite<int>(m_intFields, meshname, file, optlist);
+    fieldWrite(m_mesh.fields.fields, meshname, file, optlist);
   }
 
-  // Determine the centering and write the appropriate field
-  template<typename FieldType>
-  void fieldWrite(const FieldTypeMap<FieldType>& fields,
+  // Determine the centering and write each field
+  void fieldWrite(const FieldData::FieldTypeMap& fields,
                   const std::string& meshname,
                   DBfile* file,
                   DBoptlist* optlist);
@@ -181,8 +140,6 @@ public:
   using Base::getOvlType;
   using Base::setOvlType;
   using Base::write;
-  using Base::m_doubleFields;
-  using Base::m_intFields;
   using Base::m_mesh;
 
   void write(const std::string& filePrefix,
@@ -205,8 +162,6 @@ public:
   using Base::getOvlType;
   using Base::setOvlType;
   using Base::write;
-  using Base::m_doubleFields;
-  using Base::m_intFields;
   using Base::m_mesh;
 
   void write(const std::string& filePrefix,

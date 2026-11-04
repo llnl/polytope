@@ -30,7 +30,7 @@ def test_siloIO(Ngen):
     # Normalized x coordinates
     normx = [(p[0] - xlo)/xlen for p in rank_points]
     field = [math.sin(2.*math.pi*x) for x in normx]
-    writer.addField(polytope.FieldCentering.Cell, "xvelocity", field)
+    mesh.addField(polytope.FieldCentering.Cell, "xvelocity", field)
     writer.generateTestVars()
     matnames = ["O2", "H2O"]
     matvfs = []

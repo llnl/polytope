@@ -41,8 +41,8 @@ public:
     return Silo::findAvailableCycles(filePrefix, directory);
   }
 
-  //! Read an arbitrary polygonal mesh and associated field/t maps from a
-  //! SILO file. Field maps are keyed by Polytope field centering.
+  //! Read an arbitrary polygonal mesh and its fields from a Silo file.
+  //! Fields are stored on the mesh and copied to the output map as doubles.
   //! \param fields A map that will store arrays of field data read in from
   //!               the file. If \a fields contains keys, only those fields
   //!               with those keys will be read from the file, and an error
@@ -75,9 +75,8 @@ public:
     return Silo::findAvailableCycles(filePrefix, directory);
   }
 
-  //! Read an arbitrary polyhedral mesh and an associated set of
-  //! fields from a SILO file. Field maps are keyed by Polytope
-  //! field centering.
+  //! Read an arbitrary polyhedral mesh and its fields from a Silo file.
+  //! Fields are stored on the mesh and copied to the output map as doubles.
   //! \param fields A map that will store arrays of field data read in from
   //!               the file. If \a fields contains keys, only those fields
   //!               with those keys will be read from the file, and an error
@@ -86,6 +85,13 @@ public:
   void read(TessType& mesh,
             FieldTypeMap& fields,
             const std::string& masterFilename);
+
+  //! Wrapper for when fields are not of interest
+  void read(TessType& mesh,
+            const std::string& masterFilename) {
+    FieldTypeMap fields;
+    read(mesh, fields, masterFilename);
+  }
 
 };
 

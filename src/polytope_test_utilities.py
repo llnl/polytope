@@ -22,9 +22,9 @@ def outputMesh2d(mesh,
     writer.generateTestVars()
     if (fields):
         for key, vals in fields.item():
-            writer.addField(polytope.FieldCentering.Cell,
-                            key,
-                            vals)
+            mesh.addField(polytope.FieldCentering.Cell,
+                          key,
+                          vals)
     writer.write(filePrefix, cycle, time, numFiles)
 
 class PointGenerator:

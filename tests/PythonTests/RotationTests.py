@@ -2,7 +2,7 @@
 Exercise the four rotation fields on a Cartesian 2-D tessellation.
 This test will also use Scipy if it is installed
 """
-
+import sys
 import polytope
 from Boundary2D import Boundary2D
 import polytope_test_utilities as ptu

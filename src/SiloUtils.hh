@@ -13,33 +13,57 @@
 #include <type_traits>
 #include "silo.h"
 #include "Communicator.hh"
+#include "FieldData.hh"
 #include "polytope_internal.hh"
 
 namespace polytope {
 
-//! Centering locations for mesh fields.
-enum class FieldCentering {
-  Node = DB_NODECENT,
-  Edge = DB_EDGECENT,
-  Face = DB_FACECENT,
-  Cell = DB_ZONECENT
-};
+//! Translate mesh field centering to Silo's centering constants.
+inline int siloFieldCentering(const FieldCentering centering) {
+  switch (centering) {
+    case FieldCentering::Node: return DB_NODECENT;
+    case FieldCentering::Edge: return DB_EDGECENT;
+    case FieldCentering::Face: return DB_FACECENT;
+    case FieldCentering::Cell: return DB_ZONECENT;
+  }
+  throw std::invalid_argument("Invalid field centering");
+}
 
-static std::map<std::string, FieldCentering>
-FieldCenteringMap = {{"Node", FieldCentering::Node},
-                     {"Edge", FieldCentering::Edge},
-                     {"Face", FieldCentering::Face},
-                     {"Cell", FieldCentering::Cell}};
+inline FieldCentering fieldCenteringFromSilo(const int centering) {
+  switch (centering) {
+    case DB_NODECENT: return FieldCentering::Node;
+    case DB_EDGECENT: return FieldCentering::Edge;
+    case DB_FACECENT: return FieldCentering::Face;
+    case DB_ZONECENT: return FieldCentering::Cell;
+  }
+  throw std::invalid_argument("Invalid Silo field centering");
+}
+
+inline void storeReadField(FieldData& fieldData,
+                           std::map<FieldCentering, FieldData::TypedFieldMap<double>>& fields,
+                           const FieldCentering centering,
+                           const std::string& name,
+                           const DBucdvar& dbvar) {
+  auto& values = fields[centering][name];
+  if (dbvar.datatype == DB_INT) {
+    const auto* data = static_cast<const int*>(dbvar.vals[0]);
+    values.assign(data, data + dbvar.nels);
+    fieldData.fields[centering].insert_or_assign(name,
+      std::vector<int>(data, data + dbvar.nels));
+  } else if (dbvar.datatype == DB_DOUBLE) {
+    const auto* data = static_cast<const double*>(dbvar.vals[0]);
+    values.assign(data, data + dbvar.nels);
+    fieldData.fields[centering].insert_or_assign(name, values);
+  } else {
+    throw std::invalid_argument("Unsupported Silo field data type");
+  }
+}
 
 //! Silo data types
 enum class FieldDataType {
   Double = DB_DOUBLE,
   Int = DB_INT
 };
-
-static std::map<std::string, FieldDataType>
-FieldDataTypeMap = {{"Double", FieldDataType::Double},
-                    {"Int", FieldDataType::Int}};
 
 //! Overlink attributes
 static std::map<std::string, int> OverlinkAttr = {
@@ -97,29 +121,38 @@ inline std::string getEscapePodVar() {
 
 template<typename FieldType>
 void
-writeFields(const std::map<std::string, std::vector<FieldType>>& fields,
-            const std::string& meshname,
-            DBfile* file,
-            const int numElements,
-            const int centering,
-            DBoptlist* optlist) {
+writeField(const std::string& name,
+           const std::vector<FieldType>& values,
+           const std::string& meshname,
+           DBfile* file,
+           const int numElements,
+           const int centering,
+           DBoptlist* optlist) {
   int siloDataType = static_cast<int>(FieldDataType::Int);
   if constexpr (std::is_floating_point_v<FieldType>) {
     siloDataType = static_cast<int>(FieldDataType::Double);
   }
-  for (typename std::map<std::string, std::vector<FieldType>>::const_iterator iter = fields.begin();
-       iter != fields.end();
-       ++iter) {
-    POLY_CHECK(DBPutUcdvar1(file,
-                            (char*)iter->first.c_str(),
-                            meshname.c_str(),
-                            (void*)iter->second.data(),
-                            numElements,
-                            0,
-                            0,
-                            siloDataType,
-                            centering,
-                            optlist) != 1);
+  POLY_CHECK(DBPutUcdvar1(file,
+                          const_cast<char*>(name.c_str()),
+                          meshname.c_str(),
+                          const_cast<FieldType*>(values.data()),
+                          numElements,
+                          0,
+                          0,
+                          siloDataType,
+                          centering,
+                          optlist) != 1);
+}
+
+template<typename FieldType>
+void writeFields(const std::map<std::string, std::vector<FieldType>>& fields,
+                 const std::string& meshname,
+                 DBfile* file,
+                 const int numElements,
+                 const int centering,
+                 DBoptlist* optlist) {
+  for (const auto& [name, values] : fields) {
+    writeField(name, values, meshname, file, numElements, centering, optlist);
   }
 }
 //-------------------------------------------------------------------
@@ -219,9 +252,9 @@ std::vector<std::string> getProcPaths(const std::string& directory,
   return out;
 }
 
-template<typename FieldType>
+template<typename FieldMapType>
 void putCellVars(DBfile* file,
-                 const std::map<std::string, std::vector<FieldType>>& fields,
+                 const FieldMapType& fields,
                  const std::vector<std::string>& procPaths,
                  const size_t nblocks,
                  const std::vector<int>& varTypes,

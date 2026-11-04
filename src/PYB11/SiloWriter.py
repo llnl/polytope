@@ -9,22 +9,8 @@ class SiloWriter:
 
     @PYB11keepalive(1, 2)
     def pyinit(self,
-               mesh="const %(TessType)s&"):
+               mesh="%(TessType)s&"):
         "Construct a writer for mesh."
-
-    @PYB11template("FieldType")
-    @PYB11implementation("""[](SiloWriter<%(Dimension)s, %(TessType)s>& self,
-                               const FieldCentering& centering,
-                               const std::string& name,
-                               const py::object& values) {
-                                 const auto vec_vals = pybind11_helpers::copyPyToVector<%(FieldType)s>(values, "vec_vals");
-                                 self.addField<%(FieldType)s>(centering, name, vec_vals);
-                               }""")
-    def addField(self,
-                 centering="const FieldCentering&",
-                 name="const std::string&",
-                 values="const py::object&"):
-        return "void"
 
     @PYB11implementation("""[](SiloWriter<%(Dimension)s, %(TessType)s>& self,
                                const py::object& matNames,
@@ -76,9 +62,6 @@ class SiloWriter:
 
     ovlType = PYB11property(getter="getOvlType", setter="setOvlType",
                             doc="Whether to write an Overlink file type")
-
-    addFieldDouble = PYB11TemplateMethod(addField, ("double"), pyname="addField")
-    addFieldInt    = PYB11TemplateMethod(addField, ("int"), pyname="addField")
 
 SiloWriter2d = PYB11TemplateClass(
     SiloWriter,
