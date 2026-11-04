@@ -11,6 +11,7 @@
 #include <cstring>
 #include <stdexcept>
 #include <type_traits>
+#include <utility>
 #include "silo.h"
 #include "Communicator.hh"
 #include "FieldData.hh"
@@ -40,20 +41,23 @@ inline FieldCentering fieldCenteringFromSilo(const int centering) {
 }
 
 inline void storeReadField(FieldData& fieldData,
-                           std::map<FieldCentering, FieldData::TypedFieldMap<double>>& fields,
                            const FieldCentering centering,
                            const std::string& name,
                            const DBucdvar& dbvar) {
-  auto& values = fields[centering][name];
   if (dbvar.datatype == DB_INT) {
-    const auto* data = static_cast<const int*>(dbvar.vals[0]);
-    values.assign(data, data + dbvar.nels);
-    fieldData.fields[centering].insert_or_assign(name,
-      std::vector<int>(data, data + dbvar.nels));
+    std::vector<int> values;
+    if (dbvar.nels > 0) {
+      const auto* data = static_cast<const int*>(dbvar.vals[0]);
+      values.assign(data, data + dbvar.nels);
+    }
+    fieldData.fields[centering].insert_or_assign(name, std::move(values));
   } else if (dbvar.datatype == DB_DOUBLE) {
-    const auto* data = static_cast<const double*>(dbvar.vals[0]);
-    values.assign(data, data + dbvar.nels);
-    fieldData.fields[centering].insert_or_assign(name, values);
+    std::vector<double> values;
+    if (dbvar.nels > 0) {
+      const auto* data = static_cast<const double*>(dbvar.vals[0]);
+      values.assign(data, data + dbvar.nels);
+    }
+    fieldData.fields[centering].insert_or_assign(name, std::move(values));
   } else {
     throw std::invalid_argument("Unsupported Silo field data type");
   }

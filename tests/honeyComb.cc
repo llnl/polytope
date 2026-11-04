@@ -76,9 +76,8 @@ void test(Tessellator<2,double>& tessellator, const std::string& outname, bool h
   // Read the mesh we just wrote back in
   Tessellation<2, double> readMesh;
   std::string masterFilename = getMasterFilename(outname, cycle);
-  SiloReader<2, Tessellation<2, double>>::FieldTypeMap fields;
   SiloReader<2, Tessellation<2, double>> reader;
-  reader.read(readMesh, fields, masterFilename);
+  reader.read(readMesh, masterFilename);
   // Try writing the mesh back out
   outputMesh(readMesh, outname, cycle + 1);
   int meshnodes = readMesh.nodes.size();

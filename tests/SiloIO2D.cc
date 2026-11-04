@@ -107,19 +107,18 @@ void test(Tessellator<2, double>& tessellator) {
               << " total cells but expected " << expectedCells);
   // Now try to open the file we just created
   Tessellation<2, double> readMesh;
+  readMesh.fields.addField(FieldCentering::Cell, "stale", std::vector<int>{-1});
   std::string masterFilename = getMasterFilename(read_mesh_name, 0);
-  SiloReader<2, Tessellation<2, double>>::FieldTypeMap fields;
   SiloReader<2, Tessellation<2, double>> reader;
-  reader.read(readMesh, fields, masterFilename);
+  reader.read(readMesh, masterFilename);
   const auto& readFields = readMesh.fields.fields.at(FieldCentering::Cell);
+  POLY_CHECK(readFields.count("stale") == 0);
   const auto& cellIndices = std::get<std::vector<int>>(readFields.at("cell_index"));
   POLY_CHECK2(cellIndices.size() == readMesh.cells.size(),
               "Read cell index field has the wrong size");
   POLY_CHECK(readFields.at("cell_index") == expectedFields.at("cell_index"));
   POLY_CHECK(std::holds_alternative<std::vector<double>>(readFields.at("x")));
   POLY_CHECK(readFields.at("x") == expectedFields.at("x"));
-  POLY_CHECK2(fields.at(FieldCentering::Cell).at("cell_index").size() == cellIndices.size(),
-              "Reader field output map has the wrong size");
   totalCells = readMesh.totalPointCount(true);
   POLY_CHECK2(totalCells == expectedCells, "Read in mesh has " << totalCells
               << " cells but expected " << expectedCells);

@@ -2,9 +2,6 @@
 #define __Polytope_SiloReader__
 
 #include <string>
-#include <float.h>
-#include <map>
-#include <utility>
 #include <vector>
 #include "SiloUtils.hh"
 
@@ -30,9 +27,6 @@ class SiloReader {
 template <typename TessType>
 class SiloReader<2, TessType> {
 public:
-  using FieldMap = std::map<std::string, std::vector<double>>;
-  using FieldTypeMap = std::map<FieldCentering, FieldMap>;
-
   //! Returns a list of cycle numbers for Silo files dumped by a SiloWriter
   //! with the given prefix, in the given directory. If the directory is
   //! omitted, its name is generated automatically from the prefix.
@@ -41,32 +35,16 @@ public:
     return Silo::findAvailableCycles(filePrefix, directory);
   }
 
-  //! Read an arbitrary polygonal mesh and its fields from a Silo file.
-  //! Fields are stored on the mesh and copied to the output map as doubles.
-  //! \param fields A map that will store arrays of field data read in from
-  //!               the file. If \a fields contains keys, only those fields
-  //!               with those keys will be read from the file, and an error
-  //!               will occur if any of the keys are not found. If \a fields
-  //!               is empty, all data will be read in from the file.
+  //! Read an arbitrary polygonal mesh and all its fields from a Silo file.
+  //! The fields are stored in mesh.fields.
   void read(TessType& mesh,
-            FieldTypeMap& fields,
             const std::string& masterFilename);
-
-  //! Wrapper for when fields are not of interest
-  void read(TessType& mesh,
-            const std::string& masterFilename) {
-    FieldTypeMap fields;
-    read(mesh, fields, masterFilename);
-  }
 };
 
 //! Partial specialization for 3D tessellations.
 template <typename TessType>
 class SiloReader<3, TessType> {
 public:
-  using FieldMap = std::map<std::string, std::vector<double>>;
-  using FieldTypeMap = std::map<FieldCentering, FieldMap>;
-
   //! Returns a list of cycle numbers for Silo files dumped by a SiloWriter
   //! with the given prefix, in the given directory. If the directory is
   //! omitted, its name is generated automatically from the prefix.
@@ -75,24 +53,10 @@ public:
     return Silo::findAvailableCycles(filePrefix, directory);
   }
 
-  //! Read an arbitrary polyhedral mesh and its fields from a Silo file.
-  //! Fields are stored on the mesh and copied to the output map as doubles.
-  //! \param fields A map that will store arrays of field data read in from
-  //!               the file. If \a fields contains keys, only those fields
-  //!               with those keys will be read from the file, and an error
-  //!               will occur if any of the keys are not found. If \a fields
-  //!               is empty, all data will be read in from the file.
+  //! Read an arbitrary polyhedral mesh and all its fields from a Silo file.
+  //! The fields are stored in mesh.fields.
   void read(TessType& mesh,
-            FieldTypeMap& fields,
             const std::string& masterFilename);
-
-  //! Wrapper for when fields are not of interest
-  void read(TessType& mesh,
-            const std::string& masterFilename) {
-    FieldTypeMap fields;
-    read(mesh, fields, masterFilename);
-  }
-
 };
 
 } // end namespace

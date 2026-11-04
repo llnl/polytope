@@ -119,7 +119,7 @@ struct Point<2, CoordType> {
     Coordinate xOut, yOut;
     xOut = static_cast<Coordinate>((this->x - blo.x)/dx.x);
     yOut = static_cast<Coordinate>((this->y - blo.y)/dx.y);
-    return Point<2, Coordinate>(xOut, yOut);
+    return Point<2, Coordinate>(xOut, yOut, index);
   }
 
   template<typename RealType>
@@ -129,7 +129,7 @@ struct Point<2, CoordType> {
     // Dequantize: Coordinate -> RealType
     xOut = dx.x*(static_cast<RealType>(this->x)) + blo.x;
     yOut = dx.y*(static_cast<RealType>(this->y)) + blo.y;
-    return Point<2, RealType>(xOut, yOut);
+    return Point<2, RealType>(xOut, yOut, index);
   }
 
   template<typename RealType>

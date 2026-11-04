@@ -67,13 +67,6 @@ getSiloInputPaths(const std::string& masterFilename) {
 }
 //-------------------------------------------------------------------
 
-struct RequestedField {
-  bool hasCentering;
-  FieldCentering centering;
-  std::string name;
-};
-//-------------------------------------------------------------------
-
 }
 
 //-------------------------------------------------------------------
@@ -81,7 +74,6 @@ template <typename TessType>
 void
 SiloReader<3, TessType>::
 read(TessType& mesh,
-     FieldTypeMap& fields,
      const string& masterFilename)
 {
   mesh.fields.clear();
@@ -227,30 +219,19 @@ read(TessType& mesh,
       DBFreePointmesh(pmesh);
     }
 
-    // Make a list of the desired fields.
-    // TODO: Retrieve all other field types as well
-    vector<RequestedField> fieldNames;
-    if (fields.empty()) {
-      DBtoc* contents = DBGetToc(file);
-      for (int f = 0; f < contents->nucdvar; ++f)
-        fieldNames.push_back({false, FieldCentering::Cell, string(contents->ucdvar_names[f])});
-    } else {
-      for (const auto& [centering, fieldmap] : fields) {
-        for (const auto& field : fieldmap) {
-          fieldNames.push_back({true, centering, field.first});
-        }
-      }
-    }
-
     // Retrieve the fields.
-    for (size_t f = 0; f < fieldNames.size(); ++f) {
-      const auto& requestedField = fieldNames[f];
-      const auto& fieldName = requestedField.name;
+    DBtoc* contents = DBGetToc(file);
+    POLY_ASSERT2(contents, "Could not read Silo table of contents from file " << filename);
+    std::vector<std::string> fieldNames;
+    fieldNames.reserve(contents->nucdvar);
+    for (int f = 0; f < contents->nucdvar; ++f) {
+      fieldNames.emplace_back(contents->ucdvar_names[f]);
+    }
+    for (const auto& fieldName : fieldNames) {
       DBucdvar* dbvar = DBGetUcdvar(file, fieldName.c_str());
       POLY_ASSERT2(dbvar, "Could not find field " << fieldName << " in file " << filename);
-      const auto centering = requestedField.hasCentering ?
-        requestedField.centering : fieldCenteringFromSilo(dbvar->centering);
-      storeReadField(mesh.fields, fields, centering, fieldName, *dbvar);
+      const auto centering = fieldCenteringFromSilo(dbvar->centering);
+      storeReadField(mesh.fields, centering, fieldName, *dbvar);
 
       // Clean up.
       DBFreeUcdvar(dbvar);
