@@ -1,8 +1,6 @@
-import sys, os
-ptu_path = os.path.join(os.path.dirname(__file__), "../tests/PythonTests")
-sys.path.append(ptu_path)
+import sys
 import polytope_test_utilities as ptu
-from Boundary2d import Boundary2d
+from Boundary2D import Boundary2D
 import polytope
 
 # Number of iterations to test with the partitioner
@@ -23,7 +21,7 @@ def test_distributed_2d_tessellators(Ngen):
 
     # Seed for generating points in a normal distribution
     local_seed = 19001 + rank
-    boundary = Boundary2d(0)
+    boundary = Boundary2D(0)
     generator = ptu.PointGenerator(2, boundary2d=boundary)
     local_points = generator.generate_normal_random_points(Ngen, seed=local_seed)
     # Make a partitioner

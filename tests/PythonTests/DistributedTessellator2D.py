@@ -1,5 +1,5 @@
 import polytope_test_utilities as ptu
-from Boundary2d import Boundary2d
+from Boundary2D import Boundary2D
 import polytope
 import sys
 
@@ -18,7 +18,7 @@ def test_distributed_2d_tessellators(Ngen):
     seed = 19001
     # Seed for partitioning points randomly
     partseed = seed + 10
-    boundary = Boundary2d(10)
+    boundary = Boundary2D(10)
     # Generate Ngen points per rank
     Ntotal = Ngen*nranks
     generator = ptu.PointGenerator(2, boundary2d=boundary)

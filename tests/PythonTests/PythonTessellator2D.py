@@ -1,7 +1,7 @@
 # This test ensures python wrapped tessellators work without having to
 # install a separate tessellator
 import polytope_test_utilities as ptu
-from Boundary2d import Boundary2d
+from Boundary2D import Boundary2D
 import polytope
 import sys
 
@@ -53,7 +53,7 @@ class FakeTessellator(polytope.SerialTessellator2d):
         return assembler
 
 def test_python_2d_tessellators():
-    boundary = Boundary2d(0, 0.01)
+    boundary = Boundary2D(0, 0.01)
     boundary.mDiff = 10.
     boundary.mCenter = [0., 0.]
     boundary.setDefaultBoundary(0)

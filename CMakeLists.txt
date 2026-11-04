@@ -34,9 +34,15 @@ list(APPEND CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 # which point to directories outside the build tree to the install RPATH
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
-# List containing target dependencies
+#-------------------------------------------------------------------------------
+# Set top-level CMake variables
+#-------------------------------------------------------------------------------
+# List containing target TPL dependencies
 set(POLYTOPE_TPL_DEPENDS )
 
+#-------------------------------------------------------------------------------
+# Set CMake options
+#-------------------------------------------------------------------------------
 #option(POLYTOPE_ENABLE_HIP "Build with HIP enabled" OFF) # Currently unsupported
 set(POLYTOPE_ENABLE_MPI ${ENABLE_MPI})
 # 2D options
@@ -76,9 +82,15 @@ option(ENABLE_STATIC_TPLS "Used for libraries that require older HDF5 versions" 
 option(BUILD_SHARED_LIBS "Build Polytope as shared library" OFF)
 option(POLYTOPE_EXTERNAL_INSTALL "Enable when Polytope is an external TPL" OFF)
 
+#-------------------------------------------------------------------------------
+# Set compiler and python options
+#-------------------------------------------------------------------------------
+
 include(cmake/Compiler.cmake)
 
 if (POLYTOPE_ENABLE_PYTHON AND DEFINED python_DIR)
+  set(POLYTOPE_RUNTIME_REQ
+    "${CMAKE_CURRENT_SOURCE_DIR}/scripts/runtime-requirements.txt")
   set(Python_EXECUTABLE ${python_DIR}/bin/python3)
   set(Python3_EXECUTABLE ${python_DIR}/bin/python3)
   # Set the name of the polytope virutal python environment
@@ -112,8 +124,14 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
   set(POLYTOPE_ENABLE_DEBUG ON)
 endif()
 
+#-------------------------------------------------------------------------------#
+# Install TPLs
+#-------------------------------------------------------------------------------#
 include(cmake/InstallTPLs.cmake)
 
+#-------------------------------------------------------------------------------#
+# Build and install sources
+#-------------------------------------------------------------------------------#
 add_subdirectory(src)
 
 if (POLYTOPE_ENABLE_BENCHMARKS)

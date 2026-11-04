@@ -136,5 +136,9 @@ target_compile_options(loadEscapePod PRIVATE ${POLYTOPE_CXX_COMPILE_FLAGS})
 target_link_options(loadEscapePod PUBLIC ${POLYTOPE_CXX_LINK_FLAGS})
 
 if(POLYTOPE_ENABLE_PYTHON)
+  set(POLYTOPE_PYTHON_SRC_FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/ScipyTessellator2D.py
+    ${CMAKE_CURRENT_SOURCE_DIR}/polytope_test_utilities.py
+    ${CMAKE_CURRENT_SOURCE_DIR}/Boundary2D.py)
   add_subdirectory(PYB11)
 endif()

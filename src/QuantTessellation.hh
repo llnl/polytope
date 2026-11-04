@@ -132,6 +132,7 @@ public:
     points.reserve(Ntotal);
     hashes.reserve(Ntotal);
     cellRank.reserve(Ntotal);
+    // Check if hashes are passed around
     if constexpr (std::is_same_v<ExType, QuantizedKey<Dimension>>) {
       extendHashes(rankInps);
       if (m_doSort) {
@@ -202,12 +203,11 @@ public:
       oldToNew[sortedIndices[i]] = i;
     }
 
-    // Reorder points and hashes
+    // Reorder points and hashes but retain the original index
     std::vector<QuantizedPoint<Dimension>> newPoints(numPoints);
     std::vector<QuantizedKey<Dimension>> newHashes(numPoints);
     for (unsigned i = 0; i < numPoints; ++i) {
       newPoints[i] = points[sortedIndices[i]];
-      newPoints[i].index = i;
       newHashes[i] = hashes[sortedIndices[i]];
     }
     if (cellRank.size() > 0) {
@@ -274,7 +274,6 @@ public:
     newNodes.reserve(usedNodes.size());
     for (auto oldIdx : usedNodes) {
       QuantizedPoint<Dimension> node = nodes[oldIdx];
-      node.index = oldToNewNode[oldIdx];
       newNodes.push_back(node);
     }
 

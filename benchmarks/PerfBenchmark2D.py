@@ -1,8 +1,6 @@
-import sys, os, math, time
-ptu_path = os.path.join(os.path.dirname(__file__), "../tests/PythonTests")
-sys.path.append(ptu_path)
+import sys, math, time
 import polytope_test_utilities as ptu
-from Boundary2d import Boundary2d
+from Boundary2D import Boundary2D
 import polytope
 
 timer_log = "perf_benchmark_2d.log"
@@ -31,11 +29,11 @@ if __name__ == "__main__":
     rank = comm.getRank()
     root = comm.getRoot()
     nranks = comm.getNRanks()
-    coord_bits = round(math.log2(polytope.QuantizedKeyTraits2d().maxCoordinate()))
+    coord_bits = polytope.QuantizedKeyTraits2d().coordinateBits
     if (rank == root):
         with open(timer_log, "w") as ff:
             ff.write(f"{nranks} Ranks, Coord bits {coord_bits}, {N} points per rank\n")
-    boundary = Boundary2d(0)
+    boundary = Boundary2D(0)
     generator = ptu.PointGenerator(2, boundary2d=boundary)
     Ntotal = N*nranks
     local_seed = 19001 + rank

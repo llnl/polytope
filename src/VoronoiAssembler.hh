@@ -285,8 +285,7 @@ private:
   }
 
   // Determine the get outward direction
-  QuantizedPoint<2> rayDir(const int gen0,
-                           const int gen1) {
+  QuantizedPoint<2> rayDir(const int gen0, const int gen1) {
     return outwardRay(result.points[gen0], result.points[gen1]);
   }
 
@@ -302,9 +301,7 @@ private:
   }
 
   // Clip once, then store a canonical edge directed with gp.first on its left.
-  void addVP(const int gen0,
-             const int gen1,
-             const RawEdge& rawEdge) {
+  void addVP(const int gen0, const int gen1, const RawEdge& rawEdge) {
     ClippedEdge vp(gen0, gen1);
     if (genPairs.count(vp.gp) != 0) return;
 

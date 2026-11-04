@@ -8,7 +8,7 @@ By default Nr = 5 and Np = 50000
 """
 
 import polytope_test_utilities as ptu
-from Boundary2d import Boundary2d
+from Boundary2D import Boundary2D
 import polytope
 import sys
 
@@ -33,7 +33,7 @@ def test_serial_2d_tessellators(Ngen, nruns):
     tessellator_types = _available_tessellators()
     assert tessellator_types
     seed = 1049600
-    boundary = Boundary2d(10)
+    boundary = Boundary2D(10)
     generator = ptu.PointGenerator(2, boundary2d=boundary)
     points = generator.generate_normal_random_points(Ngen, seed)
 

@@ -18,7 +18,7 @@ configure_file(
   ${PROJECT_BINARY_DIR}/src/PYB11/Tessellators.py
 )
 
-set(POLYTOPE_PYTHON_SRC_FILES
+set(POLYTOPE_PYB11_SRC_FILES
   BoostTessellator.py
   Communicator.py
   DistributedTessellator.py
@@ -62,28 +62,28 @@ PYB11Generator_add_module(polytope
 
 target_link_options(polytope PUBLIC ${POLYTOPE_CXX_LINK_FLAGS})
 install(TARGETS polytope
-  DESTINATION ${POLYTOPE_SITE_PACKAGES_PATH})
+  DESTINATION ${POLYTOPE_SITE_PACKAGES_PATH}/polytope)
 
 include(PolytopePythonEnvironment)
 
 # If testing is enabled, create a virtual python environment in the build
 if(POLYTOPE_ENABLE_TESTING)
   polytope_add_python_environment(
-    build
     "${CMAKE_BINARY_DIR}/${POLYTOPE_VIRT_DIR}"
     "${LIBRARY_OUTPUT_PATH}"
     ALL
     TARGET_NAME polytope_build_virt_env
-    DEPENDS Python3::Python polytopeC polytope "${POLYTOPE_PYTHON_SRC_FILES}"
+    DEPENDS Python3::Python polytopeC polytope "${POLYTOPE_PYB11_SRC_FILES}"
+    PYTHON_FILES "${POLYTOPE_PYTHON_SRC_FILES}"
   )
 endif()
 
 polytope_add_python_environment(
-  install
   "${CMAKE_INSTALL_PREFIX}/${POLYTOPE_VIRT_DIR}"
-  "${CMAKE_INSTALL_PREFIX}/${POLYTOPE_SITE_PACKAGES_PATH}"
+  "${CMAKE_INSTALL_PREFIX}/${POLYTOPE_SITE_PACKAGES_PATH}/polytope"
   TARGET_NAME polytope_install_virt_env
-  DEPENDS Python3::Python polytopeC polytope "${POLYTOPE_PYTHON_SRC_FILES}"
+  DEPENDS Python3::Python polytopeC polytope "${POLYTOPE_PYB11_SRC_FILES}"
+  PYTHON_FILES "${POLYTOPE_PYTHON_SRC_FILES}"
 )
 
 # Add the virtual env target run to the install

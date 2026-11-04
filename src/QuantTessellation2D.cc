@@ -209,7 +209,6 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
       } else {
         node2id[p] = newNodes.size();
         newNodes.push_back(p);
-        newNodes.back().index = node2id[p];
         localCellIndex.push_back(node2id[p]);
       }
     }
@@ -279,15 +278,14 @@ QuantTessellation<2>::fillTessellation(TessellationType& mesh) {
   mesh.nodes.resize(numNodes);
   mesh.faces.resize(numFaces, std::vector<unsigned>(2));
   mesh.points.resize(numCells);
-  mesh.cells = cells;
+  mesh.cells.resize(numCells);
   POLY_ASSERT2(cells.size() == numCells, "Differing number of cells and generator points");
-  for (auto cellIndex = 0u; cellIndex < cells.size(); ++cellIndex) {
-    POLY_ASSERT2(cells[cellIndex].size() >= 3,
-                 "Cell " << cellIndex << " has fewer than three faces");
-  }
 
   for (unsigned i = 0; i < numCells; ++i) {
-    mesh.points[i] = m_Q.dequantize(points[i]);
+    auto index = points[i].index;
+    mesh.points[index] = m_Q.dequantize(points[i]);
+    mesh.cells[index] = cells[i];
+    POLY_ASSERT2(cells[i].size() >= 3, "Cell " << index << " has fewer than three faces");
   }
 
   // Dequantize nodes from integer coordinates to real coordinates

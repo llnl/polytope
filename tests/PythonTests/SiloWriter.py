@@ -1,5 +1,5 @@
 import polytope_test_utilities as ptu
-from Boundary2d import Boundary2d
+from Boundary2D import Boundary2D
 import polytope
 import sys, time, math
 
@@ -11,7 +11,7 @@ def test_siloIO(Ngen):
     seed = 19001
     # Seed for partitioning points randomly
     partseed = 19
-    boundary = Boundary2d(0)
+    boundary = Boundary2D(0)
     xlo = boundary.low[0]
     xhi = boundary.high[0]
     xlen = xhi - xlo

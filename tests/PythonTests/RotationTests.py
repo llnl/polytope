@@ -3,16 +3,13 @@ Exercise the four rotation fields on a Cartesian 2-D tessellation.
 This test will also use Scipy if it is installed
 """
 
-import sys
-
-import ScipyTessellator2D
 import polytope
-from Boundary2d import Boundary2d
+from Boundary2D import Boundary2D
 import polytope_test_utilities as ptu
 
 
 def runTest(tessellator, flowType, nx):
-    boundary = Boundary2d(0)
+    boundary = Boundary2D(0)
     boundary.mCenter = [0.5, 0.5]
     boundary.mDiff = 0.4
     boundary.setUnitSquare()
@@ -23,7 +20,7 @@ def runTest(tessellator, flowType, nx):
     testName = f"PyRotationTests_{tessellator.name()}_{flowType}"
     description, dt, maxTime, scaleFactor = ptu.setConfig(flowType, bhi, blo, dx)
     ptu.rootprint(description)
-    points = [0.5 + (coordinate - 0.5)*scaleFactor for coordinate in points]
+    points = [0.5 + (x - 0.5)*scaleFactor for coordinate in points for x in coordinate]
     tessellator.setQBounds([0.0, 0.0, 1.0, 1.0])
 
     step, time = 0, 0.0
@@ -32,7 +29,8 @@ def runTest(tessellator, flowType, nx):
         if step % 5 == 0:
             ptu.rootprint(f"{round(100.0*time/maxTime)}%")
         mesh = tessellator.tessellate(points)
-        ptu.outputMesh2d(mesh, testName, cycle=step, time=time)
+        if step % 5 == 0:
+            ptu.outputMesh2d(mesh, testName, cycle=step, time=time)
         ptu.compareArea(mesh, tessellator.quantizer(), f"Test {flowType}")
         velocities = ptu.getVelocities(points, bhi, blo, flowType)
         halfTimePositions = [point + dt*velocity
@@ -49,13 +47,15 @@ def test_rotation(nx=5):
     # These are already tested in the C++ test
     tessellators = [getattr(polytope, name)() for name in ttypes if hasattr(polytope, name)]
     # If Scipy is installed, use the wrappers provided by polytope
-    try:
-        import scipy
-        tessellators.append(ScipyTessellator2D.ScipyVoronoi())
-        tessellators.append(ScipyTessellator2D.ScipyDelaunay())
-    except ModuleNotFoundError:
-        print("No Scipy module found. Scipy tessellators not tested")
-        pass
+    # Scipy tessellators only work with lower bit accuracy
+    if (polytope.QuantizedKeyTraits2d().coordinateBits < 50):
+        try:
+            import ScipyTessellator2D
+            tessellators.append(ScipyTessellator2D.ScipyVoronoi())
+            tessellators.append(ScipyTessellator2D.ScipyDelaunay())
+        except ModuleNotFoundError:
+            print("No Scipy module found. Scipy tessellators not tested")
+            pass
     for tessellator in tessellators:
         ptu.rootprint(f"\n{tessellator.name()}:\n")
         for flowType in range(1, 5):

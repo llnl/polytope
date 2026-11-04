@@ -4,7 +4,7 @@ import math
 import sys
 from time import perf_counter
 from contextlib import contextmanager
-import Boundary2d
+import Boundary2D
 
 # Print statement wrapper for printing only on the root rank
 def rootprint(string):
@@ -86,19 +86,21 @@ class PointGenerator:
         return pout
 
     def generate_cartesian_points(self, Nx):
+        if (not isinstance(Nx, (list, tuple))):
+            Nx = [Nx, Nx]
         L = (self.xmax - self.xmin)
         pout = []
-        dx = [L[d]/Nx for d in range(self.dim)]
-        for i in range(Nx):
+        dx = [L[d]/Nx[d] for d in range(self.dim)]
+        for i in range(Nx[0]):
             x = self.xmin[0] + (i + 0.5)*dx[0]
-            for j in range(Nx):
+            for j in range(Nx[1]):
                 y = self.xmin[1] + (j + 0.5)*dx[1]
                 if (self.dim == 3):
-                    for k in range(Nx):
+                    for k in range(Nx[2]):
                         z = self.xmin[2] + (k + 0.5)*dx[2]
-                        pout.extend([x, y, z])
+                        pout.append([x, y, z])
                 else:
-                    pout.extend([x, y])
+                    pout.append([x, y])
         return pout
 
 @contextmanager

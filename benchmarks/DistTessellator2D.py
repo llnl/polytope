@@ -1,6 +1,4 @@
-import sys, os, math, time
-ptu_path = os.path.join(os.path.dirname(__file__), "../tests/PythonTests")
-sys.path.append(ptu_path)
+import sys, time
 import polytope_test_utilities as ptu
 import polytope
 
@@ -48,7 +46,7 @@ if __name__ == "__main__":
     lobounds = [lov, lov]
     hibounds = [hiv, hiv]
     bpoints = [(lov, lov), (hiv, lov), (hiv, hiv), (lov, hiv)]
-    coord_bits = round(math.log2(polytope.QuantizedKeyTraits2d().maxCoordinate()))
+    coord_bits = polytope.QuantizedKeyTraits2d().coordinateBits
     ptu.rootprint(f"Coordinate bits {coord_bits}")
     ptu.rootprint(f"Generating {N} random points with {nranks} ranks")
     if (rank == root):
