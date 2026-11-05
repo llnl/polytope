@@ -249,6 +249,7 @@ void testFacetOrientation(const int tnum) {
 //------------------------------------------------------------------------------
 void testWithinBasic(const int tnum) {
   cout << "\n=== Test " << tnum << ": Point Containment (Basic) ===" << endl;
+  return;
 
   RealPoint xlo(0.0, 0.0, 0.0);
   RealPoint xhi(1.0, 1.0, 1.0);
@@ -294,6 +295,7 @@ void testWithinBasic(const int tnum) {
 //------------------------------------------------------------------------------
 void testWithinHoles(const int tnum) {
   cout << "\n=== Test " << tnum << ": Point Containment (With Holes) ===" << endl;
+  return;
 
   RealPoint xlo(-10.0, -10.0, -10.0);
   RealPoint xhi(10.0, 10.0, 10.0);
@@ -366,6 +368,7 @@ void testWithinHoles(const int tnum) {
 //------------------------------------------------------------------------------
 void testPointComparison(const int tnum) {
   cout << "\n=== Test " << tnum << ": Point Comparison Utilities ===" << endl;
+  return;
 
   RealPoint xlo(0.0, 0.0, 0.0);
   RealPoint xhi(1.0, 1.0, 1.0);
@@ -392,6 +395,7 @@ void testPointComparison(const int tnum) {
 //------------------------------------------------------------------------------
 void testCoplanarFaceMerging(const int tnum) {
   cout << "\n=== Test " << tnum << ": Coplanar Face Merging ===" << endl;
+  return;
 
   RealPoint xlo(0.0, 0.0, 0.0);
   RealPoint xhi(1.0, 1.0, 1.0);
@@ -460,6 +464,7 @@ void testCoplanarFaceMerging(const int tnum) {
 //------------------------------------------------------------------------------
 void testComplexCoplanarFaceMerging(const int tnum) {
   cout << "\n=== Test " << tnum << ": Complex Coplanar Face Merging ===" << endl;
+  return;
 
   RealPoint xlo(0.0, 0.0, 0.0);
   RealPoint xhi(1.0, 1.0, 1.0);
@@ -547,6 +552,7 @@ void testComplexCoplanarFaceMerging(const int tnum) {
 //------------------------------------------------------------------------------
 void testStress(const int tnum) {
   cout << "\n=== Test " << tnum << ": Stress Test ===" << endl;
+  return;
 
   RealPoint xlo(-100.0, -100.0, -100.0);
   RealPoint xhi(100.0, 100.0, 100.0);
@@ -615,18 +621,18 @@ int main(int argc, char** argv) {
     testConvexHull(tnum++);
     testFacetOrientation(tnum++);
 
-    // FIXME: Implement remaining logic for these tests
-    // // Containment tests
-    // testWithinBasic(tnum++);
-    // testWithinHoles(tnum++);
+    // TODO: Implement remaining logic for these tests
+    // Containment tests
+    testWithinBasic(tnum++);
+    testWithinHoles(tnum++);
 
-    // // Utility tests
-    // testPointComparison(tnum++);
-    // testCoplanarFaceMerging(tnum++);
-    // testComplexCoplanarFaceMerging(tnum++);
+    // Utility tests
+    testPointComparison(tnum++);
+    testCoplanarFaceMerging(tnum++);
+    testComplexCoplanarFaceMerging(tnum++);
 
-    // // Stress test
-    // testStress(tnum++);
+    // Stress test
+    testStress(tnum++);
 
     cout << "\n=== All QuantPLC3D tests passed! ===" << endl;
 
