@@ -73,7 +73,7 @@ if(POLYTOPE_ENABLE_TESTING)
     "${LIBRARY_OUTPUT_PATH}"
     ALL
     TARGET_NAME polytope_build_virt_env
-    DEPENDS Python3::Python polytopeC polytope "${POLYTOPE_PYB11_SRC_FILES}"
+    DEPENDS "${POLYTOPE_PYB11_SRC_FILES}"
     PYTHON_FILES "${POLYTOPE_PYTHON_SRC_FILES}"
   )
 endif()
@@ -82,7 +82,7 @@ polytope_add_python_environment(
   "${CMAKE_INSTALL_PREFIX}/${POLYTOPE_VIRT_DIR}"
   "${CMAKE_INSTALL_PREFIX}/${POLYTOPE_SITE_PACKAGES_PATH}/polytope"
   TARGET_NAME polytope_install_virt_env
-  DEPENDS Python3::Python polytopeC polytope "${POLYTOPE_PYB11_SRC_FILES}"
+  DEPENDS "${POLYTOPE_PYB11_SRC_FILES}"
   PYTHON_FILES "${POLYTOPE_PYTHON_SRC_FILES}"
 )
 

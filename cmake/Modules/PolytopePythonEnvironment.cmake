@@ -62,7 +62,7 @@ if(NOT result EQUAL 0)
 endif()
 
 set(HIBIT_ENABLED ${POLYTOPE_ENABLE_HIBIT2D})
-if(NOT ${HIBIT_ENABLED})
+if(NOT HIBIT_ENABLED)
   execute_process(
     COMMAND ${env_root}/bin/python3 -m pip install -r ${POLYTOPE_RUNTIME_REQ}
     RESULT_VARIABLE result
@@ -96,7 +96,7 @@ file(WRITE \"${stamp}\" \"ok\\n\")
       add_custom_command(
         TARGET ${target} POST_BUILD
         COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${_pyfile}" "${pth_target}"
-        DEPENDS ${arg_DEPENDS} ${_pyfile}
+        DEPENDS ${_pyfile}
       )
     endforeach()
   else()

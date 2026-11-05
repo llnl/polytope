@@ -42,6 +42,7 @@ QuantPLC<Dimension>::init(const std::vector<Point<Dimension, RealType>>& allpoin
 template<int Dimension>
 void
 QuantPLC<Dimension>::init(const std::vector<Point<Dimension, RealType>>& allpoints) {
+  points.clear();
   const auto& Q = m_Q;
   m_loBounds = Q.maxBound;
   m_hiBounds = -m_loBounds;
@@ -66,6 +67,7 @@ QuantPLC<Dimension>::init(const std::vector<Point<Dimension, RealType>>& allpoin
 template<int Dimension>
 void
 QuantPLC<Dimension>::init(const std::vector<QuantizedPoint<Dimension>>& quantizedPoints) {
+  points.clear();
   const auto& Q = m_Q;
   m_loBounds = Q.maxBound;
   m_hiBounds = -m_loBounds;
@@ -93,6 +95,7 @@ QuantPLC<Dimension>::init(const std::vector<QuantizedPoint<Dimension>>& quantize
 template<int Dimension>
 void
 QuantPLC<Dimension>::reduce() {
+  if (!isValid()) return;
   // Collect only unique point indices used in the PLC facets
   std::set<unsigned> indices;
   for (const auto& f : facets) {
@@ -136,7 +139,6 @@ QuantPLC<Dimension>::reduce() {
     }
   }
 
-  orderFacets();
   m_reduced = true;
 }
 
@@ -160,10 +162,27 @@ template<int D>
 std::enable_if_t<D == 2, void>
 QuantPLC<Dimension>::makeConvex2D() {
   const unsigned n = points.size();
-  if (n == 0) return;
+  if (n < 3) return;
   m_convex = true;
-  // TODO: Replace this with QHull call instead
-
+#ifdef POLYTOPE_ENABLE_QHULL
+  std::vector<double> q_points = flattenCoords<2, double>(getRealQPoints());
+  orgQhull::Qhull qh("2D points", 2, static_cast<int>(n), q_points.data(), "");
+  orgQhull::QhullFacet qfacet = qh.facetList().first();
+  orgQhull::QhullVertex from;
+  qfacet = qfacet.nextFacet2d(&from);
+  const int edgeCount = qh.facetList().count();
+  facets.clear();
+  facets.resize(edgeCount);
+  for (int i = 0; i < edgeCount; ++i) {
+    orgQhull::QhullVertex to;
+    qfacet = qfacet.nextFacet2d(&to);
+    facets[i] = {static_cast<unsigned>(from.point().id()),
+                 static_cast<unsigned>(to.point().id())};
+    from = to;
+  }
+  reduce(); // Remove any points that are not part of the convex hull
+#else
+  // Non-Qhull method is not as optimized
   // Unhash all points to integer coordinates and pair with original indices
   std::vector<std::pair<QuantizedPoint<Dimension>, unsigned>> sortedPoints;
   sortedPoints.reserve(n);
@@ -235,10 +254,9 @@ QuantPLC<Dimension>::makeConvex2D() {
     facets.back()[0] = sortedPoints[result[i]].second;
     facets.back()[1] = sortedPoints[result[i + 1]].second;
   }
-  if (isValid()) {
-    // Remove any points that are not part of the convex hull
-    reduce();
-  }
+  orderFacets();
+  reduce(); // Remove any points that are not part of the convex hull
+#endif
 }
 
 // 3D
@@ -253,20 +271,38 @@ QuantPLC<Dimension>::makeConvex3D() {
   m_convex = true;
 
   std::vector<double> q_points = flattenCoords<3, double>(getRealQPoints());
-  orgQhull::Qhull qh;
-  qh.runQhull("", Dimension, n, q_points.data(), "Qt");
+  orgQhull::Qhull qh("", 3, static_cast<int>(n), q_points.data(), "Qt");
 
   facets.clear();
-  facets.reserve(qh.facetList().size());
+  facets.resize(qh.facetList().size());
+  int i = 0;
   // Extract and reformat the Qhull points
-  for (auto f = qh.facetList().begin(); f != qh.facetList().end(); ++f) {
-    auto vertices = f->vertices();
-    facets.push_back(std::vector<unsigned>(vertices.size()));
-    unsigned fIndx = 0;
-    for (auto v = vertices.begin(); v != vertices.end(); ++v, fIndx++) {
-      auto pid = (*v).point().id();
-      facets.back()[fIndx] = pid;
+  orgQhull::QhullFacetListIterator qfacets(qh.facetList());
+  while (qfacets.hasNext()) {
+    const orgQhull::QhullFacet qfacet = qfacets.next();
+    orgQhull::QhullVertexSetIterator vertices(qfacet.vertices());
+    std::array<orgQhull::QhullPoint, 3> p = {vertices.next().point(),
+                                             vertices.next().point(),
+                                             vertices.next().point()};
+    // Ensure order is CCW using cross product and the plane normal
+    const double ux = p[1][0] - p[0][0];
+    const double uy = p[1][1] - p[0][1];
+    const double uz = p[1][2] - p[0][2];
+    const double vx = p[2][0] - p[0][0];
+    const double vy = p[2][1] - p[0][1];
+    const double vz = p[2][2] - p[0][2];
+    const orgQhull::QhullHyperplane normal = qfacet.hyperplane();
+    const double orientation =
+      (uy * vz - uz * vy) * normal[0] +
+      (uz * vx - ux * vz) * normal[1] +
+      (ux * vy - uy * vx) * normal[2];
+    std::array<unsigned, 3> pid = {static_cast<unsigned>(p[0].id()),
+                                   static_cast<unsigned>(p[1].id()),
+                                   static_cast<unsigned>(p[2].id())};
+    if (orientation < 0.0) {
+      std::swap(pid[1], pid[2]);
     }
+    facets[i++] = {pid[0], pid[1], pid[2]};
   }
   // Remove any points that are not part of the convex hull
   reduce();

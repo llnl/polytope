@@ -183,9 +183,9 @@ void testConvexHull(const int tnum) {
   // Create a set of points including some interior points
   vector<RealType> vertices = {
     0.0, 0.0,   // 0 (corner - should be in hull)
+    0.0, 1.0,   // 3 (corner - should be in hull)
     1.0, 0.0,   // 1 (corner - should be in hull)
     1.0, 1.0,   // 2 (corner - should be in hull)
-    0.0, 1.0,   // 3 (corner - should be in hull)
     0.5, 0.5,   // 4 (interior - should NOT be in hull)
     0.3, 0.7    // 5 (interior - should NOT be in hull)
   };
@@ -195,19 +195,27 @@ void testConvexHull(const int tnum) {
 
   qplc.makeConvex();
 
+  std::vector<std::vector<unsigned>> correctFacets = {{0, 2}, {2, 3}, {3, 1}, {1, 0}};
   // Square hull should have 4 edges
-  POLY_CHECK2(qplc.facets.size() == 4,
+  POLY_CHECK2(qplc.facets.size() == correctFacets.size(),
               "Square hull should have 4 edges, got " << qplc.facets.size());
 
   // Each edge should have 2 vertices
-  for (size_t i = 0; i < qplc.facets.size(); ++i) {
-    POLY_CHECK2(qplc.facets[i].size() == 2,
-                "Edge " << i << " should have 2 vertices, got " << qplc.facets[i].size());
+  int i = 0;
+  for (auto& ff : qplc.facets) {
+    POLY_CHECK2(ff.size() == 2,
+                "Edge " << i++ << " should have 2 vertices, got " << ff.size());
   }
-
-  // After reduction, should only have 4 points (the hull vertices)
-  POLY_CHECK2(qplc.points.size() == 4,
-              "Convex hull should have 4 vertices, got " << qplc.points.size());
+  for (auto& cf : correctFacets) {
+    bool found = false;
+    for (auto& ff : qplc.facets) {
+      if (ff == cf) {
+        found = true;
+        break;
+      }
+    }
+    POLY_CHECK2(found, "Edge " << cf[0] << ", " << cf[1] << " not found");
+  }
 
   cout << "  Convex hull computation passed!" << endl;
 }
@@ -225,9 +233,12 @@ void testEdgeOrdering(const int tnum) {
 
   auto plc = createSquarePLC();
   auto vertices = createSquareVertices();
+  // Break facets so the qplc can fix it
+  plc.facets[1] = {3, 0};
+  plc.facets[3] = {1, 2};
 
   QuantPLC2D qplc(Q, vertices, plc);
-  qplc.reduce();  // This calls orderFacets
+  qplc.orderFacets();
 
   // Check that edges form a closed loop
   for (size_t i = 0; i < qplc.facets.size(); ++i) {

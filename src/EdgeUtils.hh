@@ -232,6 +232,7 @@ orderClippedEdges(std::vector<ClippedEdge>& clippedEdges) {
 
 //------------------------------------------------------------------------------
 // Order a vector of edges to form a connected chain.
+// Does not flip an individual edge order, just the order of edges.
 //------------------------------------------------------------------------------
 inline void orderEdgeLoop(std::vector<std::vector<unsigned>>& edges) {
   if (edges.empty()) return;

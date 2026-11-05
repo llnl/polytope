@@ -55,7 +55,7 @@ polytope_add_test(MortonKeyTraits3D)
 polytope_add_test(Quantizer)
 polytope_add_test(QuantPLC2D)
 polytope_add_test(SiloIO2D)
-#polytope_add_test(QuantPLC3D) # Currently broken
+polytope_add_test(QuantPLC3D) # Currently broken
 #polytope_add_test(QuantConvexIntersect3D) # Currently broken
 #polytope_add_test(clipPolyhedron3D)
 polytope_add_test(honeyComb)
