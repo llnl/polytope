@@ -100,10 +100,11 @@ tessellate(const std::vector<Point<Dimension, RealType>>& points,
 
   QuantizedTessellation quantmesh(m_Q, points);
   quantmesh.tessellatorName = this->name();
-  m_QPLC.emplace(m_Q, PLCpoints, geometry);
-  quantmesh.cullExternalPoints(*m_QPLC);
+  m_QPLCpoints = QuantPLC<Dimension>::quantizePoints(m_Q, PLCpoints);
+  m_QPLC.emplace(m_Q, m_QPLCpoints, geometry);
+  quantmesh.cullExternalPoints(*m_QPLC, m_QPLCpoints);
   this->tessellateQuantized(quantmesh);
-  quantmesh.clipTessellation(*m_QPLC, m_serialTessellator);
+  quantmesh.clipTessellation(*m_QPLC, m_QPLCpoints, m_serialTessellator);
   quantmesh.filterToLocalGenerators();
   quantmesh.fillTessellation(mesh);
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
@@ -152,13 +153,14 @@ partitionAndTessellate(const std::vector<Point<Dimension, RealType>>& points,
   POLY_VERIFY2(partitioner.getNumPartitions() <= Communicator::getNRanks(),
                "Distributed partition count must not exceed the MPI rank count");
 
-  m_QPLC.emplace(m_Q, PLCpoints, geometry);
+  m_QPLCpoints = QuantPLC<Dimension>::quantizePoints(m_Q, PLCpoints);
+  m_QPLC.emplace(m_Q, m_QPLCpoints, geometry);
   const auto localPoints = partitioner.partition(points);
   QuantizedTessellation quantmesh(m_Q, localPoints);
   quantmesh.tessellatorName = this->name();
-  quantmesh.cullExternalPoints(*m_QPLC);
+  quantmesh.cullExternalPoints(*m_QPLC, m_QPLCpoints);
   this->tessellateQuantized(quantmesh);
-  quantmesh.clipTessellation(*m_QPLC, m_serialTessellator);
+  quantmesh.clipTessellation(*m_QPLC, m_QPLCpoints, m_serialTessellator);
   quantmesh.filterToLocalGenerators();
   quantmesh.fillTessellation(mesh);
   findBoundaryElements(mesh, mesh.boundaryFaces, mesh.boundaryNodes);
@@ -182,7 +184,7 @@ tessellateQuantized(QuantizedTessellation& quantmesh) {
     neighborRanks = visibleMesh.neighboringRanks();
     // If clipping, holes can modify which ranks are neighbors
     if (m_clipping) {
-      visibleMesh.clipTessellation(*m_QPLC, m_serialTessellator);
+      visibleMesh.clipTessellation(*m_QPLC, m_QPLCpoints, m_serialTessellator);
       std::set<int> clipped_neighbors = visibleMesh.neighboringRanks();
       neighborRanks.insert(clipped_neighbors.begin(), clipped_neighbors.end());
     }
@@ -193,17 +195,19 @@ tessellateQuantized(QuantizedTessellation& quantmesh) {
     quantmesh.makeConvexHull();
   }
   const auto localHull = quantmesh.convexHull;
-  const bool validLocalHull = localHull.isValid() &&
+  const bool validLocalHull = localHull.isValid(quantmesh.points) &&
                               localHull.m_convex &&
                               localHull.facets.size() >= Dimension + 1;
-  const auto allHulls = allGatherHulls(validLocalHull, localHull);
+  const auto allHulls = allGatherHulls(validLocalHull, localHull, quantmesh.points);
   POLY_ASSERT2(int(allHulls.size()) == nranks,
                "Incorrect number of hulls after communication");
   if (validLocalHull) {
     for (int source = 0; source < nranks; ++source) {
       if (source != rank &&
           allHulls[source].first &&
-          QuantPLC<Dimension>::convexPLCIntersection(localHull, allHulls[source].second)) {
+          QuantPLC<Dimension>::convexPLCIntersection(localHull, quantmesh.points,
+                                                    allHulls[source].second.first,
+                                                    allHulls[source].second.second)) {
         neighborRanks.insert(source);
       }
     }

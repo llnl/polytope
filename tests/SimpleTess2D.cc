@@ -176,11 +176,13 @@ void tests(const int tnum, Tessellator<2, double>& tessellator) {
   } else {
     quantMesh.init(points);
   }
-  QuantPLC<2> QPLC(quantizer, boundary.mPLCpoints, boundary.mPLC);
-  quantMesh.cullExternalPoints(QPLC);
+  auto plcPoints = QuantPLC<2>::quantizePoints(quantizer,
+                                               extractCoords<2, double>(boundary.mPLCpoints));
+  QuantPLC<2> QPLC(quantizer, plcPoints, boundary.mPLC);
+  quantMesh.cullExternalPoints(QPLC, plcPoints);
   tessellator.tessellateQuantized(quantMesh);
   if (tessellator.clippingEnabled()) {
-    quantMesh.clipTessellation(QPLC, tessellator);
+    quantMesh.clipTessellation(QPLC, plcPoints, tessellator);
   }
   Tessellation<2, double> mesh;
   quantMesh.fillTessellation(mesh);

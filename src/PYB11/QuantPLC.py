@@ -6,8 +6,8 @@ from PLC import PLC
 class QuantPLC(PLC):
     """A PLC with quantized coordinates and spatial-query operations.
 
-    A QuantPLC references the supplied Quantizer, which must be initialized
-    before constructing or initializing from real coordinates.
+    The caller owns the quantized vertex vector and passes it to queries.
+    The supplied Quantizer must outlive this object.
     """
 
     PYB11typedefs = """
@@ -21,59 +21,46 @@ class QuantPLC(PLC):
         "Construct an empty QuantPLC referencing quantizer."
 
     @PYB11keepalive(1, 2)
-    @PYB11implementation("""[](const Quantizer<%(Dimension)s>& quantizer, const py::object& points,
-                               const PLC<%(Dimension)s>& plc) {
-                                 return QuantPLC<%(Dimension)s>(
-                                   quantizer, pybind11_helpers::copyCoords<%(Dimension)s, double>(points),
-                                   plc);
-                               }""")
     def pyinitFromPLC(self,
                       quantizer="const Quantizer<%(Dimension)s>&",
-                      points="const py::object&",
+                      points="const std::vector<QuantizedPoint>&",
                       plc="const PLC<%(Dimension)s>&"):
-        "Construct from a PLC and flattened coordinates or coordinate tuples."
+        "Construct from a PLC and caller-owned quantized vertices."
 
     @PYB11keepalive(1, 2)
-    @PYB11implementation("""[](const Quantizer<%(Dimension)s>& quantizer, const py::object& points) {
-                                 return QuantPLC<%(Dimension)s>(
-                                   quantizer, pybind11_helpers::copyCoords<%(Dimension)s, double>(points));
-                               }""")
     def pyinitFromPoints(self,
                          quantizer="const Quantizer<%(Dimension)s>&",
-                         points="const py::object&"):
-        "Construct a convex PLC from flattened coordinates or coordinate tuples."
+                         points="const std::vector<QuantizedPoint>&"):
+        "Construct from caller-owned quantized vertices."
 
-    @PYB11implementation("""[](QuantPLC<%(Dimension)s>& self,
-                               const py::object& points,
-                               const PLC<%(Dimension)s>& plc) {
-                                 self.init(
-                                   pybind11_helpers::copyCoords<%(Dimension)s, double>(points),
-                                   plc);
-                               }""")
     @PYB11pycppname("init")
     def initFromPLC(self,
-                    points="const py::object&",
+                    points="const std::vector<QuantizedPoint>&",
                     plc="const PLC<%(Dimension)s>&"):
-        "Initialize from a PLC and flattened coordinates or coordinate tuples."
+        "Initialize from a PLC and quantized vertices."
         return "void"
 
-    @PYB11implementation("""[](QuantPLC<%(Dimension)s>& self,
-                               const py::object& points) {
-                                 self.init(
-                                   pybind11_helpers::copyCoords<%(Dimension)s, double>(points));
-                               }""")
     @PYB11pycppname("init")
     def initFromPoints(self,
-                       points="const py::object&"):
-        "Initialize a convex PLC from flattened coordinates or coordinate tuples."
+                       points="const std::vector<QuantizedPoint>&"):
+        "Initialize from quantized vertices."
         return "void"
 
-    def reduce(self):
+    @PYB11static
+    @PYB11implementation("""[](const Quantizer<%(Dimension)s>& quantizer, const py::object& points) {
+                                 return QuantPLC<%(Dimension)s>::quantizePoints(
+                                   quantizer, pybind11_helpers::copyCoords<%(Dimension)s, double>(points));
+                               }""")
+    def quantizePoints(quantizer="const Quantizer<%(Dimension)s>&", points="const py::object&"):
+        "Quantize real coordinates into a separate vertex vector."
+        return "std::vector<QuantizedPoint>"
+
+    def reduce(self, points="std::vector<QuantizedPoint>&"):
         "Discard points not referenced by facets or holes."
         return "void"
 
-    def makeConvex(self):
-        "Replace this PLC with its convex hull."
+    def makeConvex(self, points="const std::vector<QuantizedPoint>&"):
+        "Replace this PLC with the convex hull of the supplied vertices."
         return "void"
 
     def orderFacets(self):
@@ -81,43 +68,37 @@ class QuantPLC(PLC):
         return "void"
 
     @PYB11const
-    def isValid(self):
+    def isValid(self, points="const std::vector<QuantizedPoint>&"):
         return "bool"
 
     @PYB11const
     @PYB11implementation("""[](const QuantPLC<%(Dimension)s>& self,
-                               const py::object& point) {
-                                 return self.within(pybind11_helpers::pyToPoint<%(Dimension)s, double>(point));
+                               const py::object& point,
+                               const std::vector<QuantizedPoint>& points) {
+                                 return self.within(pybind11_helpers::pyToPoint<%(Dimension)s, double>(point), points);
                                }""")
     def within(self,
-               point="const py::object&"):
+               point="const py::object&",
+               points="const std::vector<QuantizedPoint>&"):
         "Return whether a real coordinate tuple lies within the PLC."
         return "bool"
 
     @PYB11const
     @PYB11pycppname("within")
     def withinQuantized(self,
-                        point="const QuantizedPoint&"):
+                        point="const QuantizedPoint&",
+                        points="const std::vector<QuantizedPoint>&"):
         "Return whether a quantized point lies within the PLC."
         return "bool"
 
-    @PYB11const
-    def getRealQPoints(self):
-        "Return quantized vertices as real-valued point objects."
-        return "std::vector<RealPoint>"
-
-    @PYB11const
-    def getRealPoints(self):
-        "Return the dequantized vertices."
-        return "std::vector<RealPoint>"
-
     @PYB11static
     def convexPLCIntersection(a="const QuantPLC<%(Dimension)s>&",
-                              b="const QuantPLC<%(Dimension)s>&"):
+                              aPoints="const std::vector<QuantizedPoint>&",
+                              b="const QuantPLC<%(Dimension)s>&",
+                              bPoints="const std::vector<QuantizedPoint>&"):
         "Return whether two convex QuantPLCs intersect."
         return "bool"
 
-    points = PYB11readwrite(returnpolicy="reference_internal")
     m_reduced = PYB11readwrite()
     m_convex = PYB11readwrite()
     m_loBounds = PYB11readwrite(returnpolicy="reference_internal")

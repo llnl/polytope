@@ -125,6 +125,7 @@ private:
   // Whether the Voronoi is clipped by a PLC
   bool m_clipping = false;
   std::optional<QuantPLC<Dimension>> m_QPLC;
+  std::vector<QuantizedPoint<Dimension>> m_QPLCpoints;
 
   // Forbidden methods.
   DistributedTessellator(const DistributedTessellator&);

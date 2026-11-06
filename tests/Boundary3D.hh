@@ -34,6 +34,7 @@ public:
 
   Quantizer<3> mQ;
   QuantPLC<3> mQPLC;
+  std::vector<QuantizedPoint<3>> mQPLCpoints;
   
   //------------------------------------------------------------------------
   // Constructor, destructor
@@ -55,7 +56,8 @@ public:
   void finalize() {
     auto& q = mQ;
     q.init(mPLCpoints);
-    mQPLC.init(mPLC, mPLCpoints);
+    mQPLCpoints = QuantPLC<3>::quantizePoints(q, extractCoords<3, double>(mPLCpoints));
+    mQPLC.init(mQPLCpoints, mPLC);
   }
 
   //------------------------------------------------------------------------
@@ -345,7 +347,7 @@ public:
   //------------------------------------------------------------------------
   bool testInside(RealType* pos) {
     Point<3, RealType> p(pos[0], pos[1], pos[2]);
-    return mQPLC.within(p);
+    return mQPLC.within(p, mQPLCpoints);
   }
   
   
@@ -407,7 +409,7 @@ public:
       p.x = Q.minBound.x + static_cast<IntType>(random01())*Q.maxBound.x;
       p.y = Q.minBound.y + static_cast<IntType>(random01())*Q.maxBound.y;
       p.z = Q.minBound.z + static_cast<IntType>(random01())*Q.maxBound.z;
-      inside = mQPLC.within(p);
+      inside = mQPLC.within(p, mQPLCpoints);
     }
     Point<3, RealType> pd = Q.dequantize(p);
     point[0] = pd.x;

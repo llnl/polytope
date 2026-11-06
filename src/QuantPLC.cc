@@ -22,67 +22,28 @@
 namespace polytope {
 
 template<int Dimension>
-QuantPLC<Dimension>::QuantPLC(const Quant& Q,
-                              const std::vector<Point<Dimension, RealType>>& allpoints,
-                              const PLC<Dimension>& plc) :
-  PLC<Dimension>(plc),
-  m_Q(Q) {
-  init(allpoints);
-}
-
-template<int Dimension>
 void
-QuantPLC<Dimension>::init(const std::vector<Point<Dimension, RealType>>& allpoints,
+QuantPLC<Dimension>::init(const std::vector<QuantizedPoint<Dimension>>& points,
                           const PLC<Dimension>& plc) {
   facets = plc.facets;
   holes = plc.holes;
-  init(allpoints);
+  init(points);
 }
 
+// Initialize with a vector of quantized points. Be sure to retain the indices
 template<int Dimension>
 void
-QuantPLC<Dimension>::init(const std::vector<Point<Dimension, RealType>>& allpoints) {
-  points.clear();
+QuantPLC<Dimension>::init(const std::vector<QuantizedPoint<Dimension>>& points) {
   const auto& Q = m_Q;
   m_loBounds = Q.maxBound;
   m_hiBounds = -m_loBounds;
-
-  auto N = allpoints.size();
-  points.reserve(N);
-  size_t i = 0;
-  for (const auto& rp : allpoints) {
-    auto ip = Q.quantize(rp);
-    ip.index = i++;
+  m_reduced = false;
+  m_convex = false;
+  for (const auto& ip : points) {
     m_loBounds = m_loBounds.minElements(ip);
     m_hiBounds = m_hiBounds.maxElements(ip);
-    points.push_back(ip);
   }
-  if (isValid()) {
-    POLY_ASSERT2(m_loBounds < m_hiBounds,
-                 "Provided coplanar or collinear or degenerate points to the QuantPLC");
-    orderFacets();
-  }
-}
-
-template<int Dimension>
-void
-QuantPLC<Dimension>::init(const std::vector<QuantizedPoint<Dimension>>& quantizedPoints) {
-  points.clear();
-  const auto& Q = m_Q;
-  m_loBounds = Q.maxBound;
-  m_hiBounds = -m_loBounds;
-
-  auto N = quantizedPoints.size();
-  points.reserve(N);
-  size_t i = 0;
-  for (const auto& ip : quantizedPoints) {
-    auto nip(ip);
-    nip.index = i++;
-    m_loBounds = m_loBounds.minElements(nip);
-    m_hiBounds = m_hiBounds.maxElements(nip);
-    points.push_back(nip);
-  }
-  if (isValid()) {
+  if (isValid(points)) {
     POLY_ASSERT2(m_loBounds < m_hiBounds,
                  "Provided coplanar or collinear or degenerate points to the QuantPLC");
     orderFacets();
@@ -94,12 +55,17 @@ QuantPLC<Dimension>::init(const std::vector<QuantizedPoint<Dimension>>& quantize
 //------------------------------------------------------------------------------
 template<int Dimension>
 void
-QuantPLC<Dimension>::reduce() {
-  if (!isValid()) return;
+QuantPLC<Dimension>::reduce(std::vector<QuantizedPoint<Dimension>>& points) {
+  if (!isValid(points)) return;
   // Collect only unique point indices used in the PLC facets
   std::set<unsigned> indices;
   for (const auto& f : facets) {
     std::copy(f.begin(), f.end(), std::inserter(indices, indices.end()));
+  }
+  for (const auto& hole : holes) {
+    for (const auto& f : hole) {
+      std::copy(f.begin(), f.end(), std::inserter(indices, indices.end()));
+    }
   }
 
   const auto& Q = m_Q;
@@ -119,10 +85,12 @@ QuantPLC<Dimension>::reduce() {
   }
 
   auto N = indices.size();
-  points.clear();
-  points.reserve(N);
+  std::vector<QuantizedPoint<Dimension>> reducedPoints;
+  reducedPoints.reserve(N);
   for (auto h : newHashes) {
-    points.push_back(Q.decode(h));
+    auto point = Q.decode(h);
+    point.index = reducedPoints.size();
+    reducedPoints.push_back(point);
   }
 
   // Remap facet indices
@@ -139,6 +107,13 @@ QuantPLC<Dimension>::reduce() {
     }
   }
 
+  points = std::move(reducedPoints);
+  m_loBounds = Q.maxBound;
+  m_hiBounds = -m_loBounds;
+  for (const auto& point : points) {
+    m_loBounds = m_loBounds.minElements(point);
+    m_hiBounds = m_hiBounds.maxElements(point);
+  }
   m_reduced = true;
 }
 
@@ -147,11 +122,15 @@ QuantPLC<Dimension>::reduce() {
 //------------------------------------------------------------------------------
 template<int Dimension>
 void
-QuantPLC<Dimension>::makeConvex() {
+QuantPLC<Dimension>::makeConvex(const std::vector<QuantizedPoint<Dimension>>& a_points) {
+  m_convex = false;
+  facets.clear();
+  holes.clear();
+  init(a_points);
   if constexpr (Dimension == 2) {
-    makeConvex2D<Dimension>();
+    makeConvex2D<Dimension>(a_points);
   } else if constexpr (Dimension == 3) {
-    makeConvex3D<Dimension>();
+    makeConvex3D<Dimension>(a_points);
   }
 }
 
@@ -160,12 +139,17 @@ QuantPLC<Dimension>::makeConvex() {
 template<int Dimension>
 template<int D>
 std::enable_if_t<D == 2, void>
-QuantPLC<Dimension>::makeConvex2D() {
-  const unsigned n = points.size();
+QuantPLC<Dimension>::makeConvex2D(const std::vector<QuantizedPoint<2>>& a_points) {
+  const unsigned n = a_points.size();
   if (n < 3) return;
   m_convex = true;
 #ifdef POLYTOPE_ENABLE_QHULL
-  std::vector<double> q_points = flattenCoords<2, double>(getRealQPoints());
+  std::vector<double> q_points;
+  q_points.reserve(2*n);
+  for (auto& p : a_points) {
+    q_points.push_back(static_cast<double>(p.x));
+    q_points.push_back(static_cast<double>(p.y));
+  }
   orgQhull::Qhull qh("2D points", 2, static_cast<int>(n), q_points.data(), "");
   orgQhull::QhullFacet qfacet = qh.facetList().first();
   orgQhull::QhullVertex from;
@@ -180,14 +164,13 @@ QuantPLC<Dimension>::makeConvex2D() {
                  static_cast<unsigned>(to.point().id())};
     from = to;
   }
-  reduce(); // Remove any points that are not part of the convex hull
 #else
   // Non-Qhull method is not as optimized
   // Unhash all points to integer coordinates and pair with original indices
   std::vector<std::pair<QuantizedPoint<Dimension>, unsigned>> sortedPoints;
   sortedPoints.reserve(n);
   for (unsigned i = 0; i < n; ++i) {
-    sortedPoints.push_back(std::make_pair(points[i], i));
+    sortedPoints.push_back(std::make_pair(a_points[i], i));
   }
 
   // Sort by x-coordinate, then y-coordinate (using Point's operator<)
@@ -255,7 +238,6 @@ QuantPLC<Dimension>::makeConvex2D() {
     facets.back()[1] = sortedPoints[result[i + 1]].second;
   }
   orderFacets();
-  reduce(); // Remove any points that are not part of the convex hull
 #endif
 }
 
@@ -264,18 +246,24 @@ QuantPLC<Dimension>::makeConvex2D() {
 template<int Dimension>
 template<int D>
 std::enable_if_t<D == 3, void>
-QuantPLC<Dimension>::makeConvex3D() {
+QuantPLC<Dimension>::makeConvex3D(const std::vector<QuantizedPoint<3>>& a_points) {
 #ifdef POLYTOPE_ENABLE_QHULL
-  const unsigned n = points.size();
+  const unsigned n = a_points.size();
   if (n == 0) return;
   m_convex = true;
 
-  std::vector<double> q_points = flattenCoords<3, double>(getRealQPoints());
+  std::vector<double> q_points;
+  q_points.reserve(3*n);
+  for (auto& p : a_points) {
+    q_points.push_back(static_cast<double>(p.x));
+    q_points.push_back(static_cast<double>(p.y));
+    q_points.push_back(static_cast<double>(p.z));
+  }
   orgQhull::Qhull qh("", 3, static_cast<int>(n), q_points.data(), "Qt");
 
   facets.clear();
   facets.resize(qh.facetList().size());
-  int i = 0;
+  auto i = 0;
   // Extract and reformat the Qhull points
   orgQhull::QhullFacetListIterator qfacets(qh.facetList());
   while (qfacets.hasNext()) {
@@ -304,8 +292,6 @@ QuantPLC<Dimension>::makeConvex3D() {
     }
     facets[i++] = {pid[0], pid[1], pid[2]};
   }
-  // Remove any points that are not part of the convex hull
-  reduce();
 #else
   if (Communicator::getRank() == Communicator::getRoot()) {
     std::cerr << "Must enable QHull to use 3D functionality" << std::endl;
@@ -362,18 +348,20 @@ QuantPLC<Dimension>::orderFacets3D() {
 //------------------------------------------------------------------------------
 template<int Dimension>
 bool
-QuantPLC<Dimension>::within(const RealPoint& point) const {
+QuantPLC<Dimension>::within(const RealPoint& point,
+                            const std::vector<QuantizedPoint<Dimension>>& points) const {
   const auto& Q = m_Q;
   if (!Q.inBounds(point)) {
     return false;
   }
   QuantizedPoint<Dimension> ip = Q.quantize(point);
-  return within(ip);
+  return within(ip, points);
 }
 
 template<int Dimension>
 bool
-QuantPLC<Dimension>::within(const QuantizedPoint<Dimension>& point) const {
+QuantPLC<Dimension>::within(const QuantizedPoint<Dimension>& point,
+                            const std::vector<QuantizedPoint<Dimension>>& points) const {
   POLY_ASSERT2(facets.size() > 0,
                "Must have facets before checking within");
   // First checks the bounds
@@ -387,16 +375,17 @@ QuantPLC<Dimension>::within(const QuantizedPoint<Dimension>& point) const {
     }
   }
   if constexpr (Dimension == 2) {
-    return within2D<Dimension>(point);
+    return within2D<Dimension>(point, points);
   } else if constexpr (Dimension == 3) {
-    return within3D<Dimension>(point);
+    return within3D<Dimension>(point, points);
   }
 }
 
 template<int Dimension>
 template<int D>
 std::enable_if_t<D == 2, bool>
-QuantPLC<Dimension>::within2D(const QuantizedPoint<Dimension>& point) const {
+QuantPLC<Dimension>::within2D(const QuantizedPoint<Dimension>& point,
+                              const std::vector<QuantizedPoint<Dimension>>& points) const {
   // Build the outer boundary polygon from ordered facets (edges)
   // Since facets are now ordered, simply collect first vertex of each edge
   std::vector<QuantizedPoint<Dimension>> polygon;
@@ -431,7 +420,8 @@ QuantPLC<Dimension>::within2D(const QuantizedPoint<Dimension>& point) const {
 template<int Dimension>
 template<int D>
 std::enable_if_t<D == 3, bool>
-QuantPLC<Dimension>::within3D(const QuantizedPoint<Dimension>& /*point*/) const {
+QuantPLC<Dimension>::within3D(const QuantizedPoint<Dimension>& /*point*/,
+                              const std::vector<QuantizedPoint<Dimension>>& /*points*/) const {
   // Implement this
   return false;
 }

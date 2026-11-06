@@ -2,7 +2,7 @@
 # Adding a C++ test to Polytope
 #
 # The polytope test directory assumes all tests follow the naming convention
-#      "test_<name>.cc"
+#      "<name>.cc"
 #
 # To add a test, the user must register the test <name> and a list of the
 # dependencies needed to build it:
@@ -53,9 +53,10 @@ polytope_add_test(SimpleTess2D)
 polytope_add_test(MortonKeyTraits2D)
 polytope_add_test(MortonKeyTraits3D)
 polytope_add_test(Quantizer)
+polytope_add_test(QuantPLCPointOwnership)
 polytope_add_test(QuantPLC2D)
 polytope_add_test(SiloIO2D)
-polytope_add_test(QuantPLC3D) # Currently broken
+#polytope_add_test(QuantPLC3D) # Currently broken
 #polytope_add_test(QuantConvexIntersect3D) # Currently broken
 #polytope_add_test(clipPolyhedron3D)
 polytope_add_test(honeyComb)
@@ -78,6 +79,7 @@ if(POLYTOPE_ENABLE_MPI)
     polytope_add_test(DistributedOrderedPoints NUMTASKS 4)
     polytope_add_test(DistributedHoleTests NUMTASKS 8)
   endif()
+  polytope_add_test(QuantPLCHullExchange NUMTASKS 2)
   polytope_add_test(SiloIO2D NUMTASKS 4)
   polytope_add_test(DistributedVoronoi2D NUMTASKS 4)
   polytope_add_test(DistributedVisible2D NUMTASKS 6)

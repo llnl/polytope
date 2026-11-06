@@ -13,8 +13,10 @@ namespace polytope {
 // Remove any generator points that are outside our clipping region
 template<>
 void
-QuantTessellation<3>::cullExternalPoints(const QuantPLC<3>& QPLC) {
+QuantTessellation<3>::cullExternalPoints(const QuantPLC<3>& QPLC,
+                                         const std::vector<QuantizedPoint<3>>& plcPoints) {
   POLY_CONTRACT_VAR(QPLC);
+  POLY_CONTRACT_VAR(plcPoints);
   // TODO: Implement me
 }
 
@@ -37,8 +39,10 @@ QuantTessellation<3>::cullExternalPoints(const QuantPLC<3>& QPLC) {
 template<>
 void
 QuantTessellation<3>::clipTessellation(const QuantPLC<3>& QPLC,
+                                       const std::vector<QuantizedPoint<3>>& plcPoints,
                                        Tessellator<3, double>& tessellator) {
   POLY_CONTRACT_VAR(QPLC);
+  POLY_CONTRACT_VAR(plcPoints);
   POLY_CONTRACT_VAR(tessellator);
   // 3D has not been implemented
 }
@@ -103,9 +107,9 @@ QuantTessellation<3>::visibleGenerators(const std::vector<ExchangeType>& et) {
     makeConvexHull();
   }
   std::vector<ExchangeType> result;
-  if (convexHull.isValid()) {
+  if (convexHull.isValid(points)) {
     result.reserve(N);
-    auto plc_cell = convexHull.getCell();
+    auto plc_cell = convexHull.getCell(points);
     for (auto i = 0u; i < N; ++i) {
       auto qcell = getCell(i);
       // if (convexBoundaryIntersect<QuantizedCoordinate<3>>(qcell, plc_cell)) {

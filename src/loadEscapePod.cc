@@ -64,6 +64,7 @@ int main(int argc, char** argv) {
   }
   std::cout << "Using " << tessellatorName << std::endl;
   QuantPLC<2> qplc(q);
+  std::vector<QuantizedPoint<2>> plcPoints;
 
   auto tessellator = makeTessellator(tessellatorName);
   if (!tessellator) {
@@ -74,7 +75,7 @@ int main(int argc, char** argv) {
 
   tessellator->tessellateQuantized(quantMesh);
   if (!qplc.empty()) {
-    quantMesh.clipTessellation(qplc, *tessellator);
+    quantMesh.clipTessellation(qplc, plcPoints, *tessellator);
   } else {
     std::cout << "Escape pod does not contain QPLC data; skipping clipping" << std::endl;
   }

@@ -83,6 +83,7 @@ public:
   }
 
   void init(const std::vector<RealPoint>& genpoints) {
+    convexHull.m_convex = false;
     // Extract the unrolled coordinates
     auto N = genpoints.size();
     hashes.reserve(N);
@@ -102,6 +103,7 @@ public:
   }
 
   void init(const std::vector<QuantizedPoint<Dimension>>& qgenpoints) {
+    convexHull.m_convex = false;
     points = qgenpoints;
     auto N = points.size();
     hashes.reserve(N);
@@ -116,6 +118,7 @@ public:
   // Inner index is the rank. Used during communication
   template<typename ExType>
   void extend(const std::vector<std::vector<ExType>>& rankInps) {
+    convexHull.m_convex = false;
     faces.clear();
     nodes.clear();
     cells.clear();
@@ -147,6 +150,7 @@ public:
   void clear() {
     Tessellation<Dimension, QuantizedCoordinate<Dimension>>::clear();
     hashes.clear();
+    convexHull.m_convex = false;
   }
 
   //------------------------------------------------------------------------------
@@ -190,6 +194,7 @@ public:
   void sortByHash() {
     const auto numPoints = points.size();
     if (numPoints == 0) return;
+    convexHull.m_convex = false;
 
     // Create index vector and sort by hash
     std::vector<unsigned> sortedIndices(numPoints);
@@ -312,8 +317,7 @@ public:
       return;
     }
     // Check if hull will be valid
-    convexHull.init(points);
-    convexHull.makeConvex();
+    convexHull.makeConvex(points);
   }
 
   //------------------------------------------------------------------------------
@@ -352,6 +356,7 @@ public:
   }
 
   void filterToLocalGenerators() {
+    convexHull.m_convex = false;
     const auto N = points.size();
     auto rank = Communicator::getRank();
     std::vector<QuantizedPoint<Dimension>> newPoints;
@@ -378,9 +383,10 @@ public:
   //------------------------------------------------------------------------------
 
   bool cellIntersectsHull(const QuantPLC<Dimension>& QPLC,
+                          const std::vector<QuantizedPoint<Dimension>>& plcPoints,
                           const unsigned index) {
     auto qcell = getCell(index);
-    auto plc_cell = QPLC.getCell();
+    auto plc_cell = QPLC.getCell(plcPoints);
     return convexBoundaryIntersect<QuantizedCoordinate<Dimension>>(qcell, plc_cell);
   }
 
@@ -393,10 +399,12 @@ public:
 
   // Clip tessellation against PLC boundary planes
   void clipTessellation(const QuantPLC<Dimension>& QPLC,
+                        const std::vector<QuantizedPoint<Dimension>>& plcPoints,
                         Tessellator<Dimension, double>& tessellator);
 
   // Remove any external generator points
-  void cullExternalPoints(const QuantPLC<Dimension>& QPLC);
+  void cullExternalPoints(const QuantPLC<Dimension>& QPLC,
+                          const std::vector<QuantizedPoint<Dimension>>& plcPoints);
 
   //------------------------------------------------------------------------------
   // Output method

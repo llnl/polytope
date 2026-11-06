@@ -21,7 +21,8 @@ namespace polytope {
 
 template<>
 void
-QuantTessellation<2>::cullExternalPoints(const QuantPLC<2>& QPLC) {
+QuantTessellation<2>::cullExternalPoints(const QuantPLC<2>& QPLC,
+                                         const std::vector<QuantizedPoint<2>>& plcPoints) {
   auto N = points.size();
   std::vector<QuantizedPoint<2>> newPoints;
   newPoints.reserve(N);
@@ -30,13 +31,14 @@ QuantTessellation<2>::cullExternalPoints(const QuantPLC<2>& QPLC) {
   unsigned indx = 0;
   for (auto i = 0u; i < N; ++i) {
     auto point = points[i];
-    if (!QPLC.within(point)) continue;
+    if (!QPLC.within(point, plcPoints)) continue;
     point.index = indx++;
     newPoints.push_back(point);
     newHashes.push_back(m_Q.encode(point));
   }
   points = std::move(newPoints);
   hashes = std::move(newHashes);
+  convexHull.m_convex = false;
 }
 
 // All clipping functionality relies on Boost
@@ -86,11 +88,12 @@ cellPolygonIntersect(const QuantTessellation<2>::QuantizedCell& currentCell,
 template<>
 void
 QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
+                                       const std::vector<QuantizedPoint<2>>& plcPoints,
                                        Tessellator<2, double>& tessellator) {
-  const auto boundaryPoints = bp::polytopeToBoostPoints(QPLC.getCell());
+  const auto boundaryPoints = bp::polytopeToBoostPoints(QPLC.getCell(plcPoints));
   PolygonWithHoles boundary;
   bp::set_points(boundary, boundaryPoints.begin(), boundaryPoints.end());
-  auto holePoints = QPLC.getHolePoints();
+  auto holePoints = QPLC.getHolePoints(plcPoints);
   std::vector<Polygon> holes_vector;
   for (const auto& hole : holePoints) {
     Polygon holepoly;
@@ -245,6 +248,7 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
   faces = std::move(newFaces);
   cells = std::move(newCells);
   points = std::move(newPoints);
+  convexHull.m_convex = false;
   hashes = std::move(newHashes);
   if (updateCellRank) {
     cellRank = std::move(newCellRank);
@@ -255,6 +259,7 @@ QuantTessellation<2>::clipTessellation(const QuantPLC<2>& QPLC,
 template<>
 void
 QuantTessellation<2>::clipTessellation(const QuantPLC<2>& /*QPLC*/,
+                                       const std::vector<QuantizedPoint<2>>& /*plcPoints*/,
                                        Tessellator<2, double>& /*tessellator*/) {
   std::cerr << "Must compile with POLYTOPE_ENABLE_BOOST=ON and POLYTOPE_ENABLE_HIBIT2D=OFF to use clipping\n";
   Communicator::abort();
@@ -323,9 +328,9 @@ QuantTessellation<2>::visibleGenerators(const std::vector<ExchangeType>& et) {
     makeConvexHull();
   }
   if (N == 0) return result;
-  if (convexHull.isValid()) {
+  if (convexHull.isValid(points)) {
     result.reserve(N);
-    auto plc_cell = convexHull.getCell();
+    auto plc_cell = convexHull.getCell(points);
     for (auto i = 0u; i < N; ++i) {
       auto qcell = getCell(i);
       if (convexBoundaryIntersect<QCoord>(qcell, plc_cell)) {

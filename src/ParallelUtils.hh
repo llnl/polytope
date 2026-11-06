@@ -187,26 +187,33 @@ redistributeGenerators(const std::vector<std::vector<Generator>>& generatorsByDe
 }
 
 template<int Dimension>
-std::vector<std::pair<bool, QuantPLC<Dimension>>>
+std::vector<std::pair<bool, std::pair<QuantPLC<Dimension>,
+                                  std::vector<QuantizedPoint<Dimension>>>>>
 allGatherHulls(const bool localValid,
-               const QuantPLC<Dimension>& localHull) {
+               const QuantPLC<Dimension>& localHull,
+               const std::vector<QuantizedPoint<Dimension>>& localPoints) {
   auto size = Communicator::getNRanks();
   std::vector<char> localBuffer;
   serialize(localValid, localBuffer);
   if (localValid) {
     serialize(localHull, localBuffer);
+    serialize(localPoints, localBuffer);
   }
   auto buffers = allGatherBuffers(localBuffer);
-  std::vector<std::pair<bool, QuantPLC<Dimension>>> result;
+  std::vector<std::pair<bool, std::pair<QuantPLC<Dimension>,
+                                    std::vector<QuantizedPoint<Dimension>>>>> result;
   result.reserve(size);
   for (int i = 0; i < size; ++i) {
-    result.emplace_back(false, QuantPLC<Dimension>(localHull.quantizer()));
+    result.emplace_back(false,
+                        std::make_pair(QuantPLC<Dimension>(localHull.quantizer()),
+                                       std::vector<QuantizedPoint<Dimension>>()));
   }
   for (int i = 0; i < size; ++i) {
     auto itr = buffers[i].cbegin();
     deserialize(result[i].first, itr, buffers[i].end());
     if (result[i].first) {
-      deserialize<QuantPLC<Dimension>>(result[i].second, itr, buffers[i].end());
+      deserialize<QuantPLC<Dimension>>(result[i].second.first, itr, buffers[i].end());
+      deserialize(result[i].second.second, itr, buffers[i].end());
     }
   }
   return result;

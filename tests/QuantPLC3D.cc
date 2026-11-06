@@ -34,9 +34,35 @@ namespace {
 using RealType = double;
 using RealPoint = Point3<RealType>;
 using PLC = PLC<3>;
-using QuantPLC3D = QuantPLC<3>;
 using Quantizer3D = Quantizer<3>;
 using PointType = QuantizedPoint<3>;
+
+// Test fixture owns the vertices; the library QuantPLC only owns topology.
+class QuantPLC3D : public QuantPLC<3> {
+public:
+  std::vector<PointType> points;
+
+  QuantPLC3D(const Quantizer3D& Q, const std::vector<RealType>& coords,
+             const PLC& plc = PLC()):
+    QuantPLC<3>(Q),
+    points(quantizePoints(Q, extractCoords<3, RealType>(coords))) {
+    init(points, plc);
+  }
+
+  QuantPLC3D(const Quantizer3D& Q, const std::vector<RealPoint>& coords,
+             const PLC& plc = PLC()):
+    QuantPLC<3>(Q), points(quantizePoints(Q, coords)) {
+    init(points, plc);
+  }
+
+  void reduce() { QuantPLC<3>::reduce(points); }
+  void makeConvex() { QuantPLC<3>::makeConvex(points); }
+  bool within(const RealPoint& point) const { return QuantPLC<3>::within(point, points); }
+  bool within(const PointType& point) const { return QuantPLC<3>::within(point, points); }
+  bool operator==(const QuantPLC3D& other) const {
+    return equals(points, other, other.points);
+  }
+};
 
 //------------------------------------------------------------------------------
 // Test: Basic construction and quantization

@@ -33,9 +33,29 @@ namespace {
 using RealType = double;
 using RealPoint = Point2<RealType>;
 using PLC = PLC<2>;
-using QuantPLC2D = QuantPLC<2>;
 using Quantizer2D = Quantizer<2>;
 using PointType = QuantizedPoint<2>;
+
+// Test fixture owns the vertices; the library QuantPLC only owns topology.
+class QuantPLC2D : public QuantPLC<2> {
+public:
+  std::vector<PointType> points;
+
+  QuantPLC2D(const Quantizer2D& Q, const std::vector<RealType>& coords,
+             const PLC& plc = PLC()):
+    QuantPLC<2>(Q),
+    points(quantizePoints(Q, extractCoords<2, RealType>(coords))) {
+    init(points, plc);
+  }
+
+  void reduce() { QuantPLC<2>::reduce(points); }
+  void makeConvex() { QuantPLC<2>::makeConvex(points); }
+  bool within(const RealPoint& point) const { return QuantPLC<2>::within(point, points); }
+  bool within(const PointType& point) const { return QuantPLC<2>::within(point, points); }
+  bool operator==(const QuantPLC2D& other) const {
+    return equals(points, other, other.points);
+  }
+};
 
 //------------------------------------------------------------------------------
 // Helper: Create a square PLC from vertices
@@ -433,9 +453,9 @@ void testCellIntersectsHullEdgeOnly(const int tnum) {
     {8, 9, 10, 11}
   };
 
-  POLY_CHECK(mesh.cellIntersectsHull(hull, 0));
-  POLY_CHECK(!mesh.cellIntersectsHull(hull, 1));
-  POLY_CHECK(!mesh.cellIntersectsHull(hull, 2));
+  POLY_CHECK(mesh.cellIntersectsHull(hull, hull.points, 0));
+  POLY_CHECK(!mesh.cellIntersectsHull(hull, hull.points, 1));
+  POLY_CHECK(!mesh.cellIntersectsHull(hull, hull.points, 2));
 
   cout << "  Edge-only cell/hull intersection passed!" << endl;
 }

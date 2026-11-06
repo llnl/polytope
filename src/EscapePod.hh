@@ -52,15 +52,15 @@ rebuildTessellationPointMetadata(TessellationType& tessellation) {
   }
 }
 
-template<typename QPLCType>
+template<typename QPLCType, typename PointVector>
 inline
 void
-rebuildQPLCPointMetadata(QPLCType& qplc) {
+rebuildQPLCPointMetadata(QPLCType& qplc, PointVector& points) {
   const auto& Q = qplc.quantizer();
   qplc.m_loBounds = Q.maxBound;
   qplc.m_hiBounds = -qplc.m_loBounds;
-  for (unsigned i = 0; i < qplc.points.size(); ++i) {
-    auto& point = qplc.points[i];
+  for (unsigned i = 0; i < points.size(); ++i) {
+    auto& point = points[i];
     point.index = i;
     qplc.m_loBounds = qplc.m_loBounds.minElements(point);
     qplc.m_hiBounds = qplc.m_hiBounds.maxElements(point);
