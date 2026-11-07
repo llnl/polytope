@@ -89,11 +89,11 @@ void test(Tessellator<2, double>& tessellator) {
 
   Communicator::Barrier();
   DistributedTessellator<2> distributed(tessellator);
-  Tessellation<2, double> localMesh;
-  localMesh = distributed.tessellate(points);
+  Tessellation<2, double> localMesh = distributed.tessellate(points);
 
   unsigned totalCells = localMesh.totalPointCount(true);
-  POLY_CHECK2(totalCells == refCellCount, "Incorrect total number of points");
+  POLY_CHECK2(totalCells == refCellCount,
+              "Incorrect total number of points");
 
   std::string outname = "DistributedVisible_" + tessellator.name();
   outputMesh(localMesh, outname, 0, 0.);

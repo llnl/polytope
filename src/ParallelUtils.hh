@@ -7,6 +7,7 @@
 #define __Polytope_ParallelUtils__
 
 #include <limits>
+#include <unordered_map>
 #include <utility>
 
 #include "Communicator.hh"
@@ -196,8 +197,26 @@ allGatherHulls(const bool localValid,
   std::vector<char> localBuffer;
   serialize(localValid, localBuffer);
   if (localValid) {
-    serialize(localHull, localBuffer);
-    serialize(localPoints, localBuffer);
+    // The intersection test only needs the vertices referenced by hull facets.
+    // Remap those facets into a compact point vector before gathering the hull.
+    auto compactHull = localHull;
+    std::vector<QuantizedPoint<Dimension>> hullPoints;
+    std::unordered_map<unsigned, unsigned> oldToNew;
+    for (auto& facet : compactHull.facets) {
+      for (auto& index : facet) {
+        const auto oldIndex = index;
+        POLY_ASSERT2(oldIndex < localPoints.size(), "Invalid hull facet index");
+        const auto [it, inserted] = oldToNew.emplace(oldIndex, hullPoints.size());
+        if (inserted) {
+          auto point = localPoints[oldIndex];
+          point.index = it->second;
+          hullPoints.push_back(point);
+        }
+        index = it->second;
+      }
+    }
+    serialize(compactHull, localBuffer);
+    serialize(hullPoints, localBuffer);
   }
   auto buffers = allGatherBuffers(localBuffer);
   std::vector<std::pair<bool, std::pair<QuantPLC<Dimension>,

@@ -26,6 +26,25 @@ hasAnyGenerators(const bool localHasGenerators) {
 #endif
 }
 
+template<int Dimension, typename Generator>
+void
+appendVisibleGenerators(const QuantTessellation<Dimension>& visibleMesh,
+                        const std::vector<Generator>& visibleRecords,
+                        const std::set<int>& neighborRanks,
+                        std::vector<std::vector<Generator>>& rankGenerators) {
+  const int rank = Communicator::getRank();
+  POLY_ASSERT2(visibleRecords.size() == visibleMesh.cellRank.size(),
+               "Incorrect cell ranks in visible mesh");
+  for (auto i = 0u; i < visibleRecords.size(); ++i) {
+    const int source = visibleMesh.cellRank[i];
+    if (source != rank && neighborRanks.find(source) == neighborRanks.end()) {
+      POLY_ASSERT2(source >= 0 && source < int(rankGenerators.size()),
+                   "Invalid visible generator rank");
+      rankGenerators[source].push_back(visibleRecords[i]);
+    }
+  }
+}
+
 }
 
 //------------------------------------------------------------------------------
@@ -203,10 +222,19 @@ tessellateQuantized(QuantizedTessellation& quantmesh) {
                "Incorrect number of hulls after communication");
   if (validLocalHull) {
     for (int source = 0; source < nranks; ++source) {
-      if (source != rank &&
-          allHulls[source].first &&
+      if (source == rank || !allHulls[source].first) continue;
+      const auto& remoteHull = allHulls[source].second.first;
+      bool boundsOverlap = true;
+      for (int axis = 0; axis < Dimension; ++axis) {
+        if (localHull.m_hiBounds[axis] < remoteHull.m_loBounds[axis] ||
+            remoteHull.m_hiBounds[axis] < localHull.m_loBounds[axis]) {
+          boundsOverlap = false;
+          break;
+        }
+      }
+      if (boundsOverlap &&
           QuantPLC<Dimension>::convexPLCIntersection(localHull, quantmesh.points,
-                                                    allHulls[source].second.first,
+                                                    remoteHull,
                                                     allHulls[source].second.second)) {
         neighborRanks.insert(source);
       }
@@ -214,25 +242,46 @@ tessellateQuantized(QuantizedTessellation& quantmesh) {
   }
 
   // Exchange complete neighbor generator sets using the selected representation.
+  // Clipping also needs visible generators from non-neighbor ranks (see
+  // DistributedHoleTests.cc). Add them before extending the mesh.
+  bool addedGenerators = false;
   if (m_exchangePoints) {
     auto neighborGenerators =
       exchangeNeighborGenerators<Dimension, QuantizedPoint<Dimension>>(quantmesh.points, neighborRanks);
-    if (!quantmesh.points.empty()) {
+    if (quantmesh.points.empty()) {
+      for (auto& generators : neighborGenerators) generators.clear();
+    }
+    if (m_clipping) {
+      appendVisibleGenerators(visibleMesh, visibleMesh.points, neighborRanks,
+                              neighborGenerators);
+    }
+    addedGenerators = std::any_of(neighborGenerators.begin(), neighborGenerators.end(),
+                                  [](const auto& generators) { return !generators.empty(); });
+    if (addedGenerators) {
       quantmesh.extend(neighborGenerators);
     }
   } else {
     auto neighborGenerators =
       exchangeNeighborGenerators<Dimension, QuantizedKey<Dimension>>(quantmesh.hashes, neighborRanks);
-    if (!quantmesh.points.empty()) {
+    if (quantmesh.points.empty()) {
+      for (auto& generators : neighborGenerators) generators.clear();
+    }
+    if (m_clipping) {
+      appendVisibleGenerators(visibleMesh, visibleMesh.hashes, neighborRanks,
+                              neighborGenerators);
+    }
+    addedGenerators = std::any_of(neighborGenerators.begin(), neighborGenerators.end(),
+                                  [](const auto& generators) { return !generators.empty(); });
+    if (addedGenerators) {
       quantmesh.extend(neighborGenerators);
     }
   }
-  // If we are clipping, we must include all visible generator points to avoid issues
-  // See the DistributedHoleTests.cc for examples why this is needed
-  if (m_clipping) {
-    addVisibleMesh(visibleMesh, neighborRanks, quantmesh);
+  if (addedGenerators) {
+    m_serialTessellator.tessellateQuantized(quantmesh);
+  } else if (quantmesh.cellRank.size() != quantmesh.points.size()) {
+    // extend() normally initializes the local ranks for later filtering.
+    quantmesh.cellRank.assign(quantmesh.points.size(), rank);
   }
-  m_serialTessellator.tessellateQuantized(quantmesh);
 }
 
 //------------------------------------------------------------------------------
@@ -286,31 +335,16 @@ DistributedTessellator<Dimension>::
 addVisibleMesh(const QuantizedTessellation& visibleMesh,
                const std::set<int>& neighborRanks,
                QuantizedTessellation& quantmesh) {
-  int rank = Communicator::getRank();
   int nranks = Communicator::getNRanks();
   if (m_exchangePoints) {
     std::vector<std::vector<QuantizedPoint<Dimension>>> visibleGenerators(nranks);
-    const auto& vpoints = visibleMesh.points;
-    POLY_ASSERT2(vpoints.size() == visibleMesh.cellRank.size(), "Incorrect cell ranks in visible mesh");
-    for (auto i = 0u; i < vpoints.size(); ++i) {
-      auto source = visibleMesh.cellRank[i];
-      // Make sure the points are not part of the current or neighbor mesh to avoid repeats
-      if (source != rank && neighborRanks.find(source) == neighborRanks.end()) {
-        visibleGenerators[source].push_back(vpoints[i]);
-      }
-    }
+    appendVisibleGenerators(visibleMesh, visibleMesh.points, neighborRanks,
+                            visibleGenerators);
     quantmesh.extend(visibleGenerators);
   } else {
     std::vector<std::vector<QuantizedKey<Dimension>>> visibleGenerators(nranks);
-    const auto& vhashes = visibleMesh.hashes;
-    POLY_ASSERT2(vhashes.size() == visibleMesh.cellRank.size(), "Incorrect cell ranks in visible mesh");
-    for (auto i = 0u; i < vhashes.size(); ++i) {
-      auto source = visibleMesh.cellRank[i];
-      // Make sure the points are not part of the current or neighbor mesh to avoid repeats
-      if (source != rank && neighborRanks.find(source) == neighborRanks.end()) {
-        visibleGenerators[source].push_back(vhashes[i]);
-      }
-    }
+    appendVisibleGenerators(visibleMesh, visibleMesh.hashes, neighborRanks,
+                            visibleGenerators);
     quantmesh.extend(visibleGenerators);
   }
 }

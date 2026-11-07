@@ -379,7 +379,7 @@ public:
   }
 
   //------------------------------------------------------------------------------
-  // Used for debugging purposes. Creates a file of relevant generator points
+  // Used for debugging purposes.
   //------------------------------------------------------------------------------
 
   bool cellIntersectsHull(const QuantPLC<Dimension>& QPLC,

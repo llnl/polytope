@@ -135,6 +135,42 @@ bool convexBoundaryIntersect(const Cell<2, CoordType>& pointsA,
 }
 
 //------------------------------------------------------------------------------
+// Cache hull segment bounds for visible-generator intersection checks.
+//------------------------------------------------------------------------------
+template<typename CoordType>
+struct HullEdge2D {
+  Point2<CoordType> hullStart, hullEnd;
+  CoordType minX, maxX, minY, maxY;
+  HullEdge2D(const Point2<CoordType>& start,
+             const Point2<CoordType>& end) :
+    hullStart(start),
+    hullEnd(end),
+    minX(std::min(start.x, end.x)),
+    maxX(std::max(start.x, end.x)),
+    minY(std::min(start.y, end.y)),
+    maxY(std::max(start.y, end.y)) {}
+  bool contains(const HullEdge2D& rhs) const {
+    if (maxX < rhs.minX || maxX < rhs.minX ||
+        maxY < rhs.minY || maxY < rhs.minY) return false;
+    return true;
+  }
+};
+
+template<typename CoordType>
+bool hullEdgeOverlap2D(const std::vector<HullEdge2D<CoordType>>& hullEdges,
+                       const HullEdge2D<CoordType>& cellEdge) {
+  Point2<CoordType> intersection;
+  for (const auto& hullEdge : hullEdges) {
+    if (!cellEdge.contains(hullEdge)) continue;
+    // Touching bounds still need the exact segment intersection test.
+    if (segmentIntersection2D(cellEdge.hullStart, cellEdge.hullEnd,
+                              hullEdge.hullStart, hullEdge.hullEnd,
+                              intersection)) return true;
+  }
+  return false;
+}
+
+//------------------------------------------------------------------------------
 // Tests if the boundaries of two polyhedra intersect but not if one is contained
 // in the other.
 //------------------------------------------------------------------------------

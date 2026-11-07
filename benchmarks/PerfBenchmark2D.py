@@ -9,7 +9,7 @@ def get_tessellators():
     names = ("BoostTessellator", "TriangleTessellator")
     return [getattr(polytope, name)() for name in names if hasattr(polytope, name)]
 
-def test_distributed_2d_tessellators(serial_tessellator, local_points):
+def test_distributed_2d_tessellators(serial_tessellator, local_points, k):
     comm = polytope.Communicator.instance()
     tess_name = serial_tessellator.name()
     ptu.rootprint(f"Testing unbounded {tess_name}")
@@ -18,7 +18,13 @@ def test_distributed_2d_tessellators(serial_tessellator, local_points):
     startt = time.perf_counter()
     mesh = tessellator.tessellate(points)
     comm.Barrier()
-    return time.perf_counter() - startt
+    end = time.perf_counter()
+    # Uncomment to print out meshes
+    # ptu.outputMesh2d(mesh=mesh,
+    #                  filePrefix="PyPerfBench",
+    #                  cycle=k,
+    #                  time=float(k))
+    return end - startt
 
 if __name__ == "__main__":
     # Provide the number of generators per rank
@@ -42,11 +48,13 @@ if __name__ == "__main__":
     local_points = generator.generate_random_points(N, seed=local_seed)
     partitioner = polytope.DistributedLloydPartitioner2d()
     points = partitioner.partition(local_points)
+    testnum = 0
     if (rank == root):
         with open(timer_log, "a") as ff:
             ff.write(f"{dist_name} distribution\n")
     for tess in get_tessellators():
-        tess_time = test_distributed_2d_tessellators(tess, points)
+        tess_time = test_distributed_2d_tessellators(tess, points, testnum)
+        testnum += 1
         if (rank == root):
             with open(timer_log, "a") as ff:
                 ff.write(f"{tess.name()} time: {tess_time}\n")
@@ -59,7 +67,8 @@ if __name__ == "__main__":
         with open(timer_log, "a") as ff:
             ff.write(f"{dist_name} distribution\n")
     for tess in get_tessellators():
-        tess_time = test_distributed_2d_tessellators(tess, points)
+        tess_time = test_distributed_2d_tessellators(tess, points, testnum)
+        testnum += 1
         if (rank == root):
             with open(timer_log, "a") as ff:
                 ff.write(f"{tess.name()} time: {tess_time}\n")

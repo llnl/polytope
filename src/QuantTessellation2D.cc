@@ -331,9 +331,26 @@ QuantTessellation<2>::visibleGenerators(const std::vector<ExchangeType>& et) {
   if (convexHull.isValid(points)) {
     result.reserve(N);
     auto plc_cell = convexHull.getCell(points);
+    std::vector<HullEdge2D<QCoord>> hullEdges;
+    hullEdges.reserve(plc_cell.size());
+    for (auto j = 0u; j < plc_cell.size(); ++j) {
+      const auto& start = plc_cell[j];
+      const auto& end = plc_cell[(j + 1) % plc_cell.size()];
+      hullEdges.push_back(HullEdge2D(start, end));
+    }
     for (auto i = 0u; i < N; ++i) {
       auto qcell = getCell(i);
-      if (convexBoundaryIntersect<QCoord>(qcell, plc_cell)) {
+      bool touchesHull = false;
+      for (auto j = 0u; j < qcell.size() && !touchesHull; ++j) {
+        const auto& start = qcell[j];
+        const auto& end = qcell[(j + 1) % qcell.size()];
+        const HullEdge2D<QCoord> cellEdge(start, end);
+        if (hullEdgeOverlap2D(hullEdges, cellEdge)) {
+          touchesHull = true;
+          break;
+        }
+      }
+      if (touchesHull) {
         result.push_back(et[i]);
       }
     }
