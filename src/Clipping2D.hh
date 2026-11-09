@@ -14,8 +14,7 @@ namespace polytope {
 
 // Raw geometry for a directed Voronoi primitive. The primitive is directed
 // from start toward end. A missing endpoint denotes an infinite end.
-template<typename CoordType>
-struct DirectedVoronoiEdge {
+struct RawEdge2D {
 public:
   // Which generator is to the left of edge
   int leftGen = -1;
@@ -23,8 +22,8 @@ public:
   bool hasEnd = false;
   Point2<double> start;
   Point2<double> end;
-  Point2<CoordType> bisectorPoint;
-  Point2<CoordType> direction;
+  QuantizedPoint<2> bisectorPoint;
+  QuantizedPoint<2> direction;
 
   void flipEdge() {
     if (hasStart && hasEnd) {
@@ -42,10 +41,9 @@ public:
   }
 };
 
-template<typename CoordType>
-std::ostream&
+inline std::ostream&
 operator<<(std::ostream& os,
-           const DirectedVoronoiEdge<CoordType>& edge) {
+           const RawEdge2D& edge) {
   if (edge.hasStart) {
     os << "start " << edge.start << " ";
   }
@@ -61,16 +59,15 @@ operator<<(std::ostream& os,
 
 // Clip directed Voronoi geometry to the quantization box. The assembler
 // converts p0 and p1 to result.nodes indices after a successful clip.
-template<typename CoordType>
 class Clip2D {
 public:
-  Clip2D(const DirectedVoronoiEdge<CoordType>& edge,
+  Clip2D(const RawEdge2D& edge,
          const Quantizer<2>& Q):
     mEdge(edge), m_Q(Q) {}
 
   // Output geometry. The assembler converts these to result.nodes indices.
-  Point2<CoordType> p0;
-  Point2<CoordType> p1;
+  QuantizedPoint<2> p0;
+  QuantizedPoint<2> p1;
   int startSide = -1;
   int endSide = -1;
 
@@ -89,8 +86,8 @@ public:
 
     // No clipping is required for a finite edge wholly inside the box.
     if (in0 && in1) {
-      p0 = round<2, CoordType>(mEdge.start);
-      p1 = round<2, CoordType>(mEdge.end);
+      p0 = round<2, QuantizedCoordinate<2>>(mEdge.start);
+      p1 = round<2, QuantizedCoordinate<2>>(mEdge.end);
       return p0 != p1;
     }
 
@@ -106,14 +103,14 @@ public:
     // The primitive is directed from p0 to p1. Replace a missing or
     // out-of-box endpoint with the corresponding clipping-box intersection.
     if (in0) {
-      p0 = round<2, CoordType>(mEdge.start);
+      p0 = round<2, QuantizedCoordinate<2>>(mEdge.start);
     } else {
       startSide =
         clipInfiniteRay(mEdge.bisectorPoint, -mEdge.direction, p0, m_Q);
     }
 
     if (in1) {
-      p1 = round<2, CoordType>(mEdge.end);
+      p1 = round<2, QuantizedCoordinate<2>>(mEdge.end);
     } else {
       endSide =
         clipInfiniteRay(mEdge.bisectorPoint, mEdge.direction, p1, m_Q);
@@ -123,7 +120,7 @@ public:
   }
 
 private:
-  const DirectedVoronoiEdge<CoordType>& mEdge;
+  const RawEdge2D& mEdge;
   const Quantizer<2>& m_Q;
 };
 

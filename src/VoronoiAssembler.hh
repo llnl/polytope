@@ -25,7 +25,6 @@ class VoronoiAssembler;
 template<>
 class VoronoiAssembler<2> {
 public:
-  using RawEdge = DirectedVoronoiEdge<QuantizedCoordinate<2>>;
   std::vector<ClippedEdge> vps;
   VoronoiAssembler(QuantTessellation<2>& input):
     result(input) {
@@ -113,8 +112,8 @@ public:
   // Insert edge that is infinite in both directions
   void addInfLines(const int gen0,
                    const int gen1) {
-    RawEdge edge = makeRawEdge(gen0, gen1,
-                               outwardRay(result.points[gen0], result.points[gen1]));
+    RawEdge2D edge = makeRawEdge(gen0, gen1,
+                                 outwardRay(result.points[gen0], result.points[gen1]));
     addVP(gen0, gen1, edge);
   }
 
@@ -173,7 +172,7 @@ public:
                      const Point<2, double>& node0,
                      const Point<2, double>& node1,
                      const int gen2 = -1) {
-    RawEdge edge;
+    RawEdge2D edge;
     if (gen2 >= 0) {
       edge = makeRawEdge(gen0, gen1, gen2);
     } else {
@@ -194,7 +193,7 @@ public:
               const Point<2, double>& dir) {
     // For consistency, recompute the direction using the generators
     // Only use the provided direction to determine generator order
-    RawEdge edge = makeRawEdge(gen0, gen1, rayDir(gen0, gen1, dir));
+    RawEdge2D edge = makeRawEdge(gen0, gen1, rayDir(gen0, gen1, dir));
     edge.hasStart = true;
     edge.start = node0;
     addVP(gen0, gen1, edge);
@@ -206,7 +205,7 @@ public:
               const int gen1,
               const Point<2, double>& node0,
               const int gen2) {
-    RawEdge edge = makeRawEdge(gen0, gen1, gen2);
+    RawEdge2D edge = makeRawEdge(gen0, gen1, gen2);
     edge.hasStart = true;
     edge.start = node0;
     addVP(gen0, gen1, edge);
@@ -216,7 +215,7 @@ public:
   void addStartRay(const int gen0,
                    const int gen1,
                    const Point<2, double>& node0) {
-    RawEdge edge = makeRawEdge(gen0, gen1, rayDir(gen0, gen1));
+    RawEdge2D edge = makeRawEdge(gen0, gen1, rayDir(gen0, gen1));
     edge.hasStart = true;
     edge.start = node0;
     addVP(gen0, gen1, edge);
@@ -226,7 +225,7 @@ public:
   void addEndRay(const int gen0,
                  const int gen1,
                  const Point<2, double>& node1) {
-    RawEdge edge = makeRawEdge(gen0, gen1, rayDir(gen0, gen1));
+    RawEdge2D edge = makeRawEdge(gen0, gen1, rayDir(gen0, gen1));
     edge.hasEnd = true;
     edge.end = node1;
     addVP(gen0, gen1, edge);
@@ -251,10 +250,10 @@ private:
   QuantTessellation<2>& result;
 
   // Make raw edge using 2 generators and a bisector direction
-  RawEdge makeRawEdge(const int gen0,
-                      const int gen1,
-                      const QuantizedPoint<2>& direction) const {
-    RawEdge edge;
+  RawEdge2D makeRawEdge(const int gen0,
+                        const int gen1,
+                        const QuantizedPoint<2>& direction) const {
+    RawEdge2D edge;
     edge.bisectorPoint = midPoint(result.points[gen0], result.points[gen1]);
     edge.direction = direction;
     if (m_useOrderedGens) {
@@ -264,10 +263,10 @@ private:
   }
 
   // Make raw edge using 3 generator points
-  RawEdge makeRawEdge(const int gen0,
-                      const int gen1,
-                      const int gen2) const {
-    RawEdge edge;
+  RawEdge2D makeRawEdge(const int gen0,
+                        const int gen1,
+                        const int gen2) const {
+    RawEdge2D edge;
     const auto& a = result.points[gen0];
     const auto& b = result.points[gen1];
     const auto& c = result.points[gen2];
@@ -301,11 +300,11 @@ private:
   }
 
   // Clip once, then store a canonical edge directed with gp.first on its left.
-  void addVP(const int gen0, const int gen1, const RawEdge& rawEdge) {
+  void addVP(const int gen0, const int gen1, const RawEdge2D& rawEdge) {
     ClippedEdge vp(gen0, gen1);
     if (genPairs.count(vp.gp) != 0) return;
 
-    Clip2D<QuantizedCoordinate<2>> clipper(rawEdge, result.quantizer());
+    Clip2D clipper(rawEdge, result.quantizer());
     if (!clipper.clip()) return;
 
     vp.csides = std::make_pair(clipper.startSide, clipper.endSide);
