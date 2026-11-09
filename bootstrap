@@ -1,196 +1,68 @@
 #!/usr/bin/env bash
 
-# This script creates a build directory and sticks a config.sh script into it.
-# Then config.sh can be edited and run within the build directory.
+# This script creates a host config file for CMake then runs CMake
 
-# Print usage info.
-if [ "$1" = "" ]; then
-  echo "Usage: bootstrap build_dir"
-  exit 1
-fi
+# Fill in the values below based on the build
+CUR_DIR=${PWD}
+BUILD_DIR=$1
 
-# Create the build directory if it doesn't exist.
-if [ ! -d $1 ]; then
-  mkdir -p $1
-fi
+rm -rf $BUILD_DIR
+mkdir -p $BUILD_DIR
+
+cat > $BUILD_DIR/config.sh <<EOF
+# CMake settings. Adjust the last entry per line as needed
+# NOTE: Many entries try to find things by default using which.
+# Remove these and add explicit paths unless you know they are
+# correct
+#------------------------------------------------------------
+CMAKE_SETTINGS=(
+    "CMAKE_INSTALL_PREFIX|PATH|install"
+    "CMAKE_BUILD_TYPE|STRING|Release"
+    "CMAKE_C_COMPILER|PATH|$(which gcc)"
+    "CMAKE_CXX_COMPILER|PATH|$(which g++)"
+    # MPI
+    "ENABLE_MPI|BOOL|ON"
+    "MPI_C_COMPILER|PATH|$(which mpicc)"
+    "MPI_CXX_COMPILER|PATH|$(which mpicxx)"
+    # Testing
+    "POLYTOPE_ENABLE_TESTING|BOOL|OFF"
+    # Silo
+    "POLYTOPE_ENABLE_SILO|BOOL|OFF"
+    "silo_DIR|PATH|/path/to/silo"
+    "hdf5_DIR|PATH|/path/to/hdf5"
+    # Python
+    "POLYTOPE_ENABLE_PYTHON|BOOL|OFF"
+    "python_DIR|PATH|/path/to/python"
+    # 2D options
+    "POLYTOPE_ENABLE_HIBIT2D|BOOL|OFF"
+    "POLYTOPE_ENABLE_BOOST|BOOL|OFF"
+    "boost_DIR|PATH|/path/to/boost"
+    "POLYTOPE_ENABLE_TRIANGLE|BOOL|OFF"
+    "triangle_SRC_DIR|PATH|/path/to/triangle"
+    # 3D options
+    "POLYTOPE_ENABLE_TETGEN|BOOL|OFF"
+    "tetgen_DIR|PATH|/path/to/tetgen"
+    "POLYTOPE_ENABLE_QHULL|BOOL|OFF"
+    "qhull_DIR|PATH|/path/to/qhull"
+)
 
 # Copy our template config script into place.
-echo "SOURCE_DIR=$PWD" > $1/config.sh
-cat <<EOT >> $1/config.sh
-# ^^^^^^ location of polytope source code.
+{
+    echo "# Generated file"
+    for setting in "\${CMAKE_SETTINGS[@]}"; do
+        IFS='|' read -r name type value <<< "\$setting"
+        printf 'set(%s "%s" CACHE %s "")\n' "\$name" "\$value" "\$type"
+    done
+} > host-config.cmake
 
-# config.sh -- A CMake configuration script.
-# Edit this file to change the parameters in your build. Uncomment exactly one
-# value for each parameter.
-
-# Set this to the location where you want to install polytope.
-PREFIX=\$HOME/opt
-
-#-----------------------------------------------------------------------------
-#                                Parallelism
-#-----------------------------------------------------------------------------
-
-# Build with MPI for parallel simulations.
-#MPI=ON
-
-#-----------------------------------------------------------------------------
-#                                   Compilers
-#-----------------------------------------------------------------------------
-
-if [ "\$MPI" = "ON" ]; then
-  CC=mpicc
-  CXX=mpic++
-else
-  CC=cc
-  CXX=c++
-fi
-
-# Override compilers here (ONLY if you know what you're doing!).
-
-# C compiler.
-#CC=cc
-
-# C++ compiler.
-#CXX=c++
-
-#-----------------------------------------------------------------------------
-#                                Build type
-#-----------------------------------------------------------------------------
-# Choose one of the following.
-
-# Debug executable (debugging symbols, no optimization).
-BUILD_TYPE=Debug
-
-# Release executable (No symbols, optimization).
-#BUILD_TYPE=Release
-
-#-----------------------------------------------------------------------------
-#                              Build options
-#-----------------------------------------------------------------------------
-
-# Uncomment to build libraries as shared libraries.
-#SHARED_LIBS=ON
-
-# Uncomment this to build Polytope as a header-only library.
-#HEADER_ONLY=ON
-
-# Uncomment this to build Polytope's C interface.
-#BUILD_C_INTERFACE=ON
-
-# Change this to set the type of real numbers in the C interface.
-C_REAL_TYPE=double
-
-# Change this to decide whether tests get built.
-TESTING=ON
-
-# Uncomment this if you want really verbose builds.
-VERBOSE=ON
-
-#-----------------------------------------------------------------------------
-#                        Third-party libraries and bindings
-#-----------------------------------------------------------------------------
-
-# Uncomment this to provide the root location for the Boost C++ libraries.
-#BOOST_ROOT=
-
-# Change this to enable support for the Silo I/O library.
-USE_SILO=ON
-
-# Set this to provide the root location for the HDF5 I/O libraries.
-# Only used if Silo is enabled.
-HDF5_ROOT=
-
-# Change this to enable support for Python bindings.
-USE_PYTHON=OFF
-
-# Change this to provide an absolute path for the Python interpreter.
-# Currently, polytope assumes the following Python directory structure:
-#	1) <root>/bin for the executable
-#	2) <root>/include/python<version>/ to find Python.h
-#	3) <root>/lib/python/ or <root>/lib/python<version>/ to find
-#	   libpython<version>.a and site-packages/pybindgen
-PYTHON_EXE=`which python`
-
-#-----------------------------------------------------------------------------
-#                              Build generator
-#-----------------------------------------------------------------------------
-# Choose one of the following.
-
-# Good old-fashioned UNIX makefiles.
-GENERATOR="Unix Makefiles"
-
-# Ninja, a speedy make replacement. Use if available!
-#GENERATOR="Ninja"
-
-# Code::Blocks (with UNIX makefiles underneath).
-#GENERATOR="CodeBlocks - Unix Makefiles"
-
-# Code::Blocks (with Ninja underneath).
-#GENERATOR="CodeBlocks - Ninja"
-
-#-----------------------------------------------------------------------------
-#                   Don't change anything below here.
-#-----------------------------------------------------------------------------
-
-OPTIONS=""
-if [ "\$MPI" = "ON" ]; then
-  OPTIONS="-DHAVE_MPI=ON"
-fi
-if [ "\$HEADER_ONLY" = "ON" ]; then
-  OPTIONS="\$OPTIONS -DHEADER_ONLY=ON"
-fi
-if [ "\$SHARED_LIBS" = "ON" ]; then
-  OPTIONS="\$OPTIONS -DBUILD_SHARED_LIBS=ON"
-fi
-if [ "\$BUILD_C_INTERFACE" = "ON" ]; then
-  OPTIONS="\$OPTIONS -DBUILD_C_INTERFACE=ON -DC_REAL_TYPE=\$C_REAL_TYPE"
-fi
-if [ "\$TESTING" = "ON" ]; then
-  OPTIONS="\$OPTIONS -DTESTING=ON"
-else
-  OPTIONS="\$OPTIONS -DTESTING=OFF"
-fi
-if [ "\$VERBOSE" = "ON" ]; then
-  OPTIONS="\$OPTIONS -DCMAKE_VERBOSE_MAKEFILE=ON"
-fi
-if [ ! "\$BOOST_ROOT" = "" ]; then
-  OPTIONS="\$OPTIONS -DBOOST_ROOT=\$BOOST_ROOT"
-fi
-if [ ! "\$HDF5_ROOT" = "" ]; then
-  OPTIONS="\$OPTIONS -DHDF5_ROOT=\$HDF5_ROOT"
-fi
-OPTIONS="\$OPTIONS -DUSE_SILO=\$USE_SILO"
-if [ "\$USE_PYTHON" = "ON" ]; then
-  OPTIONS="\$OPTIONS -DUSE_PYTHON=ON -DPYTHON_EXE=\$PYTHON_EXE"
-fi
-
-# Remove any existing cached data.
-rm -f CMakeCache.txt
-
-# Configure the build.
-echo "Executing: cmake -Wno-dev \
- -DCMAKE_INSTALL_PREFIX:PATH=\$PREFIX \
- -DCMAKE_BUILD_TYPE=\$BUILD_TYPE \
- -DCMAKE_C_COMPILER=\$CC \
- -DCMAKE_CXX_COMPILER=\$CXX \
- \$OPTIONS \
- -G "\$GENERATOR" \
- \$SOURCE_DIR"
-cmake -Wno-dev \
- -DCMAKE_INSTALL_PREFIX:PATH=\$PREFIX \
- -DCMAKE_BUILD_TYPE=\$BUILD_TYPE \
- -DCMAKE_C_COMPILER=\$CC \
- -DCMAKE_CXX_COMPILER=\$CXX \
- \$OPTIONS \
- -G "\$GENERATOR" \
- \$SOURCE_DIR
-EOT
+cmake $CUR_DIR -C host-config.cmake
+EOF
 
 # Give instructions.
 echo "Your build directory $1 is ready."
 echo "To configure your build:"
 echo "  1. cd $1"
-echo "  2. Edit config.sh"
+echo "  2. Edit the variables in config.sh as desired (enable MPI, enable Silo, etc)"
 echo "  3. sh config.sh"
-echo "  4. Build using 'make', 'ninja', or your selected IDE."
-
+echo "  4. Build using 'make', 'ninja', or your selected IDE"
+echo "  5. If tests are enabled, you run them in the build directory using the ctest command"
